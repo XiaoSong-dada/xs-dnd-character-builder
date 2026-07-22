@@ -1,0 +1,85 @@
+// 弹性盒两侧分布
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+}
+
+// 弹性盒环绕分布
+.flex-around {
+  display: flex;
+  justify-content: space-around;
+}
+
+// 弹性盒子模式
+.flex-start {
+  display: flex;
+  justify-content: start;
+}
+
+// 末尾对齐
+.flex-end {
+  display: flex;
+  justify-content: flex-end;
+}
+
+// 弹性盒水平居中
+.flex-center {
+  display: flex;
+  justify-content: center;
+}
+
+// 弹性盒水平均匀分布
+.flex-evenly {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+// 弹性盒换行
+.flex-warp {
+  flex-wrap: wrap;
+}
+
+// 弹性盒不换行
+.flex-no-warp {
+  flex-wrap: nowrap;
+}
+
+// 弹性盒设置主轴为表格模式
+.flex-column{
+  flex-direction: column;
+}
+
+// 弹性盒设置主轴为行模式
+.flex-row {
+  flex-direction: row;
+}
+
+// 弹性盒垂直居中
+.flex-item-center{
+  align-items: center;
+}
+
+// 垂直水平居中
+.flex-all-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+// 垂直居中 
+.align-center{
+  align-items: center;
+}
+
+// 禁止缩小
+.flex-no-shrink {
+  flex-shrink: 0;
+}
+
+$gaps: 0, 4, 8, 12, 16, 20, 24, 32, 50, 64;
+
+@each $gap in $gaps {
+  .gap-#{$gap} {
+    gap: #{$gap}px;
+  }
+}
