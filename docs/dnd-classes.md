@@ -66,18 +66,18 @@
 
 | ID | 中文名 | 英文名 | 职业资料 | 子职资料 | 核验状态 |
 |---|---|---|---|---|---|
-| `barbarian` | 野蛮人 | Barbarian | 待补充 | [狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)<br>[狂野之心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)<br>[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)<br>[狂信者道途](classes/subclasses/barbarian/barbarian-zealot.md) | 目录已核验 |
-| `bard` | 吟游诗人 | Bard | 待补充 | [舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)<br>[魅惑学院](classes/subclasses/bard/bard-college-of-glamour.md)<br>[博闻学院](classes/subclasses/bard/bard-college-of-lore.md)<br>[勇气学院](classes/subclasses/bard/bard-college-of-valor.md) | 目录已核验 |
-| `cleric` | 牧师 | Cleric | 待补充 | [生命领域](classes/subclasses/cleric/cleric-life-domain.md)<br>[光明领域](classes/subclasses/cleric/cleric-light-domain.md)<br>[诡术领域](classes/subclasses/cleric/cleric-trickery-domain.md)<br>[战争领域](classes/subclasses/cleric/cleric-war-domain.md) | 目录已核验 |
-| `druid` | 德鲁伊 | Druid | 待补充 | [大地结社](classes/subclasses/druid/druid-circle-of-the-land.md)<br>[月亮结社](classes/subclasses/druid/druid-circle-of-the-moon.md)<br>[海洋结社](classes/subclasses/druid/druid-circle-of-the-sea.md)<br>[星辰结社](classes/subclasses/druid/druid-circle-of-the-stars.md) | 目录已核验 |
-| `fighter` | 战士 | Fighter | 待补充 | [战斗大师](classes/subclasses/fighter/fighter-battle-master.md)<br>[勇士](classes/subclasses/fighter/fighter-champion.md)<br>[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)<br>[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md) | 目录已核验 |
-| `monk` | 武僧 | Monk | 待补充 | [慈悲宗](classes/subclasses/monk/monk-mercy.md)<br>[暗影宗](classes/subclasses/monk/monk-shadow.md)<br>[元素宗](classes/subclasses/monk/monk-elements.md)<br>[敞手宗](classes/subclasses/monk/monk-open-hand.md) | 目录已核验 |
-| `paladin` | 圣武士 | Paladin | 待补充 | [奉献之誓](classes/subclasses/paladin/paladin-oath-of-devotion.md)<br>[荣耀之誓](classes/subclasses/paladin/paladin-oath-of-glory.md)<br>[古贤之誓](classes/subclasses/paladin/paladin-oath-of-the-ancients.md)<br>[复仇之誓](classes/subclasses/paladin/paladin-oath-of-vengeance.md) | 目录已核验 |
-| `ranger` | 游侠 | Ranger | 待补充 | [驯兽师](classes/subclasses/ranger/ranger-beast-master.md)<br>[妖精漫游者](classes/subclasses/ranger/ranger-fey-wanderer.md)<br>[幽域追猎者](classes/subclasses/ranger/ranger-gloom-stalker.md)<br>[猎人](classes/subclasses/ranger/ranger-hunter.md) | 目录已核验 |
-| `rogue` | 游荡者 | Rogue | 待补充 | [奥法骗徒](classes/subclasses/rogue/rogue-arcane-trickster.md)<br>[刺客](classes/subclasses/rogue/rogue-assassin.md)<br>[魂刃](classes/subclasses/rogue/rogue-soulknife.md)<br>[盗贼](classes/subclasses/rogue/rogue-thief.md) | 目录已核验 |
-| `sorcerer` | 术士 | Sorcerer | 待补充 | [异怪术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)<br>[机关术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)<br>[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)<br>[狂野魔法术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md) | 目录已核验 |
-| `warlock` | 邪术师 | Warlock | 待补充 | [至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)<br>[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)<br>[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)<br>[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md) | 目录已核验 |
-| `wizard` | 法师 | Wizard | 待补充 | [防护师](classes/subclasses/wizard/wizard-abjurer.md)<br>[预言师](classes/subclasses/wizard/wizard-diviner.md)<br>[塑能师](classes/subclasses/wizard/wizard-evoker.md)<br>[幻术师](classes/subclasses/wizard/wizard-illusionist.md) | 目录已核验 |
+| `barbarian` | 野蛮人 | Barbarian | [野蛮人详细资料](classes/subclasses/barbarian/barbarian.md) | [狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)<br>[狂野之心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)<br>[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)<br>[狂信者道途](classes/subclasses/barbarian/barbarian-zealot.md) | 基础资料已核验 |
+| `bard` | 吟游诗人 | Bard | [吟游诗人详细资料](classes/subclasses/bard/bard.md) | [舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)<br>[魅惑学院](classes/subclasses/bard/bard-college-of-glamour.md)<br>[博闻学院](classes/subclasses/bard/bard-college-of-lore.md)<br>[勇气学院](classes/subclasses/bard/bard-college-of-valor.md) | 基础资料已核验 |
+| `cleric` | 牧师 | Cleric | [牧师详细资料](classes/subclasses/cleric/cleric.md) | [生命领域](classes/subclasses/cleric/cleric-life-domain.md)<br>[光明领域](classes/subclasses/cleric/cleric-light-domain.md)<br>[诡术领域](classes/subclasses/cleric/cleric-trickery-domain.md)<br>[战争领域](classes/subclasses/cleric/cleric-war-domain.md) | 基础资料已核验 |
+| `druid` | 德鲁伊 | Druid | [德鲁伊详细资料](classes/subclasses/druid/druid.md) | [大地结社](classes/subclasses/druid/druid-circle-of-the-land.md)<br>[月亮结社](classes/subclasses/druid/druid-circle-of-the-moon.md)<br>[海洋结社](classes/subclasses/druid/druid-circle-of-the-sea.md)<br>[星辰结社](classes/subclasses/druid/druid-circle-of-the-stars.md) | 基础资料已核验 |
+| `fighter` | 战士 | Fighter | [战士详细资料](classes/subclasses/fighter/fighter.md) | [战斗大师](classes/subclasses/fighter/fighter-battle-master.md)<br>[勇士](classes/subclasses/fighter/fighter-champion.md)<br>[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)<br>[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md) | 基础职业与勇士已核验 |
+| `monk` | 武僧 | Monk | [武僧详细资料](classes/subclasses/monk/monk.md) | [慈悲宗](classes/subclasses/monk/monk-mercy.md)<br>[暗影宗](classes/subclasses/monk/monk-shadow.md)<br>[元素宗](classes/subclasses/monk/monk-elements.md)<br>[敞手宗](classes/subclasses/monk/monk-open-hand.md) | 基础职业与敞手宗已核验 |
+| `paladin` | 圣武士 | Paladin | [圣武士详细资料](classes/subclasses/paladin/paladin.md) | [奉献之誓](classes/subclasses/paladin/paladin-oath-of-devotion.md)<br>[荣耀之誓](classes/subclasses/paladin/paladin-oath-of-glory.md)<br>[古贤之誓](classes/subclasses/paladin/paladin-oath-of-the-ancients.md)<br>[复仇之誓](classes/subclasses/paladin/paladin-oath-of-vengeance.md) | 基础职业与奉献之誓已核验 |
+| `ranger` | 游侠 | Ranger | [游侠详细资料](classes/subclasses/ranger/ranger.md) | [驯兽师](classes/subclasses/ranger/ranger-beast-master.md)<br>[妖精漫游者](classes/subclasses/ranger/ranger-fey-wanderer.md)<br>[幽域追猎者](classes/subclasses/ranger/ranger-gloom-stalker.md)<br>[猎人](classes/subclasses/ranger/ranger-hunter.md) | 基础职业与猎人已核验 |
+| `rogue` | 游荡者 | Rogue | [游荡者详细资料](classes/subclasses/rogue/rogue.md) | [奥法骗徒](classes/subclasses/rogue/rogue-arcane-trickster.md)<br>[刺客](classes/subclasses/rogue/rogue-assassin.md)<br>[魂刃](classes/subclasses/rogue/rogue-soulknife.md)<br>[盗贼](classes/subclasses/rogue/rogue-thief.md) | 基础职业与盗贼已核验 |
+| `sorcerer` | 术士 | Sorcerer | [术士详细资料](classes/subclasses/sorcerer/sorcerer.md) | [异怪术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)<br>[机关术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)<br>[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)<br>[狂野魔法术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md) | 基础职业与龙族术法已核验 |
+| `warlock` | 邪术师 | Warlock | [邪术师详细资料](classes/subclasses/warlock/warlock.md) | [至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)<br>[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)<br>[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)<br>[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md) | 基础职业与邪魔宗主已核验 |
+| `wizard` | 法师 | Wizard | [法师详细资料](classes/subclasses/wizard/wizard.md) | [防护师](classes/subclasses/wizard/wizard-abjurer.md)<br>[预言师](classes/subclasses/wizard/wizard-diviner.md)<br>[塑能师](classes/subclasses/wizard/wizard-evoker.md)<br>[幻术师](classes/subclasses/wizard/wizard-illusionist.md) | 基础职业与塑能师已核验 |
 
 ## 4.1 官方旧版与扩展子职索引
 
@@ -105,110 +105,110 @@
 ### 5.1 野蛮人 Barbarian
 
 - 职业 ID：`barbarian`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)、[狂野之心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)、[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)、[狂信者道途](classes/subclasses/barbarian/barbarian-zealot.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[野蛮人详细资料](classes/subclasses/barbarian/barbarian.md)
+- 2024 子职：[狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)、[狂野之心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)、[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)、[狂信者道途](classes/subclasses/barbarian/barbarian-zealot.md)
+- 旧版与扩展子职：[战狂道途](classes/subclasses/barbarian/barbarian-battlerager.md)、[先祖守卫道途](classes/subclasses/barbarian/barbarian-ancestral-guardian.md)、[风暴先驱道途](classes/subclasses/barbarian/barbarian-storm-herald.md)、[狂野魔法道途](classes/subclasses/barbarian/barbarian-wild-magic.md)、[野兽道途](classes/subclasses/barbarian/barbarian-beast.md)、[巨人道途](classes/subclasses/barbarian/barbarian-giant.md)
+- 选择与校验：已记录技能、装备、武器精通、狂暴、AC、子职等级和旧版兼容边界
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.2 吟游诗人 Bard
 
 - 职业 ID：`bard`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)、[魅惑学院](classes/subclasses/bard/bard-college-of-glamour.md)、[博闻学院](classes/subclasses/bard/bard-college-of-lore.md)、[勇气学院](classes/subclasses/bard/bard-college-of-valor.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[吟游诗人详细资料](classes/subclasses/bard/bard.md)
+- 2024 子职：[舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)、[魅惑学院](classes/subclasses/bard/bard-college-of-glamour.md)、[博闻学院](classes/subclasses/bard/bard-college-of-lore.md)、[勇气学院](classes/subclasses/bard/bard-college-of-valor.md)
+- 旧版与扩展子职：[剑舞学院](classes/subclasses/bard/bard-college-of-swords.md)、[低语学院](classes/subclasses/bard/bard-college-of-whispers.md)、[创造学院](classes/subclasses/bard/bard-college-of-creation.md)、[雄辩学院](classes/subclasses/bard/bard-college-of-eloquence.md)、[精魂学院](classes/subclasses/bard/bard-college-of-spirits.md)
+- 选择与校验：已记录技能、乐器、装备、戏法与法术准备、吟游激励、魔法奥秘、子职等级和旧版兼容边界
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.3 牧师 Cleric
 
 - 职业 ID：`cleric`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[生命领域](classes/subclasses/cleric/cleric-life-domain.md)、[光明领域](classes/subclasses/cleric/cleric-light-domain.md)、[诡术领域](classes/subclasses/cleric/cleric-trickery-domain.md)、[战争领域](classes/subclasses/cleric/cleric-war-domain.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[牧师详细资料](classes/subclasses/cleric/cleric.md)
+- 2024 子职：[生命领域](classes/subclasses/cleric/cleric-life-domain.md)、[光明领域](classes/subclasses/cleric/cleric-light-domain.md)、[诡术领域](classes/subclasses/cleric/cleric-trickery-domain.md)、[战争领域](classes/subclasses/cleric/cleric-war-domain.md)
+- 旧版与扩展子职：[知识领域](classes/subclasses/cleric/cleric-knowledge-domain.md)、[自然领域](classes/subclasses/cleric/cleric-nature-domain.md)、[风暴领域](classes/subclasses/cleric/cleric-tempest-domain.md)、[奥秘领域](classes/subclasses/cleric/cleric-arcana-domain.md)、[锻造领域](classes/subclasses/cleric/cleric-forge-domain.md)、[坟墓领域](classes/subclasses/cleric/cleric-grave-domain.md)、[秩序领域](classes/subclasses/cleric/cleric-order-domain.md)、[和平领域](classes/subclasses/cleric/cleric-peace-domain.md)、[暮光领域](classes/subclasses/cleric/cleric-twilight-domain.md)、[死亡领域（DM 选项）](classes/subclasses/cleric/cleric-death-domain.md)
+- 选择与校验：已记录技能、装备、神圣职分、戏法与法术准备、引导神力、领域等级和旧版神佑打击兼容边界
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.4 德鲁伊 Druid
 
 - 职业 ID：`druid`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[大地结社](classes/subclasses/druid/druid-circle-of-the-land.md)、[月亮结社](classes/subclasses/druid/druid-circle-of-the-moon.md)、[海洋结社](classes/subclasses/druid/druid-circle-of-the-sea.md)、[星辰结社](classes/subclasses/druid/druid-circle-of-the-stars.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[德鲁伊详细资料](classes/subclasses/druid/druid.md)
+- 2024 子职：[大地结社](classes/subclasses/druid/druid-circle-of-the-land.md)、[月亮结社](classes/subclasses/druid/druid-circle-of-the-moon.md)、[海洋结社](classes/subclasses/druid/druid-circle-of-the-sea.md)、[星辰结社](classes/subclasses/druid/druid-circle-of-the-stars.md)
+- 旧版与扩展子职：[梦境结社](classes/subclasses/druid/druid-circle-of-dreams.md)、[牧人结社](classes/subclasses/druid/druid-circle-of-the-shepherd.md)、[孢子结社](classes/subclasses/druid/druid-circle-of-spores.md)、[野火结社](classes/subclasses/druid/druid-circle-of-wildfire.md)
+- 选择与校验：已记录技能、装备、原初职分、法术准备、荒野变形形态与资源、结社等级和旧版兼容边界
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.5 战士 Fighter
 
 - 职业 ID：`fighter`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[战斗大师](classes/subclasses/fighter/fighter-battle-master.md)、[勇士](classes/subclasses/fighter/fighter-champion.md)、[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)、[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[战士详细资料](classes/subclasses/fighter/fighter.md)
+- 2024子职：[战斗大师](classes/subclasses/fighter/fighter-battle-master.md)、[勇士](classes/subclasses/fighter/fighter-champion.md)、[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)、[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md)
+- 旧版与扩展子职：[紫龙骑士](classes/subclasses/fighter/fighter-purple-dragon-knight.md)、[奥法射手](classes/subclasses/fighter/fighter-arcane-archer.md)、[骑兵](classes/subclasses/fighter/fighter-cavalier.md)、[武士](classes/subclasses/fighter/fighter-samurai.md)、[回音骑士](classes/subclasses/fighter/fighter-echo-knight.md)、[符文骑士](classes/subclasses/fighter/fighter-rune-knight.md)
+- 选择与校验：已记录技能、装备、战斗风格、武器精通、回气、动作如潮、不屈、额外攻击和旧版资源兼容边界
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.6 武僧 Monk
 
 - 职业 ID：`monk`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[慈悲宗](classes/subclasses/monk/monk-mercy.md)、[暗影宗](classes/subclasses/monk/monk-shadow.md)、[元素宗](classes/subclasses/monk/monk-elements.md)、[敞手宗](classes/subclasses/monk/monk-open-hand.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[武僧详细资料](classes/subclasses/monk/monk.md)
+- 2024子职：[慈悲宗](classes/subclasses/monk/monk-mercy.md)、[暗影宗](classes/subclasses/monk/monk-shadow.md)、[元素宗](classes/subclasses/monk/monk-elements.md)、[敞手宗](classes/subclasses/monk/monk-open-hand.md)
+- 旧版与扩展子职：[长死宗](classes/subclasses/monk/monk-long-death.md)、[醉拳宗](classes/subclasses/monk/monk-drunken-master.md)、[剑圣宗](classes/subclasses/monk/monk-kensei.md)、[日魂宗](classes/subclasses/monk/monk-sun-soul.md)、[星界灵体宗](classes/subclasses/monk/monk-astral-self.md)、[升龙宗](classes/subclasses/monk/monk-ascendant-dragon.md)
+- 选择与校验：已记录技能、工具、无甲条件、武艺骰、专注点、移动、拨挡攻击、震慑打击和旧版气点兼容边界
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.7 圣武士 Paladin
 
 - 职业 ID：`paladin`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[奉献之誓](classes/subclasses/paladin/paladin-oath-of-devotion.md)、[荣耀之誓](classes/subclasses/paladin/paladin-oath-of-glory.md)、[古贤之誓](classes/subclasses/paladin/paladin-oath-of-the-ancients.md)、[复仇之誓](classes/subclasses/paladin/paladin-oath-of-vengeance.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[圣武士详细资料](classes/subclasses/paladin/paladin.md)
+- 2024子职：[奉献之誓](classes/subclasses/paladin/paladin-oath-of-devotion.md)、[荣耀之誓](classes/subclasses/paladin/paladin-oath-of-glory.md)、[古贤之誓](classes/subclasses/paladin/paladin-oath-of-the-ancients.md)、[复仇之誓](classes/subclasses/paladin/paladin-oath-of-vengeance.md)
+- 旧版与扩展子职：[王冠之誓](classes/subclasses/paladin/paladin-oath-of-the-crown.md)、[征服之誓](classes/subclasses/paladin/paladin-oath-of-conquest.md)、[救赎之誓](classes/subclasses/paladin/paladin-oath-of-redemption.md)、[守望之誓](classes/subclasses/paladin/paladin-oath-of-the-watchers.md)、[破誓者（DM选项）](classes/subclasses/paladin/paladin-oathbreaker.md)
+- 选择与校验：已记录技能、装备、武器精通、圣疗、施法、引导神力、灵光、斩击和旧版灵光兼容边界
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.8 游侠 Ranger
 
 - 职业 ID：`ranger`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[驯兽师](classes/subclasses/ranger/ranger-beast-master.md)、[妖精漫游者](classes/subclasses/ranger/ranger-fey-wanderer.md)、[幽域追猎者](classes/subclasses/ranger/ranger-gloom-stalker.md)、[猎人](classes/subclasses/ranger/ranger-hunter.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[游侠详细资料](classes/subclasses/ranger/ranger.md)
+- 2024子职：[驯兽师](classes/subclasses/ranger/ranger-beast-master.md)、[妖精漫游者](classes/subclasses/ranger/ranger-fey-wanderer.md)、[幽域追猎者](classes/subclasses/ranger/ranger-gloom-stalker.md)、[猎人](classes/subclasses/ranger/ranger-hunter.md)
+- 旧版与扩展子职：[地平线行者](classes/subclasses/ranger/ranger-horizon-walker.md)、[怪物杀手](classes/subclasses/ranger/ranger-monster-slayer.md)、[集群牧者](classes/subclasses/ranger/ranger-swarmkeeper.md)、[龙兽守卫](classes/subclasses/ranger/ranger-drakewarden.md)
+- 选择与校验：已记录技能、装备、施法、宿敌、猎人印记、武器精通、额外攻击、专注与伙伴兼容边界
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.9 游荡者 Rogue
 
 - 职业 ID：`rogue`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[奥法骗徒](classes/subclasses/rogue/rogue-arcane-trickster.md)、[刺客](classes/subclasses/rogue/rogue-assassin.md)、[魂刃](classes/subclasses/rogue/rogue-soulknife.md)、[盗贼](classes/subclasses/rogue/rogue-thief.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[游荡者详细资料](classes/subclasses/rogue/rogue.md)
+- 2024子职：[奥法骗徒](classes/subclasses/rogue/rogue-arcane-trickster.md)、[刺客](classes/subclasses/rogue/rogue-assassin.md)、[魂刃](classes/subclasses/rogue/rogue-soulknife.md)、[盗贼](classes/subclasses/rogue/rogue-thief.md)
+- 旧版与扩展子职：[审判官](classes/subclasses/rogue/rogue-inquisitive.md)、[策士](classes/subclasses/rogue/rogue-mastermind.md)、[斥候](classes/subclasses/rogue/rogue-scout.md)、[游荡剑客](classes/subclasses/rogue/rogue-swashbuckler.md)、[鬼魅](classes/subclasses/rogue/rogue-phantom.md)
+- 选择与校验：已记录技能、专精、偷袭、武器精通、诡诈打击、反应与旧版偷袭资格边界
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.10 术士 Sorcerer
 
 - 职业 ID：`sorcerer`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[异怪术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)、[机关术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)、[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)、[狂野魔法术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[术士详细资料](classes/subclasses/sorcerer/sorcerer.md)
+- 2024子职：[异怪术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)、[机关术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)、[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)、[狂野魔法术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md)
+- 旧版与扩展子职：[神圣之魂](classes/subclasses/sorcerer/sorcerer-divine-soul.md)、[幽影魔法](classes/subclasses/sorcerer/sorcerer-shadow-magic.md)、[风暴术法](classes/subclasses/sorcerer/sorcerer-storm-sorcery.md)、[月之术法](classes/subclasses/sorcerer/sorcerer-lunar-sorcery.md)
+- 选择与校验：已记录施法、天生术法、术法点、超魔法、法术位转换、常备法术和旧版首特性等级映射
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.11 邪术师 Warlock
 
 - 职业 ID：`warlock`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)、[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)、[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)、[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[邪术师详细资料](classes/subclasses/warlock/warlock.md)
+- 2024子职：[至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)、[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)、[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)、[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md)
+- 旧版与扩展子职：[不朽者宗主](classes/subclasses/warlock/warlock-undying-patron.md)、[咒剑宗主](classes/subclasses/warlock/warlock-hexblade-patron.md)、[深海意志宗主](classes/subclasses/warlock/warlock-fathomless-patron.md)、[巨灵宗主](classes/subclasses/warlock/warlock-genie-patron.md)、[死灵宗主](classes/subclasses/warlock/warlock-undead-patron.md)
+- 选择与校验：已记录契约魔法、魔能祈唤、魔法机巧、秘法奥秘、宗主等级和旧版1级特性映射
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ### 5.12 法师 Wizard
 
 - 职业 ID：`wizard`
-- 职业基础：待补充
-- 等级特性：待补充
-- 子职：[防护师](classes/subclasses/wizard/wizard-abjurer.md)、[预言师](classes/subclasses/wizard/wizard-diviner.md)、[塑能师](classes/subclasses/wizard/wizard-evoker.md)、[幻术师](classes/subclasses/wizard/wizard-illusionist.md)
-- 选择与校验：待补充
-- 来源与核验：待补充
+- 职业基础与等级特性：[法师详细资料](classes/subclasses/wizard/wizard.md)
+- 2024子职：[防护师](classes/subclasses/wizard/wizard-abjurer.md)、[预言师](classes/subclasses/wizard/wizard-diviner.md)、[塑能师](classes/subclasses/wizard/wizard-evoker.md)、[幻术师](classes/subclasses/wizard/wizard-illusionist.md)
+- 旧版与扩展子职：[咒法学派](classes/subclasses/wizard/wizard-conjuration.md)、[附魔学派](classes/subclasses/wizard/wizard-enchantment.md)、[死灵学派](classes/subclasses/wizard/wizard-necromancy.md)、[变化学派](classes/subclasses/wizard/wizard-transmutation.md)、[剑咏者](classes/subclasses/wizard/wizard-bladesinging.md)、[战争魔法](classes/subclasses/wizard/wizard-war-magic.md)、[时间魔法](classes/subclasses/wizard/wizard-chronurgy-magic.md)、[重力魔法](classes/subclasses/wizard/wizard-graviturgy-magic.md)、[书士会](classes/subclasses/wizard/wizard-order-of-scribes.md)
+- 选择与校验：已记录法术书、准备法术、抄录、仪式、奥术回想、法术精通、招牌法术和旧版2级特性映射
+- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-24
 
 ## 6. 单项特性记录模板
 
