@@ -22,6 +22,7 @@
 - 只有任务涉及出身选择、背景属性提升、起源专长、背景熟练、初始装备、2014 背景特性、背景变体、对应规则数据或 UI 展示时，才读取该索引。
 - 已知规则集和目标背景时，先读取 `dnd-backgrounds.md` 的通用字段与版本约定，再只读取 `../docs/backgrounds/<规则集>/<背景ID>/` 下的目标主文件；目标变体明确时才继续读取对应变体文件，禁止一次性加载全部背景目录。
 - `5e-2024` 与 `5e-2014` 背景必须保持独立。2024 的属性提升和起源专长不得写入 2014 背景；2014 的背景特性、语言与自定义规则不得自动并入 2024 背景。修改背景规则数据或行为时必须同步更新对应资料。
+- [`../docs/router-layout-requirements.md`](../docs/router-layout-requirements.md) 是主 Layout、一级导航和 Vue Router 基础框架的专项需求记录。任务涉及主布局、底部导航、一级页面路由、路由重定向或异常路由时，必须在设计或开发前完整读取该文档，并以其中“已确认结论”为实现基线。
 
 ## 强制技能调用
 
@@ -59,7 +60,10 @@
 - 完整目录权限矩阵、允许依赖和禁止依赖以 [`../docs/frontend-architecture.md`](../docs/frontend-architecture.md) 为准。
 - 前端主依赖方向为 `router -> layout/views -> features或页面私有hooks -> stores/services/rules`；不得由下层反向导入 `views`、`layout` 或 `router`。
 - `src/router` 只负责路由注册、路由元信息与页面组织，不承载车卡业务逻辑。
-- `src/views` 只负责页面级装配；不得直接实现规则计算、持久化或网络请求。
+- 每个可路由页面必须采用 `src/views/<page>/index.vue` 作为入口，并建立页面私有 `hooks`；详细页面职权以 [`../docs/frontend-architecture.md`](../docs/frontend-architecture.md) 的“页面目录与职权收束”为准。
+- `src/views/**/index.vue` 只负责调用页面 hooks、绑定返回值和组装组件；不得维护业务状态、生命周期、副作用，也不得直接实现规则计算、持久化或网络请求。
+- 页面逻辑必须收束到 `views/<page>/hooks`。简单页面至少提供一个页面入口 hook；复杂页面按搜索、筛选、弹窗、工具栏等职责拆分，禁止形成单个万能 hook。
+- 页面私有组件和列定义、表单、字典等配置就近放在页面目录中；没有真实内容时不创建 `components` 等空目录。
 - `src/layout` 只负责布局容器、导航和通用页面骨架，不承载具体车卡步骤。
 - `src/features` 按车卡业务能力内聚组件、私有 hooks、配置和装配逻辑，例如属性生成、职业选择和角色卡查看。
 - `src/components` 只放确认可跨功能复用的组件；基于 Reka UI 的通用封装统一放 `src/components/ui`。

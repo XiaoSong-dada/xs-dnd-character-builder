@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="navigation-character-card" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8">
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 4.5V3h6v1.5M8.5 9h7M8.5 13h7M8.5 17H13" />
+    </g>
+  </symbol>
+  <symbol id="navigation-classes" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8">
+      <path d="M3.5 5.5c2.8-.9 5.7-.3 8.5 1.6v13c-2.8-1.9-5.7-2.5-8.5-1.6z" />
+      <path d="M20.5 5.5c-2.8-.9-5.7-.3-8.5 1.6v13c2.8-1.9 5.7-2.5 8.5-1.6z" />
+    </g>
+  </symbol>
+  <symbol id="navigation-dice" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8">
+      <path d="m12 3 8 6-3 10H7L4 9z" />
+      <circle cx="12" cy="8" r=".8" fill="currentColor" stroke="none" />
+      <circle cx="8.5" cy="13" r=".8" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="13" r=".8" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="17" r=".8" fill="currentColor" stroke="none" />
+    </g>
+  </symbol>
+  <symbol id="navigation-profile" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+    </g>
+  </symbol>
+</svg>
