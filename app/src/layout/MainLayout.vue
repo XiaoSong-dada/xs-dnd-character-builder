@@ -35,14 +35,14 @@ watch(
   flex-direction: column;
   overflow: hidden;
   background: var(--color-background);
-}
 
-.main-layout__content {
-  min-height: 0;
-  flex: 1;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  scrollbar-gutter: stable;
+  &__content {
+    min-height: 0;
+    flex: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+  }
 }
 </style>

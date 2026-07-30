@@ -6,7 +6,11 @@
 pnpm install
 pnpm dev
 pnpm build
+pnpm test:run
 ```
+
+快速车卡的当前实现范围、目录职责和后续批次见
+[`docs/quick-build-implementation.md`](../docs/quick-build-implementation.md)。
 
 ## SPA History 部署要求
 

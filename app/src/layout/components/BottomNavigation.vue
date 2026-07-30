@@ -46,54 +46,54 @@ const { navigationItems, onNavigationClick } = useBottomNavigation()
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
   box-shadow: 0 -0.25rem 1.25rem rgb(50 38 27 / 8%);
-}
 
-.bottom-navigation__sprite {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.bottom-navigation__link {
-  display: flex;
-  min-width: 0;
-  min-height: 3.5rem;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 0.2rem;
-  border-radius: 0.75rem;
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1.2;
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-
-  &:focus-visible {
-    outline: 0.15rem solid var(--color-primary);
-    outline-offset: 0.1rem;
+  &__sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
   }
 
-  &.router-link-exact-active {
-    color: var(--color-primary);
-    background: var(--color-primary-soft);
-    font-weight: 700;
+  &__link {
+    display: flex;
+    min-width: 0;
+    min-height: 3.5rem;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.2rem;
+    border-radius: 0.75rem;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+
+    &:focus-visible {
+      outline: 0.15rem solid var(--color-primary);
+      outline-offset: 0.1rem;
+    }
+
+    &.router-link-exact-active {
+      color: var(--color-primary);
+      background: var(--color-primary-soft);
+      font-weight: 700;
+    }
   }
-}
 
-.bottom-navigation__icon {
-  width: 1.5rem;
-  height: 1.5rem;
-  flex: none;
-}
+  &__icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: none;
+  }
 
-.bottom-navigation__label {
-  overflow: hidden;
-  max-width: 100%;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  &__label {
+    overflow: hidden;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 </style>

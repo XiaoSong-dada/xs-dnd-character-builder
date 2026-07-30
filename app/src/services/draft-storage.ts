@@ -1,0 +1,58 @@
+import type { CharacterDraft, LegacyDraftRecord } from '@/types/character'
+
+const STORAGE_KEY = 'dnd-character-builder:drafts:v2'
+const LEGACY_STORAGE_KEY = 'dnd-character-builder:drafts:v1'
+
+function isDraft(value: unknown): value is CharacterDraft {
+  if (!value || typeof value !== 'object') return false
+  const draft = value as Partial<CharacterDraft>
+  return draft.schemaVersion === 2 && draft.ruleset === '5e-2014' && typeof draft.id === 'string'
+}
+
+function normalizeDraft(draft: CharacterDraft): CharacterDraft {
+  return {
+    ...draft,
+    raceAbilityChoices: draft.raceAbilityChoices ?? [],
+    backgroundSkillIds: draft.backgroundSkillIds ?? [],
+    backgroundToolIds: draft.backgroundToolIds ?? [],
+    languages: draft.languages ?? [],
+    proficiencyReplacements: draft.proficiencyReplacements ?? [],
+  }
+}
+
+function readArray(key: string): readonly unknown[] {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+export const DraftStorageService = {
+  loadAll(): readonly CharacterDraft[] {
+    return readArray(STORAGE_KEY).filter(isDraft).map(normalizeDraft)
+  },
+  loadLegacy(): readonly LegacyDraftRecord[] {
+    return readArray(LEGACY_STORAGE_KEY).flatMap((raw, index) => {
+      if (!raw || typeof raw !== 'object') return []
+      const candidate = raw as { id?: unknown; name?: unknown; ruleset?: unknown; targetLevel?: unknown }
+      if (candidate.ruleset !== '5e-2024') return []
+      return [{
+        id: typeof candidate.id === 'string' ? candidate.id : `legacy-${index}`,
+        name: typeof candidate.name === 'string' && candidate.name.trim() ? candidate.name : '未命名2024角色',
+        ruleset: '5e-2024',
+        targetLevel: typeof candidate.targetLevel === 'number' ? candidate.targetLevel : undefined,
+        raw,
+      }]
+    })
+  },
+  saveAll(drafts: readonly CharacterDraft[]): void {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts))
+  },
+  clear(): void {
+    localStorage.removeItem(STORAGE_KEY)
+  },
+}

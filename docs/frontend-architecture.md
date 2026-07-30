@@ -243,3 +243,21 @@ src/styles/index.scss
 10. 是否创建了没有真实内容的 `components` 等占位目录。
 
 如果依赖关系有变化，在同一修改中更新本文件；如果没有变化，在交付说明中明确写出“已复核前端依赖拓扑，无需更新”。
+
+## 10. 快速车卡当前拓扑
+
+早期“尚未创建 features、stores、rules、services”的描述已经过时。当前实际调用链为：
+
+```text
+views/character-builder/index.vue
+  -> views/character-builder/hooks/useCharacterBuilderPage.ts
+  -> views/character-builder/components
+  -> features/quick-build/components
+  -> stores/character-drafts.ts
+      -> rules/{derive,validate,timeline,dependency,repository}
+      -> services/{draft-storage,character-json}
+  -> components/ui
+```
+
+规则层仍保持框架无关，不读取 DOM、路由或存储。Store 只保存原始选择；文件和
+localStorage 副作用只存在于 services；路由查询同步和步骤编排只存在于页面 hook。
