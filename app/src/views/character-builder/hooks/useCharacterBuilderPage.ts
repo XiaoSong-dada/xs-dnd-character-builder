@@ -114,6 +114,12 @@ export function useCharacterBuilderPage() {
     if (store.activateDraft(id) && store.activeDraft) syncRoute(store.activeDraft)
   }
 
+  function deleteDraft(id: string): void {
+    const deletingActiveDraft = store.activeDraftId === id
+    if (!store.deleteDraft(id)) return
+    if (deletingActiveDraft) void router.replace({ name: 'character-builder' })
+  }
+
   function importDraft(raw: string): void {
     try {
       importError.value = ''
@@ -302,6 +308,7 @@ export function useCharacterBuilderPage() {
     canContinue,
     createDraft,
     openDraft,
+    deleteDraft,
     importDraft,
     nextStep,
     previousStep,

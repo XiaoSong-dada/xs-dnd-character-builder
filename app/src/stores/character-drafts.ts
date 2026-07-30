@@ -104,6 +104,14 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     return true
   }
 
+  function deleteDraft(id: string): boolean {
+    const index = drafts.value.findIndex((draft) => draft.id === id)
+    if (index < 0) return false
+    drafts.value.splice(index, 1)
+    if (activeDraftId.value === id) activeDraftId.value = undefined
+    return true
+  }
+
   function updateDraft(patch: Partial<Omit<CharacterDraft, 'id' | 'schemaVersion' | 'ruleset' | 'createdAt'>>): void {
     const index = drafts.value.findIndex((draft) => draft.id === activeDraftId.value)
     if (index < 0) return
@@ -170,6 +178,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     completion,
     createDraft,
     activateDraft,
+    deleteDraft,
     updateDraft,
     setStep,
     saveSelection,

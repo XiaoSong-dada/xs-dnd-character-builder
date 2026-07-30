@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+
 import BaseButton from '@/components/ui/BaseButton.vue'
+import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import type { CharacterDraft, LegacyDraftRecord } from '@/types/character'
 
-defineProps<{
+const props = defineProps<{
   drafts: readonly CharacterDraft[]
   legacyDrafts: readonly LegacyDraftRecord[]
 }>()
@@ -18,9 +21,27 @@ function readFile(event: Event): void {
 const emit = defineEmits<{
   create: []
   open: [id: string]
+  delete: [id: string]
   import: [raw: string]
   exportLegacy: [id: string]
 }>()
+
+const pendingDeleteId = ref<string>()
+const pendingDeleteDraft = computed(() => props.drafts.find((draft) => draft.id === pendingDeleteId.value))
+
+function requestDelete(id: string): void {
+  pendingDeleteId.value = id
+}
+
+function cancelDelete(): void {
+  pendingDeleteId.value = undefined
+}
+
+function confirmDelete(): void {
+  if (!pendingDeleteId.value) return
+  emit('delete', pendingDeleteId.value)
+  pendingDeleteId.value = undefined
+}
 </script>
 
 <template>
@@ -32,16 +53,24 @@ const emit = defineEmits<{
       <small>每个决定都会说明它影响的规则和数值。</small>
     </div>
     <BaseButton @click="$emit('create')">创建新角色</BaseButton>
-    <button
+    <article
       v-for="draft in drafts"
       :key="draft.id"
-      type="button"
       class="start-panel__draft"
-      @click="$emit('open', draft.id)"
     >
-      <span><strong>{{ draft.name || '未命名角色' }}</strong><small>{{ draft.targetLevel }}级 · {{ draft.currentStep }}</small></span>
-      <b>继续 ›</b>
-    </button>
+      <button type="button" class="start-panel__draft-open" @click="$emit('open', draft.id)">
+        <span><strong>{{ draft.name || '未命名角色' }}</strong><small>{{ draft.targetLevel }}级 · {{ draft.currentStep }}</small></span>
+        <b>继续 ›</b>
+      </button>
+      <button
+        type="button"
+        class="start-panel__draft-delete"
+        :aria-label="`删除角色 ${draft.name || '未命名角色'}`"
+        @click="requestDelete(draft.id)"
+      >
+        删除
+      </button>
+    </article>
     <UiNotice
       v-if="legacyDrafts.length"
       tone="warning"
@@ -60,6 +89,19 @@ const emit = defineEmits<{
       导入角色 JSON
       <input type="file" accept="application/json,.json" @change="readFile">
     </label>
+    <UiModal
+      :open="Boolean(pendingDeleteDraft)"
+      title="删除这个角色？"
+      @close="cancelDelete"
+    >
+      <p class="start-panel__delete-message">
+        “{{ pendingDeleteDraft?.name || '未命名角色' }}”及其全部车卡进度将从本地永久删除，此操作无法撤销。
+      </p>
+      <template #footer>
+        <BaseButton variant="secondary" @click="cancelDelete">取消</BaseButton>
+        <BaseButton variant="danger" @click="confirmDelete">确认删除</BaseButton>
+      </template>
+    </UiModal>
   </section>
 </template>
 
@@ -88,17 +130,46 @@ const emit = defineEmits<{
     display: flex;
     min-height: 4.25rem;
     align-items: center;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    color: var(--color-text);
     background: var(--color-surface);
-    text-align: left;
+    overflow: hidden;
 
-    span { display: grid; flex: 1; }
-    small { color: var(--color-text-muted); }
-    b { color: var(--color-primary); }
+    &-open {
+      display: flex;
+      min-width: 0;
+      min-height: 4.25rem;
+      flex: 1;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 0.75rem 0.75rem 1rem;
+      border: 0;
+      color: var(--color-text);
+      background: transparent;
+      text-align: left;
+
+      span { display: grid; min-width: 0; flex: 1; }
+      small { color: var(--color-text-muted); }
+      b { flex: none; color: var(--color-primary); }
+    }
+
+    &-delete {
+      min-width: 3.5rem;
+      min-height: 2.75rem;
+      margin-right: 0.5rem;
+      border: 0;
+      border-left: 1px solid var(--color-border);
+      color: var(--color-error);
+      background: transparent;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+  }
+
+  &__delete-message {
+    margin: 0;
+    color: var(--color-text-muted);
+    line-height: 1.7;
   }
 
   &__import {

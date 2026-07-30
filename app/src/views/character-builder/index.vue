@@ -40,6 +40,7 @@ const {
   canContinue,
   createDraft,
   openDraft,
+  deleteDraft,
   importDraft,
   nextStep,
   previousStep,
@@ -79,6 +80,7 @@ function updateMethod(value: AbilityMethod): void {
     :legacy-drafts="legacyDrafts"
     @create="createDraft"
     @open="openDraft"
+    @delete="deleteDraft"
     @import="importDraft"
     @export-legacy="exportLegacyDraft"
   />
