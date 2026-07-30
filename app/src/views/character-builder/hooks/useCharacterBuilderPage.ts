@@ -3,14 +3,16 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 
 import { deriveCharacter, getRaceAbilityBonuses } from '@/rules/derive'
+import { areBaseAbilitiesValid, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { rulesRepository } from '@/rules/repository'
 import { buildTimeline } from '@/rules/timeline'
+import { validateSpellSelections } from '@/rules/spellcasting'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
-import type { AbilityKey, AbilityMethod, AbilityScores, CharacterDraft, DraftStep } from '@/types/character'
+import type { AbilityKey, AbilityMethod, AbilityScores, CharacterDraft, DraftStep, SpellSelections } from '@/types/character'
 
-const STEP_ORDER: readonly DraftStep[] = ['setup', 'preferences', 'class', 'origin', 'abilities', 'timeline', 'equipment', 'identity', 'validation', 'sheet']
+const STEP_ORDER: readonly DraftStep[] = ['setup', 'preferences', 'class', 'origin', 'abilities', 'timeline', 'equipment', 'spells', 'identity', 'validation', 'sheet']
 const STEP_META: Record<DraftStep, { eyebrow: string; title: string }> = {
   setup: { eyebrow: '第1步', title: '先确定冒险规模' },
   preferences: { eyebrow: '第2步', title: '你想怎样参与战斗？' },
@@ -19,7 +21,8 @@ const STEP_META: Record<DraftStep, { eyebrow: string; title: string }> = {
   abilities: { eyebrow: '第5步', title: '分配六项属性' },
   timeline: { eyebrow: '第6步', title: '完成等级时间线' },
   equipment: { eyebrow: '第7步', title: '选择并装备物品' },
-  identity: { eyebrow: '第8步', title: '让角色成为一个人' },
+  spells: { eyebrow: '第8步', title: '配置职业法术' },
+  identity: { eyebrow: '第9步', title: '让角色成为一个人' },
   validation: { eyebrow: '最终检查', title: '规则校验' },
   sheet: { eyebrow: '角色完成', title: '角色卡' },
 }
@@ -89,6 +92,11 @@ export function useCharacterBuilderPage() {
         && areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod)
     }
     if (step.value === 'timeline') return timelineComplete.value
+    if (step.value === 'equipment') {
+      return draft.inventoryItemIds.length > 0
+        && draft.equippedItemIds.some((itemId) => rulesRepository.getEquipment(itemId)?.category === 'weapon')
+    }
+    if (step.value === 'spells') return validateSpellSelections(draft)
     if (step.value === 'identity') return Boolean(draft.name.trim())
     if (step.value === 'validation') return !validationIssues.value.some((issue) => issue.severity === 'error')
     return true
@@ -158,15 +166,20 @@ export function useCharacterBuilderPage() {
 
   function updateSetup(targetLevel: number, abilityMethod: AbilityMethod): void {
     const draft = activeDraft.value
+    const abilityPatch = draft
+      && abilityMethod === 'standard-array'
+      && !areBaseAbilitiesValid(draft.baseAbilities, 'standard-array')
+      ? { baseAbilities: STANDARD_ARRAY_DEFAULT }
+      : {}
     if (!draft || targetLevel === draft.targetLevel) {
-      store.updateDraft({ targetLevel, abilityMethod })
+      store.updateDraft({ targetLevel, abilityMethod, ...abilityPatch })
       return
     }
     const change = { kind: 'target-level', value: targetLevel } as const
     requestChange(change, '修改目标等级', () => {
       const impact = getDependencyImpact(draft, change)
       store.invalidateSelections(impact.invalidated, `目标等级调整为${targetLevel}级`)
-      store.updateDraft({ targetLevel, abilityMethod })
+      store.updateDraft({ targetLevel, abilityMethod, ...abilityPatch })
     })
   }
 
@@ -220,13 +233,21 @@ export function useCharacterBuilderPage() {
 
   function saveTimelineSelection(checkpointId: string, optionIds: readonly string[]): void {
     store.saveSelection(checkpointId, optionIds)
-    if (checkpointId === 'fighter-2014-subclass-3') {
-      store.updateDraft({ subclassId: optionIds.includes('subclass-2014-fighter-battle-master') ? 'subclass-2014-fighter-battle-master' : undefined })
+    const draft = activeDraft.value
+    if (!draft?.classId) return
+    const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId })
+      .find((item) => item.id === checkpointId)
+    if (checkpoint?.kind === 'subclass') {
+      store.updateDraft({ subclassId: optionIds[0] })
     }
   }
 
   function updateEquipment(inventoryItemIds: readonly string[], equippedItemIds: readonly string[]): void {
     store.updateDraft({ inventoryItemIds, equippedItemIds })
+  }
+
+  function updateSpells(value: SpellSelections): void {
+    store.updateDraft({ spellSelections: value })
   }
 
   function updateIdentity(value: Pick<CharacterDraft, 'name' | 'alignment' | 'notes'>): void {
@@ -293,6 +314,7 @@ export function useCharacterBuilderPage() {
     selectBackgroundVariant,
     saveTimelineSelection,
     updateEquipment,
+    updateSpells,
     updateIdentity,
     updateAbilities,
     updateRaceAbilityChoices,
@@ -303,4 +325,3 @@ export function useCharacterBuilderPage() {
     updateDraft: store.updateDraft,
   } as const
 }
-import { areBaseAbilitiesValid } from '@/rules/abilities'

@@ -1,6 +1,14 @@
 import type { AbilityMethod, AbilityScores } from '@/types/character'
 
-const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const
+export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const
+export const STANDARD_ARRAY_DEFAULT: AbilityScores = {
+  str: 15,
+  dex: 14,
+  con: 13,
+  int: 8,
+  wis: 12,
+  cha: 10,
+}
 const POINT_BUY_COST: Readonly<Record<number, number>> = {
   8: 0,
   9: 1,

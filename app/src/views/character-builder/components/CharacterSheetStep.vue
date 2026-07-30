@@ -28,6 +28,13 @@ const identityLine = computed(() => {
   ].filter(Boolean)
   return `${draft.targetLevel}级 · ${names.join(' · ')}`
 })
+const selectedSpells = computed(() => {
+  const config = props.draft.classId ? rulesRepository.getClass(props.draft.classId)?.spellcasting : undefined
+  const ids = config?.mode === 'prepared'
+    ? props.draft.spellSelections.preparedSpellIds
+    : props.draft.spellSelections.knownSpellIds
+  return [...props.draft.spellSelections.cantripIds, ...(ids ?? [])].map((id) => rulesRepository.getSpell(id)).filter(Boolean)
+})
 </script>
 
 <template>
@@ -45,7 +52,7 @@ const identityLine = computed(() => {
       <StatTile label="速度" :value="`${derived.speed.value}尺`" :note="derived.speed.sources[0]?.detail" />
       <StatTile v-for="(value, key) in derived.abilities" :key="key" :label="String(key).toUpperCase()" :value="value" :note="`${derived.modifiers[key] >= 0 ? '+' : ''}${derived.modifiers[key]}`" />
     </div>
-    <div v-else-if="activeTab === 'combat'" class="character-sheet__panel"><h3>长剑</h3><p>命中 +{{ derived.attackBonus.value }} · 伤害 1d8 + {{ derived.modifiers.str }}</p><small>{{ derived.attackBonus.sources.map((item) => `${item.label} ${item.value >= 0 ? '+' : ''}${item.value}`).join('，') }}</small></div>
+    <div v-else-if="activeTab === 'combat'" class="character-sheet__panel"><h3>主要武器</h3><p>命中 +{{ derived.attackBonus.value }} · 伤害骰 + {{ derived.attackDamageBonus.value }}</p><small>{{ derived.attackBonus.sources.map((item) => `${item.label} ${item.value >= 0 ? '+' : ''}${item.value}`).join('，') }}</small></div>
     <div v-else-if="activeTab === 'features'" class="character-sheet__derived">
       <section>
         <h3>豁免</h3>
@@ -71,6 +78,22 @@ const identityLine = computed(() => {
           />
         </div>
       </section>
+    </div>
+    <div v-else-if="activeTab === 'spells'" class="character-sheet__spells">
+      <div class="character-sheet__spell-stats">
+        <StatTile label="法术攻击" :value="derived.spellAttackBonus ? `+${derived.spellAttackBonus.value}` : '—'" :note="derived.spellAttackBonus?.sources.map((item) => item.label).join(' + ') ?? '当前职业无施法能力'" />
+        <StatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? '—'" :note="derived.spellSaveDc?.sources.map((item) => item.label).join(' + ') ?? '当前职业无施法能力'" />
+      </div>
+      <section v-if="selectedSpells.length">
+        <h3>已选法术</h3>
+        <ul>
+          <li v-for="spell in selectedSpells" :key="spell?.id">
+            <strong>{{ spell?.name }}</strong>
+            <span>{{ spell?.level }}环 · {{ spell?.englishName }}</span>
+          </li>
+        </ul>
+      </section>
+      <p v-else>当前没有需要展示的法术。</p>
     </div>
     <div v-else-if="activeTab === 'items'" class="character-sheet__panel"><h3>已装备</h3><p>{{ draft.equippedItemIds.join('、') || '尚未装备物品' }}</p></div>
     <div v-else class="character-sheet__panel"><h3>{{ tabs.find((tab) => tab.id === activeTab)?.label }}</h3><p>该部分将在对应职业与施法批次继续扩展。</p></div>
@@ -122,6 +145,39 @@ const identityLine = computed(() => {
         gap: 0.5rem;
       }
     }
+  }
+
+  &__spells {
+    display: grid;
+    gap: 0.75rem;
+
+    > section {
+      padding: 0.9rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+
+      h3 { margin: 0 0 0.6rem; }
+      ul { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
+      li {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid var(--color-border);
+        font-size: 0.78rem;
+
+        span { color: var(--color-text-muted); text-align: right; }
+      }
+    }
+
+    > p { color: var(--color-text-muted); }
+  }
+
+  &__spell-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
   }
 
   &__export { min-height: 3rem; border: 0; border-radius: var(--radius-md); color: white; background: var(--color-primary); font-weight: 700; }

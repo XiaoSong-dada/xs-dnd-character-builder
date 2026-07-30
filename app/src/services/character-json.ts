@@ -42,6 +42,12 @@ export const CharacterJsonService = {
       backgroundToolIds: draft.backgroundToolIds ?? [],
       languages: draft.languages ?? [],
       proficiencyReplacements: draft.proficiencyReplacements ?? [],
+      spellSelections: draft.spellSelections ?? {
+        cantripIds: [],
+        knownSpellIds: [],
+        preparedSpellIds: [],
+        spellbookSpellIds: [],
+      },
     } as CharacterDraft
   },
   downloadDraft(draft: CharacterDraft): void {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { areBaseAbilitiesValid, pointBuyCost } from '@/rules/abilities'
+import { areBaseAbilitiesValid, pointBuyCost, STANDARD_ARRAY } from '@/rules/abilities'
 import type { AbilityKey, AbilityMethod, AbilityScores } from '@/types/character'
 
 const props = defineProps<{
@@ -22,6 +22,18 @@ function update(key: AbilityKey, value: number): void {
   const minimum = props.method === 'point-buy' ? 8 : 3
   const maximum = props.method === 'point-buy' ? 15 : 20
   emit('change', { ...props.scores, [key]: Math.max(minimum, Math.min(maximum, value)) })
+}
+
+function assignStandardValue(key: AbilityKey, value: number): void {
+  if (!STANDARD_ARRAY.includes(value as (typeof STANDARD_ARRAY)[number])) return
+  const previousValue = props.scores[key]
+  const occupiedKey = keys.find((abilityKey) => props.scores[abilityKey] === value)
+  if (!occupiedKey || occupiedKey === key) return
+  emit('change', {
+    ...props.scores,
+    [key]: value,
+    [occupiedKey]: previousValue,
+  })
 }
 
 function minimumScore(): number {
@@ -66,7 +78,7 @@ function toggleChoice(key: AbilityKey): void {
       <strong v-if="method === 'standard-array'">标准数组</strong>
       <strong v-else-if="method === 'point-buy'">27点购点：已使用 {{ pointCost }}/27</strong>
       <strong v-else>自定义属性</strong>
-      <span v-if="method === 'standard-array'">六项基础值必须恰好使用 15、14、13、12、10、8。</span>
+      <span v-if="method === 'standard-array'">将 15、14、13、12、10、8 分别分配给六项基础属性；这里不包含种族加成。选择已使用的数值时，两项属性会自动交换。</span>
       <span v-else-if="method === 'point-buy'">每项范围 8—15，总花费不能超过27点。</span>
       <span v-else>每项范围 3—20；自定义结果应由玩家与DM确认。</span>
     </aside>
@@ -86,7 +98,17 @@ function toggleChoice(key: AbilityKey): void {
     <article v-for="key in keys" :key="key" class="abilities-step__ability">
       <span>{{ labels[key] }}</span>
       <small>最终 {{ scores[key] + (bonuses[key] ?? 0) }}</small>
-      <div class="abilities-step__stepper">
+      <label v-if="method === 'standard-array'" class="abilities-step__standard">
+        <span class="sr-only">选择{{ labels[key] }}基础值</span>
+        <select
+          :aria-label="`选择${labels[key]}基础值`"
+          :value="scores[key]"
+          @change="assignStandardValue(key, Number(($event.target as HTMLSelectElement).value))"
+        >
+          <option v-for="value in STANDARD_ARRAY" :key="value" :value="value">{{ value }}</option>
+        </select>
+      </label>
+      <div v-else class="abilities-step__stepper">
         <button
           type="button"
           :aria-label="`减少${labels[key]}基础值`"
@@ -212,6 +234,24 @@ function toggleChoice(key: AbilityKey): void {
       border-radius: var(--radius-sm);
       background: var(--color-gold-soft);
       font-size: 1.15rem;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+  }
+
+  &__standard {
+    display: grid;
+    grid-column: 1 / -1;
+
+    select {
+      width: 100%;
+      min-height: 2.75rem;
+      padding: 0 0.75rem;
+      border: 1px solid var(--color-gold);
+      border-radius: var(--radius-sm);
+      color: var(--color-text);
+      background: var(--color-gold-soft);
+      font-size: 1rem;
       font-variant-numeric: tabular-nums;
       font-weight: 800;
     }

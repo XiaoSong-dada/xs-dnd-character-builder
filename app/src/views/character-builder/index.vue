@@ -14,6 +14,7 @@ import IdentityStep from '@/views/character-builder/components/IdentityStep.vue'
 import OriginStep from '@/views/character-builder/components/OriginStep.vue'
 import PreferencesStep from '@/views/character-builder/components/PreferencesStep.vue'
 import SetupStep from '@/views/character-builder/components/SetupStep.vue'
+import SpellcastingStep from '@/views/character-builder/components/SpellcastingStep.vue'
 import StartPanel from '@/views/character-builder/components/StartPanel.vue'
 import TimelineStep from '@/views/character-builder/components/TimelineStep.vue'
 import ValidationStep from '@/views/character-builder/components/ValidationStep.vue'
@@ -51,6 +52,7 @@ const {
   selectBackgroundVariant,
   saveTimelineSelection,
   updateEquipment,
+  updateSpells,
   updateIdentity,
   updateAbilities,
   updateRaceAbilityChoices,
@@ -82,7 +84,7 @@ function updateMethod(value: AbilityMethod): void {
   />
   <QuickBuildShell v-else :has-drawer="step !== 'sheet'" :has-actions="step !== 'sheet'">
     <template #header>
-      <StepHeader :eyebrow="stepMeta.eyebrow" :title="stepMeta.title" :current="stepNumber" :total="10" />
+      <StepHeader :eyebrow="stepMeta.eyebrow" :title="stepMeta.title" :current="stepNumber" :total="11" />
     </template>
 
     <UiNotice v-if="importError" tone="error" title="导入失败">{{ importError }}</UiNotice>
@@ -128,7 +130,8 @@ function updateMethod(value: AbilityMethod): void {
       :selections="activeDraft.selections"
       @select="saveTimelineSelection"
     />
-    <EquipmentStep v-else-if="step === 'equipment'" :inventory="activeDraft.inventoryItemIds" :equipped="activeDraft.equippedItemIds" @change="updateEquipment" />
+    <EquipmentStep v-else-if="step === 'equipment'" :class-id="activeDraft.classId" :inventory="activeDraft.inventoryItemIds" :equipped="activeDraft.equippedItemIds" @change="updateEquipment" />
+    <SpellcastingStep v-else-if="step === 'spells'" :draft="activeDraft" @change="updateSpells" />
     <IdentityStep v-else-if="step === 'identity'" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" />
     <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" @go="setStep($event as DraftStep)" />
     <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" @export="exportDraft" />

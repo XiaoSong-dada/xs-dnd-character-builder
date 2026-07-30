@@ -2,6 +2,7 @@ export type RulesetId = '5e-2014'
 export type CompatibilityStatus = 'implemented' | 'index-only' | 'dm-only' | 'unavailable'
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 export type AbilityMethod = 'standard-array' | 'point-buy' | 'custom'
+export type SpellcastingMode = 'prepared' | 'known' | 'spellbook' | 'pact'
 
 export type DraftStep =
   | 'setup'
@@ -11,6 +12,7 @@ export type DraftStep =
   | 'abilities'
   | 'timeline'
   | 'equipment'
+  | 'spells'
   | 'identity'
   | 'validation'
   | 'sheet'
@@ -46,6 +48,13 @@ export interface ProficiencyReplacement {
   readonly replacementId: string
 }
 
+export interface SpellSelections {
+  readonly cantripIds: readonly string[]
+  readonly knownSpellIds: readonly string[]
+  readonly preparedSpellIds: readonly string[]
+  readonly spellbookSpellIds: readonly string[]
+}
+
 export interface CharacterDraft {
   readonly schemaVersion: 2
   readonly id: string
@@ -70,6 +79,7 @@ export interface CharacterDraft {
   readonly selections: readonly ChoiceSelection[]
   readonly inventoryItemIds: readonly string[]
   readonly equippedItemIds: readonly string[]
+  readonly spellSelections: SpellSelections
   readonly name: string
   readonly alignment: string
   readonly notes: string
@@ -104,6 +114,9 @@ export interface DerivedCharacter {
   readonly armorClass: DerivedValue<number>
   readonly initiative: DerivedValue<number>
   readonly attackBonus: DerivedValue<number>
+  readonly attackDamageBonus: DerivedValue<number>
+  readonly spellAttackBonus?: DerivedValue<number>
+  readonly spellSaveDc?: DerivedValue<number>
   readonly speed: DerivedValue<number>
   readonly savingThrows: Readonly<Record<AbilityKey, DerivedValue<number>>>
   readonly skills: Readonly<Record<string, DerivedValue<number>>>

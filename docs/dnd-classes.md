@@ -19,7 +19,7 @@
 - 子职英文名以官方2024目录为准；当前中文名是项目暂译，后续取得可靠的官方中文译名时再统一替换。
 - 对非开放商业内容只记录必要的索引、来源和项目内兼容说明，不复制完整规则正文。
 - 现有 2024 文件作为未来独立规则集资料保留，不进入当前注册表。扩展子职目录仅表示“已建立资料入口”，不表示车卡程序已经实现。
-- 当前 2014 战士实现说明见 [2014 战士](classes/subclasses/fighter/fighter-2014.md) 与 [2014 战斗大师](classes/subclasses/fighter/fighter-battle-master-2014.md)。
+- 当前实现说明见 [2014 战士](classes/subclasses/fighter/fighter-2014.md)、[2014 战斗大师](classes/subclasses/fighter/fighter-battle-master-2014.md)、[2014 野蛮人](classes/subclasses/barbarian/barbarian-2014.md)、[2014 武僧](classes/subclasses/monk/monk-2014.md)、[2014 游荡者](classes/subclasses/rogue/rogue-2014.md)、[2014 圣武士](classes/subclasses/paladin/paladin-2014.md)、[2014 游侠](classes/subclasses/ranger/ranger-2014.md)、[2014 法师](classes/subclasses/wizard/wizard-2014.md)与[2014 邪术师](classes/subclasses/warlock/warlock-2014.md)。
 
 ## 3. 数据字段约定
 
@@ -162,6 +162,7 @@
 ### 5.7 圣武士 Paladin
 
 - 职业 ID：`paladin`
+- 当前2014实现：[2014圣武士实现说明](classes/subclasses/paladin/paladin-2014.md)
 - 职业基础与等级特性：[圣武士详细资料](classes/subclasses/paladin/paladin.md)
 - 2024子职：[奉献之誓](classes/subclasses/paladin/paladin-oath-of-devotion.md)、[荣耀之誓](classes/subclasses/paladin/paladin-oath-of-glory.md)、[古贤之誓](classes/subclasses/paladin/paladin-oath-of-the-ancients.md)、[复仇之誓](classes/subclasses/paladin/paladin-oath-of-vengeance.md)
 - 旧版与扩展子职：[王冠之誓](classes/subclasses/paladin/paladin-oath-of-the-crown.md)、[征服之誓](classes/subclasses/paladin/paladin-oath-of-conquest.md)、[救赎之誓](classes/subclasses/paladin/paladin-oath-of-redemption.md)、[守望之誓](classes/subclasses/paladin/paladin-oath-of-the-watchers.md)、[破誓者（DM选项）](classes/subclasses/paladin/paladin-oathbreaker.md)
@@ -171,6 +172,7 @@
 ### 5.8 游侠 Ranger
 
 - 职业 ID：`ranger`
+- 当前2014实现：[2014游侠实现说明](classes/subclasses/ranger/ranger-2014.md)
 - 职业基础与等级特性：[游侠详细资料](classes/subclasses/ranger/ranger.md)
 - 2024子职：[驯兽师](classes/subclasses/ranger/ranger-beast-master.md)、[妖精漫游者](classes/subclasses/ranger/ranger-fey-wanderer.md)、[幽域追猎者](classes/subclasses/ranger/ranger-gloom-stalker.md)、[猎人](classes/subclasses/ranger/ranger-hunter.md)
 - 旧版与扩展子职：[地平线行者](classes/subclasses/ranger/ranger-horizon-walker.md)、[怪物杀手](classes/subclasses/ranger/ranger-monster-slayer.md)、[集群牧者](classes/subclasses/ranger/ranger-swarmkeeper.md)、[龙兽守卫](classes/subclasses/ranger/ranger-drakewarden.md)
@@ -198,6 +200,7 @@
 ### 5.11 邪术师 Warlock
 
 - 职业 ID：`warlock`
+- 当前2014实现：[2014邪术师实现说明](classes/subclasses/warlock/warlock-2014.md)
 - 职业基础与等级特性：[邪术师详细资料](classes/subclasses/warlock/warlock.md)
 - 2024子职：[至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)、[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)、[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)、[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md)
 - 旧版与扩展子职：[不朽者宗主](classes/subclasses/warlock/warlock-undying-patron.md)、[咒剑宗主](classes/subclasses/warlock/warlock-hexblade-patron.md)、[深海意志宗主](classes/subclasses/warlock/warlock-fathomless-patron.md)、[巨灵宗主](classes/subclasses/warlock/warlock-genie-patron.md)、[死灵宗主](classes/subclasses/warlock/warlock-undead-patron.md)
@@ -207,6 +210,7 @@
 ### 5.12 法师 Wizard
 
 - 职业 ID：`wizard`
+- 当前2014实现：[2014法师实现说明](classes/subclasses/wizard/wizard-2014.md)
 - 职业基础与等级特性：[法师详细资料](classes/subclasses/wizard/wizard.md)
 - 2024子职：[防护师](classes/subclasses/wizard/wizard-abjurer.md)、[预言师](classes/subclasses/wizard/wizard-diviner.md)、[塑能师](classes/subclasses/wizard/wizard-evoker.md)、[幻术师](classes/subclasses/wizard/wizard-illusionist.md)
 - 旧版与扩展子职：[咒法学派](classes/subclasses/wizard/wizard-conjuration.md)、[附魔学派](classes/subclasses/wizard/wizard-enchantment.md)、[死灵学派](classes/subclasses/wizard/wizard-necromancy.md)、[变化学派](classes/subclasses/wizard/wizard-transmutation.md)、[剑咏者](classes/subclasses/wizard/wizard-bladesinging.md)、[战争魔法](classes/subclasses/wizard/wizard-war-magic.md)、[时间魔法](classes/subclasses/wizard/wizard-chronurgy-magic.md)、[重力魔法](classes/subclasses/wizard/wizard-graviturgy-magic.md)、[书士会](classes/subclasses/wizard/wizard-order-of-scribes.md)

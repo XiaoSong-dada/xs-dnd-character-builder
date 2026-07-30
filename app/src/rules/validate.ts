@@ -1,6 +1,7 @@
 import { rulesRepository } from '@/rules/repository'
 import { areBaseAbilitiesValid } from '@/rules/abilities'
 import { buildTimeline } from '@/rules/timeline'
+import { getAvailableSpells, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
 import type { CharacterDraft, ValidationIssue } from '@/types/character'
 
 export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[] {
@@ -8,6 +9,37 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
   if (!draft.classId) issues.push({ id: 'class-required', step: 'class', severity: 'error', message: '尚未选择职业。', resolution: '返回职业步骤选择一个职业。' })
   if (!draft.backgroundId || !draft.raceId) issues.push({ id: 'origin-required', step: 'origin', severity: 'error', message: '角色起源尚未完成。', resolution: '选择2014种族和背景。' })
   if (!draft.name.trim()) issues.push({ id: 'name-required', step: 'identity', severity: 'error', message: '角色还没有名字。', resolution: '填写角色姓名。' })
+  const unavailableEquipment = [...draft.inventoryItemIds, ...draft.equippedItemIds].filter((itemId) => {
+    const item = rulesRepository.getEquipment(itemId)
+    return !item || !item.classIds.includes(draft.classId ?? '')
+  })
+  if (unavailableEquipment.length) {
+    issues.push({
+      id: 'equipment-class-mismatch',
+      step: 'equipment',
+      severity: 'error',
+      message: '物品列表中包含当前职业不可用的初始装备。',
+      resolution: '返回装备步骤，重新选择当前职业的初始物品。',
+    })
+  }
+  if (draft.equippedItemIds.some((itemId) => !draft.inventoryItemIds.includes(itemId))) {
+    issues.push({
+      id: 'equipped-without-owning',
+      step: 'equipment',
+      severity: 'error',
+      message: '角色装备了尚未拥有的物品。',
+      resolution: '先取得该物品，或取消装备。',
+    })
+  }
+  if (!draft.equippedItemIds.some((itemId) => rulesRepository.getEquipment(itemId)?.category === 'weapon')) {
+    issues.push({
+      id: 'weapon-required',
+      step: 'equipment',
+      severity: 'error',
+      message: '尚未装备一件初始武器。',
+      resolution: '在装备步骤选择并装备至少一件武器。',
+    })
+  }
   if (!areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod)) {
     issues.push({
       id: 'ability-method-invalid',
@@ -71,6 +103,49 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         resolution: '可以继续生成预览草稿，但不能标记为资料完整角色。',
       })
     }
+    if (classRule?.spellcasting && draft.targetLevel >= classRule.spellcasting.startsAtLevel) {
+      const selectedSpellIds = getSelectedSpellIds(draft, classRule.spellcasting)
+      const requiredCount = getRequiredSpellCount(draft, classRule.spellcasting)
+      const availableSpells = getAvailableSpells(draft, classRule.spellcasting)
+      const availableIds = new Set(availableSpells.filter((spell) => spell.level > 0).map((spell) => spell.id))
+      const cantripIds = new Set(availableSpells.filter((spell) => spell.level === 0).map((spell) => spell.id))
+      const requiredCantrips = getRequiredCantripCount(draft, classRule.spellcasting)
+      const requiredSpellbook = getRequiredSpellbookCount(draft, classRule.spellcasting)
+      if (selectedSpellIds.length !== requiredCount) {
+        issues.push({
+          id: 'spell-count',
+          step: 'spells',
+          severity: 'error',
+          message: `${classRule.name}的法术选择尚未完成。`,
+          resolution: `需要${classRule.spellcasting.mode === 'prepared' ? '准备' : '掌握'}${requiredCount}个法术。`,
+        })
+      }
+      if (selectedSpellIds.length !== new Set(selectedSpellIds).size) {
+        issues.push({ id: 'duplicate-spell', step: 'spells', severity: 'error', message: '法术列表中存在重复项。', resolution: '每个法术只能选择一次。' })
+      }
+      if (selectedSpellIds.some((id) => !availableIds.has(id))) {
+        issues.push({ id: 'unavailable-spell', step: 'spells', severity: 'error', message: '法术列表中包含当前等级或职业不可用的法术。', resolution: '返回法术步骤重新选择。' })
+      }
+      if (
+        requiredCantrips > 0
+        && (
+        draft.spellSelections.cantripIds.length !== requiredCantrips
+        || draft.spellSelections.cantripIds.some((id) => !cantripIds.has(id))
+        )
+      ) {
+        issues.push({ id: 'cantrip-count', step: 'spells', severity: 'error', message: '戏法选择尚未完成或包含不可用项。', resolution: `需要选择${requiredCantrips}个当前职业戏法。` })
+      }
+      if (
+        classRule.spellcasting.mode === 'spellbook'
+        && (
+          draft.spellSelections.spellbookSpellIds.length !== requiredSpellbook
+          || draft.spellSelections.spellbookSpellIds.some((id) => !availableIds.has(id))
+          || selectedSpellIds.some((id) => !draft.spellSelections.spellbookSpellIds.includes(id))
+        )
+      ) {
+        issues.push({ id: 'spellbook-count', step: 'spells', severity: 'error', message: '法术书内容尚未完成，或准备了不在书中的法术。', resolution: `法术书需要包含${requiredSpellbook}个当前可用法师法术。` })
+      }
+    }
     const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId })
     for (const checkpoint of timeline) {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
@@ -125,6 +200,28 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         severity: 'error',
         message: '职业与背景重复提供了同一项技能熟练。',
         resolution: '选择另一项职业技能，或记录一项同类熟练替换。',
+      })
+    }
+    const expertiseIds = timeline
+      .filter((checkpoint) => checkpoint.kind === 'expertise')
+      .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? [])
+    if (new Set(expertiseIds).size !== expertiseIds.length) {
+      issues.push({
+        id: 'duplicate-expertise',
+        step: 'timeline',
+        severity: 'error',
+        message: '不同等级重复选择了同一项专精。',
+        resolution: '6级专精必须选择尚未拥有专精的熟练项。',
+      })
+    }
+    const proficientIds = new Set([...classSkillIds, ...draft.backgroundSkillIds, 'tool-thieves-tools'])
+    if (expertiseIds.some((optionId) => !proficientIds.has(optionId))) {
+      issues.push({
+        id: 'expertise-without-proficiency',
+        step: 'timeline',
+        severity: 'error',
+        message: '专精选择中包含尚未熟练的技能。',
+        resolution: '只能从职业或背景已提供的技能熟练中选择，盗贼工具也可以选择。',
       })
     }
   }

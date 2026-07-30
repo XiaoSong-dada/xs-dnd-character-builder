@@ -1,4 +1,4 @@
-import type { AbilityKey, CompatibilityStatus, DraftStep, RuleSource, RulesetId } from '@/types/character'
+import type { AbilityKey, CompatibilityStatus, DraftStep, RuleSource, RulesetId, SpellcastingMode } from '@/types/character'
 
 export type CheckpointKind =
   | 'skills'
@@ -6,6 +6,7 @@ export type CheckpointKind =
   | 'subclass'
   | 'ability-improvement'
   | 'maneuvers'
+  | 'expertise'
   | 'class-choice'
 
 export interface RuleOption {
@@ -29,6 +30,31 @@ export interface ChoiceCheckpoint {
   readonly optionIds: readonly string[]
 }
 
+export interface SpellcastingConfig {
+  readonly ruleset: RulesetId
+  readonly mode: SpellcastingMode
+  readonly ability: AbilityKey
+  readonly startsAtLevel: number
+  readonly spellsKnownByLevel?: readonly number[]
+  readonly preparedFormula?: 'ability-plus-half-level' | 'ability-plus-level'
+  readonly cantripsKnownByLevel?: readonly number[]
+  readonly maxSpellLevelByClassLevel: readonly number[]
+  readonly classSpellIds: readonly string[]
+  readonly spellbookSpellsByLevel?: readonly number[]
+}
+
+export interface SpellRule {
+  readonly id: string
+  readonly ruleset: RulesetId
+  readonly name: string
+  readonly englishName: string
+  readonly level: number
+  readonly classIds: readonly string[]
+  readonly summary: string
+  readonly status: CompatibilityStatus
+  readonly sourceIds: readonly string[]
+}
+
 export interface ClassRule {
   readonly id: string
   readonly ruleset: RulesetId
@@ -41,6 +67,7 @@ export interface ClassRule {
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
   readonly checkpoints: readonly ChoiceCheckpoint[]
+  readonly spellcasting?: SpellcastingConfig
 }
 
 export interface SubclassRule {
@@ -92,6 +119,19 @@ export interface BackgroundRule {
   readonly sourceIds: readonly string[]
 }
 
+export interface EquipmentRule {
+  readonly id: string
+  readonly name: string
+  readonly description: string
+  readonly classIds: readonly string[]
+  readonly armorBase?: number
+  readonly addsDexterityToArmor?: boolean
+  readonly armorDexterityCap?: number
+  readonly armorClassBonus?: number
+  readonly category: 'armor' | 'shield' | 'weapon' | 'tool' | 'gear'
+  readonly sourceIds: readonly string[]
+}
+
 export interface RulesRepository {
   readonly sources: readonly RuleSource[]
   readonly classes: readonly ClassRule[]
@@ -99,9 +139,13 @@ export interface RulesRepository {
   readonly races: readonly RaceRule[]
   readonly backgrounds: readonly BackgroundRule[]
   readonly options: readonly RuleOption[]
+  readonly equipment: readonly EquipmentRule[]
+  readonly spells: readonly SpellRule[]
   getClass(id: string): ClassRule | undefined
   getSubclass(id: string): SubclassRule | undefined
   getOption(id: string): RuleOption | undefined
   getRace(id: string): RaceRule | undefined
   getBackground(id: string): BackgroundRule | undefined
+  getEquipment(id: string): EquipmentRule | undefined
+  getSpell(id: string): SpellRule | undefined
 }

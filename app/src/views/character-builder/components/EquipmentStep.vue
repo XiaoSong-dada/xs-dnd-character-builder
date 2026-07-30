@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import OptionCard from '@/components/ui/OptionCard.vue'
+import { computed } from 'vue'
 
-const props = defineProps<{ inventory: readonly string[]; equipped: readonly string[] }>()
+import OptionCard from '@/components/ui/OptionCard.vue'
+import { rulesRepository } from '@/rules/repository'
+
+const props = defineProps<{ classId?: string; inventory: readonly string[]; equipped: readonly string[] }>()
 const emit = defineEmits<{ change: [inventory: readonly string[], equipped: readonly string[]] }>()
-const equipment = [
-  ['chain-mail', '链甲', '基础 AC 16'],
-  ['shield', '盾牌', '装备时 AC +2'],
-  ['longsword', '长剑', '战士常用近战武器'],
-] as const
+const equipment = computed(() => rulesRepository.equipment.filter((item) => item.classIds.includes(props.classId ?? '')))
 
 function toggleOwn(id: string): void {
   const own = props.inventory.includes(id)
@@ -27,10 +26,10 @@ function toggleEquip(id: string): void {
 <template>
   <section class="equipment-step">
     <p>“拥有”与“已装备”是两个状态；只有已装备物品影响角色数值。</p>
-    <article v-for="[id, name, description] in equipment" :key="id">
-      <OptionCard :title="name" :description="description" :state="inventory.includes(id) ? 'complete' : 'default'" @select="toggleOwn(id)" />
-      <button type="button" :disabled="!inventory.includes(id)" :aria-pressed="equipped.includes(id)" @click="toggleEquip(id)">
-        {{ equipped.includes(id) ? '✓ 已装备' : '装备' }}
+    <article v-for="item in equipment" :key="item.id">
+      <OptionCard :title="item.name" :description="item.description" :state="inventory.includes(item.id) ? 'complete' : 'default'" @select="toggleOwn(item.id)" />
+      <button type="button" :disabled="!inventory.includes(item.id)" :aria-pressed="equipped.includes(item.id)" @click="toggleEquip(item.id)">
+        {{ equipped.includes(item.id) ? '✓ 已装备' : '装备' }}
       </button>
     </article>
   </section>

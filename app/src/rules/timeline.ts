@@ -24,5 +24,7 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
   return [
     ...(context.subraceId === 'race-2014-human-variant' ? [variantHumanCheckpoint] : []),
     ...classRule.checkpoints,
-  ].filter((checkpoint) => checkpoint.level <= targetLevel)
+  ]
+    .filter((checkpoint) => checkpoint.level <= targetLevel)
+    .sort((left, right) => left.level - right.level)
 }

@@ -18,14 +18,33 @@ function mountStep(method: 'standard-array' | 'point-buy' = 'standard-array') {
 }
 
 describe('AbilitiesStep', () => {
-  it('changes a score with the minus and plus buttons', async () => {
+  it('assigns standard-array values by swapping the occupied ability', async () => {
     const wrapper = mountStep()
 
-    await wrapper.get('button[aria-label="减少力量基础值"]').trigger('click')
-    await wrapper.get('button[aria-label="增加敏捷基础值"]').trigger('click')
+    await wrapper.get('select[aria-label="选择力量基础值"]').setValue('14')
 
-    expect(wrapper.emitted('change')?.[0]?.[0]).toMatchObject({ str: 14 })
-    expect(wrapper.emitted('change')?.[1]?.[0]).toMatchObject({ dex: 15 })
+    expect(wrapper.emitted('change')?.[0]?.[0]).toEqual({
+      str: 14,
+      dex: 15,
+      con: 13,
+      int: 8,
+      wis: 12,
+      cha: 10,
+    })
+  })
+
+  it('shows race bonuses separately from the standard-array base value', () => {
+    const wrapper = mount(AbilitiesStep, {
+      props: {
+        scores,
+        method: 'standard-array',
+        bonuses: { str: 2 },
+        flexibleCount: 0,
+        flexibleChoices: [],
+      },
+    })
+
+    expect(wrapper.text()).toContain('基础 15 + 种族 2 = 17')
   })
 
   it('disables point-buy increases when all 27 points are used', () => {

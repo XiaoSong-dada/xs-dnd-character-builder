@@ -17,6 +17,12 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     backgroundToolIds: draft.backgroundToolIds ?? [],
     languages: draft.languages ?? [],
     proficiencyReplacements: draft.proficiencyReplacements ?? [],
+    spellSelections: draft.spellSelections ?? {
+      cantripIds: [],
+      knownSpellIds: [],
+      preparedSpellIds: [],
+      spellbookSpellIds: [],
+    },
   }
 }
 

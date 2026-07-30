@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { deriveCharacterSummary } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { validateDraft } from '@/rules/validate'
+import { validateSpellSelections } from '@/rules/spellcasting'
 import { CharacterJsonService } from '@/services/character-json'
 import { DraftStorageService } from '@/services/draft-storage'
 import type {
@@ -40,6 +41,12 @@ function createCharacterDraft(): CharacterDraft {
     selections: [],
     inventoryItemIds: [],
     equippedItemIds: [],
+    spellSelections: {
+      cantripIds: [],
+      knownSpellIds: [],
+      preparedSpellIds: [],
+      spellbookSpellIds: [],
+    },
     name: '',
     alignment: '',
     notes: '',
@@ -74,11 +81,12 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
       abilitiesValid,
       timelineComplete,
       draft.inventoryItemIds.length > 0 && draft.equippedItemIds.length > 0,
+      validateSpellSelections(draft),
       Boolean(draft.name.trim()),
       !hasErrors,
       !hasWarnings,
     ]
-    return checks.filter(Boolean).length * 10
+    return Math.round(checks.filter(Boolean).length * 100 / checks.length)
   })
 
   watch(drafts, (value) => DraftStorageService.saveAll(value), { deep: true })

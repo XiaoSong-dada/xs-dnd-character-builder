@@ -37,11 +37,11 @@ function toggleCheckpoint(checkpointId: string): void {
   expandedCheckpointId.value = currentCheckpointId.value === checkpointId ? undefined : checkpointId
 }
 
-function isManeuverUsedElsewhere(checkpointId: string, optionId: string): boolean {
+function isUniqueOptionUsedElsewhere(checkpointId: string, optionId: string): boolean {
   const checkpoint = checkpoints.value.find((item) => item.id === checkpointId)
-  if (checkpoint?.kind !== 'maneuvers') return false
+  if (checkpoint?.kind !== 'maneuvers' && checkpoint?.kind !== 'expertise') return false
   return checkpoints.value
-    .filter((item) => item.kind === 'maneuvers' && item.id !== checkpointId)
+    .filter((item) => item.kind === checkpoint.kind && item.id !== checkpointId)
     .some((item) => selectedIds(item.id).includes(optionId))
 }
 
@@ -51,7 +51,7 @@ function isBackgroundSkill(checkpointId: string, optionId: string): boolean {
 }
 
 function toggle(checkpointId: string, optionId: string, max: number): void {
-  if (isManeuverUsedElsewhere(checkpointId, optionId) || isBackgroundSkill(checkpointId, optionId)) return
+  if (isUniqueOptionUsedElsewhere(checkpointId, optionId) || isBackgroundSkill(checkpointId, optionId)) return
   const current = selectedIds(checkpointId)
   const next = current.includes(optionId)
     ? current.filter((id) => id !== optionId)
@@ -89,13 +89,13 @@ function toggle(checkpointId: string, optionId: string, max: number): void {
           :description="rulesRepository.getOption(optionId)?.description"
           :state="selectedIds(checkpoint.id).includes(optionId)
             ? 'selected'
-            : isManeuverUsedElsewhere(checkpoint.id, optionId) || isBackgroundSkill(checkpoint.id, optionId)
+            : isUniqueOptionUsedElsewhere(checkpoint.id, optionId) || isBackgroundSkill(checkpoint.id, optionId)
               ? 'locked'
               : rulesRepository.getOption(optionId)?.status === 'index-only'
                 ? 'incompatible'
                 : 'default'"
-          :disabled-reason="isManeuverUsedElsewhere(checkpoint.id, optionId)
-            ? '已在较低等级掌握'
+          :disabled-reason="isUniqueOptionUsedElsewhere(checkpoint.id, optionId)
+            ? checkpoint.kind === 'expertise' ? '已在较低等级获得专精' : '已在较低等级掌握'
             : isBackgroundSkill(checkpoint.id, optionId)
               ? '背景已提供此技能，请选择另一项职业技能'
               : ''"

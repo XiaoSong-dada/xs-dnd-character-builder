@@ -1,0 +1,207 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+
+import OptionCard from '@/components/ui/OptionCard.vue'
+import UiNotice from '@/components/ui/UiNotice.vue'
+import {
+  getAvailableSpells,
+  getMaximumSpellLevel,
+  getRequiredCantripCount,
+  getRequiredSpellbookCount,
+  getRequiredSpellCount,
+  getSelectedSpellIds,
+} from '@/rules/spellcasting'
+import { rulesRepository } from '@/rules/repository'
+import type { CharacterDraft, SpellSelections } from '@/types/character'
+
+const props = defineProps<{ draft: CharacterDraft }>()
+const emit = defineEmits<{ change: [value: SpellSelections] }>()
+const classRule = computed(() => props.draft.classId ? rulesRepository.getClass(props.draft.classId) : undefined)
+const config = computed(() => classRule.value?.spellcasting)
+const requiredCount = computed(() => config.value ? getRequiredSpellCount(props.draft, config.value) : 0)
+const requiredCantripCount = computed(() => config.value ? getRequiredCantripCount(props.draft, config.value) : 0)
+const requiredSpellbookCount = computed(() => config.value ? getRequiredSpellbookCount(props.draft, config.value) : 0)
+const selectedIds = computed(() => config.value ? getSelectedSpellIds(props.draft, config.value) : [])
+const cantrips = computed(() => config.value ? getAvailableSpells(props.draft, config.value).filter((spell) => spell.level === 0) : [])
+const maximumLevel = computed(() => config.value ? getMaximumSpellLevel(config.value, props.draft.targetLevel) : 0)
+const invalidSelectedCount = computed(() => {
+  if (!config.value) return 0
+  const availableIds = new Set(getAvailableSpells(props.draft, config.value).filter((spell) => spell.level > 0).map((spell) => spell.id))
+  return selectedIds.value.filter((id) =>
+    !availableIds.has(id)
+    || (config.value?.mode === 'spellbook' && !props.draft.spellSelections.spellbookSpellIds.includes(id)),
+  ).length
+})
+const groupedSpells = computed(() => {
+  if (!config.value) return []
+  const available = getAvailableSpells(props.draft, config.value)
+  return Array.from({ length: maximumLevel.value }, (_, index) => ({
+    level: index + 1,
+    spells: available.filter((spell) => spell.level === index + 1),
+  })).filter((group) => group.spells.length)
+})
+const modeLabel = computed(() => config.value?.mode === 'prepared' ? '准备' : config.value?.mode === 'spellbook' ? '法术书与准备' : config.value?.mode === 'pact' ? '契约法术' : '掌握')
+
+function toggleSpell(id: string): void {
+  const current = selectedIds.value
+  const next = current.includes(id)
+    ? current.filter((spellId) => spellId !== id)
+    : current.length < requiredCount.value
+      ? [...current, id]
+      : current
+  if (!config.value) return
+  emit('change', {
+    ...props.draft.spellSelections,
+    ...(config.value.mode === 'prepared' || config.value.mode === 'spellbook' ? { preparedSpellIds: next } : { knownSpellIds: next }),
+  })
+}
+
+function toggleCantrip(id: string): void {
+  const current = props.draft.spellSelections.cantripIds
+  const next = current.includes(id)
+    ? current.filter((spellId) => spellId !== id)
+    : current.length < requiredCantripCount.value ? [...current, id] : current
+  emit('change', { ...props.draft.spellSelections, cantripIds: next })
+}
+
+function toggleSpellbook(id: string): void {
+  const current = props.draft.spellSelections.spellbookSpellIds
+  const removing = current.includes(id)
+  const nextBook = removing
+    ? current.filter((spellId) => spellId !== id)
+    : current.length < requiredSpellbookCount.value ? [...current, id] : current
+  emit('change', {
+    ...props.draft.spellSelections,
+    spellbookSpellIds: nextBook,
+    preparedSpellIds: removing
+      ? props.draft.spellSelections.preparedSpellIds.filter((spellId) => spellId !== id)
+      : props.draft.spellSelections.preparedSpellIds,
+  })
+}
+</script>
+
+<template>
+  <section class="spellcasting-step">
+    <UiNotice v-if="!config" tone="info" title="当前职业无需配置法术">
+      这一步会自动跳过，不影响角色完成。
+    </UiNotice>
+    <UiNotice v-else-if="draft.targetLevel < config.startsAtLevel" tone="info" title="施法尚未开始">
+      {{ classRule?.name }}从{{ config.startsAtLevel }}级开始施法；当前等级无需选择法术。
+    </UiNotice>
+    <template v-else>
+      <header>
+        <div>
+          <span>{{ config.ability.toUpperCase() }}施法 · 最高{{ maximumLevel }}环</span>
+          <h3>{{ modeLabel }}法术</h3>
+        </div>
+        <strong :class="{ 'spellcasting-step__count--complete': selectedIds.length === requiredCount }">
+          {{ selectedIds.length }} / {{ requiredCount }}
+        </strong>
+      </header>
+      <UiNotice tone="info" :title="config.mode === 'prepared' ? '长休后可以更换' : '升级时可以替换'">
+        {{ config.mode === 'spellbook'
+          ? '先写入法术书，再从书中准备法术；升级时自动增加两个可写入名额。'
+          : config.mode === 'prepared'
+          ? '准备数量由施法属性与职业等级计算；誓言法术后续将作为始终准备法术单独列出。'
+          : config.mode === 'pact'
+            ? '契约法术位按短休恢复；本页负责戏法与已知法术，秘法奥秘在后续职业资源批次接入。'
+            : '掌握数量来自2014职业表，所选法术必须在当前可用环级内。' }}
+      </UiNotice>
+      <UiNotice v-if="invalidSelectedCount" tone="warning" title="保留了需要重新确认的旧选择">
+        有{{ invalidSelectedCount }}个法术来自之前的职业、等级或法术书状态；它们没有被静默删除，但不会计入合法完成。
+      </UiNotice>
+      <section v-if="requiredCantripCount" class="spellcasting-step__level">
+        <h4>戏法 · {{ draft.spellSelections.cantripIds.length }} / {{ requiredCantripCount }}</h4>
+        <OptionCard
+          v-for="spell in cantrips"
+          :key="spell.id"
+          :title="spell.name"
+          :description="spell.englishName"
+          :state="draft.spellSelections.cantripIds.includes(spell.id) ? 'selected' : 'default'"
+          @select="toggleCantrip(spell.id)"
+        >
+          <template #suffix>
+            {{ draft.spellSelections.cantripIds.includes(spell.id) ? '已选' : draft.spellSelections.cantripIds.length >= requiredCantripCount ? '已满' : '选择' }}
+          </template>
+        </OptionCard>
+      </section>
+      <section v-if="config.mode === 'spellbook'" class="spellcasting-step__level">
+        <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.length }} / {{ requiredSpellbookCount }}</h4>
+        <OptionCard
+          v-for="spell in groupedSpells.flatMap((group) => group.spells)"
+          :key="`book-${spell.id}`"
+          :title="spell.name"
+          :description="`${spell.level}环 · ${spell.englishName}`"
+          :state="draft.spellSelections.spellbookSpellIds.includes(spell.id) ? 'complete' : 'default'"
+          @select="toggleSpellbook(spell.id)"
+        >
+          <template #suffix>
+            {{ draft.spellSelections.spellbookSpellIds.includes(spell.id) ? '在书中' : draft.spellSelections.spellbookSpellIds.length >= requiredSpellbookCount ? '已满' : '写入' }}
+          </template>
+        </OptionCard>
+      </section>
+      <section v-for="group in groupedSpells" :key="group.level" class="spellcasting-step__level">
+        <h4>{{ group.level }}环{{ config.mode === 'spellbook' ? '准备法术' : '法术' }}</h4>
+        <OptionCard
+          v-for="spell in config.mode === 'spellbook' ? group.spells.filter((item) => draft.spellSelections.spellbookSpellIds.includes(item.id)) : group.spells"
+          :key="spell.id"
+          :title="spell.name"
+          :description="`${spell.englishName} · ${spell.summary}`"
+          :state="selectedIds.includes(spell.id) ? 'selected' : 'default'"
+          @select="toggleSpell(spell.id)"
+        >
+          <template #suffix>
+            <span v-if="selectedIds.includes(spell.id)">已选</span>
+            <span v-else-if="selectedIds.length >= requiredCount">已满</span>
+            <span v-else>选择</span>
+          </template>
+        </OptionCard>
+      </section>
+    </template>
+  </section>
+</template>
+
+<style scoped lang="scss">
+.spellcasting-step {
+  display: grid;
+  gap: 0.85rem;
+
+  > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+
+    span { color: var(--color-text-muted); font-size: 0.72rem; font-weight: 700; }
+    h3 { margin: 0.2rem 0 0; }
+    > strong {
+      min-width: 4.5rem;
+      padding: 0.5rem 0.7rem;
+      border-radius: var(--radius-md);
+      color: var(--color-primary);
+      background: var(--color-primary-soft);
+      text-align: center;
+    }
+  }
+
+  &__count--complete {
+    color: var(--color-success) !important;
+    background: var(--color-success-soft) !important;
+  }
+
+  &__level {
+    display: grid;
+    gap: 0.55rem;
+
+    h4 {
+      margin: 0.25rem 0 0;
+      color: var(--color-text-muted);
+      font-size: 0.78rem;
+    }
+  }
+}
+</style>

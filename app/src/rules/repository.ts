@@ -1,5 +1,9 @@
 import { classPreviews2014 } from '@/rules/data/classes-2014'
+import { arcaneCasterClasses2014, arcaneCasterOptions2014, arcaneCasterSpells2014, arcaneCasterSubclasses2014 } from '@/rules/data/arcane-casters-2014'
 import { fighterOptions, fighterRule, fighterSubclasses } from '@/rules/data/fighter'
+import { martialClasses2014, martialOptions2014, martialSubclasses2014 } from '@/rules/data/martials-2014'
+import { equipment2014 } from '@/rules/data/equipment-2014'
+import { halfCasterClasses2014, halfCasterOptions2014, halfCasterSpells2014, halfCasterSubclasses2014 } from '@/rules/data/half-casters-2014'
 import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
 import type { RulesRepository } from '@/types/rules'
 
@@ -10,11 +14,16 @@ const sources = [
 
 export const rulesRepository: RulesRepository = {
   sources,
-  classes: classPreviews2014.map((item) => item.id === fighterRule.id ? fighterRule : { ...item, checkpoints: [] }),
-  subclasses: fighterSubclasses,
+  classes: classPreviews2014.map((item) =>
+    [fighterRule, ...martialClasses2014, ...halfCasterClasses2014, ...arcaneCasterClasses2014].find((classRule) => classRule.id === item.id)
+    ?? { ...item, checkpoints: [] },
+  ),
+  subclasses: [...fighterSubclasses, ...martialSubclasses2014, ...halfCasterSubclasses2014, ...arcaneCasterSubclasses2014],
   races: races2014,
   backgrounds: backgrounds2014,
-  options: fighterOptions,
+  options: [...fighterOptions, ...martialOptions2014, ...halfCasterOptions2014, ...arcaneCasterOptions2014],
+  equipment: equipment2014,
+  spells: [...halfCasterSpells2014, ...arcaneCasterSpells2014],
   getClass(id) {
     return this.classes.find((item) => item.id === id)
   },
@@ -29,5 +38,11 @@ export const rulesRepository: RulesRepository = {
   },
   getBackground(id) {
     return this.backgrounds.find((item) => item.id === id)
+  },
+  getEquipment(id) {
+    return this.equipment.find((item) => item.id === id)
+  },
+  getSpell(id) {
+    return this.spells.find((item) => item.id === id)
   },
 }
