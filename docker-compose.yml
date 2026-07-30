@@ -1,0 +1,12 @@
+name: dnd-character-builder
+
+services:
+  app:
+    container_name: dnd-character-builder-app
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      pull: true
+    ports:
+      - "${APP_PORT:-8080}:80"
+    restart: unless-stopped
