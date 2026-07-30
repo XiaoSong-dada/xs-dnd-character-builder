@@ -132,7 +132,11 @@ function updateMethod(value: AbilityMethod): void {
       :selections="activeDraft.selections"
       @select="saveTimelineSelection"
     />
-    <EquipmentStep v-else-if="step === 'equipment'" :class-id="activeDraft.classId" :inventory="activeDraft.inventoryItemIds" :equipped="activeDraft.equippedItemIds" @change="updateEquipment" />
+    <EquipmentStep
+      v-else-if="step === 'equipment'"
+      :draft="activeDraft"
+      @change="updateEquipment"
+    />
     <SpellcastingStep v-else-if="step === 'spells'" :draft="activeDraft" @change="updateSpells" />
     <IdentityStep v-else-if="step === 'identity'" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" />
     <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" @go="setStep($event as DraftStep)" />

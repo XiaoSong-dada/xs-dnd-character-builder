@@ -55,8 +55,33 @@ export interface SpellSelections {
   readonly spellbookSpellIds: readonly string[]
 }
 
+export interface StartingEquipmentSelection {
+  readonly groupId: string
+  readonly optionId: string
+  readonly pickedItemIds: readonly string[]
+}
+
+export type InventorySourceKind = 'class' | 'background' | 'legacy'
+
+export interface InventoryEntry {
+  readonly id: string
+  readonly itemId: string
+  readonly quantity: number
+  readonly sourceKind: InventorySourceKind
+  readonly sourceId: string
+  readonly equippedQuantity: number
+}
+
+export interface CurrencyWallet {
+  readonly cp: number
+  readonly sp: number
+  readonly ep: number
+  readonly gp: number
+  readonly pp: number
+}
+
 export interface CharacterDraft {
-  readonly schemaVersion: 2
+  readonly schemaVersion: 3
   readonly id: string
   readonly ruleset: '5e-2014'
   readonly createdAt: string
@@ -77,8 +102,10 @@ export interface CharacterDraft {
   readonly proficiencyReplacements: readonly ProficiencyReplacement[]
   readonly baseAbilities: AbilityScores
   readonly selections: readonly ChoiceSelection[]
-  readonly inventoryItemIds: readonly string[]
-  readonly equippedItemIds: readonly string[]
+  readonly startingEquipmentSelections: readonly StartingEquipmentSelection[]
+  readonly inventory: readonly InventoryEntry[]
+  readonly currency: CurrencyWallet
+  readonly equipmentNeedsReview: boolean
   readonly spellSelections: SpellSelections
   readonly name: string
   readonly alignment: string

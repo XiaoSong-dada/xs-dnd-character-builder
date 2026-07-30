@@ -1,12 +1,14 @@
 import type { CharacterDraft, LegacyDraftRecord } from '@/types/character'
+import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
 
-const STORAGE_KEY = 'dnd-character-builder:drafts:v2'
+const STORAGE_KEY = 'dnd-character-builder:drafts:v3'
+const PREVIOUS_STORAGE_KEY = 'dnd-character-builder:drafts:v2'
 const LEGACY_STORAGE_KEY = 'dnd-character-builder:drafts:v1'
 
 function isDraft(value: unknown): value is CharacterDraft {
   if (!value || typeof value !== 'object') return false
   const draft = value as Partial<CharacterDraft>
-  return draft.schemaVersion === 2 && draft.ruleset === '5e-2014' && typeof draft.id === 'string'
+  return draft.schemaVersion === 3 && draft.ruleset === '5e-2014' && typeof draft.id === 'string'
 }
 
 function normalizeDraft(draft: CharacterDraft): CharacterDraft {
@@ -17,6 +19,10 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     backgroundToolIds: draft.backgroundToolIds ?? [],
     languages: draft.languages ?? [],
     proficiencyReplacements: draft.proficiencyReplacements ?? [],
+    startingEquipmentSelections: draft.startingEquipmentSelections ?? [],
+    inventory: draft.inventory ?? [],
+    currency: draft.currency ?? EMPTY_CURRENCY,
+    equipmentNeedsReview: draft.equipmentNeedsReview ?? false,
     spellSelections: draft.spellSelections ?? {
       cantripIds: [],
       knownSpellIds: [],
@@ -24,6 +30,35 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
       spellbookSpellIds: [],
     },
   }
+}
+
+function migrateV2(value: unknown): CharacterDraft | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const draft = value as Record<string, unknown>
+  if (draft.schemaVersion !== 2 || draft.ruleset !== '5e-2014' || typeof draft.id !== 'string') return undefined
+  const inventoryItemIds = Array.isArray(draft.inventoryItemIds)
+    ? draft.inventoryItemIds.filter((item): item is string => typeof item === 'string')
+    : []
+  const equippedItemIds = new Set(Array.isArray(draft.equippedItemIds)
+    ? draft.equippedItemIds.filter((item): item is string => typeof item === 'string')
+    : [])
+  const quantityById = new Map<string, number>()
+  for (const itemId of inventoryItemIds) quantityById.set(itemId, (quantityById.get(itemId) ?? 0) + 1)
+  return normalizeDraft({
+    ...draft,
+    schemaVersion: 3,
+    startingEquipmentSelections: [],
+    inventory: [...quantityById].map(([itemId, quantity]) => ({
+      id: `legacy:${draft.id}:${itemId}`,
+      itemId,
+      quantity,
+      sourceKind: 'legacy' as const,
+      sourceId: draft.id as string,
+      equippedQuantity: equippedItemIds.has(itemId) ? 1 : 0,
+    })),
+    currency: EMPTY_CURRENCY,
+    equipmentNeedsReview: true,
+  } as unknown as CharacterDraft)
 }
 
 function readArray(key: string): readonly unknown[] {
@@ -39,7 +74,12 @@ function readArray(key: string): readonly unknown[] {
 
 export const DraftStorageService = {
   loadAll(): readonly CharacterDraft[] {
-    return readArray(STORAGE_KEY).filter(isDraft).map(normalizeDraft)
+    const current = readArray(STORAGE_KEY).filter(isDraft).map(normalizeDraft)
+    const currentIds = new Set(current.map((draft) => draft.id))
+    const migrated = readArray(PREVIOUS_STORAGE_KEY)
+      .map(migrateV2)
+      .filter((draft): draft is CharacterDraft => Boolean(draft && !currentIds.has(draft.id)))
+    return [...current, ...migrated]
   },
   loadLegacy(): readonly LegacyDraftRecord[] {
     return readArray(LEGACY_STORAGE_KEY).flatMap((raw, index) => {

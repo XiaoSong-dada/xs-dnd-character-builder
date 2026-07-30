@@ -14,7 +14,7 @@ import type { CharacterDraft } from '@/types/character'
 
 function draft(patch: Partial<CharacterDraft>): CharacterDraft {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: 'arcane-test',
     ruleset: '5e-2014',
     createdAt: '',
@@ -32,8 +32,10 @@ function draft(patch: Partial<CharacterDraft>): CharacterDraft {
     proficiencyReplacements: [],
     baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
     selections: [],
-    inventoryItemIds: [],
-    equippedItemIds: [],
+    startingEquipmentSelections: [],
+    inventory: [],
+    currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    equipmentNeedsReview: false,
     spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
     name: '奥术测试',
     alignment: '',

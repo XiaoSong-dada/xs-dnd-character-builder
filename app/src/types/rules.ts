@@ -124,12 +124,51 @@ export interface EquipmentRule {
   readonly name: string
   readonly description: string
   readonly classIds: readonly string[]
+  readonly equippable: boolean
+  readonly weaponKind?: 'simple-melee' | 'simple-ranged' | 'martial-melee' | 'martial-ranged'
+  readonly contents?: readonly EquipmentGrant[]
   readonly armorBase?: number
   readonly addsDexterityToArmor?: boolean
   readonly armorDexterityCap?: number
   readonly armorClassBonus?: number
   readonly category: 'armor' | 'shield' | 'weapon' | 'tool' | 'gear'
   readonly sourceIds: readonly string[]
+}
+
+export interface EquipmentGrant {
+  readonly itemId: string
+  readonly quantity: number
+}
+
+export interface EquipmentPickRule {
+  readonly count: number
+  readonly allowedItemIds?: readonly string[]
+  readonly allowedWeaponKinds?: readonly NonNullable<EquipmentRule['weaponKind']>[]
+}
+
+export interface StartingEquipmentOption {
+  readonly id: string
+  readonly label: string
+  readonly grants: readonly EquipmentGrant[]
+  readonly pick?: EquipmentPickRule
+}
+
+export interface StartingEquipmentGroup {
+  readonly id: string
+  readonly title: string
+  readonly options: readonly StartingEquipmentOption[]
+}
+
+export interface ClassStartingEquipmentRule {
+  readonly classId: string
+  readonly fixedGrants: readonly EquipmentGrant[]
+  readonly groups: readonly StartingEquipmentGroup[]
+}
+
+export interface BackgroundStartingEquipmentRule {
+  readonly backgroundId: string
+  readonly grants: readonly EquipmentGrant[]
+  readonly gp: number
 }
 
 export interface RulesRepository {
@@ -140,6 +179,8 @@ export interface RulesRepository {
   readonly backgrounds: readonly BackgroundRule[]
   readonly options: readonly RuleOption[]
   readonly equipment: readonly EquipmentRule[]
+  readonly classStartingEquipment: readonly ClassStartingEquipmentRule[]
+  readonly backgroundStartingEquipment: readonly BackgroundStartingEquipmentRule[]
   readonly spells: readonly SpellRule[]
   getClass(id: string): ClassRule | undefined
   getSubclass(id: string): SubclassRule | undefined
@@ -147,5 +188,7 @@ export interface RulesRepository {
   getRace(id: string): RaceRule | undefined
   getBackground(id: string): BackgroundRule | undefined
   getEquipment(id: string): EquipmentRule | undefined
+  getClassStartingEquipment(classId: string): ClassStartingEquipmentRule | undefined
+  getBackgroundStartingEquipment(backgroundId: string): BackgroundStartingEquipmentRule | undefined
   getSpell(id: string): SpellRule | undefined
 }

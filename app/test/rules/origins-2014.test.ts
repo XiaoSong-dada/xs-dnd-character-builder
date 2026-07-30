@@ -6,7 +6,7 @@ import type { CharacterDraft } from '@/types/character'
 
 function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: 'origin-test',
     ruleset: '5e-2014',
     createdAt: '',
@@ -21,8 +21,10 @@ function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
     proficiencyReplacements: [],
     baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 },
     selections: [],
-    inventoryItemIds: [],
-    equippedItemIds: [],
+    startingEquipmentSelections: [],
+    inventory: [],
+    currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    equipmentNeedsReview: false,
     name: '',
     alignment: '',
     notes: '',

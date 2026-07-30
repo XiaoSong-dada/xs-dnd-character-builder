@@ -2,6 +2,7 @@ import { rulesRepository } from '@/rules/repository'
 import { areBaseAbilitiesValid } from '@/rules/abilities'
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
+import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import type { CharacterDraft, ValidationIssue } from '@/types/character'
 
 export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[] {
@@ -9,36 +10,61 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
   if (!draft.classId) issues.push({ id: 'class-required', step: 'class', severity: 'error', message: '尚未选择职业。', resolution: '返回职业步骤选择一个职业。' })
   if (!draft.backgroundId || !draft.raceId) issues.push({ id: 'origin-required', step: 'origin', severity: 'error', message: '角色起源尚未完成。', resolution: '选择2014种族和背景。' })
   if (!draft.name.trim()) issues.push({ id: 'name-required', step: 'identity', severity: 'error', message: '角色还没有名字。', resolution: '填写角色姓名。' })
-  const unavailableEquipment = [...draft.inventoryItemIds, ...draft.equippedItemIds].filter((itemId) => {
-    const item = rulesRepository.getEquipment(itemId)
-    return !item || !item.classIds.includes(draft.classId ?? '')
-  })
-  if (unavailableEquipment.length) {
+  if (draft.classId && !isStartingEquipmentComplete(draft)) {
     issues.push({
-      id: 'equipment-class-mismatch',
+      id: 'starting-equipment-incomplete',
       step: 'equipment',
       severity: 'error',
-      message: '物品列表中包含当前职业不可用的初始装备。',
-      resolution: '返回装备步骤，重新选择当前职业的初始物品。',
+      message: '职业起始装备选择尚未完成。',
+      resolution: '返回装备步骤，完成每一个必选装备组。',
     })
   }
-  if (draft.equippedItemIds.some((itemId) => !draft.inventoryItemIds.includes(itemId))) {
+  if (draft.equipmentNeedsReview) {
     issues.push({
-      id: 'equipped-without-owning',
+      id: 'equipment-review-required',
       step: 'equipment',
       severity: 'error',
-      message: '角色装备了尚未拥有的物品。',
-      resolution: '先取得该物品，或取消装备。',
+      message: '这份旧草稿的起始装备需要按2014规则重新确认。',
+      resolution: '完成职业装备分支后，旧物品仍会保留为迁移记录。',
     })
   }
-  if (!draft.equippedItemIds.some((itemId) => rulesRepository.getEquipment(itemId)?.category === 'weapon')) {
+  if (draft.inventory.some((entry) =>
+    !rulesRepository.getEquipment(entry.itemId)
+    || entry.quantity < 1
+    || entry.equippedQuantity < 0
+    || entry.equippedQuantity > entry.quantity,
+  )) {
     issues.push({
-      id: 'weapon-required',
+      id: 'inventory-invalid',
       step: 'equipment',
       severity: 'error',
-      message: '尚未装备一件初始武器。',
-      resolution: '在装备步骤选择并装备至少一件武器。',
+      message: '物品栏包含未知物品、无效数量或超量装备。',
+      resolution: '返回装备步骤重新生成物品栏，并检查穿戴数量。',
     })
+  }
+  const duplicateEntryIds = draft.inventory.map((entry) => entry.id)
+  if (new Set(duplicateEntryIds).size !== duplicateEntryIds.length) {
+    issues.push({ id: 'inventory-entry-duplicate', step: 'equipment', severity: 'error', message: '物品栏来源记录发生重复。', resolution: '返回装备步骤重新确认装备。' })
+  }
+  if (draft.classId && draft.backgroundId && isStartingEquipmentComplete(draft) && !draft.equipmentNeedsReview) {
+    const expected = buildStartingEquipmentState(draft, false)
+    const expectedKeys = expected.inventory
+      .filter((entry) => entry.sourceKind !== 'legacy')
+      .map((entry) => `${entry.sourceKind}:${entry.sourceId}:${entry.itemId}:${entry.quantity}`)
+      .sort()
+    const actualKeys = draft.inventory
+      .filter((entry) => entry.sourceKind !== 'legacy')
+      .map((entry) => `${entry.sourceKind}:${entry.sourceId}:${entry.itemId}:${entry.quantity}`)
+      .sort()
+    if (expectedKeys.join('|') !== actualKeys.join('|') || draft.currency.gp !== expected.currency.gp) {
+      issues.push({
+        id: 'starting-equipment-out-of-sync',
+        step: 'equipment',
+        severity: 'error',
+        message: '物品栏或起始金币与当前职业、背景选择不一致。',
+        resolution: '返回装备步骤重新确认一次当前选择。',
+      })
+    }
   }
   if (!areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod)) {
     issues.push({

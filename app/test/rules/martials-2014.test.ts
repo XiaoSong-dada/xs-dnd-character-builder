@@ -8,7 +8,7 @@ import type { CharacterDraft } from '@/types/character'
 
 function draft(patch: Partial<CharacterDraft>): CharacterDraft {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: 'martial-test',
     ruleset: '5e-2014',
     createdAt: '',
@@ -25,8 +25,10 @@ function draft(patch: Partial<CharacterDraft>): CharacterDraft {
     proficiencyReplacements: [],
     baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 },
     selections: [],
-    inventoryItemIds: [],
-    equippedItemIds: [],
+    startingEquipmentSelections: [],
+    inventory: [],
+    currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    equipmentNeedsReview: false,
     name: '测试角色',
     alignment: '',
     notes: '',
@@ -95,8 +97,10 @@ describe('2014 pure martial classes', () => {
   it('derives rogue leather armor from the equipment registry', () => {
     const result = deriveCharacter(draft({
       classId: 'class-2014-rogue',
-      inventoryItemIds: ['leather-armor', 'rapier'],
-      equippedItemIds: ['leather-armor', 'rapier'],
+      inventory: [
+        { id: 'test-leather', itemId: 'leather-armor', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 },
+        { id: 'test-rapier', itemId: 'rapier', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 },
+      ],
     }))
 
     expect(result.armorClass.value).toBe(13)

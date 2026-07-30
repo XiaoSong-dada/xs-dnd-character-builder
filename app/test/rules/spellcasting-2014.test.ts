@@ -8,7 +8,7 @@ import type { CharacterDraft } from '@/types/character'
 
 function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: 'spell-test',
     ruleset: '5e-2014',
     createdAt: '',
@@ -26,8 +26,13 @@ function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
     proficiencyReplacements: [],
     baseAbilities: { str: 15, dex: 10, con: 13, int: 8, wis: 12, cha: 14 },
     selections: [],
-    inventoryItemIds: ['chain-mail', 'longsword'],
-    equippedItemIds: ['chain-mail', 'longsword'],
+    startingEquipmentSelections: [],
+    inventory: [
+      { id: 'test-chain-mail', itemId: 'chain-mail', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 },
+      { id: 'test-longsword', itemId: 'longsword', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 },
+    ],
+    currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    equipmentNeedsReview: false,
     spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
     name: '施法测试',
     alignment: '',

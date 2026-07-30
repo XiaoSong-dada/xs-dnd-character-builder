@@ -8,9 +8,20 @@ import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { rulesRepository } from '@/rules/repository'
 import { buildTimeline } from '@/rules/timeline'
 import { validateSpellSelections } from '@/rules/spellcasting'
+import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
-import type { AbilityKey, AbilityMethod, AbilityScores, CharacterDraft, DraftStep, SpellSelections } from '@/types/character'
+import type {
+  AbilityKey,
+  AbilityMethod,
+  AbilityScores,
+  CharacterDraft,
+  CurrencyWallet,
+  DraftStep,
+  InventoryEntry,
+  SpellSelections,
+  StartingEquipmentSelection,
+} from '@/types/character'
 
 const STEP_ORDER: readonly DraftStep[] = ['setup', 'preferences', 'class', 'origin', 'abilities', 'timeline', 'equipment', 'spells', 'identity', 'validation', 'sheet']
 const STEP_META: Record<DraftStep, { eyebrow: string; title: string }> = {
@@ -93,8 +104,7 @@ export function useCharacterBuilderPage() {
     }
     if (step.value === 'timeline') return timelineComplete.value
     if (step.value === 'equipment') {
-      return draft.inventoryItemIds.length > 0
-        && draft.equippedItemIds.some((itemId) => rulesRepository.getEquipment(itemId)?.category === 'weapon')
+      return isStartingEquipmentComplete(draft) && !draft.equipmentNeedsReview
     }
     if (step.value === 'spells') return validateSpellSelections(draft)
     if (step.value === 'identity') return Boolean(draft.name.trim())
@@ -145,13 +155,20 @@ export function useCharacterBuilderPage() {
     if (previous) setStep(previous)
   }
 
-  function requestChange(change: DraftChange, title: string, apply: () => void): void {
+  function requestChange(
+    change: DraftChange,
+    title: string,
+    apply: () => void,
+    additionalAffected: readonly string[] = [],
+  ): void {
     const draft = activeDraft.value
     if (!draft) return
     const impact = getDependencyImpact(draft, change)
-    const affected = impact.invalidated.filter((checkpointId) =>
-      draft.selections.some((selection) => selection.checkpointId === checkpointId && !selection.invalidatedAt),
-    )
+    const affected = [
+      ...impact.invalidated.filter((checkpointId) =>
+        draft.selections.some((selection) => selection.checkpointId === checkpointId && !selection.invalidatedAt)),
+      ...additionalAffected,
+    ]
     if (!affected.length) {
       apply()
       return
@@ -196,8 +213,17 @@ export function useCharacterBuilderPage() {
     requestChange(change, '更换职业', () => {
       const impact = getDependencyImpact(draft, change)
       store.invalidateSelections(impact.invalidated, '更换职业后需要重新确认')
-      store.updateDraft({ classId, subclassId: undefined })
-    })
+      const equipmentDraft = { ...draft, classId, startingEquipmentSelections: [] }
+      const equipment = buildStartingEquipmentState(equipmentDraft)
+      store.updateDraft({
+        classId,
+        subclassId: undefined,
+        startingEquipmentSelections: [],
+        inventory: equipment.inventory,
+        currency: equipment.currency,
+        equipmentNeedsReview: false,
+      })
+    }, draft.inventory.some((entry) => entry.sourceKind === 'class') ? ['职业起始装备'] : [])
   }
 
   function selectRace(id: string): void {
@@ -224,17 +250,37 @@ export function useCharacterBuilderPage() {
 
   function selectBackground(id: string): void {
     const background = rulesRepository.getBackground(id)
-    store.updateDraft({
-      backgroundId: id,
-      backgroundVariantId: undefined,
-      backgroundSkillIds: background?.skillIds ?? [],
-      backgroundToolIds: background?.toolIds ?? [],
-      languages: [],
-    })
+    const draft = activeDraft.value
+    if (!draft || draft.backgroundId === id) return
+    const apply = () => {
+      const equipment = buildStartingEquipmentState({ ...draft, backgroundId: id })
+      store.updateDraft({
+        backgroundId: id,
+        backgroundVariantId: undefined,
+        backgroundSkillIds: background?.skillIds ?? [],
+        backgroundToolIds: background?.toolIds ?? [],
+        languages: [],
+        inventory: equipment.inventory,
+        currency: equipment.currency,
+      })
+    }
+    requestChange(
+      { kind: 'background', value: id },
+      '更换背景',
+      apply,
+      draft.inventory.some((entry) => entry.sourceKind === 'background') ? ['背景固定装备与起始金币'] : [],
+    )
   }
 
   function selectBackgroundVariant(id: string | undefined): void {
-    store.updateDraft({ backgroundVariantId: id })
+    const draft = activeDraft.value
+    if (!draft || draft.backgroundVariantId === id) return
+    const equipment = buildStartingEquipmentState({ ...draft, backgroundVariantId: id })
+    store.updateDraft({
+      backgroundVariantId: id,
+      inventory: equipment.inventory,
+      currency: equipment.currency,
+    })
   }
 
   function saveTimelineSelection(checkpointId: string, optionIds: readonly string[]): void {
@@ -248,8 +294,17 @@ export function useCharacterBuilderPage() {
     }
   }
 
-  function updateEquipment(inventoryItemIds: readonly string[], equippedItemIds: readonly string[]): void {
-    store.updateDraft({ inventoryItemIds, equippedItemIds })
+  function updateEquipment(
+    startingEquipmentSelections: readonly StartingEquipmentSelection[],
+    inventory: readonly InventoryEntry[],
+    currency: CurrencyWallet,
+  ): void {
+    store.updateDraft({
+      startingEquipmentSelections,
+      inventory,
+      currency,
+      equipmentNeedsReview: false,
+    })
   }
 
   function updateSpells(value: SpellSelections): void {

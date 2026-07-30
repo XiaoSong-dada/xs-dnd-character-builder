@@ -5,6 +5,7 @@ import { martialClasses2014, martialOptions2014, martialSubclasses2014 } from '@
 import { equipment2014 } from '@/rules/data/equipment-2014'
 import { halfCasterClasses2014, halfCasterOptions2014, halfCasterSpells2014, halfCasterSubclasses2014 } from '@/rules/data/half-casters-2014'
 import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
+import { backgroundStartingEquipment2014, classStartingEquipment2014 } from '@/rules/data/starting-equipment-2014'
 import type { RulesRepository } from '@/types/rules'
 
 const sources = [
@@ -23,6 +24,8 @@ export const rulesRepository: RulesRepository = {
   backgrounds: backgrounds2014,
   options: [...fighterOptions, ...martialOptions2014, ...halfCasterOptions2014, ...arcaneCasterOptions2014],
   equipment: equipment2014,
+  classStartingEquipment: classStartingEquipment2014,
+  backgroundStartingEquipment: backgroundStartingEquipment2014,
   spells: [...halfCasterSpells2014, ...arcaneCasterSpells2014],
   getClass(id) {
     return this.classes.find((item) => item.id === id)
@@ -41,6 +44,17 @@ export const rulesRepository: RulesRepository = {
   },
   getEquipment(id) {
     return this.equipment.find((item) => item.id === id)
+  },
+  getClassStartingEquipment(classId) {
+    return this.classStartingEquipment.find((item) => item.classId === classId)
+  },
+  getBackgroundStartingEquipment(backgroundId) {
+    const direct = this.backgroundStartingEquipment.find((item) => item.backgroundId === backgroundId)
+    if (direct) return direct
+    const background = this.getBackground(backgroundId)
+    return background?.parentBackgroundId
+      ? this.backgroundStartingEquipment.find((item) => item.backgroundId === background.parentBackgroundId)
+      : undefined
   },
   getSpell(id) {
     return this.spells.find((item) => item.id === id)

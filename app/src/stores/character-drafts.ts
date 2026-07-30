@@ -5,6 +5,7 @@ import { deriveCharacterSummary } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { validateDraft } from '@/rules/validate'
 import { validateSpellSelections } from '@/rules/spellcasting'
+import { EMPTY_CURRENCY, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { CharacterJsonService } from '@/services/character-json'
 import { DraftStorageService } from '@/services/draft-storage'
 import type {
@@ -24,7 +25,7 @@ function newId(): string {
 function createCharacterDraft(): CharacterDraft {
   const now = new Date().toISOString()
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: newId(),
     ruleset: '5e-2014',
     createdAt: now,
@@ -39,8 +40,10 @@ function createCharacterDraft(): CharacterDraft {
     proficiencyReplacements: [],
     baseAbilities: DEFAULT_ABILITIES,
     selections: [],
-    inventoryItemIds: [],
-    equippedItemIds: [],
+    startingEquipmentSelections: [],
+    inventory: [],
+    currency: EMPTY_CURRENCY,
+    equipmentNeedsReview: false,
     spellSelections: {
       cantripIds: [],
       knownSpellIds: [],
@@ -80,7 +83,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
       Boolean(draft.backgroundId && draft.raceId),
       abilitiesValid,
       timelineComplete,
-      draft.inventoryItemIds.length > 0 && draft.equippedItemIds.length > 0,
+      isStartingEquipmentComplete(draft) && !draft.equipmentNeedsReview,
       validateSpellSelections(draft),
       Boolean(draft.name.trim()),
       !hasErrors,

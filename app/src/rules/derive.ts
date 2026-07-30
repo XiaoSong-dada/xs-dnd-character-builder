@@ -77,11 +77,12 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const hitDie = classRule?.hitDie ?? 8
   const hp = hitDie + modifiers.con
     + Math.max(0, draft.targetLevel - 1) * Math.max(1, Math.floor(hitDie / 2) + 1 + modifiers.con)
-  const equippedArmor = draft.equippedItemIds
-    .map((itemId) => rulesRepository.getEquipment(itemId))
+  const equippedItems = draft.inventory
+    .filter((entry) => entry.equippedQuantity > 0)
+    .map((entry) => rulesRepository.getEquipment(entry.itemId))
+  const equippedArmor = equippedItems
     .find((item) => item?.category === 'armor')
-  const equippedShield = draft.equippedItemIds
-    .map((itemId) => rulesRepository.getEquipment(itemId))
+  const equippedShield = equippedItems
     .find((item) => item?.category === 'shield')
   const hasHeavyArmor = equippedArmor?.id === 'chain-mail'
   const hasShield = Boolean(equippedShield)

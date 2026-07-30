@@ -95,7 +95,26 @@ const selectedSpells = computed(() => {
       </section>
       <p v-else>当前没有需要展示的法术。</p>
     </div>
-    <div v-else-if="activeTab === 'items'" class="character-sheet__panel"><h3>已装备</h3><p>{{ draft.equippedItemIds.join('、') || '尚未装备物品' }}</p></div>
+    <div v-else-if="activeTab === 'items'" class="character-sheet__panel">
+      <h3>已装备</h3>
+      <p>
+        {{
+          draft.inventory
+            .filter((entry) => entry.equippedQuantity > 0)
+            .map((entry) => rulesRepository.getEquipment(entry.itemId)?.name ?? entry.itemId)
+            .join('、') || '尚未装备物品'
+        }}
+      </p>
+      <h3>物品栏</h3>
+      <p>
+        {{
+          draft.inventory
+            .map((entry) => `${rulesRepository.getEquipment(entry.itemId)?.name ?? entry.itemId} ×${entry.quantity}`)
+            .join('、') || '尚无物品'
+        }}
+      </p>
+      <p>起始金币：{{ draft.currency.gp }} GP</p>
+    </div>
     <div v-else class="character-sheet__panel"><h3>{{ tabs.find((tab) => tab.id === activeTab)?.label }}</h3><p>该部分将在对应职业与施法批次继续扩展。</p></div>
     <button type="button" class="character-sheet__export" @click="$emit('export')">导出角色 JSON</button>
   </section>

@@ -5,7 +5,7 @@ import StartPanel from '@/views/character-builder/components/StartPanel.vue'
 import type { CharacterDraft } from '@/types/character'
 
 const draft: CharacterDraft = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   id: 'draft-delete-test',
   ruleset: '5e-2014',
   createdAt: '',
@@ -20,8 +20,10 @@ const draft: CharacterDraft = {
   proficiencyReplacements: [],
   baseAbilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 },
   selections: [],
-  inventoryItemIds: [],
-  equippedItemIds: [],
+  startingEquipmentSelections: [],
+  inventory: [],
+  currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+  equipmentNeedsReview: false,
   spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
   name: '阿尔文',
   alignment: '',

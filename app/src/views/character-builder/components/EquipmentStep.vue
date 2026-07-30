@@ -2,63 +2,444 @@
 import { computed } from 'vue'
 
 import OptionCard from '@/components/ui/OptionCard.vue'
+import UiBadge from '@/components/ui/UiBadge.vue'
+import UiNotice from '@/components/ui/UiNotice.vue'
 import { rulesRepository } from '@/rules/repository'
+import {
+  buildStartingEquipmentState,
+  getAllowedPickItems,
+  isStartingEquipmentComplete,
+  updateEquippedQuantity,
+} from '@/rules/starting-equipment'
+import type {
+  CharacterDraft,
+  CurrencyWallet,
+  InventoryEntry,
+  StartingEquipmentSelection,
+} from '@/types/character'
 
-const props = defineProps<{ classId?: string; inventory: readonly string[]; equipped: readonly string[] }>()
-const emit = defineEmits<{ change: [inventory: readonly string[], equipped: readonly string[]] }>()
-const equipment = computed(() => rulesRepository.equipment.filter((item) => item.classIds.includes(props.classId ?? '')))
+const props = defineProps<{ draft: CharacterDraft }>()
+const emit = defineEmits<{
+  change: [
+    selections: readonly StartingEquipmentSelection[],
+    inventory: readonly InventoryEntry[],
+    currency: CurrencyWallet,
+  ]
+}>()
 
-function toggleOwn(id: string): void {
-  const own = props.inventory.includes(id)
-  emit(
-    'change',
-    own ? props.inventory.filter((item) => item !== id) : [...props.inventory, id],
-    own ? props.equipped.filter((item) => item !== id) : props.equipped,
-  )
+const classProfile = computed(() =>
+  props.draft.classId ? rulesRepository.getClassStartingEquipment(props.draft.classId) : undefined)
+const backgroundProfile = computed(() =>
+  props.draft.backgroundVariantId || props.draft.backgroundId
+    ? rulesRepository.getBackgroundStartingEquipment(props.draft.backgroundVariantId ?? props.draft.backgroundId!)
+    : undefined)
+const complete = computed(() => isStartingEquipmentComplete(props.draft))
+const backgroundEntries = computed(() => props.draft.inventory.filter((entry) => entry.sourceKind === 'background'))
+
+function itemName(itemId: string): string {
+  return rulesRepository.getEquipment(itemId)?.name ?? itemId
 }
 
-function toggleEquip(id: string): void {
-  if (!props.inventory.includes(id)) return
-  emit('change', props.inventory, props.equipped.includes(id) ? props.equipped.filter((item) => item !== id) : [...props.equipped, id])
+function selectionFor(groupId: string): StartingEquipmentSelection | undefined {
+  return props.draft.startingEquipmentSelections.find((selection) => selection.groupId === groupId)
+}
+
+function emitSelections(selections: readonly StartingEquipmentSelection[]): void {
+  const state = buildStartingEquipmentState({
+    ...props.draft,
+    startingEquipmentSelections: selections,
+  })
+  emit('change', selections, state.inventory, state.currency)
+}
+
+function selectOption(groupId: string, optionId: string): void {
+  const next: StartingEquipmentSelection = { groupId, optionId, pickedItemIds: [] }
+  emitSelections([
+    ...props.draft.startingEquipmentSelections.filter((selection) => selection.groupId !== groupId),
+    next,
+  ])
+}
+
+function changePickedItem(groupId: string, itemId: string, delta: 1 | -1): void {
+  const group = classProfile.value?.groups.find((item) => item.id === groupId)
+  const current = selectionFor(groupId)
+  const selectedOption = group?.options.find((item) => item.id === current?.optionId)
+  if (!current || !selectedOption?.pick) return
+
+  const picked = [...current.pickedItemIds]
+  if (delta === 1 && picked.length < selectedOption.pick.count) picked.push(itemId)
+  if (delta === -1) {
+    const index = picked.lastIndexOf(itemId)
+    if (index >= 0) picked.splice(index, 1)
+  }
+  emitSelections(props.draft.startingEquipmentSelections.map((selection) =>
+    selection.groupId === groupId ? { ...selection, pickedItemIds: picked } : selection))
+}
+
+function toggleEquipped(entry: InventoryEntry): void {
+  const nextInventory = updateEquippedQuantity(
+    props.draft.inventory,
+    entry.id,
+    entry.equippedQuantity > 0 ? 0 : 1,
+  )
+  emit('change', props.draft.startingEquipmentSelections, nextInventory, props.draft.currency)
+}
+
+function sourceLabel(entry: InventoryEntry): string {
+  if (entry.sourceKind === 'class') return '职业'
+  if (entry.sourceKind === 'background') return '背景'
+  return '旧草稿'
 }
 </script>
 
 <template>
   <section class="equipment-step">
-    <p>“拥有”与“已装备”是两个状态；只有已装备物品影响角色数值。</p>
-    <article v-for="item in equipment" :key="item.id">
-      <OptionCard :title="item.name" :description="item.description" :state="inventory.includes(item.id) ? 'complete' : 'default'" @select="toggleOwn(item.id)" />
-      <button type="button" :disabled="!inventory.includes(item.id)" :aria-pressed="equipped.includes(item.id)" @click="toggleEquip(item.id)">
-        {{ equipped.includes(item.id) ? '✓ 已装备' : '装备' }}
-      </button>
-    </article>
+    <UiNotice
+      v-if="draft.equipmentNeedsReview"
+      tone="warning"
+      title="旧装备需要重新确认"
+    >
+      原有物品已作为迁移记录保留。完成下面的职业装备分支后即可继续。
+    </UiNotice>
+
+    <section class="equipment-step__section">
+      <header>
+        <div>
+          <p>职业起始装备</p>
+          <h2>{{ rulesRepository.getClass(draft.classId ?? '')?.name ?? '尚未选择职业' }}</h2>
+        </div>
+        <UiBadge :tone="complete ? 'success' : 'warning'">
+          {{ complete ? '已完成' : `${draft.startingEquipmentSelections.length}/${classProfile?.groups.length ?? 0}` }}
+        </UiBadge>
+      </header>
+
+      <div v-if="classProfile?.fixedGrants.length" class="equipment-step__fixed">
+        <strong>必得物品</strong>
+        <p>
+          <span v-for="grant in classProfile.fixedGrants" :key="grant.itemId">
+            {{ itemName(grant.itemId) }}<template v-if="grant.quantity > 1"> ×{{ grant.quantity }}</template>
+          </span>
+        </p>
+      </div>
+
+      <article v-for="(group, groupIndex) in classProfile?.groups ?? []" :key="group.id" class="equipment-step__group">
+        <h3><span>{{ groupIndex + 1 }}</span>{{ group.title }}</h3>
+        <div class="equipment-step__options">
+          <OptionCard
+            v-for="option in group.options"
+            :key="option.id"
+            :title="option.label"
+            :description="option.pick ? `还需选择 ${option.pick.count} 件具体物品` : ''"
+            :state="selectionFor(group.id)?.optionId === option.id ? 'selected' : 'default'"
+            @select="selectOption(group.id, option.id)"
+          />
+        </div>
+
+        <div
+          v-if="group.options.find((option) => option.id === selectionFor(group.id)?.optionId)?.pick"
+          class="equipment-step__picker"
+        >
+          <p>
+            已选
+            {{ selectionFor(group.id)?.pickedItemIds.length ?? 0 }}/
+            {{ group.options.find((option) => option.id === selectionFor(group.id)?.optionId)?.pick?.count }}
+          </p>
+          <div
+            v-for="item in getAllowedPickItems(group.options.find((option) => option.id === selectionFor(group.id)?.optionId)!.pick!)"
+            :key="item.id"
+            class="equipment-step__pick-row"
+          >
+            <span>{{ item.name }}</span>
+            <div>
+              <button
+                type="button"
+                :aria-label="`减少 ${item.name}`"
+                :disabled="!selectionFor(group.id)?.pickedItemIds.includes(item.id)"
+                @click="changePickedItem(group.id, item.id, -1)"
+              >
+                −
+              </button>
+              <strong>{{ selectionFor(group.id)?.pickedItemIds.filter((id) => id === item.id).length ?? 0 }}</strong>
+              <button
+                type="button"
+                :aria-label="`增加 ${item.name}`"
+                :disabled="(selectionFor(group.id)?.pickedItemIds.length ?? 0) >= (group.options.find((option) => option.id === selectionFor(group.id)?.optionId)?.pick?.count ?? 0)"
+                @click="changePickedItem(group.id, item.id, 1)"
+              >
+                ＋
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="equipment-step__section">
+      <header>
+        <div>
+          <p>背景固定装备</p>
+          <h2>{{ rulesRepository.getBackground(draft.backgroundId ?? '')?.name ?? '尚未选择背景' }}</h2>
+        </div>
+        <UiBadge v-if="backgroundProfile" tone="success">自动加入</UiBadge>
+      </header>
+      <p v-if="!backgroundEntries.length" class="equipment-step__empty">选择背景后会自动加入对应物品。</p>
+      <ul v-else class="equipment-step__compact-list">
+        <li v-for="entry in backgroundEntries" :key="entry.id">
+          <span>{{ itemName(entry.itemId) }}</span>
+          <strong>×{{ entry.quantity }}</strong>
+        </li>
+      </ul>
+      <p v-if="backgroundProfile" class="equipment-step__coins">起始金币 <strong>{{ draft.currency.gp }} GP</strong></p>
+    </section>
+
+    <section class="equipment-step__section">
+      <header>
+        <div>
+          <p>最终物品栏</p>
+          <h2>拥有与已装备</h2>
+        </div>
+        <UiBadge>{{ draft.inventory.length }} 类</UiBadge>
+      </header>
+      <p class="equipment-step__help">只有已装备的护甲与盾牌会影响角色数值；系统已给出推荐穿戴，可随时调整。</p>
+      <ul class="equipment-step__inventory">
+        <li v-for="entry in draft.inventory" :key="entry.id">
+          <div>
+            <strong>{{ itemName(entry.itemId) }} <small>×{{ entry.quantity }}</small></strong>
+            <UiBadge :tone="entry.sourceKind === 'legacy' ? 'warning' : 'neutral'">{{ sourceLabel(entry) }}</UiBadge>
+          </div>
+          <button
+            v-if="rulesRepository.getEquipment(entry.itemId)?.equippable"
+            type="button"
+            :class="{ 'equipment-step__equip--active': entry.equippedQuantity > 0 }"
+            :aria-pressed="entry.equippedQuantity > 0"
+            @click="toggleEquipped(entry)"
+          >
+            {{ entry.equippedQuantity > 0 ? '✓ 已装备' : '装备' }}
+          </button>
+        </li>
+      </ul>
+    </section>
   </section>
 </template>
 
 <style scoped lang="scss">
 .equipment-step {
   display: grid;
-  gap: 0.75rem;
+  gap: 1rem;
 
-  > p { margin: 0; color: var(--color-text-muted); line-height: 1.6; }
-
-  article {
+  &__section {
     display: grid;
-    grid-template-columns: 1fr auto;
+    gap: 0.85rem;
+    padding: 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+
+    > header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+
+      p {
+        margin: 0 0 0.15rem;
+        color: var(--color-primary);
+        font-size: 0.7rem;
+        font-weight: 700;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+    }
+  }
+
+  &__fixed {
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    background: var(--color-primary-soft);
+
+    strong {
+      font-size: 0.78rem;
+    }
+
+    p {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin: 0.45rem 0 0;
+
+      span {
+        padding: 0.25rem 0.45rem;
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+        background: var(--color-surface);
+        font-size: 0.72rem;
+      }
+    }
+  }
+
+  &__group {
+    display: grid;
+    gap: 0.6rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--color-border);
+
+    h3 {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin: 0;
+      font-size: 0.86rem;
+
+      span {
+        display: grid;
+        width: 1.5rem;
+        height: 1.5rem;
+        place-items: center;
+        border-radius: 50%;
+        color: var(--color-surface);
+        background: var(--color-primary);
+        font-size: 0.7rem;
+      }
+    }
+  }
+
+  &__options {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  &__picker {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.65rem;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-background);
+
+    > p {
+      margin: 0;
+      color: var(--color-text-muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+  }
+
+  &__pick-row {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: space-between;
     gap: 0.5rem;
 
-    > button {
-      min-width: 5rem;
-      min-height: 2.75rem;
-      align-self: center;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      color: var(--color-primary);
-      background: var(--color-surface);
-      font-weight: 700;
-
-      &:disabled { color: var(--color-text-muted); opacity: 0.5; }
+    > span {
+      min-width: 0;
+      font-size: 0.8rem;
     }
+
+    > div {
+      display: grid;
+      grid-template-columns: 2.75rem 2rem 2.75rem;
+      align-items: center;
+      text-align: center;
+
+      button {
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        color: var(--color-primary);
+        background: var(--color-surface);
+        font-size: 1rem;
+        font-weight: 700;
+
+        &:disabled {
+          color: var(--color-text-muted);
+          opacity: 0.45;
+        }
+      }
+    }
+  }
+
+  &__empty,
+  &__help {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.76rem;
+    line-height: 1.55;
+  }
+
+  &__compact-list,
+  &__inventory {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: flex;
+      min-height: 2.75rem;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 0.8rem;
+
+      &:last-child {
+        border-bottom: 0;
+      }
+    }
+  }
+
+  &__coins {
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.8rem;
+  }
+
+  &__inventory {
+    li {
+      > div {
+        display: flex;
+        min-width: 0;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.35rem;
+
+        strong {
+          min-width: 0;
+          font-size: 0.8rem;
+
+          small {
+            color: var(--color-text-muted);
+          }
+        }
+      }
+
+      > button {
+        min-width: 5.25rem;
+        min-height: 2.75rem;
+        flex: none;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        color: var(--color-primary);
+        background: var(--color-surface);
+        font-weight: 700;
+      }
+    }
+  }
+
+  &__equip--active {
+    border-color: var(--color-success) !important;
+    color: var(--color-success) !important;
+    background: var(--color-success-soft) !important;
   }
 }
 </style>

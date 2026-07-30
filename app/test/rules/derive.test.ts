@@ -4,7 +4,7 @@ import { abilityModifier, deriveCharacter, proficiencyBonus } from '@/rules/deri
 import type { CharacterDraft } from '@/types/character'
 
 const draft: CharacterDraft = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   id: 'test',
   ruleset: '5e-2014',
   createdAt: '2026-07-30T00:00:00.000Z',
@@ -23,8 +23,14 @@ const draft: CharacterDraft = {
   proficiencyReplacements: [],
   baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 },
   selections: [{ checkpointId: 'fighter-2014-style-1', optionIds: ['style-defense'], confirmedAt: '2026-07-30T00:00:00.000Z' }],
-  inventoryItemIds: ['chain-mail', 'shield', 'longsword'],
-  equippedItemIds: ['chain-mail', 'shield', 'longsword'],
+  startingEquipmentSelections: [],
+  inventory: [
+    { id: 'test-chain-mail', itemId: 'chain-mail', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 },
+    { id: 'test-shield', itemId: 'shield', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 },
+    { id: 'test-longsword', itemId: 'longsword', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 },
+  ],
+  currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+  equipmentNeedsReview: false,
   name: '凯恩',
   alignment: '中立善良',
   notes: '',

@@ -15,4 +15,25 @@ describe('DraftStorageService', () => {
       { id: 'old', name: '旧角色', ruleset: '5e-2024', targetLevel: 8 },
     ])
   })
+
+  it('migrates stored 2014 v2 drafts and marks equipment for review', () => {
+    localStorage.setItem('dnd-character-builder:drafts:v2', JSON.stringify([
+      {
+        schemaVersion: 2,
+        id: 'old-fighter',
+        ruleset: '5e-2014',
+        inventoryItemIds: ['chain-mail', 'longsword'],
+        equippedItemIds: ['chain-mail'],
+      },
+    ]))
+
+    const [draft] = DraftStorageService.loadAll()
+    expect(draft).toMatchObject({
+      id: 'old-fighter',
+      schemaVersion: 3,
+      equipmentNeedsReview: true,
+    })
+    expect(draft?.inventory).toHaveLength(2)
+    expect(draft?.inventory.find((entry) => entry.itemId === 'chain-mail')?.equippedQuantity).toBe(1)
+  })
 })
