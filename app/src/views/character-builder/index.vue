@@ -130,6 +130,7 @@ function updateMethod(value: AbilityMethod): void {
       :subrace-id="activeDraft.subraceId"
       :background-skill-ids="activeDraft.backgroundSkillIds"
       :selections="activeDraft.selections"
+      :draft="activeDraft"
       @select="saveTimelineSelection"
     />
     <EquipmentStep

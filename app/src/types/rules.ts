@@ -17,6 +17,21 @@ export interface RuleOption {
   readonly sourceIds: readonly string[]
 }
 
+export interface FeatPrerequisite {
+  readonly abilityMinimum?: {
+    readonly anyOf: readonly AbilityKey[]
+    readonly score: number
+  }
+  readonly requiredCapability?: 'armor-light' | 'armor-medium' | 'armor-heavy' | 'spellcasting'
+}
+
+export interface FeatRule extends RuleOption {
+  readonly ruleset: '5e-2014'
+  readonly englishName: string
+  readonly tags: readonly string[]
+  readonly prerequisite?: FeatPrerequisite
+}
+
 export interface ChoiceCheckpoint {
   readonly id: string
   readonly level: number
@@ -178,6 +193,7 @@ export interface RulesRepository {
   readonly races: readonly RaceRule[]
   readonly backgrounds: readonly BackgroundRule[]
   readonly options: readonly RuleOption[]
+  readonly feats: readonly FeatRule[]
   readonly equipment: readonly EquipmentRule[]
   readonly classStartingEquipment: readonly ClassStartingEquipmentRule[]
   readonly backgroundStartingEquipment: readonly BackgroundStartingEquipmentRule[]
@@ -185,6 +201,7 @@ export interface RulesRepository {
   getClass(id: string): ClassRule | undefined
   getSubclass(id: string): SubclassRule | undefined
   getOption(id: string): RuleOption | undefined
+  getFeat(id: string): FeatRule | undefined
   getRace(id: string): RaceRule | undefined
   getBackground(id: string): BackgroundRule | undefined
   getEquipment(id: string): EquipmentRule | undefined

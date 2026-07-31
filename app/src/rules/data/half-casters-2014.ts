@@ -1,8 +1,8 @@
 import type { ClassRule, RuleOption, SpellRule, SubclassRule } from '@/types/rules'
+import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
-const asiOptionIds = ['asi-str-2', 'asi-str-con', 'feat-alert', 'feat-great-weapon-master', 'feat-sentinel'] as const
 const halfCasterMaximumSpellLevels = [0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5] as const
 const rangerSpellsKnown = [0, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11] as const
 
@@ -98,7 +98,7 @@ export const halfCasterOptions2014: readonly RuleOption[] = [
 ]
 
 function asi(level: number, className: 'paladin' | 'ranger') {
-  return { id: `${className}-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '属性提升与专长互斥。', required: true, minSelections: 1, maxSelections: 1, optionIds: asiOptionIds }
+  return { id: `${className}-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '属性提升与专长互斥。', required: true, minSelections: 1, maxSelections: 1, optionIds: ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS }
 }
 
 export const halfCasterClasses2014: readonly ClassRule[] = [

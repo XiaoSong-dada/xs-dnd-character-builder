@@ -1,5 +1,12 @@
 import { rulesRepository } from '@/rules/repository'
+import { deriveAbilities } from '@/rules/derive'
+import {
+  decodeAbilityImprovement,
+  getAbilityImprovementEligibility,
+  getFeatEligibility,
+} from '@/rules/feats'
 import { areBaseAbilitiesValid } from '@/rules/abilities'
+import { getRaceAbilityBonuses } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
@@ -66,7 +73,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       })
     }
   }
-  if (!areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod)) {
+  if (!areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod, getRaceAbilityBonuses(draft))) {
     issues.push({
       id: 'ability-method-invalid',
       step: 'abilities',
@@ -75,7 +82,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       resolution: draft.abilityMethod === 'standard-array'
         ? '恰好使用15、14、13、12、10、8各一次。'
         : draft.abilityMethod === 'point-buy'
-          ? '将每项保持在8—15，并把总花费降至27点以内。'
+          ? '基础值至少为8，每提高1点消耗1点；把总花费降至27点以内，并确保种族加成后的最终值不超过20。'
           : '将每项基础属性保持在3—20。',
     })
   }
@@ -187,6 +194,37 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       }
       for (const optionId of selection?.optionIds ?? []) {
         const option = rulesRepository.getOption(optionId)
+        const abilityImprovement = decodeAbilityImprovement(optionId)
+        if (abilityImprovement) {
+          const eligibility = getAbilityImprovementEligibility(deriveAbilities(draft, checkpoint.id), optionId)
+          if (!eligibility.available) {
+            issues.push({
+              id: `ability-improvement-${checkpoint.id}-${optionId}`,
+              step: checkpoint.step,
+              severity: 'error',
+              message: `${checkpoint.level}级「${option?.name ?? optionId}」无法应用。`,
+              resolution: eligibility.reason,
+            })
+          }
+        }
+        const selectedFeat = rulesRepository.getFeat(optionId)
+        if (selectedFeat && draft.classId) {
+          const classRule = rulesRepository.getClass(draft.classId)
+          const eligibility = getFeatEligibility(selectedFeat, {
+            abilities: deriveAbilities(draft, checkpoint.id),
+            classId: draft.classId,
+            canCastSpells: Boolean(classRule?.spellcasting && checkpoint.level >= classRule.spellcasting.startsAtLevel),
+          })
+          if (!eligibility.available) {
+            issues.push({
+              id: `feat-prerequisite-${checkpoint.id}-${optionId}`,
+              step: checkpoint.step,
+              severity: 'error',
+              message: `${checkpoint.level}级「${selectedFeat.name}」不满足前置条件。`,
+              resolution: eligibility.reasons.join('；'),
+            })
+          }
+        }
         if (option?.status === 'index-only') {
           issues.push({
             id: `index-only-${checkpoint.id}-${optionId}`,

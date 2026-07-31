@@ -100,7 +100,7 @@ export function useCharacterBuilderPage() {
     }
     if (step.value === 'abilities') {
       return draft.raceAbilityChoices.length === raceFlexibleCount.value
-        && areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod)
+        && areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod, raceAbilityBonuses.value)
     }
     if (step.value === 'timeline') return timelineComplete.value
     if (step.value === 'equipment') {

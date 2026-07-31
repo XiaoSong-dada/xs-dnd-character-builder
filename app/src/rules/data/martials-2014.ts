@@ -1,8 +1,8 @@
 import type { ClassRule, RuleOption, SubclassRule } from '@/types/rules'
+import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
-const asiOptionIds = ['asi-str-2', 'asi-str-con', 'feat-alert', 'feat-great-weapon-master', 'feat-sentinel'] as const
 
 const barbarianSkillIds = [
   'skill-animal-handling',
@@ -173,7 +173,7 @@ export const martialClasses2014: readonly ClassRule[] = [
     checkpoints: [
       { id: 'barbarian-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项野蛮人技能', description: '从野蛮人职业技能列表中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: barbarianSkillIds },
       { id: 'barbarian-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择原初道途', description: '选择野蛮人的2014子职。', required: true, minSelections: 1, maxSelections: 1, optionIds: barbarianSubclassIds },
-      ...[4, 8, 12, 16, 19].map((level) => ({ id: `barbarian-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '专长属于默认开放的2014可选规则。', required: true, minSelections: 1, maxSelections: 1, optionIds: asiOptionIds })),
+      ...[4, 8, 12, 16, 19].map((level) => ({ id: `barbarian-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '专长属于默认开放的2014可选规则。', required: true, minSelections: 1, maxSelections: 1, optionIds: ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS })),
     ],
   },
   {
@@ -191,7 +191,7 @@ export const martialClasses2014: readonly ClassRule[] = [
       { id: 'monk-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项武僧技能', description: '从武僧职业技能列表中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: monkSkillIds },
       { id: 'monk-2014-tool-1', level: 1, step: 'timeline', kind: 'class-choice', title: '选择工具或乐器熟练', description: '选择一种工匠工具或一种乐器。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['tool-artisans-tools', 'tool-musical-instrument'] },
       { id: 'monk-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择武僧传统', description: '选择武僧的2014子职。', required: true, minSelections: 1, maxSelections: 1, optionIds: monkSubclassIds },
-      ...[4, 8, 12, 16, 19].map((level) => ({ id: `monk-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '属性提升与专长互斥。', required: true, minSelections: 1, maxSelections: 1, optionIds: asiOptionIds })),
+      ...[4, 8, 12, 16, 19].map((level) => ({ id: `monk-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '属性提升与专长互斥。', required: true, minSelections: 1, maxSelections: 1, optionIds: ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS })),
     ],
   },
   {
@@ -210,7 +210,7 @@ export const martialClasses2014: readonly ClassRule[] = [
       { id: 'rogue-2014-expertise-1', level: 1, step: 'timeline', kind: 'expertise', title: '选择2项专精', description: '选择已熟练的技能，或以盗贼工具替代其中一项。', required: true, minSelections: 2, maxSelections: 2, optionIds: expertiseOptionIds },
       { id: 'rogue-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择游荡者范型', description: '选择游荡者的2014子职。', required: true, minSelections: 1, maxSelections: 1, optionIds: rogueSubclassIds },
       { id: 'rogue-2014-expertise-6', level: 6, step: 'timeline', kind: 'expertise', title: '再选择2项专精', description: '选择尚未获得专精的熟练技能。', required: true, minSelections: 2, maxSelections: 2, optionIds: expertiseOptionIds },
-      ...[4, 8, 10, 12, 16, 19].map((level) => ({ id: `rogue-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '属性提升与专长互斥。', required: true, minSelections: 1, maxSelections: 1, optionIds: asiOptionIds })),
+      ...[4, 8, 10, 12, 16, 19].map((level) => ({ id: `rogue-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '属性提升与专长互斥。', required: true, minSelections: 1, maxSelections: 1, optionIds: ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS })),
     ],
   },
 ]

@@ -3,6 +3,7 @@ import { arcaneCasterClasses2014, arcaneCasterOptions2014, arcaneCasterSpells201
 import { fighterOptions, fighterRule, fighterSubclasses } from '@/rules/data/fighter'
 import { martialClasses2014, martialOptions2014, martialSubclasses2014 } from '@/rules/data/martials-2014'
 import { equipment2014 } from '@/rules/data/equipment-2014'
+import { abilityImprovementOptions2014, feats2014 } from '@/rules/data/feats-2014'
 import { halfCasterClasses2014, halfCasterOptions2014, halfCasterSpells2014, halfCasterSubclasses2014 } from '@/rules/data/half-casters-2014'
 import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
 import { backgroundStartingEquipment2014, classStartingEquipment2014 } from '@/rules/data/starting-equipment-2014'
@@ -22,7 +23,8 @@ export const rulesRepository: RulesRepository = {
   subclasses: [...fighterSubclasses, ...martialSubclasses2014, ...halfCasterSubclasses2014, ...arcaneCasterSubclasses2014],
   races: races2014,
   backgrounds: backgrounds2014,
-  options: [...fighterOptions, ...martialOptions2014, ...halfCasterOptions2014, ...arcaneCasterOptions2014],
+  options: [...abilityImprovementOptions2014, ...feats2014, ...fighterOptions, ...martialOptions2014, ...halfCasterOptions2014, ...arcaneCasterOptions2014],
+  feats: feats2014,
   equipment: equipment2014,
   classStartingEquipment: classStartingEquipment2014,
   backgroundStartingEquipment: backgroundStartingEquipment2014,
@@ -35,6 +37,9 @@ export const rulesRepository: RulesRepository = {
   },
   getOption(id) {
     return this.options.find((item) => item.id === id)
+  },
+  getFeat(id) {
+    return this.feats.find((item) => item.id === id)
   },
   getRace(id) {
     return this.races.find((item) => item.id === id)

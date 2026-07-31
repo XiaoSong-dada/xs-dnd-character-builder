@@ -1,4 +1,5 @@
 import { rulesRepository } from '@/rules/repository'
+import { FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
 import type { ChoiceCheckpoint } from '@/types/rules'
 
 const variantHumanCheckpoint: ChoiceCheckpoint = {
@@ -11,7 +12,7 @@ const variantHumanCheckpoint: ChoiceCheckpoint = {
   required: true,
   minSelections: 1,
   maxSelections: 1,
-  optionIds: ['feat-alert', 'feat-great-weapon-master', 'feat-sentinel'],
+  optionIds: FEAT_OPTION_IDS,
 }
 
 export interface TimelineContext {

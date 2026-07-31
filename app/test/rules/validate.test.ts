@@ -50,4 +50,23 @@ describe('validateDraft', () => {
     expect(validateDraft(draft).some((issue) => issue.id === 'checkpoint-fighter-2014-skills-1')).toBe(true)
     expect(validateDraft(draft).some((issue) => issue.id === 'checkpoint-fighter-2014-subclass-3')).toBe(true)
   })
+
+  it('报告超过20的属性提升和不满足前置条件的专长', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      targetLevel: 8,
+      classId: 'class-2014-fighter',
+      backgroundId: 'background-2014-soldier',
+      raceId: 'race-2014-human',
+      name: '凯恩',
+      baseAbilities: { str: 20, dex: 14, con: 13, int: 8, wis: 12, cha: 10 },
+      selections: [
+        { checkpointId: 'fighter-2014-asi-4', optionIds: ['asi-str-2'], confirmedAt: '' },
+        { checkpointId: 'fighter-2014-asi-6', optionIds: ['feat-actor'], confirmedAt: '' },
+      ],
+    }
+    const issues = validateDraft(draft)
+    expect(issues.some((issue) => issue.id.startsWith('ability-improvement-'))).toBe(true)
+    expect(issues.some((issue) => issue.id.startsWith('feat-prerequisite-'))).toBe(true)
+  })
 })

@@ -1,4 +1,5 @@
 import { rulesRepository } from '@/rules/repository'
+import { applyAbilityImprovement, decodeAbilityImprovement } from '@/rules/feats'
 import type {
   AbilityKey,
   AbilityScores,
@@ -42,23 +43,25 @@ export function getRaceAbilityBonuses(draft: CharacterDraft): Partial<AbilitySco
   return fixedBonuses
 }
 
-function applyAbilityImprovements(abilities: AbilityScores, draft: CharacterDraft): AbilityScores {
-  const improved = { ...abilities }
+function applyAbilityImprovements(
+  abilities: AbilityScores,
+  draft: CharacterDraft,
+  ignoredCheckpointId?: string,
+): AbilityScores {
+  let improved = { ...abilities }
 
   for (const selection of draft.selections) {
-    if (selection.invalidatedAt) continue
-
-    if (selection.optionIds.includes('asi-str-2')) {
-      improved.str = Math.min(20, improved.str + 2)
-    }
-
-    if (selection.optionIds.includes('asi-str-con')) {
-      improved.str = Math.min(20, improved.str + 1)
-      improved.con = Math.min(20, improved.con + 1)
-    }
+    if (selection.invalidatedAt || selection.checkpointId === ignoredCheckpointId) continue
+    const improvementOptionId = selection.optionIds.find((optionId) => decodeAbilityImprovement(optionId))
+    if (improvementOptionId) improved = applyAbilityImprovement(improved, improvementOptionId)
   }
 
   return improved
+}
+
+export function deriveAbilities(draft: CharacterDraft, ignoredCheckpointId?: string): AbilityScores {
+  const originAbilities = addAbilities(draft.baseAbilities, getRaceAbilityBonuses(draft))
+  return applyAbilityImprovements(originAbilities, draft, ignoredCheckpointId)
 }
 
 function derived(value: number, sources: readonly ValueSource[]): DerivedValue<number> {
@@ -66,8 +69,7 @@ function derived(value: number, sources: readonly ValueSource[]): DerivedValue<n
 }
 
 export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
-  const originAbilities = addAbilities(draft.baseAbilities, getRaceAbilityBonuses(draft))
-  const abilities = applyAbilityImprovements(originAbilities, draft)
+  const abilities = deriveAbilities(draft)
   const abilityKeys: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
   const modifiers = Object.fromEntries(abilityKeys.map((key) => [key, abilityModifier(abilities[key])])) as Record<AbilityKey, number>
   const proficiency = proficiencyBonus(draft.targetLevel)

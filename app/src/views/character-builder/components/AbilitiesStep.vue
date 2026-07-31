@@ -16,11 +16,11 @@ const emit = defineEmits<{ change: [scores: AbilityScores]; choices: [choices: r
 const labels: Record<AbilityKey, string> = { str: '力量', dex: '敏捷', con: '体质', int: '智力', wis: '感知', cha: '魅力' }
 const keys: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const pointCost = computed(() => pointBuyCost(props.scores))
-const methodValid = computed(() => areBaseAbilitiesValid(props.scores, props.method))
+const methodValid = computed(() => areBaseAbilitiesValid(props.scores, props.method, props.bonuses))
 
 function update(key: AbilityKey, value: number): void {
   const minimum = props.method === 'point-buy' ? 8 : 3
-  const maximum = props.method === 'point-buy' ? 15 : 20
+  const maximum = props.method === 'point-buy' ? maximumScore(key) : 20
   emit('change', { ...props.scores, [key]: Math.max(minimum, Math.min(maximum, value)) })
 }
 
@@ -40,8 +40,8 @@ function minimumScore(): number {
   return props.method === 'point-buy' ? 8 : 3
 }
 
-function maximumScore(): number {
-  return props.method === 'point-buy' ? 15 : 20
+function maximumScore(key: AbilityKey): number {
+  return props.method === 'point-buy' ? 20 - (props.bonuses[key] ?? 0) : 20
 }
 
 function canDecrease(key: AbilityKey): boolean {
@@ -49,9 +49,13 @@ function canDecrease(key: AbilityKey): boolean {
 }
 
 function canIncrease(key: AbilityKey): boolean {
-  if (props.scores[key] >= maximumScore()) return false
+  if (props.scores[key] >= maximumScore(key)) return false
   if (props.method !== 'point-buy') return true
-  return pointBuyCost({ ...props.scores, [key]: props.scores[key] + 1 }) <= 27
+  return areBaseAbilitiesValid(
+    { ...props.scores, [key]: props.scores[key] + 1 },
+    'point-buy',
+    props.bonuses,
+  )
 }
 
 function decrease(key: AbilityKey): void {
@@ -63,11 +67,17 @@ function increase(key: AbilityKey): void {
 }
 
 function toggleChoice(key: AbilityKey): void {
-  if (props.excludedChoices?.includes(key)) return
+  if (choiceDisabled(key)) return
   const next = props.flexibleChoices.includes(key)
     ? props.flexibleChoices.filter((item) => item !== key)
     : [...props.flexibleChoices, key].slice(-props.flexibleCount)
   emit('choices', next)
+}
+
+function choiceDisabled(key: AbilityKey): boolean {
+  if (props.excludedChoices?.includes(key)) return true
+  if (props.flexibleChoices.includes(key)) return false
+  return props.scores[key] + (props.bonuses[key] ?? 0) + 1 > 20
 }
 </script>
 
@@ -79,7 +89,7 @@ function toggleChoice(key: AbilityKey): void {
       <strong v-else-if="method === 'point-buy'">27点购点：已使用 {{ pointCost }}/27</strong>
       <strong v-else>自定义属性</strong>
       <span v-if="method === 'standard-array'">将 15、14、13、12、10、8 分别分配给六项基础属性；这里不包含种族加成。选择已使用的数值时，两项属性会自动交换。</span>
-      <span v-else-if="method === 'point-buy'">每项范围 8—15，总花费不能超过27点。</span>
+      <span v-else-if="method === 'point-buy'">基础值从8开始，每提高1点消耗1点；包含种族与子种族加成后的最终值范围为8—20，总花费不能超过27点。</span>
       <span v-else>每项范围 3—20；自定义结果应由玩家与DM确认。</span>
     </aside>
     <div v-if="flexibleCount" class="abilities-step__choices">
@@ -89,7 +99,7 @@ function toggleChoice(key: AbilityKey): void {
         :key="key"
         type="button"
         :aria-pressed="flexibleChoices.includes(key)"
-        :disabled="excludedChoices?.includes(key)"
+        :disabled="choiceDisabled(key)"
         @click="toggleChoice(key)"
       >
         {{ flexibleChoices.includes(key) ? '✓ ' : '' }}{{ labels[key] }}{{ excludedChoices?.includes(key) ? '（不可选）' : '' }}

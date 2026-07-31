@@ -1,8 +1,8 @@
 import type { ClassRule, RuleOption, SpellRule, SubclassRule } from '@/types/rules'
+import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
-const asiOptionIds = ['asi-str-2', 'asi-str-con', 'feat-alert', 'feat-great-weapon-master', 'feat-sentinel'] as const
 const fullCasterMaximumSpellLevels = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9, 9] as const
 const pactMaximumSpellLevels = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5] as const
 const wizardCantrips = [3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5] as const
@@ -66,7 +66,7 @@ export const arcaneCasterOptions2014: readonly RuleOption[] = [
   { id: 'invocation-mask-of-many-faces', name: '千面之颜', description: '魔能祈唤索引。', status: 'index-only', sourceIds: indexSource },
 ]
 
-const asi = (level: number, className: 'wizard' | 'warlock') => ({ id: `${className}-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '属性提升与专长互斥。', required: true, minSelections: 1, maxSelections: 1, optionIds: asiOptionIds })
+const asi = (level: number, className: 'wizard' | 'warlock') => ({ id: `${className}-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '属性提升与专长互斥。', required: true, minSelections: 1, maxSelections: 1, optionIds: ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS })
 
 export const arcaneCasterClasses2014: readonly ClassRule[] = [
   {

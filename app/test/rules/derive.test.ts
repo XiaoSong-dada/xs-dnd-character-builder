@@ -58,20 +58,20 @@ describe('deriveCharacter', () => {
     expect(result.skills['skill-athletics']?.sources.some((source) => source.detail === '来自背景')).toBe(true)
   })
 
-  it('applies timeline ability improvements and caps scores at 20', () => {
+  it('applies arbitrary +2 and split +1/+1 timeline ability improvements', () => {
     const improvedDraft: CharacterDraft = {
       ...draft,
       selections: [
         ...draft.selections,
-        { checkpointId: 'fighter-2014-asi-4', optionIds: ['asi-str-2'], confirmedAt: draft.updatedAt },
-        { checkpointId: 'fighter-2014-asi-6', optionIds: ['asi-str-2'], confirmedAt: draft.updatedAt },
+        { checkpointId: 'fighter-2014-asi-4', optionIds: ['asi-dex-2'], confirmedAt: draft.updatedAt },
+        { checkpointId: 'fighter-2014-asi-6', optionIds: ['asi-int-cha'], confirmedAt: draft.updatedAt },
         { checkpointId: 'fighter-2014-asi-8', optionIds: ['asi-str-2'], confirmedAt: draft.updatedAt },
       ],
     }
 
     const result = deriveCharacter(improvedDraft)
 
-    expect(result.abilities.str).toBe(20)
-    expect(result.attackBonus.value).toBe(9)
+    expect(result.abilities).toMatchObject({ str: 19, dex: 16, int: 9, cha: 11 })
+    expect(result.attackBonus.value).toBe(8)
   })
 })

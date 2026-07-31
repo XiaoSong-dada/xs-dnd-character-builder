@@ -3,9 +3,10 @@ import { computed, ref } from 'vue'
 
 import OptionCard from '@/components/ui/OptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
+import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
 import { rulesRepository } from '@/rules/repository'
 import { buildTimeline } from '@/rules/timeline'
-import type { ChoiceSelection } from '@/types/character'
+import type { CharacterDraft, ChoiceSelection } from '@/types/character'
 
 const props = defineProps<{
   classId: string
@@ -13,6 +14,7 @@ const props = defineProps<{
   subraceId?: string
   backgroundSkillIds: readonly string[]
   selections: readonly ChoiceSelection[]
+  draft: CharacterDraft
 }>()
 const emit = defineEmits<{ select: [checkpointId: string, optionIds: readonly string[]] }>()
 const expandedCheckpointId = ref<string>()
@@ -60,6 +62,10 @@ function toggle(checkpointId: string, optionId: string, max: number): void {
       : [...current, optionId].slice(0, max)
   emit('select', checkpointId, next)
 }
+
+function saveSpecialSelection(checkpointId: string, optionId?: string): void {
+  emit('select', checkpointId, optionId ? [optionId] : [])
+}
 </script>
 
 <template>
@@ -82,8 +88,17 @@ function toggle(checkpointId: string, optionId: string, max: number): void {
         </UiBadge>
       </button>
       <div v-if="currentCheckpointId === checkpoint.id" class="timeline-step__options">
+        <FeatChoicePanel
+          v-if="checkpoint.kind === 'ability-improvement' || checkpoint.id === 'race-2014-human-variant-feat-1'"
+          :checkpoint-id="checkpoint.id"
+          :checkpoint-level="checkpoint.level"
+          :draft="draft"
+          :selected-option-id="selectedIds(checkpoint.id)[0]"
+          :allow-ability-improvement="checkpoint.kind === 'ability-improvement'"
+          @select="saveSpecialSelection(checkpoint.id, $event)"
+        />
         <OptionCard
-          v-for="optionId in checkpoint.optionIds"
+          v-for="optionId in checkpoint.kind === 'ability-improvement' || checkpoint.id === 'race-2014-human-variant-feat-1' ? [] : checkpoint.optionIds"
           :key="optionId"
           :title="rulesRepository.getOption(optionId)?.name ?? optionId"
           :description="rulesRepository.getOption(optionId)?.description"

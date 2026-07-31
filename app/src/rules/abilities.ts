@@ -9,28 +9,34 @@ export const STANDARD_ARRAY_DEFAULT: AbilityScores = {
   wis: 12,
   cha: 10,
 }
-const POINT_BUY_COST: Readonly<Record<number, number>> = {
-  8: 0,
-  9: 1,
-  10: 2,
-  11: 3,
-  12: 4,
-  13: 5,
-  14: 7,
-  15: 9,
-}
+const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const
+const POINT_BUY_MINIMUM = 8
+const POINT_BUY_MAXIMUM = 20
+const POINT_BUY_BUDGET = 27
 
 export function pointBuyCost(scores: AbilityScores): number {
-  return Object.values(scores).reduce((total, score) => total + (POINT_BUY_COST[score] ?? 99), 0)
+  return Object.values(scores).reduce((total, score) => total + Math.max(0, score - POINT_BUY_MINIMUM), 0)
 }
 
-export function areBaseAbilitiesValid(scores: AbilityScores, method: AbilityMethod): boolean {
+export function areBaseAbilitiesValid(
+  scores: AbilityScores,
+  method: AbilityMethod,
+  bonuses: Partial<AbilityScores> = {},
+): boolean {
   const values = Object.values(scores)
   if (method === 'standard-array') {
     return [...values].sort((a, b) => b - a).every((value, index) => value === STANDARD_ARRAY[index])
   }
   if (method === 'point-buy') {
-    return values.every((value) => value >= 8 && value <= 15) && pointBuyCost(scores) <= 27
+    return ABILITY_KEYS.every((key) => {
+      const baseScore = scores[key]
+      const finalScore = baseScore + (bonuses[key] ?? 0)
+      return Number.isInteger(baseScore)
+        && baseScore >= POINT_BUY_MINIMUM
+        && baseScore <= POINT_BUY_MAXIMUM
+        && finalScore >= POINT_BUY_MINIMUM
+        && finalScore <= POINT_BUY_MAXIMUM
+    }) && pointBuyCost(scores) <= POINT_BUY_BUDGET
   }
   return values.every((value) => value >= 3 && value <= 20)
 }
