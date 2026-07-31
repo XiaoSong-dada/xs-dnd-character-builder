@@ -40,6 +40,7 @@ const {
   canContinue,
   createDraft,
   openDraft,
+  returnToStart,
   deleteDraft,
   importDraft,
   nextStep,
@@ -86,7 +87,15 @@ function updateMethod(value: AbilityMethod): void {
   />
   <QuickBuildShell v-else :has-drawer="step !== 'sheet'" :has-actions="step !== 'sheet'">
     <template #header>
-      <StepHeader :eyebrow="stepMeta.eyebrow" :title="stepMeta.title" :current="stepNumber" :total="11" />
+      <StepHeader
+        :eyebrow="stepMeta.eyebrow"
+        :title="stepMeta.title"
+        :current="stepNumber"
+        :total="11"
+        back-label="返回车卡首页"
+        auto-save-label="进度已自动保存"
+        @back="returnToStart"
+      />
     </template>
 
     <UiNotice v-if="importError" tone="error" title="导入失败">{{ importError }}</UiNotice>

@@ -107,6 +107,10 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     return true
   }
 
+  function closeActiveDraft(): void {
+    activeDraftId.value = undefined
+  }
+
   function deleteDraft(id: string): boolean {
     const index = drafts.value.findIndex((draft) => draft.id === id)
     if (index < 0) return false
@@ -181,6 +185,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     completion,
     createDraft,
     activateDraft,
+    closeActiveDraft,
     deleteDraft,
     updateDraft,
     setStep,

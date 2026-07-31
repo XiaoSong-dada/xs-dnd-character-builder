@@ -125,6 +125,11 @@ export function useCharacterBuilderPage() {
     if (store.activateDraft(id) && store.activeDraft) syncRoute(store.activeDraft)
   }
 
+  function returnToStart(): void {
+    store.closeActiveDraft()
+    void router.replace({ name: 'character-builder' })
+  }
+
   function deleteDraft(id: string): void {
     const deletingActiveDraft = store.activeDraftId === id
     if (!store.deleteDraft(id)) return
@@ -364,6 +369,7 @@ export function useCharacterBuilderPage() {
     canContinue,
     createDraft,
     openDraft,
+    returnToStart,
     deleteDraft,
     importDraft,
     nextStep,

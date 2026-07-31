@@ -27,6 +27,23 @@ describe('character drafts store', () => {
     expect(store.activeDraft?.selections[0]?.optionIds).toEqual(['style-defense'])
   })
 
+  it('关闭当前草稿时保留内容和当前步骤', () => {
+    const store = useCharacterDraftsStore()
+    const draft = store.createDraft()
+    store.updateDraft({ currentStep: 'abilities', name: '凯恩' })
+
+    store.closeActiveDraft()
+
+    expect(store.activeDraftId).toBeUndefined()
+    expect(store.activeDraft).toBeUndefined()
+    expect(store.drafts).toHaveLength(1)
+    expect(store.drafts[0]).toMatchObject({
+      id: draft.id,
+      currentStep: 'abilities',
+      name: '凯恩',
+    })
+  })
+
   it('删除草稿并清除对应的活动状态', () => {
     const store = useCharacterDraftsStore()
     const first = store.createDraft()
