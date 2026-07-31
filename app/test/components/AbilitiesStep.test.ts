@@ -89,7 +89,7 @@ describe('AbilitiesStep', () => {
     })
 
     expect(wrapper.get('button[aria-pressed="false"]').attributes('disabled')).toBeDefined()
-    expect(wrapper.text()).toContain('最终值范围为8—20')
+    expect(wrapper.text()).toContain('27点预算只计算本页基础值')
   })
 
   it('keeps decrement enabled for a valid point-buy score above its minimum', () => {

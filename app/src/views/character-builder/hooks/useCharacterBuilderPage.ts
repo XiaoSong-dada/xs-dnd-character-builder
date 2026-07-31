@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 
 import { deriveCharacter, getRaceAbilityBonuses } from '@/rules/derive'
-import { areBaseAbilitiesValid, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
+import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { rulesRepository } from '@/rules/repository'
 import { buildTimeline } from '@/rules/timeline'
@@ -100,7 +100,8 @@ export function useCharacterBuilderPage() {
     }
     if (step.value === 'abilities') {
       return draft.raceAbilityChoices.length === raceFlexibleCount.value
-        && areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod, raceAbilityBonuses.value)
+        && areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod)
+        && areOriginAbilitiesWithinCap(draft.baseAbilities, raceAbilityBonuses.value)
     }
     if (step.value === 'timeline') return timelineComplete.value
     if (step.value === 'equipment') {

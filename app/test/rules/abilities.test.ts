@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { areBaseAbilitiesValid, pointBuyCost } from '@/rules/abilities'
+import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, pointBuyCost } from '@/rules/abilities'
 
 describe('2014 ability generation', () => {
   it('accepts the standard array exactly once each', () => {
@@ -14,14 +14,15 @@ describe('2014 ability generation', () => {
     expect(areBaseAbilitiesValid(scores, 'point-buy')).toBe(true)
   })
 
-  it('rejects point-buy overspending and final scores above 20 after race bonuses', () => {
+  it('rejects point-buy overspending independently from later bonuses', () => {
     const overspent = { str: 18, dex: 15, con: 13, int: 8, wis: 12, cha: 10 }
     expect(pointBuyCost(overspent)).toBe(28)
     expect(areBaseAbilitiesValid(overspent, 'point-buy')).toBe(false)
 
     const affordable = { str: 18, dex: 10, con: 10, int: 8, wis: 8, cha: 8 }
     expect(pointBuyCost(affordable)).toBe(14)
-    expect(areBaseAbilitiesValid(affordable, 'point-buy', { str: 2 })).toBe(true)
-    expect(areBaseAbilitiesValid({ ...affordable, str: 19 }, 'point-buy', { str: 2 })).toBe(false)
+    expect(areBaseAbilitiesValid(affordable, 'point-buy')).toBe(true)
+    expect(areOriginAbilitiesWithinCap(affordable, { str: 2 })).toBe(true)
+    expect(areOriginAbilitiesWithinCap({ ...affordable, str: 19 }, { str: 2 })).toBe(false)
   })
 })

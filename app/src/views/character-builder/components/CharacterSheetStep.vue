@@ -3,8 +3,9 @@ import { computed, ref } from 'vue'
 
 import StatTile from '@/components/ui/StatTile.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
+import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { rulesRepository } from '@/rules/repository'
-import type { CharacterDraft, DerivedCharacter } from '@/types/character'
+import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
 
 const props = defineProps<{ draft: CharacterDraft; derived: DerivedCharacter }>()
 defineEmits<{ export: [] }>()
@@ -16,6 +17,12 @@ const tabs = [
   { id: 'spells', label: '法术' },
   { id: 'items', label: '物品' },
 ] as const
+function abilityLabel(key: string): string {
+  return ABILITY_LABELS[key as AbilityKey] ?? key
+}
+function skillLabel(skillId: string): string {
+  return rulesRepository.getOption(skillId)?.name ?? skillId
+}
 const identityLine = computed(() => {
   const draft = props.draft
   const names = [
@@ -50,7 +57,7 @@ const selectedSpells = computed(() => {
       <StatTile label="生命值" :value="derived.hitPoints.value" note="职业生命骰 + 体质" />
       <StatTile label="先攻" :value="derived.initiative.value >= 0 ? `+${derived.initiative.value}` : derived.initiative.value" note="敏捷调整值" />
       <StatTile label="速度" :value="`${derived.speed.value}尺`" :note="derived.speed.sources[0]?.detail" />
-      <StatTile v-for="(value, key) in derived.abilities" :key="key" :label="String(key).toUpperCase()" :value="value" :note="`${derived.modifiers[key] >= 0 ? '+' : ''}${derived.modifiers[key]}`" />
+      <StatTile v-for="(value, key) in derived.abilities" :key="key" :label="abilityLabel(String(key))" :value="value" :note="`${derived.modifiers[key] >= 0 ? '+' : ''}${derived.modifiers[key]}`" />
     </div>
     <div v-else-if="activeTab === 'combat'" class="character-sheet__panel"><h3>主要武器</h3><p>命中 +{{ derived.attackBonus.value }} · 伤害骰 + {{ derived.attackDamageBonus.value }}</p><small>{{ derived.attackBonus.sources.map((item) => `${item.label} ${item.value >= 0 ? '+' : ''}${item.value}`).join('，') }}</small></div>
     <div v-else-if="activeTab === 'features'" class="character-sheet__derived">
@@ -60,7 +67,7 @@ const selectedSpells = computed(() => {
           <StatTile
             v-for="(value, key) in derived.savingThrows"
             :key="key"
-            :label="String(key).toUpperCase()"
+            :label="abilityLabel(String(key))"
             :value="value.value >= 0 ? `+${value.value}` : value.value"
             :note="value.sources.map((source) => source.label).join(' + ')"
           />
@@ -72,7 +79,7 @@ const selectedSpells = computed(() => {
           <StatTile
             v-for="(value, key) in derived.skills"
             :key="key"
-            :label="String(key).replace('skill-', '')"
+            :label="skillLabel(String(key))"
             :value="value.value >= 0 ? `+${value.value}` : value.value"
             :note="value.sources.map((source) => source.detail).join(' · ')"
           />

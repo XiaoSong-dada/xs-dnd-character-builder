@@ -69,4 +69,46 @@ describe('validateDraft', () => {
     expect(issues.some((issue) => issue.id.startsWith('ability-improvement-'))).toBe(true)
     expect(issues.some((issue) => issue.id.startsWith('feat-prerequisite-'))).toBe(true)
   })
+
+  it('27点预算只校验基础值，不计入等级属性提升', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      targetLevel: 4,
+      abilityMethod: 'point-buy',
+      classId: 'class-2014-fighter',
+      backgroundId: 'background-2014-soldier',
+      raceId: 'race-2014-human',
+      name: '凯恩',
+      baseAbilities: { str: 18, dex: 16, con: 15, int: 8, wis: 10, cha: 8 },
+      selections: [
+        { checkpointId: 'fighter-2014-asi-4', optionIds: ['asi-int-2'], confirmedAt: '' },
+      ],
+    }
+
+    const issues = validateDraft(draft)
+
+    expect(issues.some((issue) => issue.id === 'ability-method-invalid')).toBe(false)
+    expect(issues.some((issue) => issue.id.startsWith('ability-improvement-'))).toBe(false)
+  })
+
+  it('属性提升超过20时只报告属性提升错误，不误报27点预算', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      targetLevel: 4,
+      abilityMethod: 'point-buy',
+      classId: 'class-2014-fighter',
+      backgroundId: 'background-2014-soldier',
+      raceId: 'race-2014-human',
+      name: '凯恩',
+      baseAbilities: { str: 18, dex: 16, con: 15, int: 8, wis: 10, cha: 8 },
+      selections: [
+        { checkpointId: 'fighter-2014-asi-4', optionIds: ['asi-str-2'], confirmedAt: '' },
+      ],
+    }
+
+    const issues = validateDraft(draft)
+
+    expect(issues.some((issue) => issue.id === 'ability-method-invalid')).toBe(false)
+    expect(issues.some((issue) => issue.id.startsWith('ability-improvement-'))).toBe(true)
+  })
 })

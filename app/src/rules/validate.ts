@@ -5,7 +5,7 @@ import {
   getAbilityImprovementEligibility,
   getFeatEligibility,
 } from '@/rules/feats'
-import { areBaseAbilitiesValid } from '@/rules/abilities'
+import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abilities'
 import { getRaceAbilityBonuses } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
@@ -73,7 +73,8 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       })
     }
   }
-  if (!areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod, getRaceAbilityBonuses(draft))) {
+  const raceAbilityBonuses = getRaceAbilityBonuses(draft)
+  if (!areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod)) {
     issues.push({
       id: 'ability-method-invalid',
       step: 'abilities',
@@ -82,8 +83,17 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       resolution: draft.abilityMethod === 'standard-array'
         ? '恰好使用15、14、13、12、10、8各一次。'
         : draft.abilityMethod === 'point-buy'
-          ? '基础值至少为8，每提高1点消耗1点；把总花费降至27点以内，并确保种族加成后的最终值不超过20。'
+          ? '只计算六项基础值：每项至少为8，每提高1点消耗1点，总花费不得超过27点。'
           : '将每项基础属性保持在3—20。',
+    })
+  }
+  if (!areOriginAbilitiesWithinCap(draft.baseAbilities, raceAbilityBonuses)) {
+    issues.push({
+      id: 'origin-ability-cap-exceeded',
+      step: 'abilities',
+      severity: 'error',
+      message: '种族或子种族加成后的属性超过20。',
+      resolution: '返回属性步骤降低对应基础值，或调整可选的种族属性加成。',
     })
   }
 

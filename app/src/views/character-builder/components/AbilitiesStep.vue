@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { areBaseAbilitiesValid, pointBuyCost, STANDARD_ARRAY } from '@/rules/abilities'
+import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, pointBuyCost, STANDARD_ARRAY } from '@/rules/abilities'
 import type { AbilityKey, AbilityMethod, AbilityScores } from '@/types/character'
 
 const props = defineProps<{
@@ -16,7 +16,10 @@ const emit = defineEmits<{ change: [scores: AbilityScores]; choices: [choices: r
 const labels: Record<AbilityKey, string> = { str: '力量', dex: '敏捷', con: '体质', int: '智力', wis: '感知', cha: '魅力' }
 const keys: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const pointCost = computed(() => pointBuyCost(props.scores))
-const methodValid = computed(() => areBaseAbilitiesValid(props.scores, props.method, props.bonuses))
+const methodValid = computed(() =>
+  areBaseAbilitiesValid(props.scores, props.method)
+  && areOriginAbilitiesWithinCap(props.scores, props.bonuses),
+)
 
 function update(key: AbilityKey, value: number): void {
   const minimum = props.method === 'point-buy' ? 8 : 3
@@ -51,11 +54,9 @@ function canDecrease(key: AbilityKey): boolean {
 function canIncrease(key: AbilityKey): boolean {
   if (props.scores[key] >= maximumScore(key)) return false
   if (props.method !== 'point-buy') return true
-  return areBaseAbilitiesValid(
-    { ...props.scores, [key]: props.scores[key] + 1 },
-    'point-buy',
-    props.bonuses,
-  )
+  const next = { ...props.scores, [key]: props.scores[key] + 1 }
+  return areBaseAbilitiesValid(next, 'point-buy')
+    && areOriginAbilitiesWithinCap(next, props.bonuses)
 }
 
 function decrease(key: AbilityKey): void {
@@ -89,7 +90,7 @@ function choiceDisabled(key: AbilityKey): boolean {
       <strong v-else-if="method === 'point-buy'">27点购点：已使用 {{ pointCost }}/27</strong>
       <strong v-else>自定义属性</strong>
       <span v-if="method === 'standard-array'">将 15、14、13、12、10、8 分别分配给六项基础属性；这里不包含种族加成。选择已使用的数值时，两项属性会自动交换。</span>
-      <span v-else-if="method === 'point-buy'">基础值从8开始，每提高1点消耗1点；包含种族与子种族加成后的最终值范围为8—20，总花费不能超过27点。</span>
+      <span v-else-if="method === 'point-buy'">基础值从8开始，每提高1点消耗1点；27点预算只计算本页基础值，不计种族加成和后续属性提升。所有加成后的最终值不能超过20。</span>
       <span v-else>每项范围 3—20；自定义结果应由玩家与DM确认。</span>
     </aside>
     <div v-if="flexibleCount" class="abilities-step__choices">

@@ -21,7 +21,6 @@ export function pointBuyCost(scores: AbilityScores): number {
 export function areBaseAbilitiesValid(
   scores: AbilityScores,
   method: AbilityMethod,
-  bonuses: Partial<AbilityScores> = {},
 ): boolean {
   const values = Object.values(scores)
   if (method === 'standard-array') {
@@ -30,13 +29,17 @@ export function areBaseAbilitiesValid(
   if (method === 'point-buy') {
     return ABILITY_KEYS.every((key) => {
       const baseScore = scores[key]
-      const finalScore = baseScore + (bonuses[key] ?? 0)
       return Number.isInteger(baseScore)
         && baseScore >= POINT_BUY_MINIMUM
         && baseScore <= POINT_BUY_MAXIMUM
-        && finalScore >= POINT_BUY_MINIMUM
-        && finalScore <= POINT_BUY_MAXIMUM
     }) && pointBuyCost(scores) <= POINT_BUY_BUDGET
   }
   return values.every((value) => value >= 3 && value <= 20)
+}
+
+export function areOriginAbilitiesWithinCap(
+  scores: AbilityScores,
+  bonuses: Partial<AbilityScores>,
+): boolean {
+  return ABILITY_KEYS.every((key) => scores[key] + (bonuses[key] ?? 0) <= POINT_BUY_MAXIMUM)
 }
