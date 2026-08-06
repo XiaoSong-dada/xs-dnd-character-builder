@@ -1,14 +1,15 @@
 import { classPreviews2014 } from '@/rules/data/classes-2014'
-import { arcaneCasterClasses2014, arcaneCasterOptions2014, arcaneCasterSpells2014 } from '@/rules/data/arcane-casters-2014'
+import { arcaneCasterClasses2014, arcaneCasterOptions2014 } from '@/rules/data/arcane-casters-2014'
 import { fighterOptions, fighterRule } from '@/rules/data/fighter'
 import { martialClasses2014, martialOptions2014 } from '@/rules/data/martials-2014'
 import { equipment2014 } from '@/rules/data/equipment-2014'
 import { abilityImprovementOptions2014, feats2014 } from '@/rules/data/feats-2014'
-import { halfCasterClasses2014, halfCasterOptions2014, halfCasterSpells2014 } from '@/rules/data/half-casters-2014'
-import { fullCasterClasses2014, fullCasterSpells2014 } from '@/rules/data/full-casters-2014'
+import { halfCasterClasses2014, halfCasterOptions2014 } from '@/rules/data/half-casters-2014'
+import { fullCasterClasses2014 } from '@/rules/data/full-casters-2014'
 import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
 import { backgroundStartingEquipment2014, classStartingEquipment2014 } from '@/rules/data/starting-equipment-2014'
 import { subclasses2014, subclassOptions2014 } from '@/rules/data/subclasses-2014'
+import { spells2014 } from '@/rules/data/spells-2014'
 import type { RulesRepository } from '@/types/rules'
 
 const sources = [
@@ -19,6 +20,7 @@ const sources = [
   { id: 'xgte-2017-index', title: '珊娜萨的万事指南索引', ruleset: '5e-2014' as const },
   { id: 'egtw-2020-index', title: '荒洲探险者指南索引', ruleset: '5e-2014' as const },
   { id: 'tcoe-2020-index', title: '塔莎的万事坩埚索引', ruleset: '5e-2014' as const },
+  { id: 'scc-2021-index', title: '斯翠海文：混沌课程索引', ruleset: '5e-2014' as const },
   { id: 'vrgtr-2021-index', title: '范·里希滕的鸦阁指南索引', ruleset: '5e-2014' as const },
   { id: 'ftd-2021-index', title: '费兹班的巨龙宝库索引', ruleset: '5e-2014' as const },
   { id: 'dsotdq-2022-index', title: '龙枪：龙后之影索引', ruleset: '5e-2014' as const },
@@ -50,7 +52,7 @@ export const rulesRepository: RulesRepository = {
   equipment: equipment2014,
   classStartingEquipment: classStartingEquipment2014,
   backgroundStartingEquipment: backgroundStartingEquipment2014,
-  spells: [...halfCasterSpells2014, ...arcaneCasterSpells2014, ...fullCasterSpells2014],
+  spells: spells2014,
   getClass(id) {
     return this.classes.find((item) => item.id === id)
   },

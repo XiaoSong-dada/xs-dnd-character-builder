@@ -1,6 +1,7 @@
-import type { ClassRule, RuleOption, SpellRule, SubclassRule } from '@/types/rules'
+import type { ClassRule, RuleOption, SubclassRule } from '@/types/rules'
 import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
+import { spells2014 } from '@/rules/data/spells-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
@@ -11,48 +12,8 @@ const wizardSpellbookCounts = Array.from({ length: 20 }, (_, index) => 6 + index
 const warlockCantrips = [2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4] as const
 const warlockSpellsKnown = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15] as const
 
-type ArcaneClass = 'wizard' | 'warlock'
-type SpellSeed = readonly [englishName: string, name: string, level: number, classes: readonly ArcaneClass[]]
-
-const wizardSeeds: readonly SpellSeed[] = [
-  ['Fire Bolt', '火焰箭', 0, ['wizard']], ['Mage Hand', '法师之手', 0, ['wizard']], ['Minor Illusion', '次级幻影', 0, ['wizard']], ['Prestidigitation', '魔法伎俩', 0, ['wizard']], ['Ray of Frost', '冷冻射线', 0, ['wizard']],
-  ['Burning Hands', '燃烧之手', 1, ['wizard']], ['Charm Person', '魅惑人类', 1, ['wizard', 'warlock']], ['Color Spray', '七彩喷射', 1, ['wizard']], ['Comprehend Languages', '通晓语言', 1, ['wizard']], ['Feather Fall', '羽落术', 1, ['wizard']], ['Find Familiar', '寻获魔宠', 1, ['wizard']], ['Identify', '鉴定术', 1, ['wizard']], ['Mage Armor', '法师护甲', 1, ['wizard']], ['Magic Missile', '魔法飞弹', 1, ['wizard']], ['Sleep', '睡眠术', 1, ['wizard']],
-  ['Arcane Lock', '秘法锁', 2, ['wizard']], ['Blindness/Deafness', '目盲/耳聋术', 2, ['wizard']], ['Blur', '朦胧术', 2, ['wizard']], ['Darkness', '黑暗术', 2, ['wizard', 'warlock']], ['Flaming Sphere', '炽焰法球', 2, ['wizard']], ['Hold Person', '人类定身术', 2, ['wizard', 'warlock']], ['Invisibility', '隐形术', 2, ['wizard', 'warlock']], ['Misty Step', '迷踪步', 2, ['wizard', 'warlock']],
-  ['Counterspell', '法术反制', 3, ['wizard', 'warlock']], ['Fireball', '火球术', 3, ['wizard']], ['Fly', '飞行术', 3, ['wizard', 'warlock']], ['Haste', '加速术', 3, ['wizard']], ['Lightning Bolt', '闪电束', 3, ['wizard']], ['Major Image', '高等幻影', 3, ['wizard']], ['Slow', '缓慢术', 3, ['wizard']],
-  ['Arcane Eye', '秘法眼', 4, ['wizard']], ['Dimension Door', '任意门', 4, ['wizard', 'warlock']], ['Greater Invisibility', '高等隐形术', 4, ['wizard']], ['Ice Storm', '冰风暴', 4, ['wizard']], ['Polymorph', '变形术', 4, ['wizard']], ['Wall of Fire', '火墙术', 4, ['wizard']],
-  ['Animate Objects', '活化物件', 5, ['wizard']], ['Cone of Cold', '寒冰锥', 5, ['wizard']], ['Hold Monster', '怪物定身术', 5, ['wizard', 'warlock']], ['Scrying', '探知术', 5, ['wizard']], ['Teleportation Circle', '传送法阵', 5, ['wizard']],
-  ['Chain Lightning', '连锁闪电', 6, ['wizard']], ['Disintegrate', '解离术', 6, ['wizard']], ['Globe of Invulnerability', '法术无效结界', 6, ['wizard']], ['True Seeing', '真实视觉', 6, ['wizard']],
-  ['Finger of Death', '死亡一指', 7, ['wizard']], ['Plane Shift', '异界传送', 7, ['wizard']], ['Teleport', '传送术', 7, ['wizard']],
-  ['Dominate Monster', '支配怪物', 8, ['wizard']], ['Maze', '迷宫术', 8, ['wizard']], ['Power Word Stun', '律令震慑', 8, ['wizard']],
-  ['Foresight', '预警术', 9, ['wizard']], ['Meteor Swarm', '流星爆', 9, ['wizard']], ['Wish', '祈愿术', 9, ['wizard']],
-]
-
-const warlockOnlySeeds: readonly SpellSeed[] = [
-  ['Eldritch Blast', '魔能爆', 0, ['warlock']], ['Chill Touch', '冻寒之触', 0, ['warlock']], ['Friends', '交友术', 0, ['warlock']],
-  ['Armor of Agathys', '阿伽迪斯之铠', 1, ['warlock']], ['Arms of Hadar', '哈达之臂', 1, ['warlock']], ['Hellish Rebuke', '炼狱叱喝', 1, ['warlock']], ['Hex', '妖火诅咒', 1, ['warlock']], ['Witch Bolt', '巫术箭', 1, ['warlock']],
-  ['Cloud of Daggers', '匕首之云', 2, ['warlock']], ['Mirror Image', '镜影术', 2, ['warlock']], ['Suggestion', '暗示术', 2, ['warlock']],
-  ['Fear', '恐惧术', 3, ['warlock']], ['Hunger of Hadar', '哈达之欲', 3, ['warlock']], ['Vampiric Touch', '吸血鬼之触', 3, ['warlock']],
-  ['Banishment', '放逐术', 4, ['warlock']], ['Blight', '枯萎术', 4, ['warlock']],
-  ['Dream', '托梦术', 5, ['warlock']], ['Contact Other Plane', '异界探知', 5, ['warlock']],
-]
-
-function spellId(englishName: string): string {
-  return `spell-2014-${englishName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
-}
-
-export const arcaneCasterSpells2014: readonly SpellRule[] = [...wizardSeeds, ...warlockOnlySeeds].map(([englishName, name, level, classes]) => ({
-  id: spellId(englishName),
-  ruleset: '5e-2014',
-  name,
-  englishName,
-  level,
-  classIds: classes.map((className) => `class-2014-${className}`),
-  summary: `${level === 0 ? '戏法' : `${level}环法术`}；本批只保存选择所需元数据。`,
-  status: 'implemented',
-  sourceIds: basicSource,
-}))
-
-const spellIds = (classId: string) => arcaneCasterSpells2014.filter((spell) => spell.classIds.includes(classId)).map((spell) => spell.id)
+const spellIds = (classId: string): readonly string[] =>
+  spells2014.filter((spell) => spell.classIds.includes(classId)).map((spell) => spell.id)
 const wizardSubclassIds = ['subclass-2014-wizard-abjuration', 'subclass-2014-wizard-conjuration', 'subclass-2014-wizard-divination', 'subclass-2014-wizard-enchantment', 'subclass-2014-wizard-evocation', 'subclass-2014-wizard-illusion', 'subclass-2014-wizard-necromancy', 'subclass-2014-wizard-transmutation'] as const
 const warlockSubclassIds = ['subclass-2014-warlock-archfey', 'subclass-2014-warlock-fiend', 'subclass-2014-warlock-great-old-one'] as const
 
