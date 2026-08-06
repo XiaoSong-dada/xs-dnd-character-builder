@@ -254,10 +254,13 @@ views/character-builder/index.vue
   -> views/character-builder/components
   -> features/quick-build/components
   -> stores/character-drafts.ts
-      -> rules/{derive,validate,timeline,dependency,repository}
+      -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}
+          -> rules/data/{subclasses-2014,subclass-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,starting-equipment-2014,feats-2014}
       -> services/{draft-storage,character-json}
   -> components/ui
 ```
 
 规则层仍保持框架无关，不读取 DOM、路由或存储。Store 只保存原始选择；文件和
 localStorage 副作用只存在于 services；路由查询同步和步骤编排只存在于页面 hook。
+
+`rules/data/subclasses-2014.ts` 是当前 2014 子职元数据和普通玩家可选 ID 的唯一聚合入口；`rules/data/subclass-features-2014.ts` 登记各子职等级特性（纵向切片，未核验效果保持 `index-only`），`rules/subclass-effects.ts` 提供子职派生效果钩子（当前返回零效果，核验后填充）。`repository` 负责登记完整目录，`timeline` 只按职业和目标等级装配玩家可用检查点；DM 专用条目可被仓库查询，但不进入普通时间线。各职业旧数据文件中已有的子职常量暂保留供局部实现引用，不再作为仓库目录来源。

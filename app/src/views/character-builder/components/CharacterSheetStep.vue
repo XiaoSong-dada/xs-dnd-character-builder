@@ -27,7 +27,7 @@ const identityLine = computed(() => {
   const draft = props.draft
   const names = [
     draft.classId ? rulesRepository.getClass(draft.classId)?.name : undefined,
-    draft.subclassId ? rulesRepository.getOption(draft.subclassId)?.name : undefined,
+    draft.subclassId ? rulesRepository.getSubclass(draft.subclassId)?.name : undefined,
     draft.raceId ? rulesRepository.getRace(draft.raceId)?.name : undefined,
     draft.subraceId ? rulesRepository.getRace(draft.subraceId)?.name : undefined,
     draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId)?.name : undefined,

@@ -1,5 +1,6 @@
 import type { ClassRule, RuleOption, SpellRule, SubclassRule } from '@/types/rules'
 import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
+import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
@@ -92,6 +93,6 @@ export const arcaneCasterClasses2014: readonly ClassRule[] = [
 ]
 
 export const arcaneCasterSubclasses2014: readonly SubclassRule[] = [
-  ...wizardSubclassIds.map((id) => ({ id, classId: 'class-2014-wizard', ruleset: '5e-2014' as const, name: arcaneCasterOptions2014.find((option) => option.id === id)?.name ?? id, englishName: id.split('-').slice(-1)[0] ?? id, selectionLevel: 2, summary: '2014法师奥术传统索引。', status: 'index-only' as const, sourceIds: indexSource })),
-  ...warlockSubclassIds.map((id) => ({ id, classId: 'class-2014-warlock', ruleset: '5e-2014' as const, name: arcaneCasterOptions2014.find((option) => option.id === id)?.name ?? id, englishName: id.split('-').slice(-1)[0] ?? id, selectionLevel: 1, summary: '2014邪术师宗主索引。', status: 'index-only' as const, sourceIds: indexSource })),
+  ...wizardSubclassIds.map((id) => ({ id, classId: 'class-2014-wizard', ruleset: '5e-2014' as const, name: arcaneCasterOptions2014.find((option) => option.id === id)?.name ?? id, englishName: id.split('-').slice(-1)[0] ?? id, selectionLevel: 2, summary: '2014法师奥术传统索引。', status: 'index-only' as const, sourceIds: indexSource, features: getSubclassFeatures2014(id) })),
+  ...warlockSubclassIds.map((id) => ({ id, classId: 'class-2014-warlock', ruleset: '5e-2014' as const, name: arcaneCasterOptions2014.find((option) => option.id === id)?.name ?? id, englishName: id.split('-').slice(-1)[0] ?? id, selectionLevel: 1, summary: '2014邪术师宗主索引。', status: 'index-only' as const, sourceIds: indexSource, features: getSubclassFeatures2014(id) })),
 ]

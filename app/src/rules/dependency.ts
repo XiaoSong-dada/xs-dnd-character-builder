@@ -4,6 +4,7 @@ import type { CharacterDraft, DependencyImpact } from '@/types/character'
 export type DraftChange =
   | { readonly kind: 'target-level'; readonly value: number }
   | { readonly kind: 'class'; readonly value: string }
+  | { readonly kind: 'subclass'; readonly value: string }
   | { readonly kind: 'race'; readonly value: string }
   | { readonly kind: 'subrace'; readonly value?: string }
   | { readonly kind: 'background'; readonly value: string }
@@ -15,6 +16,15 @@ export function getDependencyImpact(draft: CharacterDraft, change: DraftChange):
       invalidated: draft.selections.map((item) => item.checkpointId),
       review: ['装备选择', '属性分配'],
       preserved: ['姓名与人物细节', '种族与背景'],
+    }
+  }
+  if (change.kind === 'subclass') {
+    return {
+      invalidated: draft.selections
+        .filter((item) => item.checkpointId.includes('-subclass-'))
+        .map((item) => item.checkpointId),
+      review: ['子职特性选择', '子职派生值', '角色卡子职部分'],
+      preserved: ['职业与等级', '起源', '基础属性'],
     }
   }
   if (change.kind === 'target-level') {

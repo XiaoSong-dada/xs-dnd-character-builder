@@ -94,6 +94,30 @@ export interface SubclassRule {
   readonly selectionLevel: number
   readonly summary: string
   readonly status: CompatibilityStatus
+  readonly availability?: 'player' | 'dm-only'
+  readonly sourceIds: readonly string[]
+  readonly features: readonly SubclassFeature[]
+}
+
+export type SubclassFeatureKind =
+  | 'passive'
+  | 'choice'
+  | 'resource'
+  | 'action'
+  | 'bonus-action'
+  | 'reaction'
+
+export interface SubclassFeature {
+  readonly id: string
+  readonly subclassId: string
+  readonly name: string
+  readonly englishName: string
+  readonly level: number
+  readonly summary: string
+  readonly kind: SubclassFeatureKind
+  readonly requiresChoice?: boolean
+  readonly optionIds?: readonly string[]
+  readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }
 

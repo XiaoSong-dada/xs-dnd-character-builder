@@ -1,5 +1,6 @@
 import type { ClassRule, RuleOption, SubclassRule } from '@/types/rules'
 import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
+import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 
 const sourceIds = ['basic-rules-2014'] as const
 const maneuverIds = [
@@ -75,7 +76,7 @@ export const fighterRule: ClassRule = {
 }
 
 export const fighterSubclasses: readonly SubclassRule[] = [
-  { id: 'subclass-2014-fighter-battle-master', classId: 'class-2014-fighter', ruleset: '5e-2014', name: '战斗大师', englishName: 'Battle Master', selectionLevel: 3, summary: '以优势骰和战技控制战场。', status: 'implemented', sourceIds: ['phb-2014-index'] },
-  { id: 'subclass-2014-fighter-champion', classId: 'class-2014-fighter', ruleset: '5e-2014', name: '勇士', englishName: 'Champion', selectionLevel: 3, summary: '直接强化武器和运动能力。', status: 'implemented', sourceIds },
-  { id: 'subclass-2014-fighter-eldritch-knight', classId: 'class-2014-fighter', ruleset: '5e-2014', name: '奥法骑士', englishName: 'Eldritch Knight', selectionLevel: 3, summary: '结合武器和法师法术。', status: 'index-only', sourceIds: ['phb-2014-index'] },
+  { id: 'subclass-2014-fighter-battle-master', classId: 'class-2014-fighter', ruleset: '5e-2014', name: '战斗大师', englishName: 'Battle Master', selectionLevel: 3, summary: '以优势骰和战技控制战场。', status: 'implemented', sourceIds: ['phb-2014-index'], features: getSubclassFeatures2014('subclass-2014-fighter-battle-master') },
+  { id: 'subclass-2014-fighter-champion', classId: 'class-2014-fighter', ruleset: '5e-2014', name: '勇士', englishName: 'Champion', selectionLevel: 3, summary: '直接强化武器和运动能力。', status: 'implemented', sourceIds, features: getSubclassFeatures2014('subclass-2014-fighter-champion') },
+  { id: 'subclass-2014-fighter-eldritch-knight', classId: 'class-2014-fighter', ruleset: '5e-2014', name: '奥法骑士', englishName: 'Eldritch Knight', selectionLevel: 3, summary: '结合武器和法师法术。', status: 'index-only', sourceIds: ['phb-2014-index'], features: getSubclassFeatures2014('subclass-2014-fighter-eldritch-knight') },
 ]

@@ -20,6 +20,7 @@
 - 对非开放商业内容只记录必要的索引、来源和项目内兼容说明，不复制完整规则正文。
 - 现有 2024 文件作为未来独立规则集资料保留，不进入当前注册表。扩展子职目录仅表示“已建立资料入口”，不表示车卡程序已经实现。
 - 当前实现说明见 [2014 战士](classes/subclasses/fighter/fighter-2014.md)、[2014 战斗大师](classes/subclasses/fighter/fighter-battle-master-2014.md)、[2014 野蛮人](classes/subclasses/barbarian/barbarian-2014.md)、[2014 武僧](classes/subclasses/monk/monk-2014.md)、[2014 游荡者](classes/subclasses/rogue/rogue-2014.md)、[2014 圣武士](classes/subclasses/paladin/paladin-2014.md)、[2014 游侠](classes/subclasses/ranger/ranger-2014.md)、[2014 法师](classes/subclasses/wizard/wizard-2014.md)与[2014 邪术师](classes/subclasses/warlock/warlock-2014.md)。
+- 子职覆盖：112 个玩家可用子职已按纵向切片接入车卡（等级特性注册表 `app/src/rules/data/subclass-features-2014.ts`、子职选择与互斥校验、子职派生钩子）；死亡领域与破誓者仍为 DM 专用索引。未核验的具体效果保持 `index-only`，不参与自动计算。
 
 ## 3. 数据字段约定
 
@@ -86,7 +87,7 @@
 
 以下条目是基于 2014 职业框架发行的官方旧版或扩展子职。每个文件只记录来源、兼容边界与官方详情链接，不复制商业规则正文；其中 DM 选项不会进入默认玩家可选列表。
 
-- **野蛮人**：[战狂道途](classes/subclasses/barbarian/barbarian-battlerager.md)、[先祖守卫道途](classes/subclasses/barbarian/barbarian-ancestral-guardian.md)、[风暴先驱道途](classes/subclasses/barbarian/barbarian-storm-herald.md)、[狂野魔法道途](classes/subclasses/barbarian/barbarian-wild-magic.md)、[野兽道途](classes/subclasses/barbarian/barbarian-beast.md)、[巨人道途](classes/subclasses/barbarian/barbarian-giant.md)
+- **野蛮人**：[图腾武者道途](classes/subclasses/barbarian/barbarian-totem-warrior.md)、[战狂道途](classes/subclasses/barbarian/barbarian-battlerager.md)、[先祖守卫道途](classes/subclasses/barbarian/barbarian-ancestral-guardian.md)、[风暴先驱道途](classes/subclasses/barbarian/barbarian-storm-herald.md)、[狂野魔法道途](classes/subclasses/barbarian/barbarian-wild-magic.md)、[野兽道途](classes/subclasses/barbarian/barbarian-beast.md)、[巨人道途](classes/subclasses/barbarian/barbarian-giant.md)
 - **吟游诗人**：[剑舞学院](classes/subclasses/bard/bard-college-of-swords.md)、[低语学院](classes/subclasses/bard/bard-college-of-whispers.md)、[创造学院](classes/subclasses/bard/bard-college-of-creation.md)、[雄辩学院](classes/subclasses/bard/bard-college-of-eloquence.md)、[精魂学院](classes/subclasses/bard/bard-college-of-spirits.md)
 - **牧师**：[知识领域](classes/subclasses/cleric/cleric-knowledge-domain.md)、[自然领域](classes/subclasses/cleric/cleric-nature-domain.md)、[风暴领域](classes/subclasses/cleric/cleric-tempest-domain.md)、[奥秘领域](classes/subclasses/cleric/cleric-arcana-domain.md)、[锻造领域](classes/subclasses/cleric/cleric-forge-domain.md)、[坟墓领域](classes/subclasses/cleric/cleric-grave-domain.md)、[秩序领域](classes/subclasses/cleric/cleric-order-domain.md)、[和平领域](classes/subclasses/cleric/cleric-peace-domain.md)、[暮光领域](classes/subclasses/cleric/cleric-twilight-domain.md)、[死亡领域（DM 选项）](classes/subclasses/cleric/cleric-death-domain.md)
 - **德鲁伊**：[梦境结社](classes/subclasses/druid/druid-circle-of-dreams.md)、[牧人结社](classes/subclasses/druid/druid-circle-of-the-shepherd.md)、[孢子结社](classes/subclasses/druid/druid-circle-of-spores.md)、[野火结社](classes/subclasses/druid/druid-circle-of-wildfire.md)
@@ -99,7 +100,9 @@
 - **邪术师**：[不朽者宗主](classes/subclasses/warlock/warlock-undying-patron.md)、[咒剑宗主](classes/subclasses/warlock/warlock-hexblade-patron.md)、[深海意志宗主](classes/subclasses/warlock/warlock-fathomless-patron.md)、[巨灵宗主](classes/subclasses/warlock/warlock-genie-patron.md)、[死灵宗主](classes/subclasses/warlock/warlock-undead-patron.md)
 - **法师**：[咒法学派](classes/subclasses/wizard/wizard-conjuration.md)、[附魔学派](classes/subclasses/wizard/wizard-enchantment.md)、[死灵学派](classes/subclasses/wizard/wizard-necromancy.md)、[变化学派](classes/subclasses/wizard/wizard-transmutation.md)、[剑咏者](classes/subclasses/wizard/wizard-bladesinging.md)、[战争魔法](classes/subclasses/wizard/wizard-war-magic.md)、[时间魔法](classes/subclasses/wizard/wizard-chronurgy-magic.md)、[重力魔法](classes/subclasses/wizard/wizard-graviturgy-magic.md)、[书士会](classes/subclasses/wizard/wizard-order-of-scribes.md)
 
-未重复建立的旧名称：图腾武者对应 2024 的[狂野之心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)；2014 的四元素、暗影、敞手以及术士、邪术师、法师的同源新版名称，继续由核心索引中的 2024 条目承接。
+产品主项目已将上述索引与 2014 核心子职收口为独立目录，共 114 项；其中 112 项可进入普通玩家时间线，死亡领域与破誓者仅作为 DM 专用索引登记。即使名称或主题与 2024 条目相近，2014 条目仍使用独立稳定 ID、独立来源和独立元数据，不再由 2024 条目承接。世界树道途、舞蹈学院和海洋结社仅属于 2024，不进入当前目录。
+
+各职业目录数量为：野蛮人 9、吟游诗人 8、牧师 14、德鲁伊 7、战士 10、武僧 10、圣武士 9、游侠 8、游荡者 9、术士 8、邪术师 9、法师 13。商业扩展内容只记录选择所需的名称、英文名、来源与原创摘要；未经核验的具体规则效果不参与自动计算。
 
 ## 5. 职业章节
 
@@ -110,7 +113,7 @@
 - 职业 ID：`barbarian`
 - 职业基础与等级特性：[野蛮人详细资料](classes/subclasses/barbarian/barbarian.md)
 - 2024 子职：[狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)、[狂野之心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)、[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)、[狂信者道途](classes/subclasses/barbarian/barbarian-zealot.md)
-- 旧版与扩展子职：[战狂道途](classes/subclasses/barbarian/barbarian-battlerager.md)、[先祖守卫道途](classes/subclasses/barbarian/barbarian-ancestral-guardian.md)、[风暴先驱道途](classes/subclasses/barbarian/barbarian-storm-herald.md)、[狂野魔法道途](classes/subclasses/barbarian/barbarian-wild-magic.md)、[野兽道途](classes/subclasses/barbarian/barbarian-beast.md)、[巨人道途](classes/subclasses/barbarian/barbarian-giant.md)
+- 旧版与扩展子职：[图腾武者道途](classes/subclasses/barbarian/barbarian-totem-warrior.md)、[战狂道途](classes/subclasses/barbarian/barbarian-battlerager.md)、[先祖守卫道途](classes/subclasses/barbarian/barbarian-ancestral-guardian.md)、[风暴先驱道途](classes/subclasses/barbarian/barbarian-storm-herald.md)、[狂野魔法道途](classes/subclasses/barbarian/barbarian-wild-magic.md)、[野兽道途](classes/subclasses/barbarian/barbarian-beast.md)、[巨人道途](classes/subclasses/barbarian/barbarian-giant.md)
 - 选择与校验：已记录技能、装备、武器精通、狂暴、AC、子职等级和旧版兼容边界
 - 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-27
 

@@ -1,5 +1,6 @@
 import type { ClassRule, RuleOption, SubclassRule } from '@/types/rules'
 import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
+import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
@@ -231,6 +232,7 @@ function subclass(
     summary: '2014子职资料索引。',
     status: 'index-only',
     sourceIds: indexSource,
+    features: getSubclassFeatures2014(id),
   }
 }
 

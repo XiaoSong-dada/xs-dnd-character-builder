@@ -10,6 +10,7 @@ import { getRaceAbilityBonuses } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
+import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import type { CharacterDraft, ValidationIssue } from '@/types/character'
 
 export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[] {
@@ -296,6 +297,54 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         severity: 'error',
         message: '专精选择中包含尚未熟练的技能。',
         resolution: '只能从职业或背景已提供的技能熟练中选择，盗贼工具也可以选择。',
+      })
+    }
+  }
+  issues.push(...validateSubclassSelections(draft))
+  return issues
+}
+
+export function validateSubclassSelections(draft: CharacterDraft): readonly ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+  if (!draft.classId || !draft.subclassId) return issues
+  const subclass = rulesRepository.getSubclass(draft.subclassId)
+  if (!subclass) {
+    issues.push({ id: 'subclass-unknown', step: 'timeline', severity: 'error', message: '所选子职不存在。', resolution: '返回时间线重新选择子职。' })
+    return issues
+  }
+  if (subclass.classId !== draft.classId) {
+    issues.push({ id: 'subclass-class-mismatch', step: 'timeline', severity: 'error', message: `“${subclass.name}”不属于当前职业。`, resolution: '选择当前职业的子职。' })
+  }
+  if (draft.targetLevel < subclass.selectionLevel) {
+    issues.push({ id: 'subclass-level-too-early', step: 'timeline', severity: 'error', message: `“${subclass.name}”需要在${subclass.selectionLevel}级才能选择。`, resolution: '提高目标等级或移除子职选择。' })
+  }
+  if (subclass.status === 'index-only') {
+    issues.push({ id: 'subclass-index-only', step: 'timeline', severity: 'warning', message: `“${subclass.name}”目前只有2014规则索引。`, resolution: '可以继续生成预览草稿，但不能标记为资料完整角色。' })
+  }
+  const features = getSubclassFeatures2014(draft.subclassId)
+  const selectedOptionIds = new Set(
+    draft.selections
+      .filter((item) => !item.invalidatedAt)
+      .flatMap((item) => item.optionIds),
+  )
+  for (const feature of features) {
+    if (!feature.requiresChoice || !feature.optionIds?.length) continue
+    const chosen = feature.optionIds.filter((optionId) => selectedOptionIds.has(optionId))
+    if (chosen.length === 0) {
+      issues.push({
+        id: `subclass-feature-choice-${feature.id}`,
+        step: 'timeline',
+        severity: 'warning',
+        message: `子职特性「${feature.name}」需要选择一项。`,
+        resolution: '完成子职特性选择后角色资料才完整。',
+      })
+    } else if (chosen.length > 1) {
+      issues.push({
+        id: `subclass-feature-exclusive-${feature.id}`,
+        step: 'timeline',
+        severity: 'error',
+        message: `子职特性「${feature.name}」的选项互斥。`,
+        resolution: '每个特性只能选择其中一项。',
       })
     }
   }

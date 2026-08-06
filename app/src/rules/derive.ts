@@ -1,5 +1,6 @@
 import { rulesRepository } from '@/rules/repository'
 import { applyAbilityImprovement, decodeAbilityImprovement } from '@/rules/feats'
+import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
 import type {
   AbilityKey,
   AbilityScores,
@@ -74,11 +75,13 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const modifiers = Object.fromEntries(abilityKeys.map((key) => [key, abilityModifier(abilities[key])])) as Record<AbilityKey, number>
   const proficiency = proficiencyBonus(draft.targetLevel)
   const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
+  const subclassEffects = getSubclassDerivedEffects(draft.subclassId)
   const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
   const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
   const hitDie = classRule?.hitDie ?? 8
   const hp = hitDie + modifiers.con
     + Math.max(0, draft.targetLevel - 1) * Math.max(1, Math.floor(hitDie / 2) + 1 + modifiers.con)
+    + subclassEffects.hitPointBonus
   const equippedItems = draft.inventory
     .filter((entry) => entry.equippedQuantity > 0)
     .map((entry) => rulesRepository.getEquipment(entry.itemId))
@@ -101,7 +104,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
         : 10 + modifiers.dex
   const defenseStyle = draft.selections.some((item) => item.optionIds.includes('style-defense'))
   const shieldBonus = equippedShield?.armorClassBonus ?? 0
-  const armorClass = baseArmor + shieldBonus + (defenseStyle && Boolean(equippedArmor) ? 1 : 0)
+  const armorClass = baseArmor + shieldBonus + (defenseStyle && Boolean(equippedArmor) ? 1 : 0) + subclassEffects.armorClassBonus
   const selectedClassSkillIds = (classRule?.checkpoints ?? [])
     .filter((checkpoint) => checkpoint.kind === 'skills')
     .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? [])
@@ -159,7 +162,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     : draft.classId === 'class-2014-monk' && !equippedArmor && !hasShield
       ? draft.targetLevel >= 18 ? 30 : draft.targetLevel >= 14 ? 25 : draft.targetLevel >= 10 ? 20 : draft.targetLevel >= 6 ? 15 : draft.targetLevel >= 2 ? 10 : 0
       : 0
-  const speed = raceSpeed + classSpeedBonus
+  const speed = raceSpeed + classSpeedBonus + subclassEffects.speedBonus
   const attackAbility: AbilityKey = ['class-2014-rogue', 'class-2014-monk', 'class-2014-ranger'].includes(draft.classId ?? '') ? 'dex' : 'str'
   const spellcasting = classRule?.spellcasting
   const spellAbilityModifier = spellcasting ? modifiers[spellcasting.ability] : undefined
@@ -171,6 +174,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     hitPoints: derived(hp, [
       { id: 'class-hit-die', label: '职业生命骰', value: hitDie, detail: classRule?.name ?? '未选择职业' },
       { id: 'constitution', label: '体质调整值', value: modifiers.con * draft.targetLevel, detail: `体质 ${abilities.con}` },
+      ...(subclassEffects.hitPointBonus !== 0 ? [{ id: 'subclass-hit-points', label: '子职生命加成', value: subclassEffects.hitPointBonus, detail: '来自子职特性' }] : []),
     ]),
     armorClass: derived(armorClass, [
       {
@@ -187,27 +191,31 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
       },
       ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: '已装备' }] : []),
       ...(defenseStyle && equippedArmor ? [{ id: 'defense-style', label: '防御战斗风格', value: 1, detail: '穿着护甲时生效' }] : []),
+      ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: '来自子职特性' }] : []),
     ]),
     initiative: derived(modifiers.dex, [{ id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` }]),
-    attackBonus: derived(proficiency + modifiers[attackAbility], [
+    attackBonus: derived(proficiency + modifiers[attackAbility] + subclassEffects.attackBonus, [
       { id: 'attack-proficiency', label: '熟练加值', value: proficiency, detail: '熟练武器' },
       { id: `attack-${attackAbility}`, label: `${attackAbility.toUpperCase()}调整值`, value: modifiers[attackAbility], detail: `属性 ${abilities[attackAbility]}` },
+      ...(subclassEffects.attackBonus !== 0 ? [{ id: 'subclass-attack', label: '子职攻击加成', value: subclassEffects.attackBonus, detail: '来自子职特性' }] : []),
     ]),
-    attackDamageBonus: derived(modifiers[attackAbility], [{
+    attackDamageBonus: derived(modifiers[attackAbility] + subclassEffects.damageBonus, [{
       id: `damage-${attackAbility}`,
       label: `${attackAbility.toUpperCase()}调整值`,
       value: modifiers[attackAbility],
       detail: `属性 ${abilities[attackAbility]}`,
-    }]),
+    }, ...(subclassEffects.damageBonus !== 0 ? [{ id: 'subclass-damage', label: '子职伤害加成', value: subclassEffects.damageBonus, detail: '来自子职特性' }] : [])]),
     ...(spellcasting && spellAbilityModifier !== undefined && draft.targetLevel >= spellcasting.startsAtLevel ? {
-      spellAttackBonus: derived(proficiency + spellAbilityModifier, [
+      spellAttackBonus: derived(proficiency + spellAbilityModifier + subclassEffects.spellAttackBonus, [
         { id: 'spell-attack-proficiency', label: '熟练加值', value: proficiency, detail: `${draft.targetLevel}级角色` },
         { id: 'spell-attack-ability', label: `${spellcasting.ability.toUpperCase()}调整值`, value: spellAbilityModifier, detail: '职业施法属性' },
+        ...(subclassEffects.spellAttackBonus !== 0 ? [{ id: 'subclass-spell-attack', label: '子职法术攻击加成', value: subclassEffects.spellAttackBonus, detail: '来自子职特性' }] : []),
       ]),
-      spellSaveDc: derived(8 + proficiency + spellAbilityModifier, [
+      spellSaveDc: derived(8 + proficiency + spellAbilityModifier + subclassEffects.spellSaveDcBonus, [
         { id: 'spell-dc-base', label: '法术豁免基础', value: 8, detail: '固定基础值' },
         { id: 'spell-dc-proficiency', label: '熟练加值', value: proficiency, detail: `${draft.targetLevel}级角色` },
         { id: 'spell-dc-ability', label: `${spellcasting.ability.toUpperCase()}调整值`, value: spellAbilityModifier, detail: '职业施法属性' },
+        ...(subclassEffects.spellSaveDcBonus !== 0 ? [{ id: 'subclass-spell-dc', label: '子职法术DC加成', value: subclassEffects.spellSaveDcBonus, detail: '来自子职特性' }] : []),
       ]),
     } : {}),
     speed: derived(speed, [{
@@ -220,6 +228,11 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
       label: '职业移动加值',
       value: classSpeedBonus,
       detail: classRule?.name ?? '',
+    }] : []), ...(subclassEffects.speedBonus !== 0 ? [{
+      id: 'subclass-speed',
+      label: '子职移动加值',
+      value: subclassEffects.speedBonus,
+      detail: '来自子职特性',
     }] : [])]),
     savingThrows,
     skills,
