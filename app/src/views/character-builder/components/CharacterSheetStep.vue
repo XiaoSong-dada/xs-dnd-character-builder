@@ -2,14 +2,16 @@
 import { computed, ref } from 'vue'
 
 import StatTile from '@/components/ui/StatTile.vue'
+import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { rulesRepository } from '@/rules/repository'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
+import { buildTimeline } from '@/rules/timeline'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
 
 const props = defineProps<{ draft: CharacterDraft; derived: DerivedCharacter }>()
-defineEmits<{ export: [] }>()
+defineEmits<{ export: []; adjustLevel: []; reedit: [] }>()
 const activeTab = ref('overview')
 const tabs = [
   { id: 'overview', label: '总览' },
@@ -53,6 +55,18 @@ const subclassInfo = computed(() => {
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { subclass, features }
 })
+/** 存在失效选择或未完成的时间线检查点时，角色卡标记为"待补全"。 */
+const needsReview = computed(() => {
+  const draft = props.draft
+  const hasInvalidated = draft.selections.some((item) => Boolean(item.invalidatedAt))
+  if (!draft.classId) return hasInvalidated
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const incomplete = timeline.some((checkpoint) => {
+    const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
+    return (selection?.optionIds.length ?? 0) < checkpoint.minSelections
+  })
+  return hasInvalidated || incomplete
+})
 </script>
 
 <template>
@@ -61,6 +75,10 @@ const subclassInfo = computed(() => {
       <span>规则预览 · 5e-2014</span>
       <h2>{{ draft.name || '未命名角色' }}</h2>
       <p>{{ identityLine }}</p>
+      <div v-if="draft.classId" class="character-sheet__header-actions">
+        <UiBadge v-if="needsReview" tone="warning">待补全</UiBadge>
+        <button type="button" class="character-sheet__level-button" @click="$emit('adjustLevel')">调整等级</button>
+      </div>
     </header>
     <UiTabs v-model="activeTab" :items="tabs" />
     <div v-if="activeTab === 'overview'" class="character-sheet__stats">
@@ -156,7 +174,10 @@ const subclassInfo = computed(() => {
       <p>起始金币：{{ draft.currency.gp }} GP</p>
     </div>
     <div v-else class="character-sheet__panel"><h3>{{ tabs.find((tab) => tab.id === activeTab)?.label }}</h3><p>该部分将在对应职业与施法批次继续扩展。</p></div>
-    <button type="button" class="character-sheet__export" @click="$emit('export')">导出角色 JSON</button>
+    <div class="character-sheet__footer">
+      <button type="button" class="character-sheet__export" @click="$emit('export')">导出角色 JSON</button>
+      <button type="button" class="character-sheet__export character-sheet__export--secondary" @click="$emit('reedit')">重新编辑</button>
+    </div>
   </section>
 </template>
 
@@ -240,6 +261,14 @@ const subclassInfo = computed(() => {
   }
 
   &__export { min-height: 3rem; border: 0; border-radius: var(--radius-md); color: white; background: var(--color-primary); font-weight: 700; }
+
+  &__footer { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+  &__export--secondary { color: var(--color-primary); background: var(--color-surface); border: 1px solid var(--color-border); }
+
+  &__header-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; }
+
+  &__level-button { min-height: 2.25rem; padding: 0 0.9rem; border: 1px solid var(--color-primary); border-radius: var(--radius-md); color: var(--color-primary); background: var(--color-surface); font-size: 0.75rem; font-weight: 700; }
 
   &__subclass-features { display: grid; gap: 0.5rem; }
   &__subclass-features-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }

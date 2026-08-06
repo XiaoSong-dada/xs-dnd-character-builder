@@ -17,6 +17,7 @@ import type {
   AbilityScores,
   CharacterDraft,
   CurrencyWallet,
+  DependencyImpact,
   DraftStep,
   InventoryEntry,
   SpellSelections,
@@ -51,6 +52,7 @@ export function useCharacterBuilderPage() {
   const pendingChange = ref<{
     readonly title: string
     readonly affected: readonly string[]
+    readonly impact?: DependencyImpact
     readonly apply: () => void
   }>()
   const derived = computed(() => activeDraft.value ? deriveCharacter(activeDraft.value) : undefined)
@@ -166,6 +168,7 @@ export function useCharacterBuilderPage() {
     title: string,
     apply: () => void,
     additionalAffected: readonly string[] = [],
+    options: { readonly alwaysConfirm?: boolean } = {},
   ): void {
     const draft = activeDraft.value
     if (!draft) return
@@ -175,11 +178,11 @@ export function useCharacterBuilderPage() {
         draft.selections.some((selection) => selection.checkpointId === checkpointId && !selection.invalidatedAt)),
       ...additionalAffected,
     ]
-    if (!affected.length) {
+    if (!affected.length && !options.alwaysConfirm) {
       apply()
       return
     }
-    pendingChange.value = { title, affected, apply }
+    pendingChange.value = { title, affected, impact, apply }
   }
 
   function confirmPendingChange(): void {
@@ -210,6 +213,88 @@ export function useCharacterBuilderPage() {
       store.invalidateSelections(impact.invalidated, `目标等级调整为${targetLevel}级`)
       store.updateDraft({ targetLevel, abilityMethod, ...abilityPatch })
     })
+  }
+
+  /** 角色完成后升级/降级引导条：升级提示补全新检查点，降级提示复查失效选择。 */
+  const levelAdjustNotice = ref<{ tone: 'success' | 'warning'; message: string; step?: DraftStep }>()
+
+  function buildLevelAdjustNotice(
+    direction: 'up' | 'down',
+    targetLevel: number,
+    impact: DependencyImpact,
+  ): { tone: 'success' | 'warning'; message: string; step?: DraftStep } {
+    if (direction === 'up') {
+      const added = impact.added ?? []
+      if (added.length === 0) return { tone: 'success', message: `等级已提升至 ${targetLevel} 级，派生数值已更新。` }
+      return {
+        tone: 'success',
+        message: `等级提升至 ${targetLevel} 级，请完成新增检查点：${added.map((item) => item.title).join('、')}`,
+        step: 'timeline',
+      }
+    }
+    const invalidated = impact.invalidatedDetails ?? []
+    const reviews = impact.reviews ?? []
+    const parts = [...invalidated.map((item) => item.title), ...reviews]
+    return {
+      tone: 'warning',
+      message: parts.length
+        ? `等级降至 ${targetLevel} 级，需复查：${parts.join('、')}`
+        : `等级已降至 ${targetLevel} 级，派生数值已更新。`,
+      step: 'timeline',
+    }
+  }
+
+  function dismissLevelAdjustNotice(): void {
+    levelAdjustNotice.value = undefined
+  }
+
+  /** 角色完成后调整等级（升级/降级），始终弹确认并展示受影响清单。 */
+  function adjustLevel(targetLevel: number): void {
+    const draft = activeDraft.value
+    if (!draft?.classId || targetLevel === draft.targetLevel) return
+    if (targetLevel < 1 || targetLevel > 20) return
+    const change = { kind: 'target-level', value: targetLevel } as const
+    const direction = targetLevel > draft.targetLevel ? 'up' : 'down'
+    requestChange(
+      change,
+      direction === 'up' ? `升级至 ${targetLevel} 级` : `降级至 ${targetLevel} 级`,
+      () => {
+        const impact = getDependencyImpact(draft, change)
+        store.invalidateSelections(impact.invalidated, `目标等级调整为${targetLevel}级`)
+        store.updateDraft({ targetLevel })
+        levelAdjustNotice.value = buildLevelAdjustNotice(direction, targetLevel, impact)
+        if (direction === 'up' && (impact.added?.length ?? 0) > 0) {
+          setStep('timeline')
+        }
+      },
+      [],
+      { alwaysConfirm: true },
+    )
+  }
+
+  /** 角色完成后重新编辑：智能定位到需要处理的步骤，否则进入属性步骤。 */
+  function startReedit(): void {
+    const draft = activeDraft.value
+    if (!draft) return
+    if (!draft.classId) {
+      setStep('setup')
+      return
+    }
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+    const hasInvalidated = draft.selections.some((selection) => Boolean(selection.invalidatedAt))
+    const hasIncompleteCheckpoint = timeline.some((checkpoint) => {
+      const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
+      return (selection?.optionIds.length ?? 0) < checkpoint.minSelections
+    })
+    if (hasInvalidated || hasIncompleteCheckpoint) {
+      setStep('timeline')
+      return
+    }
+    if (!validateSpellSelections(draft)) {
+      setStep('spells')
+      return
+    }
+    setStep('abilities')
   }
 
   function selectClass(classId: string): void {
@@ -391,6 +476,10 @@ export function useCharacterBuilderPage() {
     exportLegacyDraft: store.exportLegacyDraft,
     confirmPendingChange,
     cancelPendingChange,
+    levelAdjustNotice,
+    dismissLevelAdjustNotice,
+    adjustLevel,
+    startReedit,
     updateDraft: store.updateDraft,
   } as const
 }

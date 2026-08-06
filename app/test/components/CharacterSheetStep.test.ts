@@ -105,3 +105,48 @@ describe('CharacterSheetStep', () => {
     expect(wrapper.text()).toContain('该子职在当前等级暂无已登记特性')
   })
 })
+
+describe('CharacterSheetStep 升级降级与重新编辑入口', () => {
+  const completeSelections = [
+    { checkpointId: 'fighter-2014-skills-1', optionIds: ['skill-athletics', 'skill-intimidation'], confirmedAt: '' },
+    { checkpointId: 'fighter-2014-style-1', optionIds: ['style-dueling'], confirmedAt: '' },
+    { checkpointId: 'fighter-2014-subclass-3', optionIds: ['subclass-2014-fighter-battle-master'], confirmedAt: '' },
+    { checkpointId: 'fighter-2014-maneuvers-3', optionIds: ['maneuver-precision', 'maneuver-trip', 'maneuver-rally'], confirmedAt: '' },
+    { checkpointId: 'fighter-2014-asi-4', optionIds: ['asi-str-2'], confirmedAt: '' },
+  ]
+
+  it('有职业时展示调整等级与重新编辑按钮并触发事件', async () => {
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft, derived: deriveCharacter(draft) },
+    })
+
+    await wrapper.get('.character-sheet__level-button').trigger('click')
+    expect(wrapper.emitted('adjustLevel')).toEqual([[]])
+
+    await wrapper.get('.character-sheet__export--secondary').trigger('click')
+    expect(wrapper.emitted('reedit')).toEqual([[]])
+  })
+
+  it('存在未完成检查点或失效选择时显示待补全徽标', () => {
+    const incomplete = mount(CharacterSheetStep, {
+      props: { draft, derived: deriveCharacter(draft) },
+    })
+    expect(incomplete.text()).toContain('待补全')
+
+    const invalidatedDraft: CharacterDraft = {
+      ...draft,
+      selections: completeSelections.map((selection) => selection.checkpointId === 'fighter-2014-asi-4'
+        ? { ...selection, invalidatedAt: '2026-08-06T00:00:00.000Z', invalidatedReason: '目标等级调整' }
+        : selection),
+    }
+    const invalidated = mount(CharacterSheetStep, {
+      props: { draft: invalidatedDraft, derived: deriveCharacter(invalidatedDraft) },
+    })
+    expect(invalidated.text()).toContain('待补全')
+
+    const complete = mount(CharacterSheetStep, {
+      props: { draft: { ...draft, selections: completeSelections }, derived: deriveCharacter({ ...draft, selections: completeSelections }) },
+    })
+    expect(complete.text()).not.toContain('待补全')
+  })
+})

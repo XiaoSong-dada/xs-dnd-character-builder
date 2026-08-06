@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
 import BaseButton from '@/components/ui/BaseButton.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
@@ -11,6 +13,7 @@ import CharacterSheetStep from '@/views/character-builder/components/CharacterSh
 import ClassStep from '@/views/character-builder/components/ClassStep.vue'
 import EquipmentStep from '@/views/character-builder/components/EquipmentStep.vue'
 import IdentityStep from '@/views/character-builder/components/IdentityStep.vue'
+import LevelAdjustModal from '@/views/character-builder/components/LevelAdjustModal.vue'
 import OriginStep from '@/views/character-builder/components/OriginStep.vue'
 import PreferencesStep from '@/views/character-builder/components/PreferencesStep.vue'
 import SetupStep from '@/views/character-builder/components/SetupStep.vue'
@@ -62,8 +65,35 @@ const {
   exportLegacyDraft,
   confirmPendingChange,
   cancelPendingChange,
+  levelAdjustNotice,
+  dismissLevelAdjustNotice,
+  adjustLevel,
+  startReedit,
   updateDraft,
 } = useCharacterBuilderPage()
+
+/** 等级调整弹窗：仅由角色卡页发起，目标始终为当前活动草稿。 */
+const levelModalOpen = ref(false)
+
+function openLevelModal(): void {
+  levelModalOpen.value = true
+}
+
+function closeLevelModal(): void {
+  levelModalOpen.value = false
+}
+
+function confirmLevelAdjust(level: number): void {
+  levelModalOpen.value = false
+  adjustLevel(level)
+}
+
+function goToLevelAdjustStep(): void {
+  const notice = levelAdjustNotice.value
+  if (!notice?.step) return
+  dismissLevelAdjustNotice()
+  setStep(notice.step)
+}
 
 function updateLevel(value: number): void {
   if (activeDraft.value) updateSetup(value, activeDraft.value.abilityMethod)
@@ -99,6 +129,9 @@ function updateMethod(value: AbilityMethod): void {
     </template>
 
     <UiNotice v-if="importError" tone="error" title="导入失败">{{ importError }}</UiNotice>
+    <div v-if="levelAdjustNotice" class="builder-level-notice" @click="goToLevelAdjustStep">
+      <UiNotice :tone="levelAdjustNotice.tone" :title="levelAdjustNotice.message">点击前往对应步骤处理。</UiNotice>
+    </div>
     <SetupStep v-if="step === 'setup'" :target-level="activeDraft.targetLevel" :ability-method="activeDraft.abilityMethod" @level="updateLevel" @method="updateMethod" />
     <PreferencesStep v-else-if="step === 'preferences'" :selected="activeDraft.preferences" @change="updateDraft({ preferences: $event })" />
     <ClassStep
@@ -150,7 +183,7 @@ function updateMethod(value: AbilityMethod): void {
     <SpellcastingStep v-else-if="step === 'spells'" :draft="activeDraft" @change="updateSpells" />
     <IdentityStep v-else-if="step === 'identity'" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" />
     <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" @go="setStep($event as DraftStep)" />
-    <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" @export="exportDraft" />
+    <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" @export="exportDraft" @adjust-level="openLevelModal" @reedit="startReedit" />
 
     <template v-if="step !== 'sheet' && derivedSummary" #drawer>
       <CharacterDrawer :summary="derivedSummary" :completion="completion" />
@@ -170,13 +203,76 @@ function updateMethod(value: AbilityMethod): void {
     :title="pendingChange?.title ?? '确认修改'"
     @close="cancelPendingChange"
   >
-    <p>以下已完成选择会保留原值，但被标记为失效，之后可逐项重新确认：</p>
-    <ul>
-      <li v-for="checkpointId in pendingChange?.affected ?? []" :key="checkpointId">{{ checkpointId }}</li>
+    <section v-if="pendingChange?.impact?.added?.length" class="builder-impact">
+      <h4>待补全（新增检查点）</h4>
+      <ul>
+        <li v-for="item in pendingChange.impact.added" :key="item.checkpointId">{{ item.title }}</li>
+      </ul>
+    </section>
+    <section v-if="pendingChange?.impact?.invalidatedDetails?.length" class="builder-impact">
+      <h4>将失效</h4>
+      <p>以下已完成选择会保留原值，但被标记为失效，之后可逐项重新确认：</p>
+      <ul>
+        <li v-for="item in pendingChange.impact.invalidatedDetails" :key="item.checkpointId">{{ item.title }}</li>
+      </ul>
+    </section>
+    <section v-if="pendingChange?.impact?.reviews?.length" class="builder-impact">
+      <h4>需复查</h4>
+      <ul>
+        <li v-for="review in pendingChange.impact.reviews" :key="review">{{ review }}</li>
+      </ul>
+    </section>
+    <p v-if="pendingChange && !pendingChange.impact">以下已完成选择会保留原值，但被标记为失效，之后可逐项重新确认：</p>
+    <ul v-if="pendingChange && !pendingChange.impact">
+      <li v-for="checkpointId in pendingChange.affected ?? []" :key="checkpointId">{{ checkpointId }}</li>
     </ul>
+    <section v-if="pendingChange?.impact?.preserved?.length" class="builder-impact">
+      <h4>保留</h4>
+      <ul>
+        <li v-for="item in pendingChange.impact.preserved" :key="item">{{ item }}</li>
+      </ul>
+    </section>
     <template #footer>
       <BaseButton variant="secondary" @click="cancelPendingChange">取消</BaseButton>
-      <BaseButton variant="danger" @click="confirmPendingChange">保留并标记失效</BaseButton>
+      <BaseButton variant="danger" @click="confirmPendingChange">确认调整</BaseButton>
     </template>
   </UiModal>
+  <LevelAdjustModal
+    v-if="levelModalOpen && activeDraft"
+    :open="levelModalOpen"
+    :draft="activeDraft"
+    @close="closeLevelModal"
+    @confirm="confirmLevelAdjust"
+  />
 </template>
+
+<style scoped lang="scss">
+.builder-level-notice {
+  cursor: pointer;
+
+  :deep(.ui-notice) {
+    border-color: var(--color-primary);
+  }
+}
+
+.builder-impact {
+  h4 {
+    margin: 0 0 0.3rem;
+    font-size: 0.82rem;
+  }
+
+  p {
+    margin: 0 0 0.3rem;
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+  }
+
+  ul {
+    margin: 0 0 0.8rem;
+    padding-left: 1.1rem;
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    line-height: 1.6;
+  }
+}
+</style>

@@ -167,8 +167,20 @@ export interface ValidationIssue {
   readonly resolution: string
 }
 
+/** 依赖影响清单中的检查点引用：id 用于定位，title 用于界面展示。 */
+export interface DependencyCheckpointRef {
+  readonly checkpointId: string
+  readonly title: string
+}
+
 export interface DependencyImpact {
   readonly invalidated: readonly string[]
   readonly review: readonly string[]
   readonly preserved: readonly string[]
+  /** 升级时：新等级时间线新增且尚未完成的检查点（用于引导玩家补全）。 */
+  readonly added?: readonly DependencyCheckpointRef[]
+  /** 降级时：将失效选择的展示信息（checkpointId → 标题）。 */
+  readonly invalidatedDetails?: readonly DependencyCheckpointRef[]
+  /** 降级时：按新等级列出数量减少、需玩家复查的资源说明。 */
+  readonly reviews?: readonly string[]
 }
