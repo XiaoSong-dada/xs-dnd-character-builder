@@ -30,4 +30,23 @@ describe('2014 timelines', () => {
     expect(buildTimeline('class-2014-fighter', 1, { subraceId: 'race-2014-elf-high' }).some((item) => item.id.startsWith('race-')))
       .toBe(false)
   })
+
+  it('appends subclass feature checkpoints for the selected subclass', () => {
+    const timeline = buildTimeline('class-2014-barbarian', 3, { subclassId: 'subclass-2014-barbarian-totem-warrior' })
+    const featureCheckpoint = timeline.find((item) => item.id === 'subclass-feature-barbarian-totem-warrior-totem-spirit')
+    expect(featureCheckpoint?.kind).toBe('subclass-feature')
+    expect(featureCheckpoint?.optionIds).toEqual(['totem-bear', 'totem-eagle', 'totem-wolf'])
+    expect(featureCheckpoint?.minSelections).toBe(1)
+    expect(featureCheckpoint?.maxSelections).toBe(1)
+  })
+
+  it('does not create a feature checkpoint for battle master maneuvers (handled by the class timeline)', () => {
+    const timeline = buildTimeline('class-2014-fighter', 3, { subclassId: 'subclass-2014-fighter-battle-master' })
+    expect(timeline.some((item) => item.id.startsWith('subclass-feature-fighter-battle-master'))).toBe(false)
+  })
+
+  it('filters subclass feature checkpoints beyond the target level', () => {
+    const timeline = buildTimeline('class-2014-barbarian', 2, { subclassId: 'subclass-2014-barbarian-totem-warrior' })
+    expect(timeline.some((item) => item.id.startsWith('subclass-feature-'))).toBe(false)
+  })
 })

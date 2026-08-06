@@ -263,4 +263,4 @@ views/character-builder/index.vue
 规则层仍保持框架无关，不读取 DOM、路由或存储。Store 只保存原始选择；文件和
 localStorage 副作用只存在于 services；路由查询同步和步骤编排只存在于页面 hook。
 
-`rules/data/subclasses-2014.ts` 是当前 2014 子职元数据和普通玩家可选 ID 的唯一聚合入口；`rules/data/subclass-features-2014.ts` 登记各子职等级特性（纵向切片，未核验效果保持 `index-only`），`rules/subclass-effects.ts` 提供子职派生效果钩子（当前返回零效果，核验后填充）。`repository` 负责登记完整目录，`timeline` 只按职业和目标等级装配玩家可用检查点；DM 专用条目可被仓库查询，但不进入普通时间线。各职业旧数据文件中已有的子职常量暂保留供局部实现引用，不再作为仓库目录来源。
+`rules/data/subclasses-2014.ts` 是当前 2014 子职元数据和普通玩家可选 ID 的唯一聚合入口；`rules/data/subclass-features-2014.ts` 登记各子职等级特性（纵向切片，未核验效果保持 `index-only`），`rules/subclass-effects.ts` 提供子职派生效果钩子（按可核验条目返回效果，首批含龙族血脉的 AC 基础公式与每级生命加成）。`repository` 负责登记完整目录，`timeline` 接收 `subclassId` 上下文，按所选子职追加 `kind: 'subclass-feature'` 的特性选择检查点（`requiresChoice` 特性），并只装配玩家可用检查点；DM 专用条目可被仓库查询，但不进入普通时间线。页面层 `TimelineStep` 选中子职后展示其特性列表并提供特性选择检查点交互，`CharacterSheetStep` 能力页签展示子职特性区块；两者都只从 `SubclassRule.features` 读取数据，不硬编码规则。各职业旧数据文件中已有的子职常量暂保留供局部实现引用，不再作为仓库目录来源。

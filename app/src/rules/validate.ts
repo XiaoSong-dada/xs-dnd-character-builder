@@ -190,7 +190,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         issues.push({ id: 'spellbook-count', step: 'spells', severity: 'error', message: '法术书内容尚未完成，或准备了不在书中的法术。', resolution: `法术书需要包含${requiredSpellbook}个当前可用法师法术。` })
       }
     }
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
     for (const checkpoint of timeline) {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const count = selection?.optionIds.length ?? 0

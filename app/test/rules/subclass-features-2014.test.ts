@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { rulesRepository } from '@/rules/repository'
 import { subclasses2014 } from '@/rules/data/subclasses-2014'
 import { getSubclassFeatures2014, subclassFeatures2014 } from '@/rules/data/subclass-features-2014'
-import { validateSubclassSelections } from '@/rules/validate'
+import { validateDraft, validateSubclassSelections } from '@/rules/validate'
 import { getDependencyImpact } from '@/rules/dependency'
 import { deriveCharacter } from '@/rules/derive'
 import { getSubclassDerivedEffects, ZERO_SUBCLASS_EFFECTS } from '@/rules/subclass-effects'
@@ -154,6 +154,26 @@ describe('validateSubclassSelections', () => {
   it('returns no issues when no class or subclass is selected', () => {
     expect(validateSubclassSelections(createDraft())).toEqual([])
   })
+
+  it('reports an incomplete subclass feature choice as a checkpoint error via validateDraft', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      classId: 'class-2014-barbarian',
+      subclassId: 'subclass-2014-barbarian-totem-warrior',
+      targetLevel: 3,
+      selections: [{ checkpointId: 'barbarian-2014-subclass-3', optionIds: ['subclass-2014-barbarian-totem-warrior'], confirmedAt: '' }],
+    }
+    expect(validateDraft(draft).some((issue) => issue.id.startsWith('checkpoint-subclass-feature-'))).toBe(true)
+
+    const complete: CharacterDraft = {
+      ...draft,
+      selections: [
+        ...draft.selections,
+        { checkpointId: 'subclass-feature-barbarian-totem-warrior-totem-spirit', optionIds: ['totem-bear'], confirmedAt: '' },
+      ],
+    }
+    expect(validateDraft(complete).some((issue) => issue.id.startsWith('checkpoint-subclass-feature-'))).toBe(false)
+  })
 })
 
 describe('subclass dependency impact', () => {
@@ -180,5 +200,22 @@ describe('subclass derived effects hook', () => {
     expect(withSubclass.speed.value).toBe(withoutSubclass.speed.value)
     expect(withSubclass.attackBonus.value).toBe(withoutSubclass.attackBonus.value)
     expect(withSubclass.hitPoints.value).toBe(withoutSubclass.hitPoints.value)
+  })
+
+  it('applies draconic resilience as armor class base and per-level hit point bonus', () => {
+    const baseDraft = {
+      ...createDraft(),
+      classId: 'class-2014-sorcerer' as const,
+      targetLevel: 3,
+      baseAbilities: { str: 8, dex: 14, con: 13, int: 12, wis: 10, cha: 15 },
+    }
+    const without = deriveCharacter(baseDraft)
+    const withDraconic = deriveCharacter({ ...baseDraft, subclassId: 'subclass-2014-sorcerer-draconic-bloodline' })
+    expect(withDraconic.armorClass.value).toBe(13 + 2)
+    expect(withDraconic.hitPoints.value).toBe(without.hitPoints.value + 3)
+    expect(withDraconic.speed.value).toBe(without.speed.value)
+    const armorSource = withDraconic.armorClass.sources.find((source) => source.id === 'armor-base')
+    expect(armorSource?.label).toContain('子职护甲公式')
+    expect(armorSource?.detail).toBe('13 + 敏捷调整值')
   })
 })

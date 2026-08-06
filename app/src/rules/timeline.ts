@@ -1,6 +1,7 @@
 import { rulesRepository } from '@/rules/repository'
 import { FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
 import { getPlayerSubclassIds2014 } from '@/rules/data/subclasses-2014'
+import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import type { ChoiceCheckpoint } from '@/types/rules'
 
 const variantHumanCheckpoint: ChoiceCheckpoint = {
@@ -18,6 +19,8 @@ const variantHumanCheckpoint: ChoiceCheckpoint = {
 
 export interface TimelineContext {
   readonly subraceId?: string
+  /** 已选子职：用于追加该子职需要玩家完成的特性选择检查点。 */
+  readonly subclassId?: string
 }
 
 const subclassTitles: Readonly<Record<string, string>> = {
@@ -54,6 +57,32 @@ function buildSubclassCheckpoint(classId: string): ChoiceCheckpoint | undefined 
   }
 }
 
+/** 已由职业时间线检查点承接选择、不再生成特性检查点的特性（如战斗大师战技）。 */
+const SUBCLASS_FEATURE_CHECKPOINT_EXCLUSIONS = new Set([
+  'fighter-battle-master-combat-superiority',
+])
+
+function buildSubclassFeatureCheckpoints(subclassId: string): readonly ChoiceCheckpoint[] {
+  return getSubclassFeatures2014(subclassId)
+    .filter((feature) =>
+      feature.requiresChoice
+      && (feature.optionIds?.length ?? 0) > 0
+      && !SUBCLASS_FEATURE_CHECKPOINT_EXCLUSIONS.has(feature.id),
+    )
+    .map((feature) => ({
+      id: `subclass-feature-${feature.id}`,
+      level: feature.level,
+      step: 'timeline' as const,
+      kind: 'subclass-feature' as const,
+      title: `选择${feature.name}`,
+      description: feature.summary,
+      required: true,
+      minSelections: 1,
+      maxSelections: 1,
+      optionIds: feature.optionIds ?? [],
+    }))
+}
+
 export function buildTimeline(classId: string, targetLevel: number, context: TimelineContext = {}): readonly ChoiceCheckpoint[] {
   const classRule = rulesRepository.getClass(classId)
   if (!classRule) return []
@@ -69,6 +98,7 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
   return [
     ...(context.subraceId === 'race-2014-human-variant' ? [variantHumanCheckpoint] : []),
     ...classCheckpoints,
+    ...(context.subclassId ? buildSubclassFeatureCheckpoints(context.subclassId) : []),
   ]
     .filter((checkpoint) => checkpoint.level <= targetLevel)
     .sort((left, right) => left.level - right.level)

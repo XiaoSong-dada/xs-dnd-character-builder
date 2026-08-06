@@ -21,7 +21,7 @@ export function getDependencyImpact(draft: CharacterDraft, change: DraftChange):
   if (change.kind === 'subclass') {
     return {
       invalidated: draft.selections
-        .filter((item) => item.checkpointId.includes('-subclass-'))
+        .filter((item) => item.checkpointId.includes('-subclass-') || item.checkpointId.startsWith('subclass-feature-'))
         .map((item) => item.checkpointId),
       review: ['子职特性选择', '子职派生值', '角色卡子职部分'],
       preserved: ['职业与等级', '起源', '基础属性'],

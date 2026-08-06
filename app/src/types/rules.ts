@@ -4,6 +4,7 @@ export type CheckpointKind =
   | 'skills'
   | 'fighting-style'
   | 'subclass'
+  | 'subclass-feature'
   | 'ability-improvement'
   | 'maneuvers'
   | 'expertise'
@@ -117,6 +118,8 @@ export interface SubclassFeature {
   readonly kind: SubclassFeatureKind
   readonly requiresChoice?: boolean
   readonly optionIds?: readonly string[]
+  /** 选项 id → 中文名（用于子职特性选择检查点的界面渲染）。 */
+  readonly optionLabels?: Readonly<Record<string, string>>
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }

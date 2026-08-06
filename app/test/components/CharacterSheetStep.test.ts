@@ -54,4 +54,54 @@ describe('CharacterSheetStep', () => {
     expect(wrapper.text()).not.toContain('animal-handling')
     expect(wrapper.text()).not.toContain('arcana')
   })
+
+  it('shows subclass features in the features tab once a subclass is selected', async () => {
+    const clericDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-cleric',
+      subclassId: 'subclass-2014-cleric-life',
+      targetLevel: 3,
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: clericDraft, derived: deriveCharacter(clericDraft) },
+    })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('子职特性 · 生命领域')
+    expect(wrapper.text()).toContain('领域法术')
+    expect(wrapper.text()).toContain('生命引导者')
+    expect(wrapper.text()).toContain('仅索引 · 未核验')
+    expect(wrapper.text()).not.toContain('至高治疗')
+
+    const text = wrapper.text()
+    expect(text.indexOf('豁免')).toBeLessThan(text.indexOf('技能'))
+    expect(text.indexOf('技能')).toBeLessThan(text.indexOf('子职特性'))
+  })
+
+  it('shows an empty hint in the features tab when no subclass is selected', async () => {
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft, derived: deriveCharacter(draft) },
+    })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('尚未选择子职')
+  })
+
+  it('shows the empty feature hint when the subclass has no features at the current level', async () => {
+    const lowLevelDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-fighter',
+      subclassId: 'subclass-2014-fighter-battle-master',
+      targetLevel: 1,
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: lowLevelDraft, derived: deriveCharacter(lowLevelDraft) },
+    })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('该子职在当前等级暂无已登记特性')
+  })
 })

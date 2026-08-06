@@ -5,6 +5,7 @@ import StatTile from '@/components/ui/StatTile.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { rulesRepository } from '@/rules/repository'
+import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
 
 const props = defineProps<{ draft: CharacterDraft; derived: DerivedCharacter }>()
@@ -41,6 +42,16 @@ const selectedSpells = computed(() => {
     ? props.draft.spellSelections.preparedSpellIds
     : props.draft.spellSelections.knownSpellIds
   return [...props.draft.spellSelections.cantripIds, ...(ids ?? [])].map((id) => rulesRepository.getSpell(id)).filter(Boolean)
+})
+const subclassInfo = computed(() => {
+  const subclassId = props.draft.subclassId
+  if (!subclassId) return undefined
+  const subclass = rulesRepository.getSubclass(subclassId)
+  if (!subclass) return undefined
+  // 角色卡只展示当前等级已解锁的特性（更高等级的特性不显示）。
+  const features = getSubclassFeatures2014(subclassId)
+    .filter((feature) => feature.level <= props.draft.targetLevel)
+  return { subclass, features }
 })
 </script>
 
@@ -85,6 +96,28 @@ const selectedSpells = computed(() => {
           />
         </div>
       </section>
+      <template v-if="subclassInfo">
+        <section v-if="subclassInfo.features.length" class="character-sheet__subclass-features">
+          <header class="character-sheet__subclass-features-header">
+            <h3>子职特性 · {{ subclassInfo.subclass.name }}</h3>
+            <span v-if="subclassInfo.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
+          </header>
+          <ul class="character-sheet__feature-list">
+            <li v-for="feature in subclassInfo.features" :key="feature.id" class="character-sheet__feature">
+              <span class="character-sheet__feature-level">{{ feature.level }}级</span>
+              <div>
+                <strong>
+                  {{ feature.name }} <small>{{ feature.englishName }}</small>
+                  <em v-if="feature.requiresChoice" class="character-sheet__feature-choice">需选择</em>
+                </strong>
+                <p>{{ feature.summary }}</p>
+              </div>
+            </li>
+          </ul>
+        </section>
+        <p v-else class="character-sheet__empty-features">该子职在当前等级暂无已登记特性。</p>
+      </template>
+      <p v-else class="character-sheet__empty-features">尚未选择子职，完成时间线步骤后这里会展示子职特性。</p>
     </div>
     <div v-else-if="activeTab === 'spells'" class="character-sheet__spells">
       <div class="character-sheet__spell-stats">
@@ -207,5 +240,20 @@ const selectedSpells = computed(() => {
   }
 
   &__export { min-height: 3rem; border: 0; border-radius: var(--radius-md); color: white; background: var(--color-primary); font-weight: 700; }
+
+  &__subclass-features { display: grid; gap: 0.5rem; }
+  &__subclass-features-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  &__subclass-features-header h3 { margin: 0; font-size: 0.85rem; }
+  &__subclass-features-note { padding: 0.1rem 0.45rem; border-radius: 999px; color: var(--color-warning, #b58900); background: rgba(181, 137, 0, 0.12); font-size: 0.66rem; white-space: nowrap; }
+  &__empty-features { color: var(--color-text-muted); font-size: 0.78rem; }
+  &__feature-list { margin: 0; padding: 0; list-style: none; }
+  &__feature { display: flex; gap: 0.6rem; padding: 0.45rem 0; border-bottom: 1px solid var(--color-border); }
+  &__feature:last-child { border-bottom: 0; }
+  &__feature-level { align-self: center; flex: none; padding: 0.1rem 0.5rem; border-radius: 999px; color: white; background: var(--color-primary); font-size: 0.66rem; font-weight: 700; line-height: 1.2; }
+  &__feature > div { display: grid; gap: 0.2rem; min-width: 0; }
+  &__feature strong { font-size: 0.8rem; }
+  &__feature strong small { color: var(--color-text-muted); font-weight: 400; }
+  &__feature-choice { margin-left: 0.3rem; padding: 0.05rem 0.4rem; border: 1px solid var(--color-primary); border-radius: 999px; color: var(--color-primary); font-size: 0.62rem; font-style: normal; vertical-align: 0.1em; }
+  &__feature p { margin: 0; color: var(--color-text-muted); font-size: 0.72rem; line-height: 1.45; }
 }
 </style>

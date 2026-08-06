@@ -22,4 +22,20 @@ describe('getDependencyImpact', () => {
     expect(getDependencyImpact(draft, { kind: 'subrace', value: undefined }).invalidated)
       .toEqual(['race-2014-human-variant-feat-1'])
   })
+
+  it('invalidates subclass feature selections when the subclass changes', () => {
+    const totemDraft = {
+      ...draft,
+      classId: 'class-2014-barbarian',
+      selections: [
+        { checkpointId: 'barbarian-2014-subclass-3', optionIds: ['subclass-2014-barbarian-totem-warrior'], confirmedAt: '' },
+        { checkpointId: 'subclass-feature-barbarian-totem-warrior-totem-spirit', optionIds: ['totem-bear'], confirmedAt: '' },
+      ],
+    } as CharacterDraft
+    const impact = getDependencyImpact(totemDraft, { kind: 'subclass', value: 'subclass-2014-barbarian-berserker' })
+    expect(impact.invalidated).toEqual([
+      'barbarian-2014-subclass-3',
+      'subclass-feature-barbarian-totem-warrior-totem-spirit',
+    ])
+  })
 })

@@ -6,7 +6,9 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
 import { rulesRepository } from '@/rules/repository'
 import { buildTimeline } from '@/rules/timeline'
+import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
+import type { SubclassFeature } from '@/types/rules'
 
 const props = defineProps<{
   classId: string
@@ -19,7 +21,25 @@ const props = defineProps<{
 const emit = defineEmits<{ select: [checkpointId: string, optionIds: readonly string[]] }>()
 const expandedCheckpointId = ref<string>()
 
-const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId }))
+const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId }))
+
+const selectedSubclassId = computed(() => {
+  const subclassCheckpoint = checkpoints.value.find((checkpoint) => checkpoint.kind === 'subclass')
+  return subclassCheckpoint ? selectedIds(subclassCheckpoint.id)[0] : undefined
+})
+const subclassFeatures = computed(() => selectedSubclassId.value ? getSubclassFeatures2014(selectedSubclassId.value) : [])
+const featureByCheckpointId = computed(() => {
+  const map = new Map<string, SubclassFeature>()
+  for (const checkpoint of checkpoints.value) {
+    if (checkpoint.kind !== 'subclass-feature') continue
+    const feature = subclassFeatures.value.find((item) => `subclass-feature-${item.id}` === checkpoint.id)
+    if (feature) map.set(checkpoint.id, feature)
+  }
+  return map
+})
+function featureOptionLabel(checkpointId: string, optionId: string): string | undefined {
+  return featureByCheckpointId.value.get(checkpointId)?.optionLabels?.[optionId]
+}
 
 function selectedIds(checkpointId: string): readonly string[] {
   return props.selections.find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)?.optionIds ?? []
@@ -100,7 +120,7 @@ function saveSpecialSelection(checkpointId: string, optionId?: string): void {
         <OptionCard
           v-for="optionId in checkpoint.kind === 'ability-improvement' || checkpoint.id === 'race-2014-human-variant-feat-1' ? [] : checkpoint.optionIds"
           :key="optionId"
-          :title="rulesRepository.getOption(optionId)?.name ?? optionId"
+          :title="rulesRepository.getOption(optionId)?.name ?? featureOptionLabel(checkpoint.id, optionId) ?? optionId"
           :description="rulesRepository.getOption(optionId)?.description"
           :state="selectedIds(checkpoint.id).includes(optionId)
             ? 'selected'
@@ -120,6 +140,17 @@ function saveSpecialSelection(checkpointId: string, optionId?: string): void {
             <UiBadge v-if="rulesRepository.getOption(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
           </template>
         </OptionCard>
+        <div v-if="checkpoint.kind === 'subclass' && subclassFeatures.length" class="timeline-step__subclass-features">
+          <h4>子职特性 · {{ rulesRepository.getSubclass(selectedSubclassId ?? '')?.name ?? '' }}</h4>
+          <div v-for="feature in subclassFeatures" :key="feature.id" class="timeline-step__feature">
+            <span class="timeline-step__feature-level">{{ feature.level }}级</span>
+            <div>
+              <strong>{{ feature.name }} <small>{{ feature.englishName }}</small></strong>
+              <p>{{ feature.summary }}</p>
+              <small v-if="feature.status === 'index-only'" class="timeline-step__feature-note">仅索引 · 具体效果未核验，不参与自动计算</small>
+            </div>
+          </div>
+        </div>
       </div>
     </article>
   </section>
@@ -154,5 +185,16 @@ function saveSpecialSelection(checkpointId: string, optionId?: string): void {
   }
 
   &__options { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
+
+  &__subclass-features { display: grid; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--color-border); }
+  &__subclass-features h4 { margin: 0; font-size: 0.78rem; color: var(--color-text-muted); }
+
+  &__feature { display: flex; gap: 0.6rem; padding: 0.5rem; border-radius: var(--radius-sm); background: var(--color-surface-alt, rgba(0, 0, 0, 0.03)); }
+  &__feature-level { display: grid; width: 2rem; height: 2rem; flex: none; place-items: center; border-radius: 50%; color: white; background: var(--color-primary); font-size: 0.68rem; font-weight: 700; }
+  &__feature > div { display: grid; gap: 0.2rem; min-width: 0; }
+  &__feature strong { font-size: 0.8rem; }
+  &__feature strong small { color: var(--color-text-muted); font-weight: 400; }
+  &__feature p { margin: 0; color: var(--color-text-muted); font-size: 0.72rem; line-height: 1.45; }
+  &__feature-note { color: var(--color-warning, #b58900); font-size: 0.68rem; }
 }
 </style>
