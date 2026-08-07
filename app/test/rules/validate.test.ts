@@ -111,4 +111,44 @@ describe('validateDraft', () => {
     expect(issues.some((issue) => issue.id === 'ability-method-invalid')).toBe(false)
     expect(issues.some((issue) => issue.id.startsWith('ability-improvement-'))).toBe(true)
   })
+
+  it('吟游诗人专精选择已熟练技能时不报未熟练错误', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      targetLevel: 3,
+      classId: 'class-2014-bard',
+      backgroundId: 'background-2014-sage',
+      raceId: 'race-2014-human',
+      name: '诗人',
+      spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+      selections: [
+        { checkpointId: 'bard-2014-skills-1', optionIds: ['skill-insight', 'skill-history', 'skill-persuasion'], confirmedAt: '' },
+        { checkpointId: 'bard-2014-expertise-3', optionIds: ['skill-insight', 'skill-history'], confirmedAt: '' },
+      ],
+    }
+
+    const issues = validateDraft(draft)
+
+    expect(issues.some((issue) => issue.id === 'expertise-without-proficiency')).toBe(false)
+  })
+
+  it('吟游诗人专精选择未熟练技能时报告未熟练错误', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      targetLevel: 3,
+      classId: 'class-2014-bard',
+      backgroundId: 'background-2014-sage',
+      raceId: 'race-2014-human',
+      name: '诗人',
+      spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+      selections: [
+        { checkpointId: 'bard-2014-skills-1', optionIds: ['skill-insight', 'skill-history', 'skill-persuasion'], confirmedAt: '' },
+        { checkpointId: 'bard-2014-expertise-3', optionIds: ['skill-deception', 'skill-history'], confirmedAt: '' },
+      ],
+    }
+
+    const issues = validateDraft(draft)
+
+    expect(issues.some((issue) => issue.id === 'expertise-without-proficiency')).toBe(true)
+  })
 })

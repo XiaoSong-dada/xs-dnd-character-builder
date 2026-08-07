@@ -74,4 +74,31 @@ describe('deriveCharacter', () => {
     expect(result.abilities).toMatchObject({ str: 19, dex: 16, int: 9, cha: 11 })
     expect(result.attackBonus.value).toBe(8)
   })
+
+  it('派生调查与自然技能的熟练加值', () => {
+    const result = deriveCharacter({
+      ...draft,
+      backgroundSkillIds: ['skill-investigation', 'skill-nature'],
+    })
+
+    // 智力 8 → -1，10级熟练加值 +4
+    expect(result.skills['skill-investigation']?.value).toBe(3)
+    expect(result.skills['skill-nature']?.value).toBe(3)
+    expect(result.skills['skill-investigation']?.sources.some((source) => source.detail === '来自背景')).toBe(true)
+  })
+
+  it('派生调查技能的专精加值', () => {
+    const result = deriveCharacter({
+      ...draft,
+      classId: 'class-2014-rogue',
+      backgroundSkillIds: ['skill-investigation'],
+      selections: [
+        { checkpointId: 'rogue-2014-expertise-1', optionIds: ['skill-investigation'], confirmedAt: draft.updatedAt },
+      ],
+    })
+
+    // 智力 8 → -1，熟练 +4 再加专精 +4
+    expect(result.skills['skill-investigation']?.value).toBe(7)
+    expect(result.skills['skill-investigation']?.sources.some((source) => source.id === 'skill-investigation-expertise')).toBe(true)
+  })
 })

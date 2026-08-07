@@ -23,6 +23,14 @@ const expandedCheckpointId = ref<string>()
 
 const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId }))
 
+/** 当前已熟练的技能与盗贼工具：职业技能选择 + 背景技能。与 validate.ts 的专精校验口径一致。 */
+const proficientSkillIds = computed(() => {
+  const classSkillIds = checkpoints.value
+    .filter((checkpoint) => checkpoint.kind === 'skills')
+    .flatMap((checkpoint) => selectedIds(checkpoint.id))
+  return new Set([...classSkillIds, ...props.backgroundSkillIds, 'tool-thieves-tools'])
+})
+
 const selectedSubclassId = computed(() => {
   const subclassCheckpoint = checkpoints.value.find((checkpoint) => checkpoint.kind === 'subclass')
   return subclassCheckpoint ? selectedIds(subclassCheckpoint.id)[0] : undefined
@@ -72,10 +80,21 @@ function isBackgroundSkill(checkpointId: string, optionId: string): boolean {
     && props.backgroundSkillIds.includes(optionId)
 }
 
+/** 专精只能选择已熟练的技能（职业或背景），未熟练技能应锁定并提示。 */
+function isExpertiseLocked(checkpointId: string, optionId: string): boolean {
+  const checkpoint = checkpoints.value.find((item) => item.id === checkpointId)
+  if (checkpoint?.kind !== 'expertise') return false
+  return !proficientSkillIds.value.has(optionId)
+}
+
 function toggle(checkpointId: string, optionId: string, max: number): void {
-  if (isUniqueOptionUsedElsewhere(checkpointId, optionId) || isBackgroundSkill(checkpointId, optionId)) return
   const current = selectedIds(checkpointId)
-  const next = current.includes(optionId)
+  const alreadySelected = current.includes(optionId)
+  if (
+    !alreadySelected
+    && (isUniqueOptionUsedElsewhere(checkpointId, optionId) || isBackgroundSkill(checkpointId, optionId) || isExpertiseLocked(checkpointId, optionId))
+  ) return
+  const next = alreadySelected
     ? current.filter((id) => id !== optionId)
     : max === 1
       ? [optionId]
@@ -124,7 +143,7 @@ function saveSpecialSelection(checkpointId: string, optionId?: string): void {
           :description="rulesRepository.getOption(optionId)?.description"
           :state="selectedIds(checkpoint.id).includes(optionId)
             ? 'selected'
-            : isUniqueOptionUsedElsewhere(checkpoint.id, optionId) || isBackgroundSkill(checkpoint.id, optionId)
+            : isUniqueOptionUsedElsewhere(checkpoint.id, optionId) || isBackgroundSkill(checkpoint.id, optionId) || isExpertiseLocked(checkpoint.id, optionId)
               ? 'locked'
               : rulesRepository.getOption(optionId)?.status === 'index-only'
                 ? 'incompatible'
@@ -133,7 +152,9 @@ function saveSpecialSelection(checkpointId: string, optionId?: string): void {
             ? checkpoint.kind === 'expertise' ? '已在较低等级获得专精' : '已在较低等级掌握'
             : isBackgroundSkill(checkpoint.id, optionId)
               ? '背景已提供此技能，请选择另一项职业技能'
-              : ''"
+              : isExpertiseLocked(checkpoint.id, optionId)
+                ? '需先获得该技能熟练（职业技能或背景）'
+                : ''"
           @select="toggle(checkpoint.id, optionId, checkpoint.maxSelections)"
         >
           <template #suffix>
