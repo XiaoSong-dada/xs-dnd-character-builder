@@ -6,14 +6,14 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { rulesRepository } from '@/rules/repository'
-import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
+import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { buildTimeline } from '@/rules/timeline'
-import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
+import type { AbilityKey, CharacterDraft, DerivedCharacter, SpellSelections } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
 
 const props = defineProps<{ draft: CharacterDraft; derived: DerivedCharacter }>()
-defineEmits<{ export: []; adjustLevel: []; reedit: [] }>()
+const emit = defineEmits<{ export: []; adjustLevel: []; reedit: []; changeSpellSelections: [value: SpellSelections] }>()
 const activeTab = ref('overview')
 const tabs = [
   { id: 'overview', label: '总览' },
@@ -71,6 +71,57 @@ const spellGroups = computed(() => {
     .filter((group) => group.spells.length)
 })
 const preparedOrKnownLabel = computed(() => (spellcastingConfig.value?.mode === 'prepared' || spellcastingConfig.value?.mode === 'spellbook' ? '已准备' : '已掌握'))
+/** 候选池：prepared 职业可选未准备的法术（1 环起）。 */
+const preparedCandidates = computed(() => {
+  const config = spellcastingConfig.value
+  if (!config) return []
+  return getSpellCandidates(props.draft, config).prepared
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is SpellRule => Boolean(spell))
+})
+/** 法师候选准备：法术书中未准备（长休可换入准备）。 */
+const wizardPrepareFromBook = computed(() => {
+  const config = spellcastingConfig.value
+  if (!config) return []
+  return getSpellCandidates(props.draft, config).prepareFromBook
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is SpellRule => Boolean(spell))
+})
+/** 法师候选写入：职业池中未写入法术书（升级时可扩充入书，只读展示）。 */
+const wizardWriteToBook = computed(() => {
+  const config = spellcastingConfig.value
+  if (!config) return []
+  return getSpellCandidates(props.draft, config).writeToBook
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is SpellRule => Boolean(spell))
+})
+/** 候选按环级分组。 */
+const preparedCandidateGroups = computed(() => {
+  const config = spellcastingConfig.value
+  if (!config) return []
+  const maximumLevel = getMaximumSpellLevel(config, props.draft.targetLevel)
+  return Array.from({ length: maximumLevel }, (_, index) => index + 1)
+    .map((level) => ({ level, spells: preparedCandidates.value.filter((spell) => spell.level === level) }))
+    .filter((group) => group.spells.length)
+})
+const hasCandidates = computed(() => preparedCandidates.value.length > 0 || wizardPrepareFromBook.value.length > 0 || wizardWriteToBook.value.length > 0)
+const hasSpellContent = computed(() => hasSelectedSpells.value || hasCandidates.value)
+/** 仅 prepared / spellbook 模式支持在角色卡切换准备（2014 规则长休可换）。 */
+const canTogglePrepared = computed(() => spellcastingConfig.value?.mode === 'prepared' || spellcastingConfig.value?.mode === 'spellbook')
+/** 已准备数量是否未达上限（决定候选项是否可准备）。 */
+const canPrepareMore = computed(() => props.draft.spellSelections.preparedSpellIds.length < requiredSpellCount.value)
+/** 点击切换准备状态：已准备项取消准备；候选项在未满时加入准备。 */
+function togglePrepare(id: string): void {
+  if (!canTogglePrepared.value) return
+  const current = props.draft.spellSelections.preparedSpellIds
+  const next = current.includes(id)
+    ? current.filter((spellId) => spellId !== id)
+    : canPrepareMore.value
+      ? [...current, id]
+      : current
+  if (next === current) return
+  emit('changeSpellSelections', { ...props.draft.spellSelections, preparedSpellIds: next })
+}
 const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || preparedOrKnownSpells.value.length > 0 || spellbookSpells.value.length > 0)
 function isPreparedSpell(id: string): boolean {
   return props.draft.spellSelections.preparedSpellIds.includes(id)
@@ -172,7 +223,7 @@ const needsReview = computed(() => {
         <StatTile label="法术攻击" :value="derived.spellAttackBonus ? `+${derived.spellAttackBonus.value}` : '—'" :note="derived.spellAttackBonus?.sources.map((item) => item.label).join(' + ') ?? '当前职业无施法能力'" />
         <StatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? '—'" :note="derived.spellSaveDc?.sources.map((item) => item.label).join(' + ') ?? '当前职业无施法能力'" />
       </div>
-      <template v-if="hasSelectedSpells">
+      <template v-if="hasSpellContent">
         <section v-if="cantripSpells.length" class="character-sheet__spell-section">
           <h4>戏法 · {{ draft.spellSelections.cantripIds.length }} / {{ requiredCantripCount }}</h4>
           <ul>
@@ -189,7 +240,10 @@ const needsReview = computed(() => {
             <ul>
               <li v-for="spell in group.spells" :key="spell.id">
                 <strong>{{ spell.name }}</strong>
-                <span>{{ spell.level }}环 · {{ spell.englishName }}</span>
+                <span class="character-sheet__spell-meta">
+                  {{ spell.level }}环 · {{ spell.englishName }}
+                </span>
+                <button v-if="canTogglePrepared" type="button" class="character-sheet__spell-action" @click="togglePrepare(spell.id)">取消准备</button>
               </li>
             </ul>
           </div>
@@ -204,6 +258,42 @@ const needsReview = computed(() => {
                 <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
                 <em class="character-sheet__spell-badge">在书中</em>
               </span>
+            </li>
+          </ul>
+        </section>
+        <section v-if="preparedCandidates.length" class="character-sheet__spell-section">
+          <h4>可选法术 · {{ preparedCandidates.length }}</h4>
+          <div v-for="group in preparedCandidateGroups" :key="group.level" class="character-sheet__spell-level">
+            <h5>{{ group.level }}环 · {{ group.spells.length }} 个可准备</h5>
+            <ul>
+              <li v-for="spell in group.spells" :key="spell.id" class="character-sheet__spell-candidate">
+                <strong>{{ spell.name }}</strong>
+                <span>{{ spell.englishName }}</span>
+                <button type="button" class="character-sheet__spell-action" :disabled="!canPrepareMore" @click="togglePrepare(spell.id)">
+                  {{ canPrepareMore ? '准备' : '已满' }}
+                </button>
+              </li>
+            </ul>
+          </div>
+        </section>
+        <section v-if="wizardPrepareFromBook.length" class="character-sheet__spell-section">
+          <h4>候选准备 · {{ wizardPrepareFromBook.length }}（长休可从法术书换入）</h4>
+          <ul>
+            <li v-for="spell in wizardPrepareFromBook" :key="spell.id" class="character-sheet__spell-candidate">
+              <strong>{{ spell.name }}</strong>
+              <span>{{ spell.level }}环 · {{ spell.englishName }}</span>
+              <button type="button" class="character-sheet__spell-action" :disabled="!canPrepareMore" @click="togglePrepare(spell.id)">
+                {{ canPrepareMore ? '准备' : '已满' }}
+              </button>
+            </li>
+          </ul>
+        </section>
+        <section v-if="wizardWriteToBook.length" class="character-sheet__spell-section">
+          <h4>未写入法术书 · {{ wizardWriteToBook.length }}（升级时可扩充）</h4>
+          <ul>
+            <li v-for="spell in wizardWriteToBook" :key="spell.id">
+              <strong>{{ spell.name }}</strong>
+              <span>{{ spell.level }}环 · {{ spell.englishName }}</span>
             </li>
           </ul>
         </section>
@@ -322,6 +412,34 @@ const needsReview = computed(() => {
 
   &__spell-level {
     h5 { margin: 0.75rem 0 0.35rem; color: var(--color-text-muted); font-size: 0.72rem; }
+  }
+
+  &__spell-candidate {
+    cursor: pointer;
+    padding: 0.4rem;
+    margin: 0 -0.4rem;
+    border-radius: var(--radius-md);
+    transition: background 0.15s;
+
+    &:hover { background: var(--color-primary-soft); }
+  }
+
+  &__spell-action {
+    flex: none;
+    min-height: 2.75rem;
+    padding: 0 0.7rem;
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-md);
+    color: var(--color-primary);
+    background: var(--color-surface);
+    font-size: 0.7rem;
+    font-weight: 700;
+
+    &:disabled {
+      border-color: var(--color-border);
+      color: var(--color-text-muted);
+      background: var(--color-surface);
+    }
   }
 
   &__spell-badge {

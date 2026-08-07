@@ -38,6 +38,37 @@ export function getSelectedSpellIds(draft: CharacterDraft, config: SpellcastingC
   return draft.spellSelections.knownSpellIds
 }
 
+/** 候选池：可更换（准备）但尚未选择的法术 ID。`known`/`pact` 模式在 2014 规则中平时不可更换，无候选。 */
+export interface SpellCandidates {
+  /** prepared 模式：职业法术池（1 环起）中未准备的法术。 */
+  readonly prepared: readonly string[]
+  /** spellbook 模式：职业法术池（1 环起）中未写入法术书的法术（升级时可扩充入书）。 */
+  readonly writeToBook: readonly string[]
+  /** spellbook 模式：法术书中未准备的法术（长休可从书中换入准备）。 */
+  readonly prepareFromBook: readonly string[]
+}
+
+export function getSpellCandidates(draft: CharacterDraft, config: SpellcastingConfig): SpellCandidates {
+  const availableIds = getAvailableSpells(draft, config)
+    .filter((spell) => spell.level > 0)
+    .map((spell) => spell.id)
+  const empty: SpellCandidates = { prepared: [], writeToBook: [], prepareFromBook: [] }
+  if (config.mode === 'spellbook') {
+    const book = draft.spellSelections.spellbookSpellIds
+    const prepared = draft.spellSelections.preparedSpellIds
+    return {
+      prepared: [],
+      writeToBook: availableIds.filter((id) => !book.includes(id)),
+      prepareFromBook: book.filter((id) => !prepared.includes(id)),
+    }
+  }
+  if (config.mode === 'prepared') {
+    const selected = getSelectedSpellIds(draft, config)
+    return { ...empty, prepared: availableIds.filter((id) => !selected.includes(id)) }
+  }
+  return empty
+}
+
 export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingConfig) {
   const maximumLevel = getMaximumSpellLevel(config, draft.targetLevel)
   return config.classSpellIds

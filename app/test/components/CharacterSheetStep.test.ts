@@ -1,8 +1,11 @@
 import { mount } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { defineComponent } from 'vue'
 import { describe, expect, it } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
-import type { CharacterDraft } from '@/types/character'
+import type { CharacterDraft, SpellSelections } from '@/types/character'
 import CharacterSheetStep from '@/views/character-builder/components/CharacterSheetStep.vue'
 
 const draft: CharacterDraft = {
@@ -263,5 +266,186 @@ describe('CharacterSheetStep 法术展示', () => {
     await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
 
     expect(wrapper.text()).toContain('当前没有需要展示的法术。')
+  })
+})
+
+describe('CharacterSheetStep 候选池与点击交互', () => {
+  const spellbookDraft: CharacterDraft = {
+    ...draft,
+    classId: 'class-2014-wizard',
+    targetLevel: 3,
+    spellSelections: {
+      cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],
+      knownSpellIds: [],
+      preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield'],
+      spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands'],
+    },
+  }
+
+  async function mountSheet(spellDraft: CharacterDraft) {
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: spellDraft, derived: deriveCharacter(spellDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+    return wrapper
+  }
+
+  function spellActionFor(wrapper: ReturnType<typeof mount>, spellName: string) {
+    const li = wrapper.findAll('li').find((item) => item.text().includes(spellName))
+    return li?.find('button.character-sheet__spell-action')
+  }
+
+  it('牧师（prepared）展示可选法术区块，戏法不进入候选', async () => {
+    const clericDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-cleric',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        cantripIds: ['spell-2014-guidance'],
+        preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word'],
+      },
+    }
+    const wrapper = await mountSheet(clericDraft)
+
+    expect(wrapper.text()).toContain('可选法术')
+    expect(wrapper.text()).toContain('引导箭')
+    expect(wrapper.text()).toMatch(/1环 · \d+ 个可准备/)
+    // 已准备区块提供取消准备，候选区块提供准备
+    expect(wrapper.text()).toContain('取消准备')
+    expect(wrapper.text()).toContain('准备')
+  })
+
+  it('法师（spellbook）展示候选准备与未写入法术书区块', async () => {
+    const wrapper = await mountSheet(spellbookDraft)
+
+    expect(wrapper.text()).toContain('候选准备')
+    expect(wrapper.text()).toContain('未写入法术书')
+    expect(wrapper.text()).toContain('长休可从法术书换入')
+  })
+
+  it('点击候选项准备：emit changeSpellSelections 并加入 preparedSpellIds', async () => {
+    const clericDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-cleric',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        preparedSpellIds: ['spell-2014-bless'],
+      },
+    }
+    const wrapper = await mountSheet(clericDraft)
+    const button = spellActionFor(wrapper, '引导箭')
+    expect(button).toBeTruthy()
+    await button!.trigger('click')
+
+    const emitted = wrapper.emitted('changeSpellSelections')
+    expect(emitted).toHaveLength(1)
+    const value = emitted![0][0] as SpellSelections
+    expect(value.preparedSpellIds).toContain('spell-2014-bless')
+    expect(value.preparedSpellIds).toContain('spell-2014-guiding-bolt')
+  })
+
+  it('点击已准备项取消准备：emit 移除该法术', async () => {
+    const clericDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-cleric',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word'],
+      },
+    }
+    const wrapper = await mountSheet(clericDraft)
+    const button = spellActionFor(wrapper, '祝福术')
+    expect(button).toBeTruthy()
+    await button!.trigger('click')
+
+    const value = wrapper.emitted('changeSpellSelections')![0][0] as SpellSelections
+    expect(value.preparedSpellIds).not.toContain('spell-2014-bless')
+    expect(value.preparedSpellIds).toContain('spell-2014-healing-word')
+  })
+
+  it('准备已满时候选按钮禁用显示已满且点击不生效', async () => {
+    // 法师 3 级准备上限 = max(1, 智力调整 -1 + 3) = 2，spellbookDraft 已准备 2 个。
+    const wrapper = await mountSheet(spellbookDraft)
+
+    expect(wrapper.text()).toContain('已满')
+    const disabledButtons = wrapper.findAll('button.character-sheet__spell-action:disabled')
+    expect(disabledButtons.length).toBeGreaterThan(0)
+    await disabledButtons[0].trigger('click')
+    expect(wrapper.emitted('changeSpellSelections')).toBeUndefined()
+  })
+
+  it('术士（known）与邪术师（pact）不出现候选区块', async () => {
+    const sorcererDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-sorcerer',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        knownSpellIds: ['spell-2014-charm-person'],
+      },
+    }
+    const sorcerer = await mountSheet(sorcererDraft)
+    expect(sorcerer.text()).not.toContain('可选法术')
+    expect(sorcerer.text()).not.toContain('候选准备')
+    expect(sorcerer.text()).not.toContain('未写入法术书')
+    expect(sorcerer.text()).not.toContain('取消准备')
+
+    const warlockDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-warlock',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        knownSpellIds: ['spell-2014-hex'],
+      },
+    }
+    const warlock = await mountSheet(warlockDraft)
+    expect(warlock.text()).not.toContain('可选法术')
+    expect(warlock.text()).not.toContain('候选准备')
+    expect(warlock.text()).not.toContain('未写入法术书')
+  })
+})
+
+describe('CharacterSheetStep 事件绑定契约', () => {
+  it('index.vue 使用 @change-spell-selections 监听（kebab-case 与 defineEmits 的 changeSpellSelections 一致）', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/views/character-builder/index.vue'), 'utf-8')
+    const sheetLine = source.split('\n').find((line) => line.includes('<CharacterSheetStep'))
+    expect(sheetLine).toBeTruthy()
+    expect(sheetLine).toContain('@change-spell-selections="updateSpells"')
+    expect(sheetLine).not.toContain('@change-spells=')
+  })
+
+  it('点击取消准备经 @change-spell-selections 到达父组件', async () => {
+    const Parent = defineComponent({
+      components: { CharacterSheetStep },
+      props: { draft: { type: Object, required: true } },
+      emits: ['spells'],
+      template: '<CharacterSheetStep :draft="draft" :derived="derived" @change-spell-selections="$emit(\'spells\', $event)" />',
+      setup(props) {
+        return { derived: deriveCharacter(props.draft as CharacterDraft) }
+      },
+    })
+    const clericDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-cleric',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word'],
+      },
+    }
+    const wrapper = mount(Parent, { props: { draft: clericDraft } })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    const blessLi = wrapper.findAll('li').find((item) => item.text().includes('祝福术'))
+    expect(blessLi).toBeTruthy()
+    await blessLi!.find('button.character-sheet__spell-action').trigger('click')
+
+    const value = wrapper.emitted('spells')![0][0] as SpellSelections
+    expect(value.preparedSpellIds).not.toContain('spell-2014-bless')
+    expect(value.preparedSpellIds).toContain('spell-2014-healing-word')
   })
 })
