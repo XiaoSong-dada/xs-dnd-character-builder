@@ -14,7 +14,7 @@ defineEmits<{ level: [value: number]; method: [value: AbilityMethod] }>()
       <small>等级决定需要完成多少次职业、子职和属性提升选择。</small>
     </label>
     <h2>属性生成方式</h2>
-    <OptionCard title="标准数组" description="15、14、13、12、10、8；适合第一次车卡。" :state="abilityMethod === 'standard-array' ? 'selected' : 'recommended'" @select="$emit('method', 'standard-array')" />
+    <OptionCard title="标准数组" description="15、14、13、12、10、8；适合第一次车卡。" :state="abilityMethod === 'standard-array' ? 'selected' : 'default'" @select="$emit('method', 'standard-array')" />
     <OptionCard title="27点购点" description="自由调整六项属性，总消耗不得超过27点。" :state="abilityMethod === 'point-buy' ? 'selected' : 'default'" @select="$emit('method', 'point-buy')" />
     <OptionCard title="自定义" description="适合已有投骰结果或明确团规。" :state="abilityMethod === 'custom' ? 'selected' : 'default'" @select="$emit('method', 'custom')" />
   </section>
