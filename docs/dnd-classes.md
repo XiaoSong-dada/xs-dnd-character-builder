@@ -31,6 +31,7 @@
 - 稳定 ID、中文名、英文名；
 - `ruleset` 与来源；
 - 主要属性、生命骰；
+- 玩法标签 `playStyleTags`（推荐引擎专用，只影响推荐排序与理由，不参与派生计算；标签取值见 `app/src/types/rules.ts` 的 `PlayStyleTag`，中文名见 `app/src/rules/data/preferences-2014.ts`）；
 - 护甲、武器、工具熟练；
 - 豁免熟练与技能选择；
 - 1 级初始生命值公式；

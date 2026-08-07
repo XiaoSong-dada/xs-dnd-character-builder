@@ -9,6 +9,7 @@ import { rulesRepository } from '@/rules/repository'
 import { buildTimeline } from '@/rules/timeline'
 import { validateSpellSelections } from '@/rules/spellcasting'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
+import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type {
@@ -23,21 +24,6 @@ import type {
   SpellSelections,
   StartingEquipmentSelection,
 } from '@/types/character'
-
-const STEP_ORDER: readonly DraftStep[] = ['setup', 'preferences', 'class', 'origin', 'abilities', 'timeline', 'equipment', 'spells', 'identity', 'validation', 'sheet']
-const STEP_META: Record<DraftStep, { eyebrow: string; title: string }> = {
-  setup: { eyebrow: '第1步', title: '先确定冒险规模' },
-  preferences: { eyebrow: '第2步', title: '你想怎样参与战斗？' },
-  class: { eyebrow: '第3步', title: '选择推荐职业' },
-  origin: { eyebrow: '第4步', title: '确定角色起源' },
-  abilities: { eyebrow: '第5步', title: '分配六项属性' },
-  timeline: { eyebrow: '第6步', title: '完成等级时间线' },
-  equipment: { eyebrow: '第7步', title: '选择并装备物品' },
-  spells: { eyebrow: '第8步', title: '配置职业法术' },
-  identity: { eyebrow: '第9步', title: '让角色成为一个人' },
-  validation: { eyebrow: '最终检查', title: '规则校验' },
-  sheet: { eyebrow: '角色完成', title: '角色卡' },
-}
 
 function isDraftStep(value: unknown): value is DraftStep {
   return typeof value === 'string' && STEP_ORDER.includes(value as DraftStep)

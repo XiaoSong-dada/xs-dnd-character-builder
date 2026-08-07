@@ -47,7 +47,7 @@ function asi(level: number, className: 'bard' | 'cleric' | 'druid' | 'sorcerer')
 
 export const fullCasterClasses2014: readonly ClassRule[] = [
   {
-    id: 'class-2014-bard', ruleset: '5e-2014', name: '吟游诗人', englishName: 'Bard', summary: '2014版多面手：技能、激励与已知法术。', hitDie: 8, primaryAbilities: ['cha'], savingThrowAbilities: ['dex', 'cha'], status: 'implemented', sourceIds: basicSource,
+    id: 'class-2014-bard', ruleset: '5e-2014', name: '吟游诗人', englishName: 'Bard', summary: '2014版多面手：技能、激励与已知法术。', hitDie: 8, primaryAbilities: ['cha'], playStyleTags: ['spellcaster', 'support', 'utility', 'control'], savingThrowAbilities: ['dex', 'cha'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'bard-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择3项任意技能', description: '2014吟游诗人可从任意技能中选择3项。', required: true, minSelections: 3, maxSelections: 3, optionIds: allSkillIds },
       { id: 'bard-2014-tool-1', level: 1, step: 'timeline', kind: 'class-choice', title: '选择一种乐器熟练', description: '选择一种乐器熟练。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['tool-musical-instrument'] },
@@ -58,7 +58,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
     spellcasting: { ruleset: '5e-2014', mode: 'known', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: bardCantrips, spellsKnownByLevel: bardSpellsKnown, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, classSpellIds: spellIds('class-2014-bard') },
   },
   {
-    id: 'class-2014-cleric', ruleset: '5e-2014', name: '牧师', englishName: 'Cleric', summary: '2014版神术施法者：领域、引导神力与准备法术。', hitDie: 8, primaryAbilities: ['wis'], savingThrowAbilities: ['wis', 'cha'], status: 'implemented', sourceIds: basicSource,
+    id: 'class-2014-cleric', ruleset: '5e-2014', name: '牧师', englishName: 'Cleric', summary: '2014版神术施法者：领域、引导神力与准备法术。', hitDie: 8, primaryAbilities: ['wis'], playStyleTags: ['spellcaster', 'support', 'durable'], savingThrowAbilities: ['wis', 'cha'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'cleric-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项牧师技能', description: '从牧师技能列表中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-history', 'skill-insight', 'skill-medicine', 'skill-persuasion', 'skill-religion'] },
       { id: 'cleric-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择神圣领域', description: '领域在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: clericSubclassIds },
@@ -67,7 +67,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
     spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'wis', startsAtLevel: 1, preparedFormula: 'ability-plus-level', maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, classSpellIds: spellIds('class-2014-cleric') },
   },
   {
-    id: 'class-2014-druid', ruleset: '5e-2014', name: '德鲁伊', englishName: 'Druid', summary: '2014版自然施法者：荒野变形与准备法术。', hitDie: 8, primaryAbilities: ['wis'], savingThrowAbilities: ['int', 'wis'], status: 'implemented', sourceIds: basicSource,
+    id: 'class-2014-druid', ruleset: '5e-2014', name: '德鲁伊', englishName: 'Druid', summary: '2014版自然施法者：荒野变形与准备法术。', hitDie: 8, primaryAbilities: ['wis'], playStyleTags: ['spellcaster', 'control', 'support', 'durable'], savingThrowAbilities: ['int', 'wis'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'druid-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项德鲁伊技能', description: '从德鲁伊技能列表中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-animal-handling', 'skill-insight', 'skill-medicine', 'skill-nature', 'skill-perception', 'skill-religion', 'skill-survival'] },
       { id: 'druid-2014-subclass-2', level: 2, step: 'timeline', kind: 'subclass', title: '选择德鲁伊结社', description: '结社在2级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: druidSubclassIds },
@@ -76,7 +76,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
     spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'wis', startsAtLevel: 1, preparedFormula: 'ability-plus-level', maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, classSpellIds: spellIds('class-2014-druid') },
   },
   {
-    id: 'class-2014-sorcerer', ruleset: '5e-2014', name: '术士', englishName: 'Sorcerer', summary: '2014版天生施法者：术法点、超魔法与已知法术。', hitDie: 6, primaryAbilities: ['cha'], savingThrowAbilities: ['con', 'cha'], status: 'implemented', sourceIds: basicSource,
+    id: 'class-2014-sorcerer', ruleset: '5e-2014', name: '术士', englishName: 'Sorcerer', summary: '2014版天生施法者：术法点、超魔法与已知法术。', hitDie: 6, primaryAbilities: ['cha'], playStyleTags: ['spellcaster', 'striker', 'control'], savingThrowAbilities: ['con', 'cha'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'sorcerer-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项术士技能', description: '从术士技能列表中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-deception', 'skill-insight', 'skill-intimidation', 'skill-persuasion', 'skill-religion'] },
       { id: 'sorcerer-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择术法起源', description: '起源在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: sorcererSubclassIds },

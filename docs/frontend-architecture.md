@@ -252,10 +252,11 @@ src/styles/index.scss
 views/character-builder/index.vue
   -> views/character-builder/hooks/useCharacterBuilderPage.ts
   -> views/character-builder/components
+  -> views/character-builder/steps.ts（STEP_META/STEP_ORDER 步骤顺序与友好文案公共常量，被 hook 与 StartPanel 共用）
   -> features/quick-build/components
   -> stores/character-drafts.ts
       -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}
-          -> rules/data/{subclasses-2014,subclass-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,starting-equipment-2014,feats-2014,spells-2014}
+          -> rules/data/{subclasses-2014,subclass-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,starting-equipment-2014,feats-2014,spells-2014,preferences-2014}
       -> services/{draft-storage,character-json}
   -> components/ui
 ```
@@ -267,4 +268,8 @@ localStorage 副作用只存在于 services；路由查询同步和步骤编排�
 
 `rules/data/spells-2014.ts` 是 2014 全量法术元数据（稳定 ID、中英文名、环级、8 主施法职业归属、来源索引）的唯一聚合入口，收录 PHB/XGtE/EGtW（非 dunamancy）/TCoE/FTD/SCC 法术；`repository.spells` 直接引用该表。三个旧施法者文件（`half-casters-2014`、`arcane-casters-2014`、`full-casters-2014`）不再持有法术 seed，仅保留职业等级表与子职配置，其 `classSpellIds` 均从 `spells-2014` 按职业过滤派生；跨职业共享法术只登记一次并合并归属，历史 `spell-2014-<slug>` ID 规则保持不变以保证草稿兼容。
 
+`rules/data/preferences-2014.ts` 是玩法偏好的唯一数据源（6 项偏好的中文名、说明、关联属性与关联玩法标签），`rules/recommend.ts` 消费它生成可解释的职业推荐（`getClassRecommendation` 返回 `{ score, reasons, matchedPreferenceLabels }`，`score` 只排序不表达百分比；`status` 不参与评分）、职业成长速览（`getClassGrowthSummary`）与种族/背景推荐理由（从 `fixedAbilityBonuses`/技能检查点推导，无职业特判）；`ClassRule.playStyleTags` 玩法标签记录在各职业数据文件中，只服务推荐。页面组件 `PreferencesStep`、`ClassStep`、`OriginStep` 直接调用 `rules/recommend` 与 `rulesRepository` 做展示级排序与渲染，不实现推荐公式，符合权限矩阵。
+
 `rules/dependency.ts` 的 `target-level` 变更支持升级与降级影响计算：升级时返回 `added`（新等级新增且未完成的检查点清单，含等级与标题，供 UI 引导补全），降级时返回 `invalidatedDetails`（将失效选择的等级与标题）与 `reviews`（按新等级列出数量减少的资源：熟练加值、属性提升/专长次数、战技数量、已知法术上限、子职特性、生命值上限），并沿用"旧选择保留并标记失效、不静默删除"的约定。页面层 `CharacterSheetStep` 提供"调整等级 / 重新编辑"入口与"待补全"徽标，`LevelAdjustModal.vue`（页面私有组件）提供 1—20 级数字网格与影响摘要预览；升级/降级确认复用 `useCharacterBuilderPage` 的 `pendingChange` 依赖影响弹窗（按新增待补 / 将失效 / 需复查 / 保留分节展示），升级后引导条可一键跳转 `timeline` 补全新检查点，`startReedit` 智能定位到需处理步骤（否则进入属性步骤）。草稿首页角色条仅保留打开与删除操作，编辑、等级调整与导出均从角色卡页发起。
+
+`views/character-builder/steps.ts` 是车卡步骤顺序（`STEP_ORDER`）与友好文案（`STEP_META`，`eyebrow`/`title`）的公共常量模块，仅依赖 `types/character`（`DraftStep`）；`useCharacterBuilderPage`（步骤编排、`stepMeta`/`stepNumber`）与 `StartPanel`（首页角色条第三段信息）共用。`StartPanel` 的角色条信息分级展示：完成态（`sheet`）显示职业名（查询不到回退"角色完成"），进行中已选职业显示"职业 · 第N步"，未选职业显示"第N步 · 步骤名"，不再裸显 `currentStep` 英文 ID。

@@ -16,6 +16,7 @@ const props = defineProps<{
 }>()
 const raceSearch = ref('')
 const backgroundSearch = ref('')
+const classRule = computed(() => props.classId ? rulesRepository.getClass(props.classId) : undefined)
 const baseRaces = computed(() => rulesRepository.races
   .filter((item) => !item.parentRaceId && `${item.name}${item.englishName}`.toLowerCase().includes(raceSearch.value.trim().toLowerCase()))
   .sort((a, b) => Number(b.recommendedClassIds.includes(props.classId ?? '')) - Number(a.recommendedClassIds.includes(props.classId ?? ''))))
@@ -62,7 +63,7 @@ const emit = defineEmits<{
       v-for="race in baseRaces"
       :key="race.id"
       :title="race.name"
-      :description="[race.summary, getRaceRecommendationReason(race, classId)].filter(Boolean).join(' · ')"
+      :description="[race.summary, getRaceRecommendationReason(race, classRule)].filter(Boolean).join(' · ')"
       :state="raceId === race.id ? 'selected' : race.recommendedClassIds.includes(classId ?? '') ? 'recommended' : 'default'"
       @select="$emit('race', race.id)"
     >
@@ -75,7 +76,7 @@ const emit = defineEmits<{
         v-for="subrace in subraces"
         :key="subrace.id"
         :title="subrace.name"
-        :description="[subrace.summary, getRaceRecommendationReason(subrace, classId)].filter(Boolean).join(' · ')"
+        :description="[subrace.summary, getRaceRecommendationReason(subrace, classRule)].filter(Boolean).join(' · ')"
         :state="subraceId === subrace.id ? 'selected' : subrace.recommendedClassIds.includes(classId ?? '') ? 'recommended' : 'default'"
         @select="$emit('subrace', subraceId === subrace.id ? undefined : subrace.id)"
       >
@@ -99,7 +100,7 @@ const emit = defineEmits<{
       v-for="background in baseBackgrounds"
       :key="background.id"
       :title="background.name"
-      :description="[background.summary, background.featureName, getBackgroundRecommendationReason(background, classId)].filter(Boolean).join(' · ')"
+      :description="[background.summary, background.featureName, getBackgroundRecommendationReason(background, classRule)].filter(Boolean).join(' · ')"
       :state="backgroundId === background.id ? 'selected' : background.recommendedClassIds.includes(classId ?? '') ? 'recommended' : 'default'"
       @select="$emit('background', background.id)"
     >

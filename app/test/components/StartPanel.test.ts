@@ -55,3 +55,39 @@ describe('StartPanel draft deletion', () => {
     expect(wrapper.emitted('delete')).toEqual([['draft-delete-test']])
   })
 })
+
+describe('StartPanel 角色条信息展示', () => {
+  function sheetWithClass(): CharacterDraft {
+    return { ...draft, classId: 'class-2014-fighter', currentStep: 'sheet' }
+  }
+
+  it('完成态（sheet）显示职业名，不出现英文步骤 ID', () => {
+    const wrapper = mount(StartPanel, { props: { drafts: [sheetWithClass()], legacyDrafts: [] } })
+
+    expect(wrapper.text()).toContain('3级 · 战士')
+    expect(wrapper.text()).not.toContain('sheet')
+  })
+
+  it('进行中已选职业显示"职业 · 第N步"', () => {
+    const inProgress = { ...draft, classId: 'class-2014-fighter' }
+    const wrapper = mount(StartPanel, { props: { drafts: [inProgress], legacyDrafts: [] } })
+
+    expect(wrapper.text()).toContain('3级 · 战士 · 第4步')
+    expect(wrapper.text()).not.toContain('origin')
+  })
+
+  it('进行中未选职业显示"第N步 · 步骤名"', () => {
+    const wrapper = mount(StartPanel, { props: { drafts: [draft], legacyDrafts: [] } })
+
+    expect(wrapper.text()).toContain('3级 · 第4步 · 确定角色起源')
+    expect(wrapper.text()).not.toContain('origin')
+  })
+
+  it('职业查询不到时回退：完成态显示"角色完成"', () => {
+    const unknownClass = { ...draft, classId: 'class-2014-unknown', currentStep: 'sheet' }
+    const wrapper = mount(StartPanel, { props: { drafts: [unknownClass], legacyDrafts: [] } })
+
+    expect(wrapper.text()).toContain('3级 · 角色完成')
+    expect(wrapper.text()).not.toContain('sheet')
+  })
+})

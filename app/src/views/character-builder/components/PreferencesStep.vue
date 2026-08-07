@@ -1,16 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import UiChip from '@/components/ui/UiChip.vue'
+import { getClassRecommendation } from '@/rules/recommend'
+import { rulesRepository } from '@/rules/repository'
+import { playPreferences2014 } from '@/rules/data/preferences-2014'
 
 const props = defineProps<{ selected: readonly string[] }>()
 const emit = defineEmits<{ change: [value: readonly string[]] }>()
-const options = [
-  ['melee', '近身作战'],
-  ['ranged', '远程攻击'],
-  ['spellcasting', '施放法术'],
-  ['support', '支援队友'],
-  ['durable', '高生存'],
-  ['control', '战场控制'],
-] as const
+
+const topClasses = computed(() => {
+  if (props.selected.length === 0) return []
+  return [...rulesRepository.classes]
+    .map((classRule) => ({ classRule, recommendation: getClassRecommendation(classRule, props.selected) }))
+    .filter(({ recommendation }) => recommendation.score > 0)
+    .sort((a, b) => b.recommendation.score - a.recommendation.score)
+    .slice(0, 3)
+    .map(({ classRule }) => classRule.name)
+})
 
 function toggle(id: string): void {
   emit('change', props.selected.includes(id) ? props.selected.filter((item) => item !== id) : [...props.selected, id])
@@ -21,9 +28,15 @@ function toggle(id: string): void {
   <section class="preferences-step">
     <p>凭直觉选择，可多选。推荐只用于排序，不会替你决定职业。</p>
     <div>
-      <UiChip v-for="[id, label] in options" :key="id" :selected="selected.includes(id)" @toggle="toggle(id)">{{ label }}</UiChip>
+      <UiChip
+        v-for="preference in playPreferences2014"
+        :key="preference.id"
+        :selected="selected.includes(preference.id)"
+        :title="preference.description"
+        @toggle="toggle(preference.id)"
+      >{{ preference.label }}</UiChip>
     </div>
-    <aside><strong>当前推荐方向</strong><span>{{ selected.includes('spellcasting') ? '施法职业' : '战士 · 圣武士 · 野蛮人' }}</span></aside>
+    <aside><strong>当前推荐方向</strong><span v-if="topClasses.length">{{ topClasses.join(' · ') }}</span><span v-else>选择偏好后查看推荐方向</span></aside>
   </section>
 </template>
 

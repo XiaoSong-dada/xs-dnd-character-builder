@@ -4,6 +4,8 @@ import { computed, ref } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
+import { rulesRepository } from '@/rules/repository'
+import { STEP_META } from '@/views/character-builder/steps'
 import type { CharacterDraft, LegacyDraftRecord } from '@/types/character'
 
 const props = defineProps<{
@@ -42,6 +44,14 @@ function confirmDelete(): void {
   emit('delete', pendingDeleteId.value)
   pendingDeleteId.value = undefined
 }
+
+/** 角色条第三段信息：完成态显示职业；进行中已选职业显示"职业 · 第N步"；未选职业显示"第N步 · 步骤名"。 */
+function statusText(draft: CharacterDraft): string {
+  const meta = STEP_META[draft.currentStep]
+  const className = draft.classId ? rulesRepository.getClass(draft.classId)?.name : undefined
+  if (draft.currentStep === 'sheet') return className ?? meta.eyebrow
+  return className ? `${className} · ${meta.eyebrow}` : `${meta.eyebrow} · ${meta.title}`
+}
 </script>
 
 <template>
@@ -59,7 +69,7 @@ function confirmDelete(): void {
       class="start-panel__draft"
     >
       <button type="button" class="start-panel__draft-open" @click="$emit('open', draft.id)">
-        <span><strong>{{ draft.name || '未命名角色' }}</strong><small>{{ draft.targetLevel }}级 · {{ draft.currentStep }}</small></span>
+        <span><strong>{{ draft.name || '未命名角色' }}</strong><small>{{ draft.targetLevel }}级 · {{ statusText(draft) }}</small></span>
         <b>继续 ›</b>
       </button>
       <button

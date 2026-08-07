@@ -10,6 +10,21 @@ export type CheckpointKind =
   | 'expertise'
   | 'class-choice'
 
+/**
+ * 玩法标签：描述职业/子职的常见玩法定位，供推荐引擎做偏好匹配。
+ * 标签只服务推荐排序与理由解释，不参与派生计算。
+ */
+export type PlayStyleTag =
+  | 'frontline' // 前线近战
+  | 'ranged' // 远程输出
+  | 'spellcaster' // 施法者
+  | 'support' // 支援辅助
+  | 'durable' // 耐久生存
+  | 'control' // 战场控制
+  | 'striker' // 爆发输出
+  | 'utility' // 多功能
+  | 'skirmisher' // 机动游击
+
 export interface RuleOption {
   readonly id: string
   readonly name: string
@@ -79,6 +94,7 @@ export interface ClassRule {
   readonly summary: string
   readonly hitDie: number
   readonly primaryAbilities: readonly string[]
+  readonly playStyleTags: readonly PlayStyleTag[]
   readonly savingThrowAbilities: readonly AbilityKey[]
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
@@ -235,4 +251,26 @@ export interface RulesRepository {
   getClassStartingEquipment(classId: string): ClassStartingEquipmentRule | undefined
   getBackgroundStartingEquipment(backgroundId: string): BackgroundStartingEquipmentRule | undefined
   getSpell(id: string): SpellRule | undefined
+}
+
+/** 推荐原因：text 为玩家可读的解释，weight 为该原因对分数的贡献。 */
+export interface RecommendationReason {
+  readonly text: string
+  readonly weight: number
+  /** 所属偏好的中文名，供界面生成原因摘要。 */
+  readonly preferenceLabel: string
+}
+
+/** 职业推荐结果：score 仅用于排序，reasons 用于界面解释。 */
+export interface ClassRecommendation {
+  readonly score: number
+  readonly reasons: readonly RecommendationReason[]
+  /** 命中偏好的中文名（与 reasons 一一对应），供界面生成原因摘要。 */
+  readonly matchedPreferenceLabels: readonly string[]
+}
+
+/** 职业成长速览条目：由规则数据推导，供界面展示职业关键节点。 */
+export interface ClassGrowthSummaryItem {
+  readonly level: number
+  readonly title: string
 }

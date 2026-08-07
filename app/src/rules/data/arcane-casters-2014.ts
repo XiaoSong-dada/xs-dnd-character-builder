@@ -32,7 +32,7 @@ const asi = (level: number, className: 'wizard' | 'warlock') => ({ id: `${classN
 
 export const arcaneCasterClasses2014: readonly ClassRule[] = [
   {
-    id: 'class-2014-wizard', ruleset: '5e-2014', name: '法师', englishName: 'Wizard', summary: '2014版法术书施法者，分别管理法术书与准备列表。', hitDie: 6, primaryAbilities: ['int'], savingThrowAbilities: ['int', 'wis'], status: 'implemented', sourceIds: basicSource,
+    id: 'class-2014-wizard', ruleset: '5e-2014', name: '法师', englishName: 'Wizard', summary: '2014版法术书施法者，分别管理法术书与准备列表。', hitDie: 6, primaryAbilities: ['int'], playStyleTags: ['spellcaster', 'control', 'utility', 'striker'], savingThrowAbilities: ['int', 'wis'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'wizard-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项法师技能', description: '选择职业技能。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-history', 'skill-insight', 'skill-investigation', 'skill-medicine', 'skill-religion'] },
       { id: 'wizard-2014-subclass-2', level: 2, step: 'timeline', kind: 'subclass', title: '选择奥术传统', description: '奥术传统在2级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: wizardSubclassIds },
@@ -41,7 +41,7 @@ export const arcaneCasterClasses2014: readonly ClassRule[] = [
     spellcasting: { ruleset: '5e-2014', mode: 'spellbook', ability: 'int', startsAtLevel: 1, preparedFormula: 'ability-plus-level', cantripsKnownByLevel: wizardCantrips, spellbookSpellsByLevel: wizardSpellbookCounts, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, classSpellIds: spellIds('class-2014-wizard') },
   },
   {
-    id: 'class-2014-warlock', ruleset: '5e-2014', name: '邪术师', englishName: 'Warlock', summary: '2014版契约施法者，以短休恢复的契约法术位施法。', hitDie: 8, primaryAbilities: ['cha'], savingThrowAbilities: ['wis', 'cha'], status: 'implemented', sourceIds: basicSource,
+    id: 'class-2014-warlock', ruleset: '5e-2014', name: '邪术师', englishName: 'Warlock', summary: '2014版契约施法者，以短休恢复的契约法术位施法。', hitDie: 8, primaryAbilities: ['cha'], playStyleTags: ['spellcaster', 'striker', 'control', 'utility'], savingThrowAbilities: ['wis', 'cha'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'warlock-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项邪术师技能', description: '选择职业技能。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-deception', 'skill-history', 'skill-intimidation', 'skill-investigation', 'skill-nature', 'skill-religion'] },
       { id: 'warlock-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择异界宗主', description: '宗主在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: warlockSubclassIds },

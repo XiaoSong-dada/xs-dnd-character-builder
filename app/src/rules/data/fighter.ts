@@ -54,6 +54,7 @@ export const fighterRule: ClassRule = {
   summary: '2014版武器专家，以战斗风格、动作如潮和武术范型成长。',
   hitDie: 10,
   primaryAbilities: ['str', 'dex'],
+  playStyleTags: ['frontline', 'durable', 'striker', 'ranged'],
   savingThrowAbilities: ['str', 'con'],
   status: 'implemented',
   sourceIds: ['basic-rules-2014', 'phb-2014-index'],
