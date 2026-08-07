@@ -1,8 +1,13 @@
 import { mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import StartPanel from '@/views/character-builder/components/StartPanel.vue'
 import type { CharacterDraft } from '@/types/character'
+
+const mockConfig = vi.hoisted(() => ({
+  siteConfig: { authorName: '小宋哒哒', githubUrl: 'https://github.com/XiaoSong-dada', version: '0.1.0' },
+}))
+vi.mock('@/config/site', () => mockConfig)
 
 const draft: CharacterDraft = {
   schemaVersion: 3,
@@ -89,5 +94,46 @@ describe('StartPanel 角色条信息展示', () => {
 
     expect(wrapper.text()).toContain('3级 · 角色完成')
     expect(wrapper.text()).not.toContain('sheet')
+  })
+})
+
+describe('StartPanel hero 署名行', () => {
+  beforeEach(() => {
+    mockConfig.siteConfig.authorName = '小宋哒哒'
+    mockConfig.siteConfig.githubUrl = 'https://github.com/XiaoSong-dada'
+    mockConfig.siteConfig.version = '0.1.0'
+  })
+
+  it('配置齐全时显示作者、GitHub 链接与版本', () => {
+    const wrapper = mount(StartPanel, { props: { drafts: [draft], legacyDrafts: [] } })
+
+    expect(wrapper.text()).toContain('由 小宋哒哒 制作')
+    expect(wrapper.text()).toContain('v0.1.0')
+    const link = wrapper.get('.start-panel__signature-link')
+    expect(link.attributes('href')).toBe('https://github.com/XiaoSong-dada')
+    expect(link.attributes('target')).toBe('_blank')
+    expect(link.attributes('rel')).toContain('noopener')
+    expect(link.attributes('rel')).toContain('noreferrer')
+  })
+
+  it('部分配置时对应段省略', () => {
+    mockConfig.siteConfig.githubUrl = undefined
+    mockConfig.siteConfig.version = undefined
+    const wrapper = mount(StartPanel, { props: { drafts: [draft], legacyDrafts: [] } })
+
+    expect(wrapper.text()).toContain('由 小宋哒哒 制作')
+    expect(wrapper.text()).not.toContain('GitHub')
+    expect(wrapper.text()).not.toContain('v0.1.0')
+  })
+
+  it('全部未配置时署名行不渲染且无 GitHub 链接', () => {
+    mockConfig.siteConfig.authorName = undefined
+    mockConfig.siteConfig.githubUrl = undefined
+    mockConfig.siteConfig.version = undefined
+    const wrapper = mount(StartPanel, { props: { drafts: [draft], legacyDrafts: [] } })
+
+    expect(wrapper.find('.start-panel__signature').exists()).toBe(false)
+    expect(wrapper.find('a[href*="github"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('GitHub')
   })
 })

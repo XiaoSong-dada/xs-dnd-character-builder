@@ -7,6 +7,12 @@ services:
       context: ./app
       dockerfile: Dockerfile
       pull: true
+      args:
+        # Vite 构建期注入的站点信息（取自仓库根 .env，未配置则空）
+        VITE_AUTHOR_NAME: ${VITE_AUTHOR_NAME:-}
+        VITE_GITHUB_URL: ${VITE_GITHUB_URL:-}
+        VITE_AUTHOR_TAGLINE: ${VITE_AUTHOR_TAGLINE:-}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-}
     ports:
       - "${APP_PORT:-8080}:80"
     restart: unless-stopped

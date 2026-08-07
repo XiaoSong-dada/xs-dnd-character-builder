@@ -4,6 +4,16 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@10.17.1 --activate
 
+# 站点信息构建期注入（由 docker-compose build args 传入，未配置则为空）
+ARG VITE_AUTHOR_NAME
+ARG VITE_GITHUB_URL
+ARG VITE_AUTHOR_TAGLINE
+ARG VITE_APP_VERSION
+ENV VITE_AUTHOR_NAME=$VITE_AUTHOR_NAME \
+    VITE_GITHUB_URL=$VITE_GITHUB_URL \
+    VITE_AUTHOR_TAGLINE=$VITE_AUTHOR_TAGLINE \
+    VITE_APP_VERSION=$VITE_APP_VERSION
+
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
