@@ -190,14 +190,16 @@ import type { CharacterDraft } from '../../types/character'
 
 ## 8. 当前实际拓扑
 
-截至当前基础版本：
+截至 2026-08 基线，`app/src` 已建立完整的分层结构。以下按 import 语句核对，列出各层实际模块与它们的依赖。
+
+### 8.1 入口、应用与路由
 
 ```text
 src/main.ts
   -> src/App.vue
   -> src/router/router.ts
   -> src/styles/index.scss
-  -> Pinia
+  -> Pinia（createPinia）
 
 src/App.vue
   -> Vue Router 的 RouterView
@@ -209,23 +211,134 @@ src/router/router.ts
   -> src/views/dice/index.vue（懒加载）
   -> src/views/profile/index.vue（懒加载）
   -> src/views/not-found/index.vue（懒加载）
+  -> import.meta.env.BASE_URL（vue-router 标准用法）
+```
 
+### 8.2 布局层
+
+```text
 src/layout/MainLayout.vue
   -> src/layout/components/BottomNavigation.vue
-  -> Vue Router 的 RouterView
+  -> vue-router（RouterView / useRoute）
 
 src/layout/components/BottomNavigation.vue
   -> src/layout/hooks/useBottomNavigation.ts
-  -> src/assets/icons/navigation.svg
+  -> src/assets/icons/navigation.svg（?raw）
 
-src/views/<page>/index.vue
-  -> src/views/<page>/hooks/use<Page>Page.ts
-
-src/styles/index.scss
-  -> src/styles/flex.scss
+src/layout/hooks/useBottomNavigation.ts
+  -> vue-router（useRoute，用于导航高亮）
 ```
 
-当前尚未创建 `features`、`stores`、`rules`、`services`、`api` 等目录。只有出现对应真实职责时才创建。
+### 8.3 页面层（车卡页之外）
+
+其余四个页面均为「入口 `index.vue` + 页面私有 hooks」，无页面私有 `components`：
+
+```text
+src/views/classes/index.vue    -> src/views/classes/hooks/useClassesPage.ts
+src/views/dice/index.vue       -> src/views/dice/hooks/useDicePage.ts
+src/views/profile/index.vue    -> src/views/profile/hooks/useProfilePage.ts
+src/views/not-found/index.vue  -> src/views/not-found/hooks/useNotFoundPage.ts（-> vue-router useRouter）
+```
+
+### 8.4 车卡页面（views/character-builder）
+
+```text
+src/views/character-builder/index.vue
+  -> src/views/character-builder/hooks/useCharacterBuilderPage.ts
+  -> src/views/character-builder/steps.ts（STEP_ORDER / STEP_META）
+  -> src/views/character-builder/components/*（13 个步骤组件；ClassOptionCard、FeatChoicePanel 由内部引用）
+  -> src/features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
+  -> src/components/ui/{BaseButton,UiModal,UiNotice}
+  -> src/types/character
+
+src/views/character-builder/hooks/useCharacterBuilderPage.ts
+  -> src/views/character-builder/steps.ts
+  -> src/stores/character-drafts.ts
+  -> src/services/character-json.ts
+  -> src/rules/{derive,abilities,dependency,repository,timeline,spellcasting,starting-equipment}
+  -> vue-router（useRoute / useRouter，路由查询与步骤编排）
+
+src/views/character-builder/components/*
+  -> src/views/character-builder/components/{ClassOptionCard,FeatChoicePanel}（页面内复用）
+  -> src/components/ui/*
+  -> src/rules/* 与 src/rules/data/*（推荐、时间线、法术、装备、子职特性等只读消费）
+  -> src/config/site.ts（仅 StartPanel）
+  -> src/types/*
+```
+
+### 8.5 features / components/ui
+
+```text
+src/features/quick-build/components/CharacterDrawer.vue
+  -> src/components/ui/{StatTile,UiDrawer}
+  -> src/types/character
+
+src/features/quick-build/components/QuickBuildShell.vue   （无 import，纯插槽布局壳）
+src/features/quick-build/components/StepHeader.vue        -> src/components/ui/UiProgress
+src/features/quick-build/components/StickyActionBar.vue   -> src/components/ui/BaseButton
+
+src/components/ui/*（BaseButton、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
+  -> 无项目内 import，仅依赖全局 CSS 变量主题
+```
+
+### 8.6 stores / services / config
+
+```text
+src/stores/character-drafts.ts
+  -> src/rules/{derive,timeline,validate,spellcasting,starting-equipment}
+  -> src/services/{character-json,draft-storage}
+  -> src/types/character
+
+src/services/character-json.ts
+  -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
+  -> src/types/character
+
+src/services/draft-storage.ts
+  -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
+  -> src/types/character
+
+src/config/site.ts    （无依赖；项目内唯一读取 import.meta.env 的入口）
+src/config/setting.ts （空占位文件，无消费者）
+```
+
+### 8.7 rules 层
+
+```text
+src/rules/repository.ts          -> src/rules/data/{classes-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
+src/rules/derive.ts              -> src/rules/{repository,feats,subclass-effects}
+src/rules/validate.ts            -> src/rules/{repository,derive,feats,abilities,timeline,spellcasting,starting-equipment} + src/rules/data/subclass-features-2014
+src/rules/dependency.ts          -> src/rules/{derive,repository,timeline} + src/rules/data/subclass-features-2014
+src/rules/timeline.ts            -> src/rules/repository + src/rules/data/{feats-2014,subclasses-2014,subclass-features-2014}
+src/rules/spellcasting.ts        -> src/rules/{derive,repository}
+src/rules/starting-equipment.ts  -> src/rules/repository
+src/rules/feats.ts               -> src/rules/data/feats-2014
+src/rules/recommend.ts           -> src/rules/data/{feats-2014,preferences-2014}
+src/rules/abilities.ts           （无 rules 内部依赖，最纯）
+src/rules/subclass-effects.ts    （无依赖，纯函数）
+```
+
+规则层保持框架无关：不导入 Vue、Pinia、Router、DOM、Cookie、存储或 `import.meta.env`。`rules/data` 之间仅存在单向、无环的横向依赖：
+
+```text
+feats-2014             <- {martials-2014, fighter, arcane-casters-2014, half-casters-2014, full-casters-2014}（属性提升/专长选项）
+subclass-features-2014 <- {martials-2014, fighter, arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（子职特性）
+spells-2014            <- {arcane-casters-2014, half-casters-2014, full-casters-2014}（职业法术归属）
+```
+
+### 8.8 types / styles
+
+```text
+src/types/character.ts（叶子类型，全项目共享）
+src/types/rules.ts     -> src/types/character（type-only）
+src/styles/index.scss  -> @use src/styles/flex.scss
+```
+
+### 8.9 已知偏差与注意事项
+
+- ⚠️ `services -> rules`：`character-json.ts` 与 `draft-storage.ts` 导入 `rules/starting-equipment` 的 `EMPTY_CURRENCY`，而权限矩阵中 services 允许依赖 `api、config、types、纯 utils`（未含 rules）。建议后续把该常量上提到 `types` 或 `constants`，或修订矩阵授权。
+- 页面组件直接消费 `rules/data/*`（`TimelineStep`、`CharacterSheetStep`、`FeatChoicePanel`、`PreferencesStep`），符合「views -> rules」权限；如需收紧可改经 `repository` 聚合。
+- `config/setting.ts` 为空占位文件；`assets/icons/DND.png` 无任何 import 引用。
+- `src/api`、`src/constants`、`src/utils`、顶层 `src/hooks`、非 ui 的 `src/components` 当前不存在，只有出现对应真实职责时才创建。
 
 ## 9. 变更复核
 
@@ -251,18 +364,19 @@ src/styles/index.scss
 ```text
 views/character-builder/index.vue
   -> views/character-builder/hooks/useCharacterBuilderPage.ts
-  -> views/character-builder/components
   -> views/character-builder/steps.ts（STEP_META/STEP_ORDER 步骤顺序与友好文案公共常量，被 hook 与 StartPanel 共用）
-  -> features/quick-build/components
+  -> views/character-builder/components/*（15 个：AbilitiesStep、CharacterSheetStep、ClassOptionCard、ClassStep、EquipmentStep、FeatChoicePanel、IdentityStep、LevelAdjustModal、OriginStep、PreferencesStep、SetupStep、SpellcastingStep、StartPanel、TimelineStep、ValidationStep）
+  -> features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
   -> stores/character-drafts.ts
       -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}
           -> rules/data/{subclasses-2014,subclass-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,starting-equipment-2014,feats-2014,spells-2014,preferences-2014}
       -> services/{draft-storage,character-json}
-  -> components/ui
+          -> rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点，见 8.9
+  -> components/ui/*（BaseButton、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
 ```
 
 规则层仍保持框架无关，不读取 DOM、路由或存储。Store 只保存原始选择；文件和
-localStorage 副作用只存在于 services；路由查询同步和步骤编排只存在于页面 hook。
+localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层依赖见 8.9 越权点说明）；路由查询同步和步骤编排只存在于页面 hook。
 
 `rules/data/subclasses-2014.ts` 是当前 2014 子职元数据和普通玩家可选 ID 的唯一聚合入口；`rules/data/subclass-features-2014.ts` 登记各子职等级特性（纵向切片，未核验效果保持 `index-only`），`rules/subclass-effects.ts` 提供子职派生效果钩子（按可核验条目返回效果，首批含龙族血脉的 AC 基础公式与每级生命加成）。`repository` 负责登记完整目录，`timeline` 接收 `subclassId` 上下文，按所选子职追加 `kind: 'subclass-feature'` 的特性选择检查点（`requiresChoice` 特性），并只装配玩家可用检查点；DM 专用条目可被仓库查询，但不进入普通时间线。页面层 `TimelineStep` 选中子职后展示其特性列表并提供特性选择检查点交互，`CharacterSheetStep` 能力页签展示子职特性区块；两者都只从 `SubclassRule.features` 读取数据，不硬编码规则。各职业旧数据文件中已有的子职常量暂保留供局部实现引用，不再作为仓库目录来源。
 

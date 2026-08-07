@@ -64,7 +64,7 @@ const emit = defineEmits<{
       :key="race.id"
       :title="race.name"
       :description="[race.summary, getRaceRecommendationReason(race, classRule)].filter(Boolean).join(' · ')"
-      :state="raceId === race.id ? 'selected' : race.recommendedClassIds.includes(classId ?? '') ? 'recommended' : 'default'"
+      :state="raceId === race.id ? 'selected' : 'default'"
       @select="$emit('race', race.id)"
     >
       <template #suffix><UiBadge v-if="race.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
@@ -77,7 +77,7 @@ const emit = defineEmits<{
         :key="subrace.id"
         :title="subrace.name"
         :description="[subrace.summary, getRaceRecommendationReason(subrace, classRule)].filter(Boolean).join(' · ')"
-        :state="subraceId === subrace.id ? 'selected' : subrace.recommendedClassIds.includes(classId ?? '') ? 'recommended' : 'default'"
+        :state="subraceId === subrace.id ? 'selected' : 'default'"
         @select="$emit('subrace', subraceId === subrace.id ? undefined : subrace.id)"
       >
         <template #suffix>
@@ -101,7 +101,7 @@ const emit = defineEmits<{
       :key="background.id"
       :title="background.name"
       :description="[background.summary, background.featureName, getBackgroundRecommendationReason(background, classRule)].filter(Boolean).join(' · ')"
-      :state="backgroundId === background.id ? 'selected' : background.recommendedClassIds.includes(classId ?? '') ? 'recommended' : 'default'"
+      :state="backgroundId === background.id ? 'selected' : 'default'"
       @select="$emit('background', background.id)"
     >
       <template #suffix><UiBadge v-if="background.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
