@@ -150,3 +150,118 @@ describe('CharacterSheetStep 升级降级与重新编辑入口', () => {
     expect(complete.text()).not.toContain('待补全')
   })
 })
+
+describe('CharacterSheetStep 法术展示', () => {
+  const spellbookDraft: CharacterDraft = {
+    ...draft,
+    classId: 'class-2014-wizard',
+    targetLevel: 3,
+    spellSelections: {
+      cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],
+      knownSpellIds: [],
+      preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield'],
+      spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands'],
+    },
+  }
+
+  it('法师（spellbook）完整展示戏法、法术书与已准备法术', async () => {
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: spellbookDraft, derived: deriveCharacter(spellbookDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    expect(wrapper.text()).toContain('火焰箭')
+    expect(wrapper.text()).toContain('魔法飞弹')
+    expect(wrapper.text()).toContain('护盾')
+    expect(wrapper.text()).toContain('燃烧之手')
+    expect(wrapper.text()).toContain('戏法 · 3 / 3')
+    expect(wrapper.text()).toContain('已准备 · 2 / 2')
+    expect(wrapper.text()).toContain('法术书 · 3 / 10')
+    expect(wrapper.text()).toContain('1环 · 已选 2')
+
+    const badges = wrapper.findAll('.character-sheet__spell-badge')
+    expect(badges.filter((badge) => badge.text() === '已准备')).toHaveLength(2)
+    expect(badges.filter((badge) => badge.text() === '在书中')).toHaveLength(3)
+  })
+
+  it('牧师（prepared）展示戏法与已准备法术，不出现法术书与已掌握', async () => {
+    const preparedDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-cleric',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        cantripIds: ['spell-2014-guidance', 'spell-2014-sacred-flame'],
+        preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word'],
+      },
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: preparedDraft, derived: deriveCharacter(preparedDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    expect(wrapper.text()).toContain('指引术')
+    expect(wrapper.text()).toContain('神圣之火')
+    expect(wrapper.text()).toContain('祝福术')
+    expect(wrapper.text()).toContain('治愈真言')
+    expect(wrapper.text()).toContain('已准备')
+    expect(wrapper.text()).not.toContain('已掌握')
+    expect(wrapper.text()).not.toContain('法术书')
+    expect(wrapper.text()).not.toContain('在书中')
+  })
+
+  it('术士（known）展示戏法与已掌握法术', async () => {
+    const knownDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-sorcerer',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        cantripIds: ['spell-2014-fire-bolt', 'spell-2014-ray-of-frost'],
+        knownSpellIds: ['spell-2014-charm-person', 'spell-2014-burning-hands'],
+      },
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: knownDraft, derived: deriveCharacter(knownDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    expect(wrapper.text()).toContain('魅惑人类')
+    expect(wrapper.text()).toContain('燃烧之手')
+    expect(wrapper.text()).toContain('已掌握')
+    expect(wrapper.text()).not.toContain('已准备')
+    expect(wrapper.text()).not.toContain('法术书')
+  })
+
+  it('邪术师（pact）展示戏法与已掌握法术', async () => {
+    const pactDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-warlock',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        cantripIds: ['spell-2014-eldritch-blast', 'spell-2014-mage-hand'],
+        knownSpellIds: ['spell-2014-hex', 'spell-2014-armor-of-agathys'],
+      },
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: pactDraft, derived: deriveCharacter(pactDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    expect(wrapper.text()).toContain('魔能爆')
+    expect(wrapper.text()).toContain('妖火诅咒')
+    expect(wrapper.text()).toContain('阿伽迪斯之铠')
+    expect(wrapper.text()).toContain('已掌握')
+    expect(wrapper.text()).not.toContain('已准备')
+  })
+
+  it('无施法能力的职业显示空状态提示', async () => {
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft, derived: deriveCharacter(draft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    expect(wrapper.text()).toContain('当前没有需要展示的法术。')
+  })
+})

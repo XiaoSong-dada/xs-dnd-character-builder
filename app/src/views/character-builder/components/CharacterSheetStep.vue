@@ -6,9 +6,11 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { rulesRepository } from '@/rules/repository'
+import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { buildTimeline } from '@/rules/timeline'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
+import type { SpellRule } from '@/types/rules'
 
 const props = defineProps<{ draft: CharacterDraft; derived: DerivedCharacter }>()
 defineEmits<{ export: []; adjustLevel: []; reedit: [] }>()
@@ -38,13 +40,41 @@ const identityLine = computed(() => {
   ].filter(Boolean)
   return `${draft.targetLevel}级 · ${names.join(' · ')}`
 })
-const selectedSpells = computed(() => {
-  const config = props.draft.classId ? rulesRepository.getClass(props.draft.classId)?.spellcasting : undefined
-  const ids = config?.mode === 'prepared'
-    ? props.draft.spellSelections.preparedSpellIds
-    : props.draft.spellSelections.knownSpellIds
-  return [...props.draft.spellSelections.cantripIds, ...(ids ?? [])].map((id) => rulesRepository.getSpell(id)).filter(Boolean)
+const spellcastingConfig = computed(() => (props.draft.classId ? rulesRepository.getClass(props.draft.classId)?.spellcasting : undefined))
+const cantripSpells = computed(() => props.draft.spellSelections.cantripIds
+  .map((id) => rulesRepository.getSpell(id))
+  .filter((spell): spell is SpellRule => Boolean(spell)))
+const preparedOrKnownSpells = computed(() => {
+  const config = spellcastingConfig.value
+  if (!config) return []
+  // 已准备 / 已掌握法术以规则层 getSelectedSpellIds 为唯一事实源（覆盖 spellbook/prepared/known/pact 四种模式）。
+  return getSelectedSpellIds(props.draft, config)
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is SpellRule => Boolean(spell))
 })
+const spellbookSpells = computed(() => {
+  if (spellcastingConfig.value?.mode !== 'spellbook') return []
+  return props.draft.spellSelections.spellbookSpellIds
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is SpellRule => Boolean(spell))
+})
+const requiredCantripCount = computed(() => (spellcastingConfig.value ? getRequiredCantripCount(props.draft, spellcastingConfig.value) : 0))
+const requiredSpellCount = computed(() => (spellcastingConfig.value ? getRequiredSpellCount(props.draft, spellcastingConfig.value) : 0))
+const requiredSpellbookCount = computed(() => (spellcastingConfig.value ? getRequiredSpellbookCount(props.draft, spellcastingConfig.value) : 0))
+/** 已准备 / 已掌握法术按环级分组（戏法由 cantripSpells 单独展示）。 */
+const spellGroups = computed(() => {
+  const config = spellcastingConfig.value
+  if (!config) return []
+  const maximumLevel = getMaximumSpellLevel(config, props.draft.targetLevel)
+  return Array.from({ length: maximumLevel }, (_, index) => index + 1)
+    .map((level) => ({ level, spells: preparedOrKnownSpells.value.filter((spell) => spell.level === level) }))
+    .filter((group) => group.spells.length)
+})
+const preparedOrKnownLabel = computed(() => (spellcastingConfig.value?.mode === 'prepared' || spellcastingConfig.value?.mode === 'spellbook' ? '已准备' : '已掌握'))
+const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || preparedOrKnownSpells.value.length > 0 || spellbookSpells.value.length > 0)
+function isPreparedSpell(id: string): boolean {
+  return props.draft.spellSelections.preparedSpellIds.includes(id)
+}
 const subclassInfo = computed(() => {
   const subclassId = props.draft.subclassId
   if (!subclassId) return undefined
@@ -142,15 +172,42 @@ const needsReview = computed(() => {
         <StatTile label="法术攻击" :value="derived.spellAttackBonus ? `+${derived.spellAttackBonus.value}` : '—'" :note="derived.spellAttackBonus?.sources.map((item) => item.label).join(' + ') ?? '当前职业无施法能力'" />
         <StatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? '—'" :note="derived.spellSaveDc?.sources.map((item) => item.label).join(' + ') ?? '当前职业无施法能力'" />
       </div>
-      <section v-if="selectedSpells.length">
-        <h3>已选法术</h3>
-        <ul>
-          <li v-for="spell in selectedSpells" :key="spell?.id">
-            <strong>{{ spell?.name }}</strong>
-            <span>{{ spell?.level }}环 · {{ spell?.englishName }}</span>
-          </li>
-        </ul>
-      </section>
+      <template v-if="hasSelectedSpells">
+        <section v-if="cantripSpells.length" class="character-sheet__spell-section">
+          <h4>戏法 · {{ draft.spellSelections.cantripIds.length }} / {{ requiredCantripCount }}</h4>
+          <ul>
+            <li v-for="spell in cantripSpells" :key="spell.id">
+              <strong>{{ spell.name }}</strong>
+              <span>{{ spell.englishName }}</span>
+            </li>
+          </ul>
+        </section>
+        <section v-if="preparedOrKnownSpells.length" class="character-sheet__spell-section">
+          <h4>{{ preparedOrKnownLabel }} · {{ preparedOrKnownSpells.length }} / {{ requiredSpellCount }}</h4>
+          <div v-for="group in spellGroups" :key="group.level" class="character-sheet__spell-level">
+            <h5>{{ group.level }}环 · 已选 {{ group.spells.length }}</h5>
+            <ul>
+              <li v-for="spell in group.spells" :key="spell.id">
+                <strong>{{ spell.name }}</strong>
+                <span>{{ spell.level }}环 · {{ spell.englishName }}</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+        <section v-if="spellbookSpells.length" class="character-sheet__spell-section">
+          <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.length }} / {{ requiredSpellbookCount }}</h4>
+          <ul>
+            <li v-for="spell in spellbookSpells" :key="spell.id">
+              <strong>{{ spell.name }}</strong>
+              <span class="character-sheet__spell-meta">
+                {{ spell.level }}环 · {{ spell.englishName }}
+                <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
+                <em class="character-sheet__spell-badge">在书中</em>
+              </span>
+            </li>
+          </ul>
+        </section>
+      </template>
       <p v-else>当前没有需要展示的法术。</p>
     </div>
     <div v-else-if="activeTab === 'items'" class="character-sheet__panel">
@@ -231,27 +288,50 @@ const needsReview = computed(() => {
     display: grid;
     gap: 0.75rem;
 
-    > section {
-      padding: 0.9rem;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      background: var(--color-surface);
+    > p { color: var(--color-text-muted); }
+  }
 
-      h3 { margin: 0 0 0.6rem; }
-      ul { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
-      li {
+  &__spell-section {
+    padding: 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+
+    h4 { margin: 0 0 0.6rem; }
+    ul { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 0.78rem;
+
+      span { color: var(--color-text-muted); text-align: right; }
+
+      .character-sheet__spell-meta {
         display: flex;
-        justify-content: space-between;
-        gap: 0.75rem;
-        padding-bottom: 0.4rem;
-        border-bottom: 1px solid var(--color-border);
-        font-size: 0.78rem;
-
-        span { color: var(--color-text-muted); text-align: right; }
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.3rem;
+        min-width: 0;
       }
     }
+  }
 
-    > p { color: var(--color-text-muted); }
+  &__spell-level {
+    h5 { margin: 0.75rem 0 0.35rem; color: var(--color-text-muted); font-size: 0.72rem; }
+  }
+
+  &__spell-badge {
+    padding: 0.05rem 0.4rem;
+    border: 1px solid var(--color-primary);
+    border-radius: 999px;
+    color: var(--color-primary);
+    font-size: 0.62rem;
+    font-style: normal;
+    white-space: nowrap;
   }
 
   &__spell-stats {
