@@ -246,9 +246,9 @@ src/views/not-found/index.vue  -> src/views/not-found/hooks/useNotFoundPage.ts�
 src/views/character-builder/index.vue
   -> src/views/character-builder/hooks/useCharacterBuilderPage.ts
   -> src/views/character-builder/steps.ts（STEP_ORDER / STEP_META）
-  -> src/views/character-builder/components/*（13 个步骤组件；ClassOptionCard、FeatChoicePanel 由内部引用）
+  -> src/views/character-builder/components/*（13 个步骤组件；FeatChoicePanel 由内部引用）
   -> src/features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
-  -> src/components/ui/{BaseButton,UiModal,UiNotice}
+  -> src/components/ui/{BaseButton,ExpandableOptionCard,UiModal,UiNotice}
   -> src/types/character
 
 src/views/character-builder/hooks/useCharacterBuilderPage.ts
@@ -259,7 +259,7 @@ src/views/character-builder/hooks/useCharacterBuilderPage.ts
   -> vue-router（useRoute / useRouter，路由查询与步骤编排）
 
 src/views/character-builder/components/*
-  -> src/views/character-builder/components/{ClassOptionCard,FeatChoicePanel}（页面内复用）
+  -> src/views/character-builder/components/{FeatChoicePanel}（页面内复用）
   -> src/components/ui/*
   -> src/rules/* 与 src/rules/data/*（推荐、时间线、法术、装备、子职特性等只读消费）
   -> src/config/site.ts（仅 StartPanel）
@@ -277,7 +277,7 @@ src/features/quick-build/components/QuickBuildShell.vue   （无 import，纯插
 src/features/quick-build/components/StepHeader.vue        -> src/components/ui/UiProgress
 src/features/quick-build/components/StickyActionBar.vue   -> src/components/ui/BaseButton
 
-src/components/ui/*（BaseButton、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
+src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
   -> 无项目内 import，仅依赖全局 CSS 变量主题
 ```
 
@@ -365,14 +365,14 @@ src/styles/index.scss  -> @use src/styles/flex.scss
 views/character-builder/index.vue
   -> views/character-builder/hooks/useCharacterBuilderPage.ts
   -> views/character-builder/steps.ts（STEP_META/STEP_ORDER 步骤顺序与友好文案公共常量，被 hook 与 StartPanel 共用）
-  -> views/character-builder/components/*（15 个：AbilitiesStep、CharacterSheetStep、ClassOptionCard、ClassStep、EquipmentStep、FeatChoicePanel、IdentityStep、LevelAdjustModal、OriginStep、PreferencesStep、SetupStep、SpellcastingStep、StartPanel、TimelineStep、ValidationStep）
+  -> views/character-builder/components/*（15 个：AbilitiesStep、CharacterSheetStep、ClassStep、EquipmentStep、FeatChoicePanel、IdentityStep、LevelAdjustModal、OriginStep、PreferencesStep、SetupStep、SpellcastingStep、StartPanel、TimelineStep、ValidationStep）
   -> features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
   -> stores/character-drafts.ts
       -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}
           -> rules/data/{subclasses-2014,subclass-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,starting-equipment-2014,feats-2014,spells-2014,preferences-2014}
       -> services/{draft-storage,character-json}
           -> rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点，见 8.9
-  -> components/ui/*（BaseButton、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
+  -> components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
 ```
 
 规则层仍保持框架无关，不读取 DOM、路由或存储。Store 只保存原始选择；文件和
@@ -380,7 +380,7 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 
 `rules/data/subclasses-2014.ts` 是当前 2014 子职元数据和普通玩家可选 ID 的唯一聚合入口；`rules/data/subclass-features-2014.ts` 登记各子职等级特性（纵向切片，未核验效果保持 `index-only`），`rules/subclass-effects.ts` 提供子职派生效果钩子（按可核验条目返回效果，首批含龙族血脉的 AC 基础公式与每级生命加成）。`repository` 负责登记完整目录，`timeline` 接收 `subclassId` 上下文，按所选子职追加 `kind: 'subclass-feature'` 的特性选择检查点（`requiresChoice` 特性），并只装配玩家可用检查点；DM 专用条目可被仓库查询，但不进入普通时间线。页面层 `TimelineStep` 选中子职后展示其特性列表并提供特性选择检查点交互，`CharacterSheetStep` 能力页签展示子职特性区块；两者都只从 `SubclassRule.features` 读取数据，不硬编码规则。各职业旧数据文件中已有的子职常量暂保留供局部实现引用，不再作为仓库目录来源。
 
-`rules/data/spells-2014.ts` 是 2014 全量法术元数据（稳定 ID、中英文名、环级、8 主施法职业归属、来源索引）的唯一聚合入口，收录 PHB/XGtE/EGtW（非 dunamancy）/TCoE/FTD/SCC 法术；`repository.spells` 直接引用该表。三个旧施法者文件（`half-casters-2014`、`arcane-casters-2014`、`full-casters-2014`）不再持有法术 seed，仅保留职业等级表与子职配置，其 `classSpellIds` 均从 `spells-2014` 按职业过滤派生；跨职业共享法术只登记一次并合并归属，历史 `spell-2014-<slug>` ID 规则保持不变以保证草稿兼容。
+`rules/data/spells-2014.ts` 是 2014 全量法术元数据（稳定 ID、中英文名、环级、8 主施法职业归属、来源索引与**原创中文效果摘要** `description`）的唯一聚合入口，收录 PHB/XGtE/EGtW（非 dunamancy）/TCoE/FTD/SCC 法术；`repository.spells` 直接引用该表。三个旧施法者文件（`half-casters-2014`、`arcane-casters-2014`、`full-casters-2014`）不再持有法术 seed，仅保留职业等级表与子职配置，其 `classSpellIds` 均从 `spells-2014` 按职业过滤派生；跨职业共享法术只登记一次并合并归属，历史 `spell-2014-<slug>` ID 规则保持不变以保证草稿兼容。
 
 `rules/data/preferences-2014.ts` 是玩法偏好的唯一数据源（6 项偏好的中文名、说明、关联属性与关联玩法标签），`rules/recommend.ts` 消费它生成可解释的职业推荐（`getClassRecommendation` 返回 `{ score, reasons, matchedPreferenceLabels }`，`score` 只排序不表达百分比；`status` 不参与评分）、职业成长速览（`getClassGrowthSummary`）与种族/背景推荐理由（从 `fixedAbilityBonuses`/技能检查点推导，无职业特判）；`ClassRule.playStyleTags` 玩法标签记录在各职业数据文件中，只服务推荐。页面组件 `PreferencesStep`、`ClassStep`、`OriginStep` 直接调用 `rules/recommend` 与 `rulesRepository` 做展示级排序与渲染，不实现推荐公式，符合权限矩阵。
 
