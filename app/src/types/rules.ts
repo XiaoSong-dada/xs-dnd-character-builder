@@ -81,7 +81,10 @@ export interface SpellRule {
   readonly englishName: string
   readonly level: number
   readonly classIds: readonly string[]
+  /** 环级等元数据说明（占位性质，不承载效果）。 */
   readonly summary: string
+  /** 原创中文效果摘要（施法时间/射程/持续时间/效果要点）；空字符串表示尚未登记。 */
+  readonly description: string
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }

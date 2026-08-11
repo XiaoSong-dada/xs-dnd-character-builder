@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
+import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import StatTile from '@/components/ui/StatTile.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
@@ -226,76 +227,98 @@ const needsReview = computed(() => {
       <template v-if="hasSpellContent">
         <section v-if="cantripSpells.length" class="character-sheet__spell-section">
           <h4>戏法 · {{ draft.spellSelections.cantripIds.length }} / {{ requiredCantripCount }}</h4>
-          <ul>
-            <li v-for="spell in cantripSpells" :key="spell.id">
-              <strong>{{ spell.name }}</strong>
-              <span>{{ spell.englishName }}</span>
-            </li>
-          </ul>
+          <ExpandableOptionCard
+            v-for="spell in cantripSpells"
+            expanded-label="法术效果"
+            :key="spell.id"
+            :title="spell.name"
+            :description="spell.englishName"
+          >
+            <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+          </ExpandableOptionCard>
         </section>
         <section v-if="preparedOrKnownSpells.length" class="character-sheet__spell-section">
           <h4>{{ preparedOrKnownLabel }} · {{ preparedOrKnownSpells.length }} / {{ requiredSpellCount }}</h4>
           <div v-for="group in spellGroups" :key="group.level" class="character-sheet__spell-level">
             <h5>{{ group.level }}环 · 已选 {{ group.spells.length }}</h5>
-            <ul>
-              <li v-for="spell in group.spells" :key="spell.id">
-                <strong>{{ spell.name }}</strong>
-                <span class="character-sheet__spell-meta">
-                  {{ spell.level }}环 · {{ spell.englishName }}
-                </span>
+            <ExpandableOptionCard
+              v-for="spell in group.spells"
+              expanded-label="法术效果"
+              :key="spell.id"
+              :title="spell.name"
+              :description="`${spell.level}环 · ${spell.englishName}`"
+            >
+              <template #suffix>
                 <button v-if="canTogglePrepared" type="button" class="character-sheet__spell-action" @click="togglePrepare(spell.id)">取消准备</button>
-              </li>
-            </ul>
+              </template>
+              <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+            </ExpandableOptionCard>
           </div>
         </section>
         <section v-if="spellbookSpells.length" class="character-sheet__spell-section">
           <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.length }} / {{ requiredSpellbookCount }}</h4>
-          <ul>
-            <li v-for="spell in spellbookSpells" :key="spell.id">
-              <strong>{{ spell.name }}</strong>
-              <span class="character-sheet__spell-meta">
-                {{ spell.level }}环 · {{ spell.englishName }}
-                <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
-                <em class="character-sheet__spell-badge">在书中</em>
-              </span>
-            </li>
-          </ul>
+          <ExpandableOptionCard
+            v-for="spell in spellbookSpells"
+            expanded-label="法术效果"
+            :key="spell.id"
+            :title="spell.name"
+            :description="`${spell.level}环 · ${spell.englishName}`"
+          >
+            <template #suffix>
+              <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
+              <em class="character-sheet__spell-badge">在书中</em>
+            </template>
+            <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+          </ExpandableOptionCard>
         </section>
         <section v-if="preparedCandidates.length" class="character-sheet__spell-section">
           <h4>可选法术 · {{ preparedCandidates.length }}</h4>
           <div v-for="group in preparedCandidateGroups" :key="group.level" class="character-sheet__spell-level">
             <h5>{{ group.level }}环 · {{ group.spells.length }} 个可准备</h5>
-            <ul>
-              <li v-for="spell in group.spells" :key="spell.id" class="character-sheet__spell-candidate">
-                <strong>{{ spell.name }}</strong>
-                <span>{{ spell.englishName }}</span>
+            <ExpandableOptionCard
+              v-for="spell in group.spells"
+              expanded-label="法术效果"
+              :key="spell.id"
+              :title="spell.name"
+              :description="spell.englishName"
+            >
+              <template #suffix>
                 <button type="button" class="character-sheet__spell-action" :disabled="!canPrepareMore" @click="togglePrepare(spell.id)">
                   {{ canPrepareMore ? '准备' : '已满' }}
                 </button>
-              </li>
-            </ul>
+              </template>
+              <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+            </ExpandableOptionCard>
           </div>
         </section>
         <section v-if="wizardPrepareFromBook.length" class="character-sheet__spell-section">
           <h4>候选准备 · {{ wizardPrepareFromBook.length }}（长休可从法术书换入）</h4>
-          <ul>
-            <li v-for="spell in wizardPrepareFromBook" :key="spell.id" class="character-sheet__spell-candidate">
-              <strong>{{ spell.name }}</strong>
-              <span>{{ spell.level }}环 · {{ spell.englishName }}</span>
+          <ExpandableOptionCard
+            v-for="spell in wizardPrepareFromBook"
+            expanded-label="法术效果"
+            :key="spell.id"
+            :title="spell.name"
+            :description="`${spell.level}环 · ${spell.englishName}`"
+          >
+            <template #suffix>
               <button type="button" class="character-sheet__spell-action" :disabled="!canPrepareMore" @click="togglePrepare(spell.id)">
                 {{ canPrepareMore ? '准备' : '已满' }}
               </button>
-            </li>
-          </ul>
+            </template>
+            <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+          </ExpandableOptionCard>
         </section>
         <section v-if="wizardWriteToBook.length" class="character-sheet__spell-section">
           <h4>未写入法术书 · {{ wizardWriteToBook.length }}（升级时可扩充）</h4>
-          <ul>
-            <li v-for="spell in wizardWriteToBook" :key="spell.id">
-              <strong>{{ spell.name }}</strong>
-              <span>{{ spell.level }}环 · {{ spell.englishName }}</span>
-            </li>
-          </ul>
+          <ExpandableOptionCard
+            v-for="spell in wizardWriteToBook"
+            expanded-label="法术效果"
+            :key="spell.id"
+            :title="spell.name"
+            :description="`${spell.level}环 · ${spell.englishName}`"
+          >
+            <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+          </ExpandableOptionCard>
         </section>
       </template>
       <p v-else>当前没有需要展示的法术。</p>
@@ -382,51 +405,28 @@ const needsReview = computed(() => {
   }
 
   &__spell-section {
+    display: grid;
+    gap: 0.6rem;
     padding: 0.9rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
 
-    h4 { margin: 0 0 0.6rem; }
-    ul { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
-    li {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 0.75rem;
-      padding-bottom: 0.4rem;
-      border-bottom: 1px solid var(--color-border);
-      font-size: 0.78rem;
-
-      span { color: var(--color-text-muted); text-align: right; }
-
-      .character-sheet__spell-meta {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 0.3rem;
-        min-width: 0;
-      }
-    }
+    h4 { margin: 0; }
   }
 
   &__spell-level {
-    h5 { margin: 0.75rem 0 0.35rem; color: var(--color-text-muted); font-size: 0.72rem; }
-  }
+    display: grid;
+    gap: 0.6rem;
 
-  &__spell-candidate {
-    cursor: pointer;
-    padding: 0.4rem;
-    margin: 0 -0.4rem;
-    border-radius: var(--radius-md);
-    transition: background 0.15s;
-
-    &:hover { background: var(--color-primary-soft); }
+    h5 { margin: 0.15rem 0 0; color: var(--color-text-muted); font-size: 0.72rem; }
   }
 
   &__spell-action {
-    flex: none;
-    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.25rem;
     padding: 0 0.7rem;
     border: 1px solid var(--color-primary);
     border-radius: var(--radius-md);

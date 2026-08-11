@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import OptionCard from '@/components/ui/OptionCard.vue'
+import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import {
   getAvailableSpells,
@@ -112,8 +112,9 @@ function toggleSpellbook(id: string): void {
       </UiNotice>
       <section v-if="requiredCantripCount" class="spellcasting-step__level">
         <h4>戏法 · {{ draft.spellSelections.cantripIds.length }} / {{ requiredCantripCount }}</h4>
-        <OptionCard
+        <ExpandableOptionCard
           v-for="spell in cantrips"
+          expanded-label="法术效果"
           :key="spell.id"
           :title="spell.name"
           :description="spell.englishName"
@@ -123,12 +124,14 @@ function toggleSpellbook(id: string): void {
           <template #suffix>
             {{ draft.spellSelections.cantripIds.includes(spell.id) ? '已选' : draft.spellSelections.cantripIds.length >= requiredCantripCount ? '已满' : '选择' }}
           </template>
-        </OptionCard>
+          <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+        </ExpandableOptionCard>
       </section>
       <section v-if="config.mode === 'spellbook'" class="spellcasting-step__level">
         <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.length }} / {{ requiredSpellbookCount }}</h4>
-        <OptionCard
+        <ExpandableOptionCard
           v-for="spell in groupedSpells.flatMap((group) => group.spells)"
+          expanded-label="法术效果"
           :key="`book-${spell.id}`"
           :title="spell.name"
           :description="`${spell.level}环 · ${spell.englishName}`"
@@ -138,12 +141,14 @@ function toggleSpellbook(id: string): void {
           <template #suffix>
             {{ draft.spellSelections.spellbookSpellIds.includes(spell.id) ? '在书中' : draft.spellSelections.spellbookSpellIds.length >= requiredSpellbookCount ? '已满' : '写入' }}
           </template>
-        </OptionCard>
+          <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+        </ExpandableOptionCard>
       </section>
       <section v-for="group in groupedSpells" :key="group.level" class="spellcasting-step__level">
         <h4>{{ group.level }}环{{ config.mode === 'spellbook' ? '准备法术' : '法术' }}</h4>
-        <OptionCard
+        <ExpandableOptionCard
           v-for="spell in config.mode === 'spellbook' ? group.spells.filter((item) => draft.spellSelections.spellbookSpellIds.includes(item.id)) : group.spells"
+          expanded-label="法术效果"
           :key="spell.id"
           :title="spell.name"
           :description="`${spell.englishName} · ${spell.summary}`"
@@ -155,7 +160,8 @@ function toggleSpellbook(id: string): void {
             <span v-else-if="selectedIds.length >= requiredCount">已满</span>
             <span v-else>选择</span>
           </template>
-        </OptionCard>
+          <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+        </ExpandableOptionCard>
       </section>
     </template>
   </section>
@@ -195,7 +201,7 @@ function toggleSpellbook(id: string): void {
 
   &__level {
     display: grid;
-    gap: 0.55rem;
+    gap: 0.7rem;
 
     h4 {
       margin: 0.25rem 0 0;

@@ -267,6 +267,28 @@ describe('CharacterSheetStep 法术展示', () => {
 
     expect(wrapper.text()).toContain('当前没有需要展示的法术。')
   })
+
+  it('点击三角形展开法术效果摘要，双击卡片也可展开且不触发准备切换', async () => {
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: spellbookDraft, derived: deriveCharacter(spellbookDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    // 三角形展开：火焰箭（戏法）展开后可见其原创摘要（含"1d10"）
+    const fireBoltCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('火焰箭'))
+    expect(fireBoltCard).toBeTruthy()
+    await fireBoltCard!.find('.expandable-option-card__arrow').trigger('click')
+    expect(fireBoltCard!.find('.expandable-option-card__growth').exists()).toBe(true)
+    expect(fireBoltCard!.text()).toContain('1d10')
+
+    // 双击主按钮展开魔法飞弹卡片，且不触发 changeSpellSelections
+    const magicMissileCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('魔法飞弹'))
+    const main = magicMissileCard!.find('.expandable-option-card__main')
+    await main.trigger('click')
+    await main.trigger('click')
+    expect(magicMissileCard!.find('.expandable-option-card__growth').exists()).toBe(true)
+    expect(wrapper.emitted('changeSpellSelections')).toBeUndefined()
+  })
 })
 
 describe('CharacterSheetStep 候选池与点击交互', () => {
@@ -291,8 +313,8 @@ describe('CharacterSheetStep 候选池与点击交互', () => {
   }
 
   function spellActionFor(wrapper: ReturnType<typeof mount>, spellName: string) {
-    const li = wrapper.findAll('li').find((item) => item.text().includes(spellName))
-    return li?.find('button.character-sheet__spell-action')
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes(spellName))
+    return card?.find('button.character-sheet__spell-action')
   }
 
   it('牧师（prepared）展示可选法术区块，戏法不进入候选', async () => {
@@ -440,9 +462,9 @@ describe('CharacterSheetStep 事件绑定契约', () => {
     const wrapper = mount(Parent, { props: { draft: clericDraft } })
     await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
 
-    const blessLi = wrapper.findAll('li').find((item) => item.text().includes('祝福术'))
-    expect(blessLi).toBeTruthy()
-    await blessLi!.find('button.character-sheet__spell-action').trigger('click')
+    const blessCard = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('祝福术'))
+    expect(blessCard).toBeTruthy()
+    await blessCard!.find('button.character-sheet__spell-action').trigger('click')
 
     const value = wrapper.emitted('spells')![0][0] as SpellSelections
     expect(value.preparedSpellIds).not.toContain('spell-2014-bless')
