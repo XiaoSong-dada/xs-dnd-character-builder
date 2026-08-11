@@ -51,6 +51,29 @@ describe('validateDraft', () => {
     expect(validateDraft(draft).some((issue) => issue.id === 'checkpoint-fighter-2014-subclass-3')).toBe(true)
   })
 
+  it('报告费兹本龙裔缺少子种族与自选属性数量不足', () => {
+    const withoutSubrace: CharacterDraft = {
+      ...createDraft(),
+      classId: 'class-2014-fighter',
+      backgroundId: 'background-2014-soldier',
+      raceId: 'race-2014-dragonborn-fizban',
+      name: '凯恩',
+      raceAbilityChoices: ['str', 'con'],
+    }
+    expect(validateDraft(withoutSubrace).some((issue) => issue.id === 'subrace-required')).toBe(true)
+
+    const partialChoices: CharacterDraft = {
+      ...createDraft(),
+      classId: 'class-2014-fighter',
+      backgroundId: 'background-2014-soldier',
+      raceId: 'race-2014-dragonborn-fizban',
+      subraceId: 'race-2014-dragonborn-fizban-chromatic',
+      name: '凯恩',
+      raceAbilityChoices: ['str'],
+    }
+    expect(validateDraft(partialChoices).some((issue) => issue.id === 'race-ability-choice')).toBe(true)
+  })
+
   it('报告超过20的属性提升和不满足前置条件的专长', () => {
     const draft: CharacterDraft = {
       ...createDraft(),

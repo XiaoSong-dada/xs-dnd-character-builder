@@ -6,7 +6,7 @@ import {
   getFeatEligibility,
 } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abilities'
-import { getRaceAbilityBonuses } from '@/rules/derive'
+import { getFlexibleBonusRule, getRaceAbilityBonuses } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
@@ -106,12 +106,14 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
   if (subrace && subrace.parentRaceId !== draft.raceId) {
     issues.push({ id: 'subrace-mismatch', step: 'origin', severity: 'error', message: '所选子种族不属于当前种族。', resolution: '重新选择当前种族的子种族。' })
   }
-  const flexibleRule = subrace?.flexibleBonusCount ? subrace : race
+  const flexibleRule = getFlexibleBonusRule(race, subrace)
+  const flexibleTotalCount = flexibleRule?.flexibleBonusGroups?.reduce((sum, group) => sum + group.count, 0)
+    ?? flexibleRule?.flexibleBonusCount ?? 0
   if (
-    (flexibleRule?.flexibleBonusCount ?? 0) !== draft.raceAbilityChoices.length
+    flexibleTotalCount !== draft.raceAbilityChoices.length
     || draft.raceAbilityChoices.length !== new Set(draft.raceAbilityChoices).size
   ) {
-    issues.push({ id: 'race-ability-choice', step: 'abilities', severity: 'error', message: '种族自选属性加值尚未完成。', resolution: `选择${flexibleRule?.flexibleBonusCount ?? 0}项不同属性。` })
+    issues.push({ id: 'race-ability-choice', step: 'abilities', severity: 'error', message: '种族自选属性加值尚未完成。', resolution: `选择${flexibleTotalCount}项不同属性。` })
   }
   if (draft.raceAbilityChoices.some((key) => flexibleRule?.excludedFlexibleAbilityKeys?.includes(key))) {
     issues.push({

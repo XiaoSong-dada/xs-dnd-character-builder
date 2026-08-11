@@ -29,4 +29,33 @@ describe('OriginStep 种族展开', () => {
     await vi.advanceTimersByTimeAsync(250)
     expect(wrapper.emitted('race')).toHaveLength(1)
   })
+
+  it('dm-only 基础种族显示可选规则徽章，普通种族不显示', () => {
+    const wrapper = mount(OriginStep, { props: { languages: [] } })
+    const cards = wrapper.findAll('.expandable-option-card')
+    const aarakocraBadges = cards.find((card) => card.text().includes('鸟人'))!.findAll('.ui-badge').map((badge) => badge.text())
+    const dwarfBadges = cards.find((card) => card.text().includes('矮人'))!.findAll('.ui-badge').map((badge) => badge.text())
+    expect(aarakocraBadges).toContain('可选规则')
+    expect(dwarfBadges).not.toContain('可选规则')
+  })
+
+  it('选择兽化人后手机宽度下渲染四个子种族卡片', () => {
+    window.innerWidth = 375
+    window.dispatchEvent(new Event('resize'))
+    const wrapper = mount(OriginStep, { props: { languages: [], raceId: 'race-2014-shifter' } })
+    const text = wrapper.text()
+    expect(text).toContain('选择子种族')
+    expect(text).toContain('熊皮兽化人')
+    expect(text).toContain('长牙兽化人')
+    expect(text).toContain('疾行兽化人')
+    expect(text).toContain('野猎兽化人')
+  })
+
+  it('选择费兹本龙裔后渲染色龙/宝石/金属三类型', () => {
+    const wrapper = mount(OriginStep, { props: { languages: [], raceId: 'race-2014-dragonborn-fizban' } })
+    const text = wrapper.text()
+    expect(text).toContain('色龙裔')
+    expect(text).toContain('宝石龙裔')
+    expect(text).toContain('金属龙裔')
+  })
 })

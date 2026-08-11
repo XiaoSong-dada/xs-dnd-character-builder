@@ -2,7 +2,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 
-import { deriveCharacter, getRaceAbilityBonuses } from '@/rules/derive'
+import { deriveCharacter, getFlexibleBonusRule, getRaceAbilityBonuses } from '@/rules/derive'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { rulesRepository } from '@/rules/repository'
@@ -48,7 +48,16 @@ export function useCharacterBuilderPage() {
     if (!draft) return 0
     const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
     const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
-    return subrace?.flexibleBonusCount ?? race?.flexibleBonusCount ?? 0
+    const flexibleRule = getFlexibleBonusRule(race, subrace)
+    return flexibleRule?.flexibleBonusGroups?.reduce((sum, group) => sum + group.count, 0)
+      ?? flexibleRule?.flexibleBonusCount ?? 0
+  })
+  const raceFlexibleGroups = computed(() => {
+    const draft = activeDraft.value
+    if (!draft) return undefined
+    const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
+    const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+    return getFlexibleBonusRule(race, subrace)?.flexibleBonusGroups
   })
   const excludedRaceAbilityChoices = computed(() => {
     const draft = activeDraft.value
@@ -428,6 +437,7 @@ export function useCharacterBuilderPage() {
     derived,
     raceAbilityBonuses,
     raceFlexibleCount,
+    raceFlexibleGroups,
     excludedRaceAbilityChoices,
     derivedSummary,
     validationIssues,

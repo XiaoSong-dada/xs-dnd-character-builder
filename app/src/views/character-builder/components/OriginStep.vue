@@ -69,7 +69,10 @@ const emit = defineEmits<{
       :state="raceId === race.id ? 'selected' : 'default'"
       @select="$emit('race', race.id)"
     >
-      <template #suffix><UiBadge v-if="race.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
+      <template #suffix>
+        <UiBadge v-if="race.status === 'dm-only'" tone="warning">可选规则</UiBadge>
+        <UiBadge v-else-if="race.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge>
+      </template>
       <template #expanded>{{ race.description }}</template>
     </ExpandableOptionCard>
 

@@ -31,6 +31,7 @@ const {
   derived,
   raceAbilityBonuses,
   raceFlexibleCount,
+  raceFlexibleGroups,
   excludedRaceAbilityChoices,
   derivedSummary,
   validationIssues,
@@ -161,6 +162,7 @@ function updateMethod(value: AbilityMethod): void {
       :bonuses="raceAbilityBonuses"
       :flexible-count="raceFlexibleCount"
       :flexible-choices="activeDraft.raceAbilityChoices"
+      :flexible-groups="raceFlexibleGroups"
       :excluded-choices="excludedRaceAbilityChoices"
       @change="updateAbilities"
       @choices="updateRaceAbilityChoices"

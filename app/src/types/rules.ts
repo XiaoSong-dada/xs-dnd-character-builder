@@ -160,6 +160,8 @@ export interface RaceRule {
   readonly speed?: number
   readonly flexibleBonusCount?: number
   readonly flexibleBonusValue?: number
+  /** 灵活加值分组（如费兹本龙裔：第一项 +2、第二项 +1）；与 flexibleBonusCount/Value 二选一。 */
+  readonly flexibleBonusGroups?: readonly { readonly count: number; readonly value: number }[]
   readonly excludedFlexibleAbilityKeys?: readonly AbilityKey[]
   readonly recommendedClassIds: readonly string[]
   readonly status: CompatibilityStatus

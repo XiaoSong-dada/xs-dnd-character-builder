@@ -10,6 +10,7 @@ const props = defineProps<{
   bonuses: Partial<AbilityScores>
   flexibleCount: number
   flexibleChoices: readonly AbilityKey[]
+  flexibleGroups?: readonly { count: number; value: number }[]
   excludedChoices?: readonly AbilityKey[]
 }>()
 const emit = defineEmits<{ change: [scores: AbilityScores]; choices: [choices: readonly AbilityKey[]] }>()
@@ -94,7 +95,8 @@ function choiceDisabled(key: AbilityKey): boolean {
       <span v-else>每项范围 3—20；自定义结果应由玩家与DM确认。</span>
     </aside>
     <div v-if="flexibleCount" class="abilities-step__choices">
-      <strong>种族允许选择{{ flexibleCount }}项不同属性 +1</strong>
+      <strong v-if="flexibleGroups?.length">种族允许选择{{ flexibleGroups.map((g) => `${g.count}项不同属性 +${g.value}`).join('、') }}</strong>
+      <strong v-else>种族允许选择{{ flexibleCount }}项不同属性 +1</strong>
       <button
         v-for="key in keys"
         :key="key"

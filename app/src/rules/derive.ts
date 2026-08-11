@@ -1,6 +1,7 @@
 import { rulesRepository } from '@/rules/repository'
 import { applyAbilityImprovement, decodeAbilityImprovement } from '@/rules/feats'
 import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
+import type { RaceRule } from '@/types/rules'
 import type {
   AbilityKey,
   AbilityScores,
@@ -30,16 +31,32 @@ function addAbilities(base: AbilityScores, bonus: Partial<AbilityScores>): Abili
   }
 }
 
+export function getFlexibleBonusRule(race: RaceRule | undefined, subrace: RaceRule | undefined): RaceRule | undefined {
+  if (subrace && (subrace.flexibleBonusCount ?? 0) > 0) return subrace
+  if (subrace && (subrace.flexibleBonusGroups?.length ?? 0) > 0) return subrace
+  return race
+}
+
 export function getRaceAbilityBonuses(draft: CharacterDraft): Partial<AbilityScores> {
   const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
   const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
   const baseBonuses = subrace?.replacesParentBonuses ? {} : race?.fixedAbilityBonuses ?? {}
   const fixedBonuses: Partial<Record<AbilityKey, number>> = { ...baseBonuses, ...subrace?.fixedAbilityBonuses }
-  const flexibleRule = subrace?.flexibleBonusCount ? subrace : race
-  const flexibleValue = flexibleRule?.flexibleBonusValue ?? 1
+  const flexibleRule = getFlexibleBonusRule(race, subrace)
 
-  for (const key of draft.raceAbilityChoices.slice(0, flexibleRule?.flexibleBonusCount ?? 0)) {
-    fixedBonuses[key] = (fixedBonuses[key] ?? 0) + flexibleValue
+  if (flexibleRule?.flexibleBonusGroups?.length) {
+    let index = 0
+    for (const group of flexibleRule.flexibleBonusGroups) {
+      for (let i = 0; i < group.count; i++) {
+        const key = draft.raceAbilityChoices[index++]
+        if (key) fixedBonuses[key] = (fixedBonuses[key] ?? 0) + group.value
+      }
+    }
+  } else {
+    const flexibleValue = flexibleRule?.flexibleBonusValue ?? 1
+    for (const key of draft.raceAbilityChoices.slice(0, flexibleRule?.flexibleBonusCount ?? 0)) {
+      fixedBonuses[key] = (fixedBonuses[key] ?? 0) + flexibleValue
+    }
   }
   return fixedBonuses
 }
