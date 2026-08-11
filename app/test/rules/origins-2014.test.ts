@@ -34,10 +34,10 @@ function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
 }
 
 describe('2014 origins', () => {
-  it('registers all extended core races and thirteen base backgrounds', () => {
+  it('registers all extended core races and thirty-five base backgrounds', () => {
     expect(rulesRepository.races.filter((item) => !item.parentRaceId)).toHaveLength(35)
     expect(rulesRepository.races.filter((item) => item.parentRaceId)).toHaveLength(37)
-    expect(rulesRepository.backgrounds.filter((item) => !item.parentBackgroundId)).toHaveLength(13)
+    expect(rulesRepository.backgrounds.filter((item) => !item.parentBackgroundId)).toHaveLength(35)
     expect(rulesRepository.backgrounds.filter((item) => item.parentBackgroundId)).toHaveLength(5)
   })
 
@@ -77,6 +77,30 @@ describe('2014 origins', () => {
       raceId: 'race-2014-shifter',
       subraceId: 'race-2014-shifter-beasthide',
     }))).toEqual({ con: 2, str: 1 })
+  })
+
+  it('扩展背景数据完整性：ID 唯一、变体引用双向有效、技能已注册、description 非空', () => {
+    const backgrounds = rulesRepository.backgrounds
+    const ids = backgrounds.map((b) => b.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    const byId = new Map(backgrounds.map((b) => [b.id, b]))
+    const optionIds = new Set(rulesRepository.options.map((o) => o.id))
+    for (const bg of backgrounds) {
+      if (bg.parentBackgroundId) {
+        expect(byId.get(bg.parentBackgroundId), `${bg.id} 的父背景应存在`).toBeTruthy()
+        expect(byId.get(bg.parentBackgroundId)?.variantIds, `${bg.id} 应在父背景 variantIds 中`).toContain(bg.id)
+      }
+      for (const variantId of bg.variantIds) {
+        expect(byId.get(variantId)?.parentBackgroundId, `${variantId} 应反向指向父背景`).toBe(bg.id)
+      }
+      for (const skillId of bg.skillIds) {
+        expect(optionIds.has(skillId), `${bg.id} 技能 ${skillId} 已注册`).toBe(true)
+      }
+      for (const toolId of bg.toolIds) {
+        expect(toolId, `${bg.id} 工具 ID 格式`).toMatch(/^tool-[a-z-]+$/)
+      }
+      expect(bg.description.trim(), `${bg.id} 应有展开介绍`).not.toBe('')
+    }
   })
 
   it('tiefling legacy stacks its +1 on top of the parent charisma +2', () => {

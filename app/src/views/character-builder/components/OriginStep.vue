@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
-import OptionCard from '@/components/ui/OptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import { getBackgroundRecommendationReason, getRaceRecommendationReason } from '@/rules/recommend'
 import { rulesRepository } from '@/rules/repository'
@@ -104,27 +103,32 @@ const emit = defineEmits<{
       <span>搜索背景</span>
       <input v-model="backgroundSearch" type="search" placeholder="中文或英文名称">
     </label>
-    <OptionCard
+    <ExpandableOptionCard
       v-for="background in baseBackgrounds"
       :key="background.id"
       :title="background.name"
       :description="[background.summary, background.featureName, getBackgroundRecommendationReason(background, classRule)].filter(Boolean).join(' · ')"
+      expanded-label="背景介绍"
       :state="backgroundId === background.id ? 'selected' : 'default'"
       @select="$emit('background', background.id)"
     >
       <template #suffix><UiBadge v-if="background.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
-    </OptionCard>
+      <template #expanded>{{ background.description }}</template>
+    </ExpandableOptionCard>
 
     <div v-if="variants.length" class="origin-step__branches">
       <strong>正式背景变体（可选）</strong>
-      <OptionCard
+      <ExpandableOptionCard
         v-for="variant in variants"
         :key="variant.id"
         :title="variant.name"
         :description="variant.summary"
+        expanded-label="变体介绍"
         :state="backgroundVariantId === variant.id ? 'selected' : 'default'"
         @select="$emit('variant', backgroundVariantId === variant.id ? undefined : variant.id)"
-      />
+      >
+        <template #expanded>{{ variant.description }}</template>
+      </ExpandableOptionCard>
     </div>
 
     <div v-if="languageChoiceCount" class="origin-step__languages">

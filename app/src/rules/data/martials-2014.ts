@@ -105,6 +105,7 @@ export const martialOptions2014: readonly RuleOption[] = [
   { id: 'tool-thieves-tools', name: '盗贼工具', description: '可作为游荡者专精的工具熟练。', status: 'implemented', sourceIds: basicSource },
   { id: 'tool-artisans-tools', name: '一种工匠工具', description: '选择一种工匠工具熟练。', status: 'index-only', sourceIds: indexSource },
   { id: 'tool-musical-instrument', name: '一种乐器', description: '选择一种乐器熟练。', status: 'index-only', sourceIds: indexSource },
+  { id: 'tool-poisoners-kit', name: '制毒工具', description: '选择制毒工具熟练。', status: 'index-only', sourceIds: indexSource },
   ...barbarianSubclassIds.map((id) => ({
     id,
     name: ({

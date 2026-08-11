@@ -45,10 +45,10 @@ function wizardDraft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
 }
 
 describe('2014 starting equipment', () => {
-  it('covers all twelve classes and thirteen base backgrounds with resolvable item references', () => {
+  it('covers all twelve classes and thirty-five base backgrounds with resolvable item references', () => {
     expect(rulesRepository.classStartingEquipment).toHaveLength(12)
     const baseBackgrounds = rulesRepository.backgrounds.filter((background) => !background.parentBackgroundId)
-    expect(baseBackgrounds).toHaveLength(13)
+    expect(baseBackgrounds).toHaveLength(35)
 
     const grants = [
       ...rulesRepository.classStartingEquipment.flatMap((profile) => [

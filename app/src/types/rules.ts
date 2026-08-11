@@ -174,6 +174,8 @@ export interface BackgroundRule {
   readonly name: string
   readonly englishName: string
   readonly summary: string
+  /** 原创中文详细介绍（技能/工具/语言/背景特性/装备要点）；展开区展示。 */
+  readonly description: string
   readonly parentBackgroundId?: string
   readonly variantIds: readonly string[]
   readonly skillIds: readonly string[]

@@ -58,4 +58,27 @@ describe('OriginStep 种族展开', () => {
     expect(text).toContain('宝石龙裔')
     expect(text).toContain('金属龙裔')
   })
+
+  it('背景卡片展开显示背景介绍，选择经 250ms 判定后 emit background', async () => {
+    const wrapper = mount(OriginStep, { props: { languages: [] } })
+    const acolyteCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('侍僧'))
+    expect(acolyteCard).toBeTruthy()
+    await acolyteCard!.find('.expandable-option-card__arrow').trigger('click')
+    expect(acolyteCard!.text()).toContain('背景介绍')
+    expect(acolyteCard!.text()).toContain('信仰庇护')
+    await acolyteCard!.find('.expandable-option-card__main').trigger('click')
+    expect(wrapper.emitted('background')).toBeUndefined()
+    await vi.advanceTimersByTimeAsync(250)
+    expect(wrapper.emitted('background')).toHaveLength(1)
+    expect(wrapper.emitted('background')![0]).toEqual(['background-2014-acolyte'])
+  })
+
+  it('正式背景变体卡片可展开并显示变体介绍', async () => {
+    const wrapper = mount(OriginStep, { props: { languages: [], backgroundId: 'background-2014-sailor' } })
+    const pirateCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('海盗'))
+    expect(pirateCard).toBeTruthy()
+    await pirateCard!.find('.expandable-option-card__arrow').trigger('click')
+    expect(pirateCard!.text()).toContain('变体介绍')
+    expect(pirateCard!.text()).toContain('恶名')
+  })
 })

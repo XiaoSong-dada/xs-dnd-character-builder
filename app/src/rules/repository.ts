@@ -24,6 +24,7 @@ const sources = [
   { id: 'ggr-2018-index', title: '拉尼卡公会会长指南索引', ruleset: '5e-2014' as const },
   { id: 'mtof-2018-index', title: '莫登凯恩的敌人全书索引', ruleset: '5e-2014' as const },
   { id: 'erftlw-2019-index', title: '艾伯伦：战乱后的最后战争索引', ruleset: '5e-2014' as const },
+  { id: 'mot-2020-index', title: '塞洛斯神话奥德赛索引', ruleset: '5e-2014' as const },
   { id: 'egtw-2020-index', title: '荒洲探险者指南索引', ruleset: '5e-2014' as const },
   { id: 'tcoe-2020-index', title: '塔莎的万事坩埚索引', ruleset: '5e-2014' as const },
   { id: 'scc-2021-index', title: '斯翠海文：混沌课程索引', ruleset: '5e-2014' as const },

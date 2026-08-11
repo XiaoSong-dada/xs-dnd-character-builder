@@ -93,12 +93,46 @@ background-2014-sailor-pirate
 | 士兵 | Soldier | [2014 士兵](backgrounds/5e-2014/soldier/soldier.md) | 无 |
 | 贫儿 | Urchin | [2014 贫儿](backgrounds/5e-2014/urchin/urchin.md) | 无 |
 
+## 2014 扩展背景（商业内容）
+
+以下背景来自商业补充书，只记录稳定 ID、技能/工具/语言、装备要点、原创玩法摘要、兼容边界与官方链接，不复制规则正文。SCAG 背景为**独立完整背景**（技能/工具/语言/装备均独立给出），其背景特性按原书标注为 Variant Feature，且建议特征表（人格/理想/羁绊/缺点）沿用 PHB 对应背景；GGR 公会背景的特性 Guild Spells 前置为拥有施法或契约魔法特性，效果是把公会法术加入施法职业的法术列表（照常占用法术位），无短休恢复机制。
+
+| 背景 | 英文名 | 来源 | 详细资料 | 借用 PHB 特征表 |
+| --- | --- | --- | --- | --- |
+| 城市守卫 | City Watch | SCAG | [2014 城市守卫](backgrounds/5e-2014/city-watch/city-watch.md) | 士兵（含调查员变体：以调查替换运动） |
+| 氏族工匠 | Clan Crafter | SCAG | [2014 氏族工匠](backgrounds/5e-2014/clan-crafter/clan-crafter.md) | 行会工匠 |
+| 隐修学者 | Cloistered Scholar | SCAG | [2014 隐修学者](backgrounds/5e-2014/cloistered-scholar/cloistered-scholar.md) | 学者 |
+| 宫廷贵族 | Courtier | SCAG | [2014 宫廷贵族](backgrounds/5e-2014/courtier/courtier.md) | 行会工匠 |
+| 派系特工 | Faction Agent | SCAG | [2014 派系特工](backgrounds/5e-2014/faction-agent/faction-agent.md) | 侍僧 |
+| 远方旅人 | Far Traveler | SCAG | [2014 远方旅人](backgrounds/5e-2014/far-traveler/far-traveler.md) | 自带完整特征表 |
+| 遗产继承者 | Inheritor | SCAG | [2014 遗产继承者](backgrounds/5e-2014/inheritor/inheritor.md) | 民间英雄 |
+| 骑士团骑士 | Knight of the Order | SCAG | [2014 骑士团骑士](backgrounds/5e-2014/knight-of-the-order/knight-of-the-order.md) | 士兵 |
+| 雇佣兵老兵 | Mercenary Veteran | SCAG | [2014 雇佣兵老兵](backgrounds/5e-2014/mercenary-veteran/mercenary-veteran.md) | 士兵 |
+| 城市赏金猎人 | Urban Bounty Hunter | SCAG | [2014 城市赏金猎人](backgrounds/5e-2014/urban-bounty-hunter/urban-bounty-hunter.md) | 罪犯 |
+| 乌斯加德部落成员 | Uthgardt Tribe Member | SCAG | [2014 乌斯加德部落成员](backgrounds/5e-2014/uthgardt-tribe-member/uthgardt-tribe-member.md) | 化外之民 |
+| 深水城贵族 | Waterdhavian Noble | SCAG | [2014 深水城贵族](backgrounds/5e-2014/waterdhavian-noble/waterdhavian-noble.md) | 贵族 |
+| 俄佐立执行者 | Azorius Functionary | GGR | [2014 俄佐立执行者](backgrounds/5e-2014/azorius-functionary/azorius-functionary.md) | 公会背景，自带特征表 |
+| 波洛斯军团兵 | Boros Legionnaire | GGR | [2014 波洛斯军团兵](backgrounds/5e-2014/boros-legionnaire/boros-legionnaire.md) | 公会背景，自带特征表 |
+| 底密尔特工 | Dimir Operative | GGR | [2014 底密尔特工](backgrounds/5e-2014/dimir-operative/dimir-operative.md) | 公会背景，自带特征表 |
+| 葛加理密探 | Golgari Agent | GGR | [2014 葛加理密探](backgrounds/5e-2014/golgari-agent/golgari-agent.md) | 公会背景，自带特征表 |
+| 古鲁无政府主义者 | Gruul Anarch | GGR | [2014 古鲁无政府主义者](backgrounds/5e-2014/gruul-anarch/gruul-anarch.md) | 公会背景，自带特征表 |
+| 伊捷工程师 | Izzet Engineer | GGR | [2014 伊捷工程师](backgrounds/5e-2014/izzet-engineer/izzet-engineer.md) | 公会背景，自带特征表 |
+| 欧佐夫代表 | Orzhov Representative | GGR | [2014 欧佐夫代表](backgrounds/5e-2014/orzhov-representative/orzhov-representative.md) | 公会背景，自带特征表 |
+| 拉铎斯信徒 | Rakdos Cultist | GGR | [2014 拉铎斯信徒](backgrounds/5e-2014/rakdos-cultist/rakdos-cultist.md) | 公会背景，自带特征表 |
+| 瑟雷尼亚见习生 | Selesnya Initiate | GGR | [2014 瑟雷尼亚见习生](backgrounds/5e-2014/selesnya-initiate/selesnya-initiate.md) | 公会背景，自带特征表 |
+| 运动员 | Athlete | MOT | [2014 运动员](backgrounds/5e-2014/athlete/athlete.md) | 自带特征表 |
+
 ## 来源与版权边界
 
 - 2024 通用机制与侍僧、罪犯、学者、士兵依据 [2024 Free Rules：Character Origins](https://www.dndbeyond.com/sources/dnd/br-2024/character-origins) 与 SRD 5.2.1，可用原创表述整理到实现级。
 - 2024 其余核心出身依据 [官方 2024 背景介绍](https://www.dndbeyond.com/posts/1785-the-backgrounds-and-origin-feats-in-the-2024) 与 2024《玩家手册》，只记录机械索引、原创摘要、选择提示和官方入口。
 - 2014 通用机制与侍僧依据 [2014 Basic Rules：Personality and Background](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/personality-and-background) 与 SRD 5.1，可整理到实现级。
 - 2014 其他背景和变体来自 [2014 Player’s Handbook](https://www.dndbeyond.com/sources/dnd/phb-2014)，只记录机械索引、原创摘要、兼容边界和官方入口，不复制商业规则正文。
+- 2014 扩展背景来源索引：
+  - **SCAG**：Sword Coast Adventurer’s Guide（城市守卫、氏族工匠、隐修学者、宫廷贵族、派系特工、远方旅人、遗产继承者、骑士团骑士、雇佣兵老兵、城市赏金猎人、乌斯加德部落成员、深水城贵族）。
+  - **GGR**：Guildmaster’s Guide to Ravnica（9 个公会背景，含公会法术特性；Simic Scientist 析米克科学家未纳入本次精选）。
+  - **MOT**：Mythic Odysseys of Theros（运动员；勘误：MOT 无 Mariner 背景，Ghosts of Saltmarsh 的 Marine 是士兵变体）。
+- 版本勘误记录（2026-08-11 核验）：SCAG 背景为独立完整背景（非“替换 PHB 技能”的变体），特性按原书标 Variant Feature、建议特征表借用 PHB 对应背景；GGR 公会法术加入施法职业法术列表并占用职业法术位，无短休恢复机制；MOT 仅 Athlete 一个新背景。
 
 ## 选择性加载
 
@@ -109,6 +143,6 @@ background-2014-sailor-pirate
 
 ## 核验记录
 
-- 全量核验日期：2026-07-27。
-- 当前资料范围：16 个 `5e-2024` 出身文件、13 个 `5e-2014` 背景文件、5 个正式变体文件，以及本总索引，共 35 个 Markdown 文件。
-- 当前程序只注册 `5e-2014` 背景；2024 出身资料作为未来独立规则集保留，不进入当前车卡选项。
+- 全量核验日期：2026-07-27；2026-08-11 扩展背景考察、勘误核验。
+- 当前资料范围：16 个 `5e-2024` 出身文件、13 个 `5e-2014` 核心背景文件、5 个正式变体文件、22 个 `5e-2014` 扩展背景文件（含调查员子变体说明），以及本总索引。
+- 当前程序已注册 `5e-2014` 背景共 40 条（13 核心基础 + 5 变体 + 22 扩展，全部 `implemented` 且带 `description` 展开介绍，2026-08-11 扩展登记完成）；2024 出身资料作为未来独立规则集保留，不进入当前车卡选项。
