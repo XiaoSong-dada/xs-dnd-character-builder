@@ -121,6 +121,8 @@ export function buildStartingEquipmentState(
       ? buildEntries('background', backgroundSourceId, backgroundProfile.grants, draft.inventory)
       : []),
     ...draft.inventory.filter((entry) => entry.sourceKind === 'legacy'),
+    // 冒险获得物品由角色卡添加，重新编辑换职业/背景时保留（不静默删除）。
+    ...draft.inventory.filter((entry) => entry.sourceKind === 'adventure'),
   ]
 
   return {
@@ -137,4 +139,47 @@ export function updateEquippedQuantity(
   return inventory.map((entry) => entry.id === entryId
     ? { ...entry, equippedQuantity: Math.max(0, Math.min(entry.quantity, equippedQuantity)) }
     : entry)
+}
+
+/** 添加冒险物品的入参。 */
+export interface AdventureItemInput {
+  readonly itemId: string
+  /** 添加数量（≥1）。 */
+  readonly quantity: number
+  /** 是否直接装备（非可装备物品由调用方保证 equip=false）。 */
+  readonly equip: boolean
+}
+
+/**
+ * 向物品栏添加冒险获得物品：同 itemId 已存在时合并数量（优先合并到 adventure 条目，
+ * 其次任意来源条目），否则新建 adventure 条目；恒满足 equippedQuantity ≤ quantity。
+ */
+export function addAdventureItem(
+  inventory: readonly InventoryEntry[],
+  draftId: string,
+  input: AdventureItemInput,
+): readonly InventoryEntry[] {
+  const { itemId, quantity, equip } = input
+  if (quantity < 1) return inventory
+  const existing = inventory.find((entry) => entry.itemId === itemId && entry.sourceKind === 'adventure')
+    ?? inventory.find((entry) => entry.itemId === itemId)
+  if (!existing) {
+    return [
+      ...inventory,
+      {
+        id: `adventure:${draftId}:${itemId}:${Date.now()}`,
+        itemId,
+        quantity,
+        sourceKind: 'adventure',
+        sourceId: 'adventure',
+        equippedQuantity: equip ? quantity : 0,
+      },
+    ]
+  }
+  return inventory.map((entry) => {
+    if (entry.id !== existing.id) return entry
+    const nextQuantity = entry.quantity + quantity
+    const nextEquipped = equip ? Math.min(nextQuantity, entry.equippedQuantity + quantity) : entry.equippedQuantity
+    return { ...entry, quantity: nextQuantity, equippedQuantity: nextEquipped }
+  })
 }

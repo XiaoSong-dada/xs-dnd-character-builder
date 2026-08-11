@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { rulesRepository } from '@/rules/repository'
 import {
+  addAdventureItem,
   buildStartingEquipmentState,
   isStartingEquipmentComplete,
   updateEquippedQuantity,
@@ -114,5 +115,58 @@ describe('2014 starting equipment', () => {
     expect(quarterstaff).toBeDefined()
     const updated = updateEquippedQuantity(state.inventory, quarterstaff!.id, 99)
     expect(updated.find((entry) => entry.id === quarterstaff!.id)?.equippedQuantity).toBe(quarterstaff!.quantity)
+  })
+
+  it('preserves adventure entries when rebuilding starting equipment', () => {
+    const draft = wizardDraft({
+      inventory: [
+        {
+          id: 'adventure:wizard-equipment:longsword:1',
+          itemId: 'longsword',
+          quantity: 2,
+          sourceKind: 'adventure',
+          sourceId: 'adventure',
+          equippedQuantity: 1,
+        },
+      ],
+    })
+    const state = buildStartingEquipmentState(draft)
+    const adventure = state.inventory.find((entry) => entry.sourceKind === 'adventure')
+    expect(adventure?.itemId).toBe('longsword')
+    expect(adventure?.quantity).toBe(2)
+    expect(adventure?.equippedQuantity).toBe(1)
+  })
+
+  it('addAdventureItem creates entries, merges into adventure first and clamps equipped quantity', () => {
+    const draft = wizardDraft()
+    const created = addAdventureItem(draft.inventory, draft.id, { itemId: 'torch', quantity: 2, equip: false })
+    expect(created).toHaveLength(1)
+    expect(created[0]).toMatchObject({ itemId: 'torch', quantity: 2, sourceKind: 'adventure', equippedQuantity: 0 })
+    expect(created[0]?.id.startsWith('adventure:wizard-equipment:torch:')).toBe(true)
+
+    // 合并到已有 adventure 条目（即使存在同 itemId 的其它来源条目也优先 adventure）。
+    const withClass = [
+      { id: 'class:wizard:torch', itemId: 'torch', quantity: 1, sourceKind: 'class', sourceId: 'class-2014-wizard', equippedQuantity: 0 },
+      { id: 'adventure:wizard:torch:1', itemId: 'torch', quantity: 1, sourceKind: 'adventure', sourceId: 'adventure', equippedQuantity: 0 },
+    ]
+    const merged = addAdventureItem(withClass, 'wizard', { itemId: 'torch', quantity: 3, equip: true })
+    expect(merged).toHaveLength(2)
+    const adventureEntry = merged.find((entry) => entry.sourceKind === 'adventure')
+    expect(adventureEntry?.quantity).toBe(4)
+    expect(adventureEntry?.equippedQuantity).toBe(3)
+    expect(merged.find((entry) => entry.sourceKind === 'class')?.quantity).toBe(1)
+
+    // 非装备合并不改变已装备数量。
+    const mergedBag = addAdventureItem(withClass, 'wizard', { itemId: 'torch', quantity: 2, equip: false })
+    expect(mergedBag.find((entry) => entry.sourceKind === 'adventure')?.quantity).toBe(3)
+    expect(mergedBag.find((entry) => entry.sourceKind === 'adventure')?.equippedQuantity).toBe(0)
+
+    // 装备数量不超过持有数量。
+    const clamped = addAdventureItem([{ id: 'adventure:wizard:torch:1', itemId: 'torch', quantity: 1, sourceKind: 'adventure', sourceId: 'adventure', equippedQuantity: 1 }], 'wizard', { itemId: 'torch', quantity: 0, equip: true })
+    expect(clamped).toHaveLength(1)
+    expect(clamped[0]?.equippedQuantity).toBe(1)
+
+    // quantity < 1 直接返回原数组。
+    expect(addAdventureItem(draft.inventory, draft.id, { itemId: 'torch', quantity: 0, equip: false })).toBe(draft.inventory)
   })
 })

@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineComponent } from 'vue'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
@@ -497,3 +497,152 @@ describe('CharacterSheetStep 事件绑定契约', () => {
     expect(value.preparedSpellIds).toContain('spell-2014-healing-word')
   })
 })
+
+describe('CharacterSheetStep 物品添加与金币调整', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    document.body.innerHTML = ''
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    document.body.innerHTML = ''
+  })
+
+  async function mountToItemsTab(patch: Partial<CharacterDraft> = {}): Promise<ReturnType<typeof mount>> {
+    const itemDraft: CharacterDraft = { ...draft, ...patch }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: itemDraft, derived: deriveCharacter(itemDraft) },
+      attachTo: document.body,
+    })
+    await wrapper.get('[role="tab"]:nth-child(5)').trigger('click')
+    return wrapper
+  }
+
+  async function pickLibraryItem(name: string): Promise<void> {
+    const search = document.body.querySelector<HTMLInputElement>('.add-item-modal__search input')
+    search!.value = name
+    search!.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    const main = document.body.querySelector<HTMLElement>('.add-item-modal__list .expandable-option-card__main')
+    main!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await vi.advanceTimersByTimeAsync(300)
+  }
+
+  function bodyButton(text: string): HTMLButtonElement | undefined {
+    return Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.trim() === text)
+  }
+
+  it('通过弹窗添加内置物品到物品栏并 emit changeInventory', async () => {
+    const wrapper = await mountToItemsTab()
+    await wrapper.get('.character-sheet__add-item').trigger('click')
+    await pickLibraryItem('长剑')
+    bodyButton('加入物品栏')!.click()
+
+    const emitted = wrapper.emitted('changeInventory')
+    expect(emitted).toHaveLength(1)
+    const inventory = emitted![0][0] as readonly {
+      itemId: string
+      quantity: number
+      sourceKind: string
+      equippedQuantity: number
+    }[]
+    expect(inventory).toHaveLength(1)
+    expect(inventory[0]).toMatchObject({
+      itemId: 'longsword',
+      quantity: 1,
+      sourceKind: 'adventure',
+      equippedQuantity: 0,
+    })
+  })
+
+  it('重复添加同一物品合并数量（新增与装备都累加）', async () => {
+    const wrapper = await mountToItemsTab({
+      inventory: [{
+        id: 'adventure:character-sheet-labels:longsword:1',
+        itemId: 'longsword',
+        quantity: 1,
+        sourceKind: 'adventure',
+        sourceId: 'adventure',
+        equippedQuantity: 1,
+      }],
+    })
+    await wrapper.get('.character-sheet__add-item').trigger('click')
+    await pickLibraryItem('长剑')
+    bodyButton('加入装备栏')!.click()
+
+    const inventory = wrapper.emitted('changeInventory')![0][0] as readonly {
+      quantity: number
+      equippedQuantity: number
+    }[]
+    expect(inventory).toHaveLength(1)
+    expect(inventory[0].quantity).toBe(2)
+    expect(inventory[0].equippedQuantity).toBe(2)
+  })
+
+  it('自定义物品添加成功且不可装备', async () => {
+    const wrapper = await mountToItemsTab()
+    await wrapper.get('.character-sheet__add-item').trigger('click')
+    const custom = document.body.querySelector<HTMLInputElement>('.add-item-modal__custom input')
+    custom!.value = '治疗药水'
+    custom!.dispatchEvent(new Event('focus'))
+    custom!.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(bodyButton('加入装备栏')!.disabled).toBe(true)
+    bodyButton('加入物品栏')!.click()
+
+    const inventory = wrapper.emitted('changeInventory')![0][0] as readonly {
+      itemId: string
+      equippedQuantity: number
+    }[]
+    expect(inventory[0].itemId).toBe('治疗药水')
+    expect(inventory[0].equippedQuantity).toBe(0)
+  })
+
+  it('金币面板支持添加（增量）与设置（覆盖），拒绝负数结果', async () => {
+    const itemDraft: CharacterDraft = { ...draft }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: itemDraft, derived: deriveCharacter(itemDraft) },
+      attachTo: document.body,
+    })
+    await wrapper.get('[role="tab"]:nth-child(5)').trigger('click')
+    const input = wrapper.get('[aria-label="金币调整数值"]')
+    const addButton = () => wrapper.findAll('.character-sheet__coin-actions button').find((button) => button.text() === '添加')!
+    const setButton = () => wrapper.findAll('.character-sheet__coin-actions button').find((button) => button.text() === '设置')!
+    // 模拟父组件把新金币回写为 props（真实场景由 store.updateDraft 回传）。
+    const syncProps = async (gp: number) => {
+      const next = { ...itemDraft, currency: { ...itemDraft.currency, gp } }
+      await wrapper.setProps({ draft: next })
+    }
+
+    await input.setValue('10')
+    await addButton().trigger('click')
+    expect((wrapper.emitted('changeCurrency')![0][0] as { gp: number }).gp).toBe(10)
+    await syncProps(10)
+
+    // 负数增量 = 扣减。
+    await input.setValue('-5')
+    await addButton().trigger('click')
+    expect((wrapper.emitted('changeCurrency')![1][0] as { gp: number }).gp).toBe(5)
+    await syncProps(5)
+
+    // 设置覆盖。
+    await input.setValue('99')
+    await setButton().trigger('click')
+    expect((wrapper.emitted('changeCurrency')![2][0] as { gp: number }).gp).toBe(99)
+    await syncProps(99)
+
+    // 结果为负被拒绝并提示。
+    await input.setValue('-1000')
+    await addButton().trigger('click')
+    expect(wrapper.text()).toContain('金币不能为负')
+    expect(wrapper.emitted('changeCurrency')).toHaveLength(3)
+
+    // 非整数被拒绝。
+    await input.setValue('1.5')
+    await setButton().trigger('click')
+    expect(wrapper.text()).toContain('请输入整数金币数')
+    expect(wrapper.emitted('changeCurrency')).toHaveLength(3)
+  })
+})
+

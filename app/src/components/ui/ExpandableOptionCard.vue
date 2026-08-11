@@ -103,6 +103,9 @@ onBeforeUnmount(() => {
 <style scoped lang="scss">
 .expandable-option-card {
   display: grid;
+  // 滚动 grid 容器（如添加物品弹窗列表）中，item 的 overflow 非 visible 时 min-height:auto
+  // 解析为 0 会导致卡片塌缩成仅边框的细条；显式 min-height 与内部 __main 保持一致。
+  min-height: 4.25rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);

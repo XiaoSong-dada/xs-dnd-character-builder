@@ -88,6 +88,7 @@ function toggleEquipped(entry: InventoryEntry): void {
 function sourceLabel(entry: InventoryEntry): string {
   if (entry.sourceKind === 'class') return '职业'
   if (entry.sourceKind === 'background') return '背景'
+  if (entry.sourceKind === 'adventure') return '冒险获得'
   return '旧草稿'
 }
 </script>

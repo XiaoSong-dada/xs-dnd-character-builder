@@ -61,7 +61,7 @@ export interface StartingEquipmentSelection {
   readonly pickedItemIds: readonly string[]
 }
 
-export type InventorySourceKind = 'class' | 'background' | 'legacy'
+export type InventorySourceKind = 'class' | 'background' | 'legacy' | 'adventure'
 
 export interface InventoryEntry {
   readonly id: string

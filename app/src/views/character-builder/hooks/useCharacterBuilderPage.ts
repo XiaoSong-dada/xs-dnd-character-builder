@@ -393,6 +393,14 @@ export function useCharacterBuilderPage() {
     })
   }
 
+  function updateInventory(inventory: readonly InventoryEntry[]): void {
+    store.updateDraft({ inventory })
+  }
+
+  function updateCurrency(currency: CurrencyWallet): void {
+    store.updateDraft({ currency })
+  }
+
   function updateSpells(value: SpellSelections): void {
     store.updateDraft({ spellSelections: value })
   }
@@ -464,6 +472,8 @@ export function useCharacterBuilderPage() {
     selectBackgroundVariant,
     saveTimelineSelection,
     updateEquipment,
+    updateInventory,
+    updateCurrency,
     updateSpells,
     updateIdentity,
     updateAbilities,

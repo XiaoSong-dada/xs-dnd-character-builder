@@ -1,20 +1,29 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
+import AddItemModal from './AddItemModal.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import StatTile from '@/components/ui/StatTile.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { rulesRepository } from '@/rules/repository'
+import { addAdventureItem } from '@/rules/starting-equipment'
 import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { buildTimeline } from '@/rules/timeline'
-import type { AbilityKey, CharacterDraft, DerivedCharacter, SpellSelections } from '@/types/character'
+import type { AbilityKey, CharacterDraft, CurrencyWallet, DerivedCharacter, InventoryEntry, SpellSelections } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
 
 const props = defineProps<{ draft: CharacterDraft; derived: DerivedCharacter }>()
-const emit = defineEmits<{ export: []; adjustLevel: []; reedit: []; changeSpellSelections: [value: SpellSelections] }>()
+const emit = defineEmits<{
+  export: []
+  adjustLevel: []
+  reedit: []
+  changeSpellSelections: [value: SpellSelections]
+  changeInventory: [inventory: readonly InventoryEntry[]]
+  changeCurrency: [currency: CurrencyWallet]
+}>()
 const activeTab = ref('overview')
 const tabs = [
   { id: 'overview', label: '总览' },
@@ -135,6 +144,38 @@ function equipmentName(itemId: string): string {
 function equipmentSummary(itemId: string): string {
   const equipment = rulesRepository.getEquipment(itemId)
   return equipment?.damageDice ? `${equipment.damageDice} ${equipment.damageType}伤害` : ''
+}
+/** 添加物品弹窗开关。 */
+const showAddItemModal = ref(false)
+function handleAddItem(payload: { itemId: string; quantity: number; equip: boolean }): void {
+  // 防御：非可装备物品（如自定义物品）不允许装备。
+  const equip = payload.equip && Boolean(rulesRepository.getEquipment(payload.itemId)?.equippable)
+  const inventory = addAdventureItem(props.draft.inventory, props.draft.id, {
+    itemId: payload.itemId,
+    quantity: payload.quantity,
+    equip,
+  })
+  emit('changeInventory', inventory)
+  showAddItemModal.value = false
+}
+/** 金币调整：输入与错误提示。 */
+const currencyInput = ref('')
+const currencyError = ref('')
+function applyCurrency(mode: 'add' | 'set'): void {
+  const raw = currencyInput.value.trim()
+  if (!/^-?\d+$/.test(raw)) {
+    currencyError.value = '请输入整数金币数'
+    return
+  }
+  const delta = Number(raw)
+  const next = mode === 'add' ? props.draft.currency.gp + delta : delta
+  if (next < 0) {
+    currencyError.value = '金币不能为负'
+    return
+  }
+  emit('changeCurrency', { ...props.draft.currency, gp: next })
+  currencyInput.value = ''
+  currencyError.value = ''
 }
 const subclassInfo = computed(() => {
   const subclassId = props.draft.subclassId
@@ -333,7 +374,10 @@ const needsReview = computed(() => {
       <p v-else>当前没有需要展示的法术。</p>
     </div>
     <div v-else-if="activeTab === 'items'" class="character-sheet__panel">
-      <h3>已装备</h3>
+      <header class="character-sheet__items-header">
+        <h3>已装备</h3>
+        <button type="button" class="character-sheet__add-item" @click="showAddItemModal = true">添加物品</button>
+      </header>
       <div v-if="equippedEntries.length" class="character-sheet__item-list">
         <ExpandableOptionCard
           v-for="entry in equippedEntries"
@@ -342,6 +386,7 @@ const needsReview = computed(() => {
           :description="equipmentSummary(entry.itemId)"
           expanded-label="装备详情"
         >
+          <template #suffix><span class="character-sheet__item-qty">×{{ entry.equippedQuantity }}</span></template>
           <template #expanded>{{ rulesRepository.getEquipment(entry.itemId)?.description }}</template>
         </ExpandableOptionCard>
       </div>
@@ -360,9 +405,22 @@ const needsReview = computed(() => {
         </ExpandableOptionCard>
       </div>
       <p v-else>尚无物品</p>
-      <p>起始金币：{{ draft.currency.gp }} GP</p>
+      <section class="character-sheet__coins">
+        <header>
+          <h3>金币</h3>
+          <strong>{{ draft.currency.gp }} GP</strong>
+        </header>
+        <div class="character-sheet__coin-actions">
+          <input v-model="currencyInput" type="text" inputmode="numeric" placeholder="输入金币数（可为负）" aria-label="金币调整数值" />
+          <button type="button" @click="applyCurrency('add')">添加</button>
+          <button type="button" @click="applyCurrency('set')">设置</button>
+        </div>
+        <p v-if="currencyError" class="character-sheet__coin-error">{{ currencyError }}</p>
+        <small>起始金币 {{ draft.currency.gp }} GP，可随冒险增减</small>
+      </section>
     </div>
     <div v-else class="character-sheet__panel"><h3>{{ tabs.find((tab) => tab.id === activeTab)?.label }}</h3><p>该部分将在对应职业与施法批次继续扩展。</p></div>
+    <AddItemModal :open="showAddItemModal" @close="showAddItemModal = false" @add="handleAddItem" />
     <div class="character-sheet__footer">
       <button type="button" class="character-sheet__export" @click="$emit('export')">导出角色 JSON</button>
       <button type="button" class="character-sheet__export character-sheet__export--secondary" @click="$emit('reedit')">重新编辑</button>
@@ -474,6 +532,87 @@ const needsReview = computed(() => {
   &__item-list {
     display: grid;
     gap: 0.6rem;
+  }
+
+  &__items-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  &__add-item {
+    min-height: 2.75rem;
+    padding: 0 0.9rem;
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-md);
+    color: var(--color-surface);
+    background: var(--color-primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  &__coins {
+    display: grid;
+    gap: 0.6rem;
+    margin-top: 0.8rem;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-background);
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+
+      h3 {
+        margin: 0;
+        font-size: 0.85rem;
+      }
+
+      strong {
+        color: var(--color-primary);
+        font-size: 1rem;
+      }
+    }
+
+    small {
+      color: var(--color-text-muted);
+    }
+  }
+
+  &__coin-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.5rem;
+
+    input {
+      min-height: 2.75rem;
+      min-width: 0;
+      padding: 0 0.7rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+    }
+
+    button {
+      min-height: 2.75rem;
+      min-width: 4.5rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      color: var(--color-primary);
+      background: var(--color-surface);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+  }
+
+  &__coin-error {
+    margin: 0;
+    color: var(--color-danger, #c0392b);
+    font-size: 0.72rem;
   }
 
   &__item-qty {
