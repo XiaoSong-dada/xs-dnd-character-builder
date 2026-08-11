@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
+import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import OptionCard from '@/components/ui/OptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import { getBackgroundRecommendationReason, getRaceRecommendationReason } from '@/rules/recommend'
@@ -59,24 +60,27 @@ const emit = defineEmits<{
       <span>搜索种族</span>
       <input v-model="raceSearch" type="search" placeholder="中文或英文名称">
     </label>
-    <OptionCard
+    <ExpandableOptionCard
       v-for="race in baseRaces"
       :key="race.id"
       :title="race.name"
       :description="[race.summary, getRaceRecommendationReason(race, classRule)].filter(Boolean).join(' · ')"
+      expanded-label="种族介绍"
       :state="raceId === race.id ? 'selected' : 'default'"
       @select="$emit('race', race.id)"
     >
       <template #suffix><UiBadge v-if="race.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
-    </OptionCard>
+      <template #expanded>{{ race.description }}</template>
+    </ExpandableOptionCard>
 
     <div v-if="subraces.length" class="origin-step__branches">
       <strong>选择子种族</strong>
-      <OptionCard
+      <ExpandableOptionCard
         v-for="subrace in subraces"
         :key="subrace.id"
         :title="subrace.name"
         :description="[subrace.summary, getRaceRecommendationReason(subrace, classRule)].filter(Boolean).join(' · ')"
+        expanded-label="种族介绍"
         :state="subraceId === subrace.id ? 'selected' : 'default'"
         @select="$emit('subrace', subraceId === subrace.id ? undefined : subrace.id)"
       >
@@ -84,7 +88,8 @@ const emit = defineEmits<{
           <UiBadge v-if="subrace.status === 'dm-only'" tone="warning">可选规则</UiBadge>
           <UiBadge v-else-if="subrace.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge>
         </template>
-      </OptionCard>
+        <template #expanded>{{ subrace.description }}</template>
+      </ExpandableOptionCard>
     </div>
 
     <header>

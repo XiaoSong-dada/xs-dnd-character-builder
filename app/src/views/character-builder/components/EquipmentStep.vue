@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import OptionCard from '@/components/ui/OptionCard.vue'
+import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import { rulesRepository } from '@/rules/repository'
@@ -125,14 +125,23 @@ function sourceLabel(entry: InventoryEntry): string {
       <article v-for="(group, groupIndex) in classProfile?.groups ?? []" :key="group.id" class="equipment-step__group">
         <h3><span>{{ groupIndex + 1 }}</span>{{ group.title }}</h3>
         <div class="equipment-step__options">
-          <OptionCard
+          <ExpandableOptionCard
             v-for="option in group.options"
             :key="option.id"
             :title="option.label"
             :description="option.pick ? `还需选择 ${option.pick.count} 件具体物品` : ''"
+            expanded-label="装备详情"
             :state="selectionFor(group.id)?.optionId === option.id ? 'selected' : 'default'"
             @select="selectOption(group.id, option.id)"
-          />
+          >
+            <template #expanded>
+              <ul v-if="option.grants.length" class="equipment-step__grant-list">
+                <li v-for="grant in option.grants" :key="grant.itemId">
+                  {{ itemName(grant.itemId) }}<template v-if="grant.quantity > 1"> ×{{ grant.quantity }}</template>
+                </li>
+              </ul>
+            </template>
+          </ExpandableOptionCard>
         </div>
 
         <div
@@ -144,32 +153,36 @@ function sourceLabel(entry: InventoryEntry): string {
             {{ selectionFor(group.id)?.pickedItemIds.length ?? 0 }}/
             {{ group.options.find((option) => option.id === selectionFor(group.id)?.optionId)?.pick?.count }}
           </p>
-          <div
+          <ExpandableOptionCard
             v-for="item in getAllowedPickItems(group.options.find((option) => option.id === selectionFor(group.id)?.optionId)!.pick!)"
             :key="item.id"
-            class="equipment-step__pick-row"
+            :title="item.name"
+            :description="item.damageDice ? `${item.damageDice} ${item.damageType}伤害` : ''"
+            expanded-label="装备详情"
           >
-            <span>{{ item.name }}</span>
-            <div>
-              <button
-                type="button"
-                :aria-label="`减少 ${item.name}`"
-                :disabled="!selectionFor(group.id)?.pickedItemIds.includes(item.id)"
-                @click="changePickedItem(group.id, item.id, -1)"
-              >
-                −
-              </button>
-              <strong>{{ selectionFor(group.id)?.pickedItemIds.filter((id) => id === item.id).length ?? 0 }}</strong>
-              <button
-                type="button"
-                :aria-label="`增加 ${item.name}`"
-                :disabled="(selectionFor(group.id)?.pickedItemIds.length ?? 0) >= (group.options.find((option) => option.id === selectionFor(group.id)?.optionId)?.pick?.count ?? 0)"
-                @click="changePickedItem(group.id, item.id, 1)"
-              >
-                ＋
-              </button>
-            </div>
-          </div>
+            <template #suffix>
+              <div class="equipment-step__qty">
+                <button
+                  type="button"
+                  :aria-label="`减少 ${item.name}`"
+                  :disabled="!selectionFor(group.id)?.pickedItemIds.includes(item.id)"
+                  @click="changePickedItem(group.id, item.id, -1)"
+                >
+                  −
+                </button>
+                <strong>{{ selectionFor(group.id)?.pickedItemIds.filter((id) => id === item.id).length ?? 0 }}</strong>
+                <button
+                  type="button"
+                  :aria-label="`增加 ${item.name}`"
+                  :disabled="(selectionFor(group.id)?.pickedItemIds.length ?? 0) >= (group.options.find((option) => option.id === selectionFor(group.id)?.optionId)?.pick?.count ?? 0)"
+                  @click="changePickedItem(group.id, item.id, 1)"
+                >
+                  ＋
+                </button>
+              </div>
+            </template>
+            <template #expanded>{{ item.description }}</template>
+          </ExpandableOptionCard>
         </div>
       </article>
     </section>
@@ -327,40 +340,36 @@ function sourceLabel(entry: InventoryEntry): string {
     }
   }
 
-  &__pick-row {
-    display: flex;
-    min-height: 2.75rem;
+  &__grant-list {
+    margin: 0;
+    padding-left: 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    line-height: 1.7;
+  }
+
+  &__qty {
+    display: grid;
+    grid-template-columns: 2.25rem 1.75rem 2.25rem;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
+    text-align: center;
 
-    > span {
-      min-width: 0;
-      font-size: 0.8rem;
-    }
+    button {
+      min-height: 2.25rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      color: var(--color-primary);
+      background: var(--color-surface);
+      font-size: 1rem;
+      font-weight: 700;
 
-    > div {
-      display: grid;
-      grid-template-columns: 2.75rem 2rem 2.75rem;
-      align-items: center;
-      text-align: center;
-
-      button {
-        min-width: 2.75rem;
-        min-height: 2.75rem;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-sm);
-        color: var(--color-primary);
-        background: var(--color-surface);
-        font-size: 1rem;
-        font-weight: 700;
-
-        &:disabled {
-          color: var(--color-text-muted);
-          opacity: 0.45;
-        }
+      &:disabled {
+        color: var(--color-text-muted);
+        opacity: 0.45;
       }
     }
+
+    strong { font-size: 0.85rem; }
   }
 
   &__empty,

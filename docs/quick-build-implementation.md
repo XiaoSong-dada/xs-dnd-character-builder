@@ -28,6 +28,7 @@
 - 主页站点信息：`src/config/site.ts` 为唯一读取 `import.meta.env` 的模块（`VITE_AUTHOR_NAME`/`VITE_GITHUB_URL`/`VITE_AUTHOR_TAGLINE`/`VITE_APP_VERSION`，可选）；首页 hero 底部渲染署名行"由 X 制作 · GitHub · v版本"，全部未配置时隐藏；模板见 `app/.env.example`。
 - Docker 部署：`docker-compose.yml` 将根 `.env` 的 `VITE_*` 经 `build.args` 传入，`app/Dockerfile` builder 阶段 ARG/ENV 注入 `pnpm build`（Vite 构建期替换，nginx 运行时无需变量）；根 `.env.example` 为部署模板。
 - 角色完成后支持升级/降级与重新编辑：角色卡提供入口（草稿首页角色条仅保留打开与删除，避免拥挤），等级调整弹窗支持 1—20 任意跳级并实时预览影响摘要（新增待补 / 将失效 / 需复查）；确认后升级自动跳转时间线补全新增检查点，降级作废超限选择（保留记录并标记失效）并给出针对性复查清单（熟练加值、属性提升/专长次数、战技数量、已知法术上限、子职特性、生命值上限）；存在失效或未完成检查点时角色卡显示"待补全"徽标；"重新编辑"一键进入车卡流程并智能定位到需处理步骤（否则进入属性步骤）。
+- 种族与装备效果展开：`RaceRule` 新增 `description` 原创中文介绍（19 条种族/子种族全部登记，覆盖体型/速度/感官/语言/特性）；`EquipmentRule` 新增 `damageDice`/`damageType`（37 条武器登记伤害骰/类型/特性），全部 136 条装备 description 补齐（护甲 AC/力量需求/隐蔽劣势、工具用品用途）；车卡起源步骤（种族/子种族）、起始装备步骤（分组选项展开装备清单 + pick 行展开详情，`−/＋` 数量控件保留在操作位）与角色卡物品页签（条目化展开）均复用 `ExpandableOptionCard` 展开样式，与法术展开体验一致；背景不展开（另行立项）。
 - HP、AC、先攻、熟练加值和攻击加值由纯函数派生并保留来源。
 
 商业规则效果尚未核验的专长和战技保持 `index-only`。它们可用于预览，但会产生资料完整性警告。

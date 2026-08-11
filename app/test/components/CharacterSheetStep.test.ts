@@ -289,6 +289,32 @@ describe('CharacterSheetStep 法术展示', () => {
     expect(magicMissileCard!.find('.expandable-option-card__growth').exists()).toBe(true)
     expect(wrapper.emitted('changeSpellSelections')).toBeUndefined()
   })
+
+  it('物品页签条目化并可展开装备详情（武器显示伤害摘要）', async () => {
+    const itemDraft: CharacterDraft = {
+      ...draft,
+      inventory: [
+        { id: 'inv-greatsword', itemId: 'greatsword', quantity: 1, equippedQuantity: 1, sourceKind: 'class' },
+        { id: 'inv-torch', itemId: 'torch', quantity: 2, equippedQuantity: 0, sourceKind: 'class' },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: itemDraft, derived: deriveCharacter(itemDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(5)').trigger('click')
+
+    // 条目化：巨剑显示伤害摘要，火把在物品栏带 ×2
+    const greatswordCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('巨剑'))
+    expect(greatswordCard).toBeTruthy()
+    expect(greatswordCard!.text()).toContain('2d6')
+    expect(wrapper.text()).toContain('×2')
+
+    // 展开巨剑卡片可见装备详情（挥砍伤害）
+    await greatswordCard!.find('.expandable-option-card__arrow').trigger('click')
+    expect(greatswordCard!.find('.expandable-option-card__growth').exists()).toBe(true)
+    expect(greatswordCard!.text()).toContain('装备详情')
+    expect(greatswordCard!.text()).toContain('挥砍')
+  })
 })
 
 describe('CharacterSheetStep 候选池与点击交互', () => {

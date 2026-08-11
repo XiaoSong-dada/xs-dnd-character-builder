@@ -148,7 +148,10 @@ export interface RaceRule {
   readonly ruleset: RulesetId
   readonly name: string
   readonly englishName: string
+  /** 一行概括（卡片摘要行）。 */
   readonly summary: string
+  /** 原创中文详细介绍（体型/速度/感官/语言/特性要点）；展开区展示。 */
+  readonly description: string
   readonly parentRaceId?: string
   readonly subraceIds: readonly string[]
   readonly requiresSubrace?: boolean
@@ -183,10 +186,15 @@ export interface BackgroundRule {
 export interface EquipmentRule {
   readonly id: string
   readonly name: string
+  /** 展开区详情：护甲 AC/力量需求/隐蔽劣势、武器伤害与特性、工具用品用途等（原创转述）。 */
   readonly description: string
   readonly classIds: readonly string[]
   readonly equippable: boolean
   readonly weaponKind?: 'simple-melee' | 'simple-ranged' | 'martial-melee' | 'martial-ranged'
+  /** 武器伤害骰（如 '1d6'）；仅武器条目使用。 */
+  readonly damageDice?: string
+  /** 武器伤害类型（如 '穿刺'）；仅武器条目使用。 */
+  readonly damageType?: string
   readonly contents?: readonly EquipmentGrant[]
   readonly armorBase?: number
   readonly addsDexterityToArmor?: boolean

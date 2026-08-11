@@ -127,6 +127,15 @@ const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || prepa
 function isPreparedSpell(id: string): boolean {
   return props.draft.spellSelections.preparedSpellIds.includes(id)
 }
+/** 物品页签：已装备（equippedQuantity > 0）与全部物品栏条目。 */
+const equippedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity > 0))
+function equipmentName(itemId: string): string {
+  return rulesRepository.getEquipment(itemId)?.name ?? itemId
+}
+function equipmentSummary(itemId: string): string {
+  const equipment = rulesRepository.getEquipment(itemId)
+  return equipment?.damageDice ? `${equipment.damageDice} ${equipment.damageType}伤害` : ''
+}
 const subclassInfo = computed(() => {
   const subclassId = props.draft.subclassId
   if (!subclassId) return undefined
@@ -325,22 +334,32 @@ const needsReview = computed(() => {
     </div>
     <div v-else-if="activeTab === 'items'" class="character-sheet__panel">
       <h3>已装备</h3>
-      <p>
-        {{
-          draft.inventory
-            .filter((entry) => entry.equippedQuantity > 0)
-            .map((entry) => rulesRepository.getEquipment(entry.itemId)?.name ?? entry.itemId)
-            .join('、') || '尚未装备物品'
-        }}
-      </p>
+      <div v-if="equippedEntries.length" class="character-sheet__item-list">
+        <ExpandableOptionCard
+          v-for="entry in equippedEntries"
+          :key="entry.id"
+          :title="equipmentName(entry.itemId)"
+          :description="equipmentSummary(entry.itemId)"
+          expanded-label="装备详情"
+        >
+          <template #expanded>{{ rulesRepository.getEquipment(entry.itemId)?.description }}</template>
+        </ExpandableOptionCard>
+      </div>
+      <p v-else>尚未装备物品</p>
       <h3>物品栏</h3>
-      <p>
-        {{
-          draft.inventory
-            .map((entry) => `${rulesRepository.getEquipment(entry.itemId)?.name ?? entry.itemId} ×${entry.quantity}`)
-            .join('、') || '尚无物品'
-        }}
-      </p>
+      <div v-if="draft.inventory.length" class="character-sheet__item-list">
+        <ExpandableOptionCard
+          v-for="entry in draft.inventory"
+          :key="entry.id"
+          :title="equipmentName(entry.itemId)"
+          :description="equipmentSummary(entry.itemId)"
+          expanded-label="装备详情"
+        >
+          <template #suffix><span class="character-sheet__item-qty">×{{ entry.quantity }}</span></template>
+          <template #expanded>{{ rulesRepository.getEquipment(entry.itemId)?.description }}</template>
+        </ExpandableOptionCard>
+      </div>
+      <p v-else>尚无物品</p>
       <p>起始金币：{{ draft.currency.gp }} GP</p>
     </div>
     <div v-else class="character-sheet__panel"><h3>{{ tabs.find((tab) => tab.id === activeTab)?.label }}</h3><p>该部分将在对应职业与施法批次继续扩展。</p></div>
@@ -450,6 +469,17 @@ const needsReview = computed(() => {
     font-size: 0.62rem;
     font-style: normal;
     white-space: nowrap;
+  }
+
+  &__item-list {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  &__item-qty {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
   }
 
   &__spell-stats {
