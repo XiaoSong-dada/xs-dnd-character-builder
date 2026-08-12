@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
+import ListShell from '@/components/ui/ListShell.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import { rulesRepository } from '@/rules/repository'
 import type { EquipmentRule } from '@/types/rules'
@@ -116,47 +117,37 @@ function addItem(equip: boolean): void {
 <template>
   <UiModal :open="open" title="添加物品" @close="$emit('close')">
     <div class="add-item-modal">
-      <label class="add-item-modal__search">
-        <span>搜索物品</span>
-        <input v-model="search" type="search" placeholder="输入名称查找（如：长剑、药水）" />
-      </label>
-
-      <div class="add-item-modal__categories" role="group" aria-label="物品分类">
-        <button
-          v-for="item in CATEGORIES"
+      <ListShell
+        searchable
+        search-label="搜索物品"
+        search-placeholder="输入名称查找（如：长剑、药水）"
+        :query="search"
+        @update:query="search = $event"
+        :filters="CATEGORIES"
+        :filter="category"
+        @update:filter="category = $event as CategoryId"
+        :empty="!filteredItems.length"
+        empty-text="没有匹配的物品，可改用下方自定义添加。"
+        max-height="15rem"
+      >
+        <ExpandableOptionCard
+          v-for="item in filteredItems"
           :key="item.id"
-          type="button"
-          class="add-item-modal__category"
-          :class="{ 'add-item-modal__category--active': category === item.id }"
-          :aria-pressed="category === item.id"
-          @click="category = item.id"
+          :title="item.name"
+          :description="item.damageDice ? `${item.damageDice} ${item.damageType}伤害` : ''"
+          :state="mode === 'library' && selectedItemId === item.id ? 'selected' : 'default'"
+          expanded-label="装备详情"
+          expand-on-select
+          @select="selectItem(item.id)"
         >
-          {{ item.label }}
-        </button>
-      </div>
-
-      <div class="add-item-modal__list-scroll">
-        <div v-if="filteredItems.length" class="add-item-modal__list">
-          <ExpandableOptionCard
-            v-for="item in filteredItems"
-            :key="item.id"
-            :title="item.name"
-            :description="item.damageDice ? `${item.damageDice} ${item.damageType}伤害` : ''"
-            :state="mode === 'library' && selectedItemId === item.id ? 'selected' : 'default'"
-            expanded-label="装备详情"
-            expand-on-select
-            @select="selectItem(item.id)"
-          >
-            <template #expanded>
-              <p class="add-item-modal__item-detail">{{ item.description }}</p>
-              <ul v-if="detailLines(item).length" class="add-item-modal__item-meta">
-                <li v-for="line in detailLines(item)" :key="line">{{ line }}</li>
-              </ul>
-            </template>
-          </ExpandableOptionCard>
-        </div>
-        <p v-else class="add-item-modal__empty">没有匹配的物品，可改用下方自定义添加。</p>
-      </div>
+          <template #expanded>
+            <p class="add-item-modal__item-detail">{{ item.description }}</p>
+            <ul v-if="detailLines(item).length" class="add-item-modal__item-meta">
+              <li v-for="line in detailLines(item)" :key="line">{{ line }}</li>
+            </ul>
+          </template>
+        </ExpandableOptionCard>
+      </ListShell>
 
       <section class="add-item-modal__custom">
         <header>
@@ -188,66 +179,6 @@ function addItem(equip: boolean): void {
 .add-item-modal {
   display: grid;
   gap: 0.8rem;
-
-  &__search {
-    display: grid;
-    gap: 0.3rem;
-
-    span {
-      color: var(--color-text-muted);
-      font-size: 0.72rem;
-      font-weight: 700;
-    }
-
-    input {
-      min-height: 2.75rem;
-      padding: 0 0.7rem;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      background: var(--color-background);
-    }
-  }
-
-  &__categories {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
-  &__category {
-    min-height: 2.25rem;
-    padding: 0 0.7rem;
-    border: 1px solid var(--color-border);
-    border-radius: 999px;
-    color: var(--color-text-muted);
-    background: var(--color-surface);
-    font-size: 0.72rem;
-    font-weight: 700;
-
-    &--active {
-      border-color: var(--color-primary);
-      color: var(--color-surface);
-      background: var(--color-primary);
-    }
-  }
-
-  &__list-scroll {
-    max-height: 15rem;
-    overflow: auto;
-  }
-
-  &__list {
-    display: grid;
-    gap: 0.45rem;
-    // 滚动容器放在外层 __list-scroll，grid 本身保持非滚动，行高按内容正常计算
-    // （与角色卡物品列表等非滚动 grid 列表的展开行为一致）。
-  }
-
-  &__empty {
-    margin: 0;
-    color: var(--color-text-muted);
-    font-size: 0.76rem;
-  }
 
   &__item-detail {
     margin: 0;

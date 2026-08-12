@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
+import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import { getClassGrowthSummary, getClassRecommendation } from '@/rules/recommend'
 import { rulesRepository } from '@/rules/repository'
@@ -23,25 +24,27 @@ const rankedClasses = computed(() => [...rulesRepository.classes]
 <template>
   <section class="class-step">
     <p class="class-step__match">推荐只用于排序，不限制职业选择。</p>
-    <ExpandableOptionCard
-      v-for="({ classRule, recommendation, growth }, index) in rankedClasses"
-      :key="classRule.id"
-      :title="classRule.name"
-      :description="classRule.summary"
-      :state="selected === classRule.id ? 'selected' : recommendation.score > 0 && index < 3 ? 'recommended' : 'default'"
-      expanded-label="职业成长"
-      @select="$emit('select', classRule.id)"
-    >
-      <template #suffix>
-        <UiBadge v-if="recommendation.score > 0 && index < 3" tone="primary">{{ orderLabels[index] }} 推荐 · 匹配{{ recommendation.matchedPreferenceLabels.length }}项偏好</UiBadge>
-        <UiBadge v-if="classRule.status !== 'implemented'" tone="warning">资料索引</UiBadge>
-      </template>
-      <template #expanded>
-        <ul class="class-step__growth-list">
-          <li v-for="item in growth" :key="`${item.level}-${item.title}`">{{ item.level }}级 · {{ item.title }}</li>
-        </ul>
-      </template>
-    </ExpandableOptionCard>
+    <ListShell>
+      <ExpandableOptionCard
+        v-for="({ classRule, recommendation, growth }, index) in rankedClasses"
+        :key="classRule.id"
+        :title="classRule.name"
+        :description="classRule.summary"
+        :state="selected === classRule.id ? 'selected' : recommendation.score > 0 && index < 3 ? 'recommended' : 'default'"
+        expanded-label="职业成长"
+        @select="$emit('select', classRule.id)"
+      >
+        <template #suffix>
+          <UiBadge v-if="recommendation.score > 0 && index < 3" tone="primary">{{ orderLabels[index] }} 推荐 · 匹配{{ recommendation.matchedPreferenceLabels.length }}项偏好</UiBadge>
+          <UiBadge v-if="classRule.status !== 'implemented'" tone="warning">资料索引</UiBadge>
+        </template>
+        <template #expanded>
+          <ul class="class-step__growth-list">
+            <li v-for="item in growth" :key="`${item.level}-${item.title}`">{{ item.level }}级 · {{ item.title }}</li>
+          </ul>
+        </template>
+      </ExpandableOptionCard>
+    </ListShell>
   </section>
 </template>
 

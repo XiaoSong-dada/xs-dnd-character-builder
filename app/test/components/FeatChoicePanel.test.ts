@@ -60,7 +60,7 @@ describe('FeatChoicePanel', () => {
   it('searches the full catalog and disables unmet prerequisites with a reason', async () => {
     const wrapper = mountPanel()
     await wrapper.get('.feat-choice__kind button:last-child').trigger('click')
-    await wrapper.get('input[aria-label="搜索专长"]').setValue('战地施法者')
+    await wrapper.get('input[type="search"]').setValue('战地施法者')
 
     expect(wrapper.text()).toContain('战地施法者 · War Caster')
     expect(wrapper.text()).toContain('需要能够施放至少一个法术')

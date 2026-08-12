@@ -75,7 +75,14 @@ defineEmits<{ select: [] }>()
   }
 
   &__reason { color: var(--color-error) !important; }
-  &__suffix { color: var(--color-text-muted); font-size: 1.25rem; }
+  &__suffix {
+    // flex 居中：suffix 内徽章为 inline-flex，行内基线对齐会导致视觉偏上，几何居中消除偏移
+    display: flex;
+    flex: none;
+    align-items: center;
+    color: var(--color-text-muted);
+    font-size: 1.25rem;
+  }
 
   &--selected,
   &--recommended {

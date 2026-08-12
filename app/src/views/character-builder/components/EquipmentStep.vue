@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
+import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import { rulesRepository } from '@/rules/repository'
@@ -125,7 +126,7 @@ function sourceLabel(entry: InventoryEntry): string {
 
       <article v-for="(group, groupIndex) in classProfile?.groups ?? []" :key="group.id" class="equipment-step__group">
         <h3><span>{{ groupIndex + 1 }}</span>{{ group.title }}</h3>
-        <div class="equipment-step__options">
+        <ListShell>
           <ExpandableOptionCard
             v-for="option in group.options"
             :key="option.id"
@@ -143,24 +144,23 @@ function sourceLabel(entry: InventoryEntry): string {
               </ul>
             </template>
           </ExpandableOptionCard>
-        </div>
+        </ListShell>
 
         <div
           v-if="group.options.find((option) => option.id === selectionFor(group.id)?.optionId)?.pick"
           class="equipment-step__picker"
         >
-          <p>
-            已选
-            {{ selectionFor(group.id)?.pickedItemIds.length ?? 0 }}/
-            {{ group.options.find((option) => option.id === selectionFor(group.id)?.optionId)?.pick?.count }}
-          </p>
-          <ExpandableOptionCard
-            v-for="item in getAllowedPickItems(group.options.find((option) => option.id === selectionFor(group.id)?.optionId)!.pick!)"
-            :key="item.id"
-            :title="item.name"
-            :description="item.damageDice ? `${item.damageDice} ${item.damageType}伤害` : ''"
-            expanded-label="装备详情"
+          <ListShell
+            :count="`${selectionFor(group.id)?.pickedItemIds.length ?? 0}/${group.options.find((option) => option.id === selectionFor(group.id)?.optionId)?.pick?.count ?? 0}`"
+            count-label="已选 "
           >
+            <ExpandableOptionCard
+              v-for="item in getAllowedPickItems(group.options.find((option) => option.id === selectionFor(group.id)?.optionId)!.pick!)"
+              :key="item.id"
+              :title="item.name"
+              :description="item.damageDice ? `${item.damageDice} ${item.damageType}伤害` : ''"
+              expanded-label="装备详情"
+            >
             <template #suffix>
               <div class="equipment-step__qty">
                 <button
@@ -184,6 +184,7 @@ function sourceLabel(entry: InventoryEntry): string {
             </template>
             <template #expanded>{{ item.description }}</template>
           </ExpandableOptionCard>
+          </ListShell>
         </div>
       </article>
     </section>
@@ -320,11 +321,6 @@ function sourceLabel(entry: InventoryEntry): string {
     }
   }
 
-  &__options {
-    display: grid;
-    gap: 0.5rem;
-  }
-
   &__picker {
     display: grid;
     gap: 0.4rem;
@@ -332,13 +328,6 @@ function sourceLabel(entry: InventoryEntry): string {
     border: 1px dashed var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-background);
-
-    > p {
-      margin: 0;
-      color: var(--color-text-muted);
-      font-size: 0.75rem;
-      font-weight: 700;
-    }
   }
 
   &__grant-list {

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
+import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import { getBackgroundRecommendationReason, getRaceRecommendationReason } from '@/rules/recommend'
 import { rulesRepository } from '@/rules/repository'
@@ -55,25 +56,29 @@ const emit = defineEmits<{
       <h2>选择种族</h2>
       <p>职业只提供推荐，所有种族均可自由选择。</p>
     </header>
-    <label>
-      <span>搜索种族</span>
-      <input v-model="raceSearch" type="search" placeholder="中文或英文名称">
-    </label>
-    <ExpandableOptionCard
-      v-for="race in baseRaces"
-      :key="race.id"
-      :title="race.name"
-      :description="[race.summary, getRaceRecommendationReason(race, classRule)].filter(Boolean).join(' · ')"
-      expanded-label="种族介绍"
-      :state="raceId === race.id ? 'selected' : 'default'"
-      @select="$emit('race', race.id)"
+    <ListShell
+      searchable
+      search-label="搜索种族"
+      search-placeholder="中文或英文名称"
+      :query="raceSearch"
+      @update:query="raceSearch = $event"
     >
-      <template #suffix>
-        <UiBadge v-if="race.status === 'dm-only'" tone="warning">可选规则</UiBadge>
-        <UiBadge v-else-if="race.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge>
-      </template>
-      <template #expanded>{{ race.description }}</template>
-    </ExpandableOptionCard>
+      <ExpandableOptionCard
+        v-for="race in baseRaces"
+        :key="race.id"
+        :title="race.name"
+        :description="[race.summary, getRaceRecommendationReason(race, classRule)].filter(Boolean).join(' · ')"
+        expanded-label="种族介绍"
+        :state="raceId === race.id ? 'selected' : 'default'"
+        @select="$emit('race', race.id)"
+      >
+        <template #suffix>
+          <UiBadge v-if="race.status === 'dm-only'" tone="warning">可选规则</UiBadge>
+          <UiBadge v-else-if="race.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge>
+        </template>
+        <template #expanded>{{ race.description }}</template>
+      </ExpandableOptionCard>
+    </ListShell>
 
     <div v-if="subraces.length" class="origin-step__branches">
       <strong>选择子种族</strong>
@@ -99,22 +104,26 @@ const emit = defineEmits<{
       <h2>选择背景</h2>
       <p>背景不提供属性加值；它提供技能、工具、语言和背景特性。</p>
     </header>
-    <label>
-      <span>搜索背景</span>
-      <input v-model="backgroundSearch" type="search" placeholder="中文或英文名称">
-    </label>
-    <ExpandableOptionCard
-      v-for="background in baseBackgrounds"
-      :key="background.id"
-      :title="background.name"
-      :description="[background.summary, background.featureName, getBackgroundRecommendationReason(background, classRule)].filter(Boolean).join(' · ')"
-      expanded-label="背景介绍"
-      :state="backgroundId === background.id ? 'selected' : 'default'"
-      @select="$emit('background', background.id)"
+    <ListShell
+      searchable
+      search-label="搜索背景"
+      search-placeholder="中文或英文名称"
+      :query="backgroundSearch"
+      @update:query="backgroundSearch = $event"
     >
-      <template #suffix><UiBadge v-if="background.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
-      <template #expanded>{{ background.description }}</template>
-    </ExpandableOptionCard>
+      <ExpandableOptionCard
+        v-for="background in baseBackgrounds"
+        :key="background.id"
+        :title="background.name"
+        :description="[background.summary, background.featureName, getBackgroundRecommendationReason(background, classRule)].filter(Boolean).join(' · ')"
+        expanded-label="背景介绍"
+        :state="backgroundId === background.id ? 'selected' : 'default'"
+        @select="$emit('background', background.id)"
+      >
+        <template #suffix><UiBadge v-if="background.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
+        <template #expanded>{{ background.description }}</template>
+      </ExpandableOptionCard>
+    </ListShell>
 
     <div v-if="variants.length" class="origin-step__branches">
       <strong>正式背景变体（可选）</strong>
@@ -157,15 +166,6 @@ const emit = defineEmits<{
     span { color: var(--color-primary); font-size: 0.7rem; font-weight: 700; }
     h2 { margin: 0.2rem 0; font-size: 1.05rem; }
     p { margin: 0; color: var(--color-text-muted); font-size: 0.8rem; line-height: 1.55; }
-  }
-
-  label {
-    display: grid;
-    gap: 0.3rem;
-    color: var(--color-text-muted);
-    font-size: 0.75rem;
-
-    input { min-height: 2.75rem; padding: 0.65rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
   }
 
   &__branches {

@@ -32,7 +32,7 @@ describe('AddItemModal', () => {
     mount(AddItemModal, { props: { open: true }, attachTo: document.body })
     expect(cardMains().length).toBeGreaterThan(1)
 
-    const search = document.body.querySelector<HTMLInputElement>('.add-item-modal__search input')
+    const search = document.body.querySelector<HTMLInputElement>('.list-shell__search input')
     search!.value = '长剑'
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)
@@ -44,7 +44,7 @@ describe('AddItemModal', () => {
     search!.value = ''
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)
-    const armorButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.add-item-modal__categories button'))
+    const armorButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.list-shell__filters .ui-chip'))
       .find((button) => button.textContent?.trim() === '护甲')
     armorButton!.click()
     await vi.advanceTimersByTimeAsync(0)
@@ -60,14 +60,14 @@ describe('AddItemModal', () => {
   it('单击物品条目即展开装备详情（下拉介绍）', async () => {
     mount(AddItemModal, { props: { open: true }, attachTo: document.body })
 
-    const search = document.body.querySelector<HTMLInputElement>('.add-item-modal__search input')
+    const search = document.body.querySelector<HTMLInputElement>('.list-shell__search input')
     search!.value = '长剑'
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)
     await clickCard(0)
 
     // 单击后自动展开详情区：完整介绍 + 结构化装备详情
-    const growth = document.querySelector('.add-item-modal__list .expandable-option-card__growth')
+    const growth = document.querySelector('.list-shell .expandable-option-card__growth')
     expect(growth).not.toBeNull()
     expect(growth?.textContent).toContain('装备详情')
     expect(growth?.textContent).toContain('多用 1d10（双手）')
@@ -77,14 +77,14 @@ describe('AddItemModal', () => {
 
   it('装备详情展示护甲 AC 与药水稀有度', async () => {
     mount(AddItemModal, { props: { open: true }, attachTo: document.body })
-    const search = document.body.querySelector<HTMLInputElement>('.add-item-modal__search input')
+    const search = document.body.querySelector<HTMLInputElement>('.list-shell__search input')
 
     // 护甲：AC 公式行
     search!.value = '衬甲'
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)
     await clickCard(0)
-    const armorGrowth = document.querySelector('.add-item-modal__list .expandable-option-card__growth')
+    const armorGrowth = document.querySelector('.list-shell .expandable-option-card__growth')
     expect(armorGrowth?.textContent).toContain('AC 11 + 敏捷调整值（不限）')
 
     // 药水：稀有度与不可装备
@@ -92,7 +92,7 @@ describe('AddItemModal', () => {
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)
     await clickCard(0)
-    const potionGrowth = document.querySelector('.add-item-modal__list .expandable-option-card__growth')
+    const potionGrowth = document.querySelector('.list-shell .expandable-option-card__growth')
     expect(potionGrowth?.textContent).toContain('稀有度：常见')
     expect(potionGrowth?.textContent).toContain('不可装备')
     expect(potionGrowth?.textContent).toContain('恢复 2d4+2 点生命值')
@@ -101,7 +101,7 @@ describe('AddItemModal', () => {
   it('adds a library item to the inventory with quantity and emits add', async () => {
     const wrapper = mount(AddItemModal, { props: { open: true }, attachTo: document.body })
 
-    const search = document.body.querySelector<HTMLInputElement>('.add-item-modal__search input')
+    const search = document.body.querySelector<HTMLInputElement>('.list-shell__search input')
     search!.value = '长剑'
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)
@@ -120,7 +120,7 @@ describe('AddItemModal', () => {
     const wrapper = mount(AddItemModal, { props: { open: true }, attachTo: document.body })
 
     // 非可装备物品（口粮）。
-    const search = document.body.querySelector<HTMLInputElement>('.add-item-modal__search input')
+    const search = document.body.querySelector<HTMLInputElement>('.list-shell__search input')
     search!.value = '口粮'
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)
@@ -145,7 +145,7 @@ describe('AddItemModal', () => {
   it('equips an equippable item when using the equip action', async () => {
     const wrapper = mount(AddItemModal, { props: { open: true }, attachTo: document.body })
 
-    const search = document.body.querySelector<HTMLInputElement>('.add-item-modal__search input')
+    const search = document.body.querySelector<HTMLInputElement>('.list-shell__search input')
     search!.value = '长剑'
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)

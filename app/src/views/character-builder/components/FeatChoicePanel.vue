@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 
 import OptionCard from '@/components/ui/OptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
-import UiChip from '@/components/ui/UiChip.vue'
+import ListShell from '@/components/ui/ListShell.vue'
 import { ABILITY_KEYS, ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { deriveAbilities } from '@/rules/derive'
 import {
@@ -37,6 +37,7 @@ const search = ref('')
 const tagFilter = ref('all')
 const availableOnly = ref(false)
 const tagFilters = ['all', '战斗', '施法', '属性', '探索', '支援'] as const
+const tagFilterOptions = tagFilters.map((id) => ({ id, label: id === 'all' ? '全部' : id }))
 
 const abilitiesBeforeCheckpoint = computed(() => deriveAbilities(props.draft, props.checkpointId))
 const classRule = computed(() => rulesRepository.getClass(props.draft.classId ?? ''))
@@ -171,25 +172,28 @@ function selectFeat(featId: string, available: boolean): void {
     </template>
 
     <template v-else>
-      <div class="feat-choice__search">
-        <input v-model="search" type="search" placeholder="搜索专长名称、英文名或用途" aria-label="搜索专长">
-        <UiBadge>2014 · {{ visibleFeats.length }}/{{ rulesRepository.feats.length }}</UiBadge>
-      </div>
-      <div class="feat-choice__filters">
-        <UiChip
-          v-for="filter in tagFilters"
-          :key="filter"
-          :selected="tagFilter === filter"
-          @toggle="tagFilter = filter"
-        >
-          {{ filter === 'all' ? '全部' : filter }}
-        </UiChip>
-      </div>
-      <label class="feat-choice__available">
-        <input v-model="availableOnly" type="checkbox">
-        <span>只看当前可选</span>
-      </label>
-      <div v-if="visibleFeats.length" class="feat-choice__list">
+      <ListShell
+        :count="`${visibleFeats.length}/${rulesRepository.feats.length}`"
+        searchable
+        search-label=""
+        search-placeholder="搜索专长名称、英文名或用途"
+        :query="search"
+        @update:query="search = $event"
+        :filters="tagFilterOptions"
+        :filter="tagFilter"
+        @update:filter="tagFilter = $event"
+        :empty="!visibleFeats.length"
+        max-height="30rem"
+      >
+        <template #header>
+          <div class="feat-choice__header-row">
+            <label class="feat-choice__available">
+              <input v-model="availableOnly" type="checkbox">
+              <span>只看当前可选</span>
+            </label>
+            <UiBadge>2014 · {{ visibleFeats.length }}/{{ rulesRepository.feats.length }}</UiBadge>
+          </div>
+        </template>
         <OptionCard
           v-for="{ feat, eligibility } in visibleFeats"
           :key="feat.id"
@@ -205,12 +209,12 @@ function selectFeat(featId: string, available: boolean): void {
             </UiBadge>
           </template>
         </OptionCard>
-      </div>
-      <div v-else class="feat-choice__empty">
-        <strong>没有符合条件的专长</strong>
-        <span>清除搜索或筛选后可继续浏览完整目录。</span>
-        <button type="button" @click="search = ''; tagFilter = 'all'; availableOnly = false">清除筛选</button>
-      </div>
+        <template #empty>
+          <strong>没有符合条件的专长</strong>
+          <span>清除搜索或筛选后可继续浏览完整目录。</span>
+          <button type="button" @click="search = ''; tagFilter = 'all'; availableOnly = false">清除筛选</button>
+        </template>
+      </ListShell>
     </template>
   </div>
 </template>
@@ -309,24 +313,14 @@ function selectFeat(featId: string, available: boolean): void {
 
   &__status--complete { color: var(--color-success); background: var(--color-success-soft); }
 
-  &__search {
+  &__header-row {
     display: flex;
+    min-width: 0;
+    flex: 1;
     align-items: center;
+    justify-content: space-between;
     gap: 0.5rem;
-
-    input {
-      min-width: 0;
-      min-height: 44px;
-      flex: 1;
-      padding: 0.65rem 0.75rem;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      color: var(--color-text);
-      background: var(--color-surface);
-    }
   }
-
-  &__filters { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.15rem; }
 
   &__available {
     display: flex;
@@ -338,8 +332,6 @@ function selectFeat(featId: string, available: boolean): void {
 
     input { width: 1.1rem; height: 1.1rem; accent-color: var(--color-primary); }
   }
-
-  &__list { display: grid; max-height: 30rem; gap: 0.5rem; overflow-y: auto; padding-right: 0.15rem; }
 
   &__empty {
     display: grid;

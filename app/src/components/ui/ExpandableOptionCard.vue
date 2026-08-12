@@ -170,6 +170,8 @@ onBeforeUnmount(() => {
     flex-wrap: wrap;
     gap: 0.25rem;
     padding-right: 0.4rem;
+    // 纯文本 suffix（如"已选/已满"）统一字号，避免继承根字号（16px）与 UiBadge 视觉不一致
+    font-size: 0.75rem;
 
     // 操作位内的按钮由调用方设定固定高度，此处兜底防止被拉伸
     :deep(button) {

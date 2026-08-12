@@ -16,6 +16,7 @@ withDefaults(
   display: inline-flex;
   min-height: 1.5rem;
   align-items: center;
+  line-height: 1;
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
   color: var(--color-text-muted);

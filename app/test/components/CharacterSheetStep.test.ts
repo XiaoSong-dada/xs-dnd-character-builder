@@ -519,11 +519,11 @@ describe('CharacterSheetStep 物品添加与金币调整', () => {
   }
 
   async function pickLibraryItem(name: string): Promise<void> {
-    const search = document.body.querySelector<HTMLInputElement>('.add-item-modal__search input')
+    const search = document.body.querySelector<HTMLInputElement>('.ui-modal .list-shell__search input')
     search!.value = name
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)
-    const main = document.body.querySelector<HTMLElement>('.add-item-modal__list .expandable-option-card__main')
+    const main = document.body.querySelector<HTMLElement>('.ui-modal .list-shell .expandable-option-card__main')
     main!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await vi.advanceTimersByTimeAsync(300)
   }

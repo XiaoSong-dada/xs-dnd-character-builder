@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
+import ListShell from '@/components/ui/ListShell.vue'
 import OptionCard from '@/components/ui/OptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
@@ -136,31 +137,35 @@ function saveSpecialSelection(checkpointId: string, optionId?: string): void {
           :allow-ability-improvement="checkpoint.kind === 'ability-improvement'"
           @select="saveSpecialSelection(checkpoint.id, $event)"
         />
-        <OptionCard
-          v-for="optionId in checkpoint.kind === 'ability-improvement' || checkpoint.id === 'race-2014-human-variant-feat-1' ? [] : checkpoint.optionIds"
-          :key="optionId"
-          :title="rulesRepository.getOption(optionId)?.name ?? featureOptionLabel(checkpoint.id, optionId) ?? optionId"
-          :description="rulesRepository.getOption(optionId)?.description"
-          :state="selectedIds(checkpoint.id).includes(optionId)
-            ? 'selected'
-            : isUniqueOptionUsedElsewhere(checkpoint.id, optionId) || isBackgroundSkill(checkpoint.id, optionId) || isExpertiseLocked(checkpoint.id, optionId)
-              ? 'locked'
-              : rulesRepository.getOption(optionId)?.status === 'index-only'
-                ? 'incompatible'
-                : 'default'"
-          :disabled-reason="isUniqueOptionUsedElsewhere(checkpoint.id, optionId)
-            ? checkpoint.kind === 'expertise' ? '已在较低等级获得专精' : '已在较低等级掌握'
-            : isBackgroundSkill(checkpoint.id, optionId)
-              ? '背景已提供此技能，请选择另一项职业技能'
-              : isExpertiseLocked(checkpoint.id, optionId)
-                ? '需先获得该技能熟练（职业技能或背景）'
-                : ''"
-          @select="toggle(checkpoint.id, optionId, checkpoint.maxSelections)"
+        <ListShell
+          v-else-if="checkpoint.optionIds.length"
         >
-          <template #suffix>
-            <UiBadge v-if="rulesRepository.getOption(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
-          </template>
-        </OptionCard>
+          <OptionCard
+            v-for="optionId in checkpoint.optionIds"
+            :key="optionId"
+            :title="rulesRepository.getOption(optionId)?.name ?? featureOptionLabel(checkpoint.id, optionId) ?? optionId"
+            :description="rulesRepository.getOption(optionId)?.description"
+            :state="selectedIds(checkpoint.id).includes(optionId)
+              ? 'selected'
+              : isUniqueOptionUsedElsewhere(checkpoint.id, optionId) || isBackgroundSkill(checkpoint.id, optionId) || isExpertiseLocked(checkpoint.id, optionId)
+                ? 'locked'
+                : rulesRepository.getOption(optionId)?.status === 'index-only'
+                  ? 'incompatible'
+                  : 'default'"
+            :disabled-reason="isUniqueOptionUsedElsewhere(checkpoint.id, optionId)
+              ? checkpoint.kind === 'expertise' ? '已在较低等级获得专精' : '已在较低等级掌握'
+              : isBackgroundSkill(checkpoint.id, optionId)
+                ? '背景已提供此技能，请选择另一项职业技能'
+                : isExpertiseLocked(checkpoint.id, optionId)
+                  ? '需先获得该技能熟练（职业技能或背景）'
+                  : ''"
+            @select="toggle(checkpoint.id, optionId, checkpoint.maxSelections)"
+          >
+            <template #suffix>
+              <UiBadge v-if="rulesRepository.getOption(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
+            </template>
+          </OptionCard>
+        </ListShell>
         <div v-if="checkpoint.kind === 'subclass' && subclassFeatures.length" class="timeline-step__subclass-features">
           <h4>子职特性 · {{ rulesRepository.getSubclass(selectedSubclassId ?? '')?.name ?? '' }}</h4>
           <div v-for="feature in subclassFeatures" :key="feature.id" class="timeline-step__feature">

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
+import ListShell from '@/components/ui/ListShell.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import {
   getAvailableSpells,
@@ -110,8 +111,11 @@ function toggleSpellbook(id: string): void {
       <UiNotice v-if="invalidSelectedCount" tone="warning" title="保留了需要重新确认的旧选择">
         有{{ invalidSelectedCount }}个法术来自之前的职业、等级或法术书状态；它们没有被静默删除，但不会计入合法完成。
       </UiNotice>
-      <section v-if="requiredCantripCount" class="spellcasting-step__level">
-        <h4>戏法 · {{ draft.spellSelections.cantripIds.length }} / {{ requiredCantripCount }}</h4>
+      <ListShell
+        v-if="requiredCantripCount"
+        title="戏法"
+        :count="`${draft.spellSelections.cantripIds.length} / ${requiredCantripCount}`"
+      >
         <ExpandableOptionCard
           v-for="spell in cantrips"
           expanded-label="法术效果"
@@ -126,9 +130,12 @@ function toggleSpellbook(id: string): void {
           </template>
           <template v-if="spell.description" #expanded>{{ spell.description }}</template>
         </ExpandableOptionCard>
-      </section>
-      <section v-if="config.mode === 'spellbook'" class="spellcasting-step__level">
-        <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.length }} / {{ requiredSpellbookCount }}</h4>
+      </ListShell>
+      <ListShell
+        v-if="config.mode === 'spellbook'"
+        title="法术书"
+        :count="`${draft.spellSelections.spellbookSpellIds.length} / ${requiredSpellbookCount}`"
+      >
         <ExpandableOptionCard
           v-for="spell in groupedSpells.flatMap((group) => group.spells)"
           expanded-label="法术效果"
@@ -143,9 +150,12 @@ function toggleSpellbook(id: string): void {
           </template>
           <template v-if="spell.description" #expanded>{{ spell.description }}</template>
         </ExpandableOptionCard>
-      </section>
-      <section v-for="group in groupedSpells" :key="group.level" class="spellcasting-step__level">
-        <h4>{{ group.level }}环{{ config.mode === 'spellbook' ? '准备法术' : '法术' }}</h4>
+      </ListShell>
+      <ListShell
+        v-for="group in groupedSpells"
+        :key="group.level"
+        :title="`${group.level}环${config.mode === 'spellbook' ? '准备法术' : '法术'}`"
+      >
         <ExpandableOptionCard
           v-for="spell in config.mode === 'spellbook' ? group.spells.filter((item) => draft.spellSelections.spellbookSpellIds.includes(item.id)) : group.spells"
           expanded-label="法术效果"
@@ -162,7 +172,7 @@ function toggleSpellbook(id: string): void {
           </template>
           <template v-if="spell.description" #expanded>{{ spell.description }}</template>
         </ExpandableOptionCard>
-      </section>
+      </ListShell>
     </template>
   </section>
 </template>
@@ -197,17 +207,6 @@ function toggleSpellbook(id: string): void {
   &__count--complete {
     color: var(--color-success) !important;
     background: var(--color-success-soft) !important;
-  }
-
-  &__level {
-    display: grid;
-    gap: 0.7rem;
-
-    h4 {
-      margin: 0.25rem 0 0;
-      color: var(--color-text-muted);
-      font-size: 0.78rem;
-    }
   }
 }
 </style>
