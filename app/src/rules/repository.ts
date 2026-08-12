@@ -3,6 +3,9 @@ import { arcaneCasterClasses2014, arcaneCasterOptions2014 } from '@/rules/data/a
 import { fighterOptions, fighterRule } from '@/rules/data/fighter'
 import { martialClasses2014, martialOptions2014 } from '@/rules/data/martials-2014'
 import { equipment2014 } from '@/rules/data/equipment-2014'
+import { magicItems2014 } from '@/rules/data/magic-items-2014'
+import { magicItems2024 } from '@/rules/data/magic-items-2024'
+import { magicItemsXgteTcoe2014 } from '@/rules/data/magic-items-xgte-tcoe-2014'
 import { abilityImprovementOptions2014, feats2014 } from '@/rules/data/feats-2014'
 import { halfCasterClasses2014, halfCasterOptions2014 } from '@/rules/data/half-casters-2014'
 import { fullCasterClasses2014 } from '@/rules/data/full-casters-2014'
@@ -32,6 +35,8 @@ const sources = [
   { id: 'ftd-2021-index', title: '费兹班的巨龙宝库索引', ruleset: '5e-2014' as const },
   { id: 'dsotdq-2022-index', title: '龙枪：龙后之影索引', ruleset: '5e-2014' as const },
   { id: 'bigby-2023-index', title: '毕格比的巨人荣光索引', ruleset: '5e-2014' as const },
+  { id: 'phb-2024-index', title: '2024 玩家手册索引', ruleset: '5e-2014' as const },
+  { id: 'dmg-2024-index', title: '2024 地下城主指南索引', ruleset: '5e-2014' as const },
 ] as const
 
 const withoutLegacySubclassOptions = <T extends { readonly id: string }>(options: readonly T[]): readonly T[] =>
@@ -56,7 +61,7 @@ export const rulesRepository: RulesRepository = {
     ...withoutLegacySubclassOptions(arcaneCasterOptions2014),
   ],
   feats: feats2014,
-  equipment: equipment2014,
+  equipment: [...equipment2014, ...magicItems2014, ...magicItemsXgteTcoe2014, ...magicItems2024],
   classStartingEquipment: classStartingEquipment2014,
   backgroundStartingEquipment: backgroundStartingEquipment2014,
   spells: spells2014,

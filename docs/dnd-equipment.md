@@ -66,6 +66,9 @@ docs/equipment/5e-2014/magic-items/artifacts.md 神器（artifact，8 件）
 
 ## 与代码数据的关系
 
-- 数据实现文件：`app/src/rules/data/equipment-2014.ts`（`equipment2014`）与 `app/src/types/rules.ts`（`EquipmentRule`）。
-- 当前 `EquipmentRule` 字段：`id/name/description/classIds/equippable/weaponKind/damageDice/damageType/contents/armorBase/addsDexterityToArmor/armorDexterityCap/armorClassBonus/category/sourceIds`；**暂无价格与重量字段**，本索引收录的价格/重量为后续数据补全与购买/出售功能的前置依据（字段扩展列入 `docs/需求文档/角色卡物品与金币需求.md` R7/R8）。
-- 角色卡"添加物品"弹窗内置库的来源即 `equipment2014`；本文档整理完成后按批次补全数据，未补全条目在弹窗中由"自定义物品"入口兜底。
+- 数据实现文件：`app/src/rules/data/equipment-2014.ts`（`equipment2014`，普通装备）、`app/src/rules/data/magic-items-2014.ts`（`magicItems2014`，DMG 魔法物品）、`app/src/rules/data/magic-items-xgte-tcoe-2014.ts`（`magicItemsXgteTcoe2014`，XGtE 常见 + TCoE 刺青）、`app/src/rules/data/magic-items-2024.ts`（`magicItems2024`，2024 新增条目）与 `app/src/types/rules.ts`（`EquipmentRule`）。
+- `EquipmentRule` 字段：`id/name/description/classIds/equippable/weaponKind/damageDice/damageType/contents/armorBase/addsDexterityToArmor/armorDexterityCap/armorClassBonus/category/sourceIds`，以及魔法物品字段 `rarity/requiresAttunement/magicBonus`；**暂无价格与重量字段**，本索引收录的价格/重量为后续数据补全与购买/出售功能的前置依据（字段扩展列入 `docs/需求文档/角色卡物品与金币需求.md` R7/R8）。
+- **登记状态**：普通装备（PHB 2014 装备章节全量，含冒险装备/工具/坐骑车辆，约 250 条，全部带原创介绍）已进入 `equipment-2014.ts`；魔法物品第一批（DMG 2014 常见 + 非普通全量，约 101 条，含治疗药水四级）在 `magic-items-2014.ts`；第二批（XGtE 常见 47 件 + TCoE 刺青 17 条）在 `magic-items-xgte-tcoe-2014.ts`；2024 批次（Enspelled 系列等已确认新增条目 6 条）在 `magic-items-2024.ts`，经 `rulesRepository.equipment = [...equipment2014, ...magicItems2014, ...magicItemsXgteTcoe2014, ...magicItems2024]` 合并（`app/src/rules/repository.ts`）。
+- **待核对**：2024 全量清单（2024 DMG 魔法物品与 2024 PHB 装备的差异校准）需官方文本核对后补全——本地网络无法访问 5e.tools/存档镜像；重叠条目以 2024 规则为准的校准（如容量、数值差异）随核对批次更新。
+- 弹窗内置库（"添加物品"）来源即合并后的 `rulesRepository.equipment`，分类 chips 含护甲/盾牌/武器/药水/魔法/工具/杂物；未收录条目由"自定义物品"入口兜底。
+- 派生说明：装备栏 AC 计算（`app/src/rules/derive.ts`）目前只识别带 `armorBase` 的护甲；泛型魔法护甲（如"护甲 +1"）装备后按基础 10 计算，附着具体护甲后的 AC 增强属后续派生增强点。

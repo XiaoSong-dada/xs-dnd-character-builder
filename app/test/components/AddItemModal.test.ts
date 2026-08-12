@@ -49,8 +49,53 @@ describe('AddItemModal', () => {
     armorButton!.click()
     await vi.advanceTimersByTimeAsync(0)
     const armorTitles = Array.from(document.body.querySelectorAll('.expandable-option-card__title-line')).map((node) => node.textContent)
-    expect(armorTitles.length).toBeGreaterThan(0)
-    expect(armorTitles.every((title) => ['衬甲', '皮甲', '镶钉皮甲', '兽皮甲', '链甲衫', '鳞甲', '胸甲', '半身板甲', '环甲', '链甲', '板条甲', '板甲'].includes(title ?? ''))).toBe(true)
+    // 护甲分类 = 12 种普通护甲 + 4 件 DMG 魔法护甲（护甲+1、精金/秘银/水手护甲）+ 3 件 XGtE 魔法护甲（光亮/脱卸/闷燃）
+    const plainArmor = ['衬甲', '皮甲', '镶钉皮甲', '兽皮甲', '链甲衫', '鳞甲', '胸甲', '半身板甲', '环甲', '链甲', '板条甲', '板甲']
+    for (const title of plainArmor) {
+      expect(armorTitles).toContain(title)
+    }
+    expect(armorTitles?.length).toBe(19)
+  })
+
+  it('单击物品条目即展开装备详情（下拉介绍）', async () => {
+    mount(AddItemModal, { props: { open: true }, attachTo: document.body })
+
+    const search = document.body.querySelector<HTMLInputElement>('.add-item-modal__search input')
+    search!.value = '长剑'
+    search!.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    await clickCard(0)
+
+    // 单击后自动展开详情区：完整介绍 + 结构化装备详情
+    const growth = document.querySelector('.add-item-modal__list .expandable-option-card__growth')
+    expect(growth).not.toBeNull()
+    expect(growth?.textContent).toContain('装备详情')
+    expect(growth?.textContent).toContain('多用 1d10（双手）')
+    expect(growth?.textContent).toContain('1d8 挥砍伤害')
+    expect(growth?.textContent).toContain('可装备')
+  })
+
+  it('装备详情展示护甲 AC 与药水稀有度', async () => {
+    mount(AddItemModal, { props: { open: true }, attachTo: document.body })
+    const search = document.body.querySelector<HTMLInputElement>('.add-item-modal__search input')
+
+    // 护甲：AC 公式行
+    search!.value = '衬甲'
+    search!.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    await clickCard(0)
+    const armorGrowth = document.querySelector('.add-item-modal__list .expandable-option-card__growth')
+    expect(armorGrowth?.textContent).toContain('AC 11 + 敏捷调整值（不限）')
+
+    // 药水：稀有度与不可装备
+    search!.value = '治疗药水'
+    search!.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    await clickCard(0)
+    const potionGrowth = document.querySelector('.add-item-modal__list .expandable-option-card__growth')
+    expect(potionGrowth?.textContent).toContain('稀有度：常见')
+    expect(potionGrowth?.textContent).toContain('不可装备')
+    expect(potionGrowth?.textContent).toContain('恢复 2d4+2 点生命值')
   })
 
   it('adds a library item to the inventory with quantity and emits add', async () => {

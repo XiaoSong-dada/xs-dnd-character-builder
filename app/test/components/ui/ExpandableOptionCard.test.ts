@@ -65,6 +65,18 @@ describe('ExpandableOptionCard', () => {
     expect(wrapper.find('.expandable-option-card__growth').exists()).toBe(false)
   })
 
+  it('expandOnSelect 时单击选择后自动展开介绍区', async () => {
+    const wrapper = mountCard({
+      props: { title: '火焰箭', description: '戏法 · Fire Bolt', expandedLabel: '法术效果', expandOnSelect: true },
+      slots: { expanded: '<p class="effect">原创效果摘要</p>' },
+    })
+    await wrapper.find('.expandable-option-card__main').trigger('click')
+    await vi.advanceTimersByTimeAsync(250)
+    expect(wrapper.emitted('select')).toHaveLength(1)
+    expect(wrapper.find('.expandable-option-card__growth').exists()).toBe(true)
+    expect(wrapper.text()).toContain('原创效果摘要')
+  })
+
   it('展开状态与选择互不影响', async () => {
     const wrapper = mountCard()
     await wrapper.find('.expandable-option-card__arrow').trigger('click')

@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import { rulesRepository } from '@/rules/repository'
+import type { EquipmentRule } from '@/types/rules'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{
@@ -16,6 +17,8 @@ const CATEGORIES = [
   { id: 'armor', label: '护甲' },
   { id: 'shield', label: '盾牌' },
   { id: 'weapon', label: '武器' },
+  { id: 'potion', label: '药水' },
+  { id: 'magic', label: '魔法' },
   { id: 'tool', label: '工具' },
   { id: 'gear', label: '杂物' },
 ] as const
@@ -67,6 +70,38 @@ function selectItem(itemId: string): void {
   selectedItemId.value = itemId
 }
 
+/** 稀有度中文标签（用于装备详情展示）。 */
+const RARITY_LABELS: Readonly<Record<NonNullable<EquipmentRule['rarity']>, string>> = {
+  common: '常见',
+  uncommon: '非普通',
+  rare: '稀有',
+  'very-rare': '非常稀有',
+  legendary: '传说',
+  artifact: '神器',
+}
+
+/** 装备详情行：由规则字段推导的结构化属性（展示用，不含价格/重量等未登记字段）。 */
+function detailLines(item: EquipmentRule): string[] {
+  const lines: string[] = []
+  if (item.category === 'armor') {
+    lines.push(
+      item.addsDexterityToArmor
+        ? `AC ${item.armorBase} + 敏捷调整值${item.armorDexterityCap ? `（最多 +${item.armorDexterityCap}）` : '（不限）'}`
+        : `基础 AC ${item.armorBase}`,
+    )
+  } else if (item.category === 'shield') {
+    lines.push(`持握时 AC 加值 +${item.armorClassBonus ?? 0}`)
+  }
+  if (item.weaponKind && item.damageDice) {
+    lines.push(`${item.damageDice} ${item.damageType ?? ''}伤害`.trim())
+  }
+  if (item.magicBonus) lines.push(`魔法加值 +${item.magicBonus}`)
+  if (item.rarity) lines.push(`稀有度：${RARITY_LABELS[item.rarity]}`)
+  if (item.requiresAttunement) lines.push('需要同调')
+  lines.push(item.equippable ? '可装备' : '不可装备')
+  return lines
+}
+
 function changeQuantity(delta: 1 | -1): void {
   quantity.value = Math.max(1, quantity.value + delta)
 }
@@ -100,20 +135,28 @@ function addItem(equip: boolean): void {
         </button>
       </div>
 
-      <div v-if="filteredItems.length" class="add-item-modal__list">
-        <ExpandableOptionCard
-          v-for="item in filteredItems"
-          :key="item.id"
-          :title="item.name"
-          :description="item.damageDice ? `${item.damageDice} ${item.damageType}伤害` : ''"
-          :state="mode === 'library' && selectedItemId === item.id ? 'selected' : 'default'"
-          expanded-label="物品介绍"
-          @select="selectItem(item.id)"
-        >
-          <template v-if="item.description" #expanded>{{ item.description }}</template>
-        </ExpandableOptionCard>
+      <div class="add-item-modal__list-scroll">
+        <div v-if="filteredItems.length" class="add-item-modal__list">
+          <ExpandableOptionCard
+            v-for="item in filteredItems"
+            :key="item.id"
+            :title="item.name"
+            :description="item.damageDice ? `${item.damageDice} ${item.damageType}伤害` : ''"
+            :state="mode === 'library' && selectedItemId === item.id ? 'selected' : 'default'"
+            expanded-label="装备详情"
+            expand-on-select
+            @select="selectItem(item.id)"
+          >
+            <template #expanded>
+              <p class="add-item-modal__item-detail">{{ item.description }}</p>
+              <ul v-if="detailLines(item).length" class="add-item-modal__item-meta">
+                <li v-for="line in detailLines(item)" :key="line">{{ line }}</li>
+              </ul>
+            </template>
+          </ExpandableOptionCard>
+        </div>
+        <p v-else class="add-item-modal__empty">没有匹配的物品，可改用下方自定义添加。</p>
       </div>
-      <p v-else class="add-item-modal__empty">没有匹配的物品，可改用下方自定义添加。</p>
 
       <section class="add-item-modal__custom">
         <header>
@@ -188,17 +231,46 @@ function addItem(equip: boolean): void {
     }
   }
 
+  &__list-scroll {
+    max-height: 15rem;
+    overflow: auto;
+  }
+
   &__list {
     display: grid;
-    max-height: 15rem;
     gap: 0.45rem;
-    overflow: auto;
+    // 滚动容器放在外层 __list-scroll，grid 本身保持非滚动，行高按内容正常计算
+    // （与角色卡物品列表等非滚动 grid 列表的展开行为一致）。
   }
 
   &__empty {
     margin: 0;
     color: var(--color-text-muted);
     font-size: 0.76rem;
+  }
+
+  &__item-detail {
+    margin: 0;
+  }
+
+  &__item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      padding: 0.15rem 0.5rem;
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      color: var(--color-primary);
+      background: var(--color-surface);
+      font-size: 0.68rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
   }
 
   &__custom {

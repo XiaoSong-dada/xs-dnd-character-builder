@@ -190,7 +190,7 @@ export interface BackgroundRule {
 export interface EquipmentRule {
   readonly id: string
   readonly name: string
-  /** 展开区详情：护甲 AC/力量需求/隐蔽劣势、武器伤害与特性、工具用品用途等（原创转述）。 */
+  /** 展开区详情：护甲 AC/力量需求/隐蔽劣势、武器伤害与特性、魔法物品效果要点等（原创转述）。 */
   readonly description: string
   readonly classIds: readonly string[]
   readonly equippable: boolean
@@ -204,7 +204,13 @@ export interface EquipmentRule {
   readonly addsDexterityToArmor?: boolean
   readonly armorDexterityCap?: number
   readonly armorClassBonus?: number
-  readonly category: 'armor' | 'shield' | 'weapon' | 'tool' | 'gear'
+  readonly category: 'armor' | 'shield' | 'weapon' | 'tool' | 'gear' | 'potion' | 'magic'
+  /** 魔法物品稀有度；普通装备省略。 */
+  readonly rarity?: 'common' | 'uncommon' | 'rare' | 'very-rare' | 'legendary' | 'artifact'
+  /** 是否需要同调（attunement）才能使用；仅魔法物品使用。 */
+  readonly requiresAttunement?: boolean
+  /** 魔法加值（+1/+2/+3）：供命中/AC/伤害派生计算；仅魔法物品使用。 */
+  readonly magicBonus?: number
   readonly sourceIds: readonly string[]
 }
 

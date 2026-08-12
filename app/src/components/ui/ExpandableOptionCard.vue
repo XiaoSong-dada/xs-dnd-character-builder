@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, useId, useSlots } from 'vue'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     title: string
     description?: string
@@ -9,12 +9,15 @@ withDefaults(
     expandedLabel?: string
     state?: 'default' | 'selected' | 'recommended' | 'complete' | 'locked' | 'incompatible' | 'error'
     disabledReason?: string
+    /** 单击选择时同时展开介绍区（用于弹窗类紧凑列表的下拉式介绍）。 */
+    expandOnSelect?: boolean
   }>(),
   {
     description: '',
     expandedLabel: '',
     state: 'default',
     disabledReason: '',
+    expandOnSelect: false,
   },
 )
 
@@ -51,6 +54,7 @@ function handleMainClick(): void {
   if (selectTimer) clearTimeout(selectTimer)
   selectTimer = setTimeout(() => {
     selectTimer = undefined
+    if (props.expandOnSelect) open.value = true
     emit('select')
   }, DOUBLE_CLICK_MS)
 }
