@@ -32,6 +32,7 @@ describe('DraftStorageService', () => {
       id: 'old-fighter',
       schemaVersion: 3,
       equipmentNeedsReview: true,
+      adventureGold: 0,
     })
     expect(draft?.inventory).toHaveLength(2)
     expect(draft?.inventory.find((entry) => entry.itemId === 'chain-mail')?.equippedQuantity).toBe(1)

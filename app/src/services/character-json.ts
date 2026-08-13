@@ -56,6 +56,7 @@ export const CharacterJsonService = {
           equippedQuantity: equipped.has(itemId) ? 1 : 0,
         })),
         currency: EMPTY_CURRENCY,
+        adventureGold: 0,
         equipmentNeedsReview: true,
         raceAbilityChoices: draft.raceAbilityChoices ?? [],
         backgroundSkillIds: draft.backgroundSkillIds ?? [],
@@ -80,6 +81,7 @@ export const CharacterJsonService = {
       startingEquipmentSelections: draft.startingEquipmentSelections ?? [],
       inventory: draft.inventory ?? [],
       currency: draft.currency ?? EMPTY_CURRENCY,
+      adventureGold: draft.adventureGold ?? 0,
       equipmentNeedsReview: draft.equipmentNeedsReview ?? false,
       spellSelections: draft.spellSelections ?? {
         cantripIds: [],

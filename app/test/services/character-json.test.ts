@@ -25,10 +25,32 @@ describe('CharacterJsonService', () => {
 
     expect(imported.schemaVersion).toBe(3)
     expect(imported.equipmentNeedsReview).toBe(true)
+    expect(imported.adventureGold).toBe(0)
     expect(imported.inventory.find((entry) => entry.itemId === 'dagger')).toMatchObject({
       quantity: 2,
       equippedQuantity: 1,
       sourceKind: 'legacy',
     })
+  })
+
+  it('v3 导入保留 adventureGold，缺省时兜底为 0', () => {
+    const withGold = CharacterJsonService.importDraft(JSON.stringify({
+      schemaVersion: 3,
+      id: 'v3-with-gold',
+      ruleset: '5e-2014',
+      baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
+      selections: [],
+      adventureGold: 42,
+    }))
+    expect(withGold.adventureGold).toBe(42)
+
+    const withoutGold = CharacterJsonService.importDraft(JSON.stringify({
+      schemaVersion: 3,
+      id: 'v3-no-gold',
+      ruleset: '5e-2014',
+      baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
+      selections: [],
+    }))
+    expect(withoutGold.adventureGold).toBe(0)
   })
 })

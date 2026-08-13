@@ -37,7 +37,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     })
   }
   if (draft.inventory.some((entry) =>
-    !rulesRepository.getEquipment(entry.itemId)
+    (entry.sourceKind !== 'adventure' && !rulesRepository.getEquipment(entry.itemId))
     || entry.quantity < 1
     || entry.equippedQuantity < 0
     || entry.equippedQuantity > entry.quantity,

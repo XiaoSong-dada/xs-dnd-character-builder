@@ -397,8 +397,8 @@ export function useCharacterBuilderPage() {
     store.updateDraft({ inventory })
   }
 
-  function updateCurrency(currency: CurrencyWallet): void {
-    store.updateDraft({ currency })
+  function updateAdventureGold(adventureGold: number): void {
+    store.updateDraft({ adventureGold })
   }
 
   function updateSpells(value: SpellSelections): void {
@@ -473,7 +473,7 @@ export function useCharacterBuilderPage() {
     saveTimelineSelection,
     updateEquipment,
     updateInventory,
-    updateCurrency,
+    updateAdventureGold,
     updateSpells,
     updateIdentity,
     updateAbilities,

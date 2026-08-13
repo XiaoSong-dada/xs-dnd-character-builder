@@ -15,6 +15,7 @@ describe('character drafts store', () => {
     store.updateDraft({ classId: 'class-2014-fighter' })
     store.saveSelection('fighter-2014-style-1', ['style-defense'])
     expect(store.activeDraftId).toBe(draft.id)
+    expect(store.activeDraft?.adventureGold).toBe(0)
     expect(store.activeDraft?.selections[0]?.optionIds).toEqual(['style-defense'])
   })
 

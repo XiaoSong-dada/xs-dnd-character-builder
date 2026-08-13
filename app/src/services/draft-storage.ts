@@ -22,6 +22,7 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     startingEquipmentSelections: draft.startingEquipmentSelections ?? [],
     inventory: draft.inventory ?? [],
     currency: draft.currency ?? EMPTY_CURRENCY,
+    adventureGold: draft.adventureGold ?? 0,
     equipmentNeedsReview: draft.equipmentNeedsReview ?? false,
     spellSelections: draft.spellSelections ?? {
       cantripIds: [],

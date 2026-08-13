@@ -105,6 +105,8 @@ export interface CharacterDraft {
   readonly startingEquipmentSelections: readonly StartingEquipmentSelection[]
   readonly inventory: readonly InventoryEntry[]
   readonly currency: CurrencyWallet
+  /** 冒险净增金币（GP，可为负）；持有总额 = currency.gp + adventureGold。 */
+  readonly adventureGold: number
   readonly equipmentNeedsReview: boolean
   readonly spellSelections: SpellSelections
   readonly name: string

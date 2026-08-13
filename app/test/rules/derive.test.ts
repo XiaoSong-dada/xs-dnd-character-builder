@@ -30,6 +30,7 @@ const draft: CharacterDraft = {
     { id: 'test-longsword', itemId: 'longsword', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 },
   ],
   currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+  adventureGold: 0,
   equipmentNeedsReview: false,
   name: '凯恩',
   alignment: '中立善良',

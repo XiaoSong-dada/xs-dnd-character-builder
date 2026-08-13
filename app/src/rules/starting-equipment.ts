@@ -151,8 +151,9 @@ export interface AdventureItemInput {
 }
 
 /**
- * 向物品栏添加冒险获得物品：同 itemId 已存在时合并数量（优先合并到 adventure 条目，
- * 其次任意来源条目），否则新建 adventure 条目；恒满足 equippedQuantity ≤ quantity。
+ * 向物品栏添加冒险获得物品：同 itemId 的 adventure 条目已存在时合并数量，
+ * 否则新建 adventure 条目（不合并进职业/背景起始装备条目，避免污染其数量）；
+ * 恒满足 equippedQuantity ≤ quantity。
  */
 export function addAdventureItem(
   inventory: readonly InventoryEntry[],
@@ -162,7 +163,6 @@ export function addAdventureItem(
   const { itemId, quantity, equip } = input
   if (quantity < 1) return inventory
   const existing = inventory.find((entry) => entry.itemId === itemId && entry.sourceKind === 'adventure')
-    ?? inventory.find((entry) => entry.itemId === itemId)
   if (!existing) {
     return [
       ...inventory,

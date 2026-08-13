@@ -13,7 +13,7 @@ import { addAdventureItem } from '@/rules/starting-equipment'
 import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { buildTimeline } from '@/rules/timeline'
-import type { AbilityKey, CharacterDraft, CurrencyWallet, DerivedCharacter, InventoryEntry, SpellSelections } from '@/types/character'
+import type { AbilityKey, CharacterDraft, DerivedCharacter, InventoryEntry, SpellSelections } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
 
 const props = defineProps<{ draft: CharacterDraft; derived: DerivedCharacter }>()
@@ -23,7 +23,7 @@ const emit = defineEmits<{
   reedit: []
   changeSpellSelections: [value: SpellSelections]
   changeInventory: [inventory: readonly InventoryEntry[]]
-  changeCurrency: [currency: CurrencyWallet]
+  changeAdventureGold: [adventureGold: number]
 }>()
 const activeTab = ref('overview')
 const tabs = [
@@ -159,7 +159,7 @@ function handleAddItem(payload: { itemId: string; quantity: number; equip: boole
   emit('changeInventory', inventory)
   showAddItemModal.value = false
 }
-/** 金币调整：输入与错误提示。 */
+/** 金币调整：操作冒险净增金币（adventureGold），持有总额 = currency.gp + adventureGold。 */
 const currencyInput = ref('')
 const currencyError = ref('')
 function applyCurrency(mode: 'add' | 'set'): void {
@@ -168,13 +168,14 @@ function applyCurrency(mode: 'add' | 'set'): void {
     currencyError.value = '请输入整数金币数'
     return
   }
-  const delta = Number(raw)
-  const next = mode === 'add' ? props.draft.currency.gp + delta : delta
-  if (next < 0) {
+  const value = Number(raw)
+  const startingGold = props.draft.currency.gp
+  const nextGold = mode === 'add' ? props.draft.adventureGold + value : value - startingGold
+  if (startingGold + nextGold < 0) {
     currencyError.value = '金币不能为负'
     return
   }
-  emit('changeCurrency', { ...props.draft.currency, gp: next })
+  emit('changeAdventureGold', nextGold)
   currencyInput.value = ''
   currencyError.value = ''
 }
@@ -425,10 +426,10 @@ const needsReview = computed(() => {
       <section class="character-sheet__coins">
         <header>
           <h3>金币</h3>
-          <strong>{{ draft.currency.gp }} GP</strong>
+          <strong>{{ draft.currency.gp + draft.adventureGold }} GP</strong>
         </header>
         <div class="character-sheet__coin-actions">
-          <input v-model="currencyInput" type="text" inputmode="numeric" placeholder="输入金币数（可为负）" aria-label="金币调整数值" />
+          <input v-model="currencyInput" type="text" inputmode="numeric" placeholder="输入金币数（添加可为负）" aria-label="金币调整数值" />
           <button type="button" @click="applyCurrency('add')">添加</button>
           <button type="button" @click="applyCurrency('set')">设置</button>
         </div>

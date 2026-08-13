@@ -43,6 +43,7 @@ function createCharacterDraft(): CharacterDraft {
     startingEquipmentSelections: [],
     inventory: [],
     currency: EMPTY_CURRENCY,
+    adventureGold: 0,
     equipmentNeedsReview: false,
     spellSelections: {
       cantripIds: [],

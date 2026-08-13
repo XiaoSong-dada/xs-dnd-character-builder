@@ -31,6 +31,7 @@ function bardDraft(): CharacterDraft {
     startingEquipmentSelections: [],
     inventory: [],
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    adventureGold: 0,
     equipmentNeedsReview: false,
     name: '测试',
     alignment: '',

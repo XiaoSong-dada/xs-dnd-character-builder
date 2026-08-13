@@ -30,6 +30,7 @@ const draft: CharacterDraft = {
   startingEquipmentSelections: [],
   inventory: [],
   currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+  adventureGold: 0,
   equipmentNeedsReview: false,
   spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
   name: '测试角色',
@@ -599,8 +600,8 @@ describe('CharacterSheetStep 物品添加与金币调整', () => {
     expect(inventory[0].equippedQuantity).toBe(0)
   })
 
-  it('金币面板支持添加（增量）与设置（覆盖），拒绝负数结果', async () => {
-    const itemDraft: CharacterDraft = { ...draft }
+  it('金币面板支持添加（增量）与设置（持有总额），拒绝负数总额', async () => {
+    const itemDraft: CharacterDraft = { ...draft, currency: { ...draft.currency, gp: 50 } }
     const wrapper = mount(CharacterSheetStep, {
       props: { draft: itemDraft, derived: deriveCharacter(itemDraft) },
       attachTo: document.body,
@@ -609,40 +610,41 @@ describe('CharacterSheetStep 物品添加与金币调整', () => {
     const input = wrapper.get('[aria-label="金币调整数值"]')
     const addButton = () => wrapper.findAll('.character-sheet__coin-actions button').find((button) => button.text() === '添加')!
     const setButton = () => wrapper.findAll('.character-sheet__coin-actions button').find((button) => button.text() === '设置')!
-    // 模拟父组件把新金币回写为 props（真实场景由 store.updateDraft 回传）。
-    const syncProps = async (gp: number) => {
-      const next = { ...itemDraft, currency: { ...itemDraft.currency, gp } }
+    // 模拟父组件把新冒险净增金币回写为 props（真实场景由 store.updateDraft 回传）。
+    const syncProps = async (adventureGold: number) => {
+      const next = { ...itemDraft, adventureGold }
       await wrapper.setProps({ draft: next })
     }
 
+    // 添加增量：净增 +10（总额 60）。
     await input.setValue('10')
     await addButton().trigger('click')
-    expect((wrapper.emitted('changeCurrency')![0][0] as { gp: number }).gp).toBe(10)
+    expect(wrapper.emitted('changeAdventureGold')![0][0]).toBe(10)
     await syncProps(10)
 
-    // 负数增量 = 扣减。
+    // 负数增量 = 扣减：净增 5（总额 55）。
     await input.setValue('-5')
     await addButton().trigger('click')
-    expect((wrapper.emitted('changeCurrency')![1][0] as { gp: number }).gp).toBe(5)
+    expect(wrapper.emitted('changeAdventureGold')![1][0]).toBe(5)
     await syncProps(5)
 
-    // 设置覆盖。
+    // 设置持有总额 99：净增 = 99 - 起始金币 50 = 49。
     await input.setValue('99')
     await setButton().trigger('click')
-    expect((wrapper.emitted('changeCurrency')![2][0] as { gp: number }).gp).toBe(99)
-    await syncProps(99)
+    expect(wrapper.emitted('changeAdventureGold')![2][0]).toBe(49)
+    await syncProps(49)
 
-    // 结果为负被拒绝并提示。
+    // 总额为负被拒绝并提示（净增 -1000 → 总额 -950）。
     await input.setValue('-1000')
     await addButton().trigger('click')
     expect(wrapper.text()).toContain('金币不能为负')
-    expect(wrapper.emitted('changeCurrency')).toHaveLength(3)
+    expect(wrapper.emitted('changeAdventureGold')).toHaveLength(3)
 
     // 非整数被拒绝。
     await input.setValue('1.5')
     await setButton().trigger('click')
     expect(wrapper.text()).toContain('请输入整数金币数')
-    expect(wrapper.emitted('changeCurrency')).toHaveLength(3)
+    expect(wrapper.emitted('changeAdventureGold')).toHaveLength(3)
   })
 })
 

@@ -35,6 +35,7 @@ function wizardDraft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
     ],
     inventory: [],
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    adventureGold: 0,
     equipmentNeedsReview: false,
     spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
     name: '伊莱恩',
@@ -155,6 +156,15 @@ describe('2014 starting equipment', () => {
     expect(adventureEntry?.quantity).toBe(4)
     expect(adventureEntry?.equippedQuantity).toBe(3)
     expect(merged.find((entry) => entry.sourceKind === 'class')?.quantity).toBe(1)
+
+  // 只有职业/背景来源条目（无 adventure）时，不合并进该条目，新建独立 adventure 条目。
+  const classOnly = [
+    { id: 'class:wizard:torch', itemId: 'torch', quantity: 2, sourceKind: 'class', sourceId: 'class-2014-wizard', equippedQuantity: 1 },
+  ]
+  const freshAdventure = addAdventureItem(classOnly, 'wizard', { itemId: 'torch', quantity: 1, equip: false })
+  expect(freshAdventure).toHaveLength(2)
+  expect(freshAdventure.find((entry) => entry.sourceKind === 'class')?.quantity).toBe(2)
+  expect(freshAdventure.find((entry) => entry.sourceKind === 'adventure')?.quantity).toBe(1)
 
     // 非装备合并不改变已装备数量。
     const mergedBag = addAdventureItem(withClass, 'wizard', { itemId: 'torch', quantity: 2, equip: false })

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { buildStartingEquipmentState } from '@/rules/starting-equipment'
 import { validateDraft } from '@/rules/validate'
 import type { CharacterDraft } from '@/types/character'
 
@@ -23,6 +24,7 @@ function createDraft(): CharacterDraft {
     startingEquipmentSelections: [],
     inventory: [],
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    adventureGold: 0,
     equipmentNeedsReview: false,
     name: '',
     alignment: '',
@@ -173,5 +175,57 @@ describe('validateDraft', () => {
     const issues = validateDraft(draft)
 
     expect(issues.some((issue) => issue.id === 'expertise-without-proficiency')).toBe(true)
+  })
+
+  it('冒险净增金币不触发起始装备不同步', () => {
+    const base: CharacterDraft = {
+      ...createDraft(),
+      classId: 'class-2014-fighter',
+      backgroundId: 'background-2014-soldier',
+      name: '凯恩',
+      targetLevel: 1,
+      startingEquipmentSelections: [
+        { groupId: 'fighter-armor', optionId: 'chain-mail', pickedItemIds: [] },
+        { groupId: 'fighter-primary', optionId: 'two-weapons', pickedItemIds: ['longsword', 'longsword'] },
+        { groupId: 'fighter-ranged', optionId: 'handaxes', pickedItemIds: [] },
+        { groupId: 'fighter-pack', optionId: 'explorer-pack', pickedItemIds: [] },
+      ],
+    }
+    const synced = buildStartingEquipmentState(base, false)
+    const draft: CharacterDraft = {
+      ...base,
+      inventory: synced.inventory,
+      currency: synced.currency,
+      adventureGold: 42,
+    }
+    expect(validateDraft(draft).some((issue) => issue.id === 'starting-equipment-out-of-sync')).toBe(false)
+  })
+
+  it('冒险来源自定义物品不触发 inventory-invalid，非冒险未知物品仍报错', () => {
+    const adventureCustom: CharacterDraft = {
+      ...createDraft(),
+      inventory: [{
+        id: 'adventure:test:custom-potion:1',
+        itemId: '自定义药水',
+        quantity: 1,
+        sourceKind: 'adventure',
+        sourceId: 'adventure',
+        equippedQuantity: 0,
+      }],
+    }
+    expect(validateDraft(adventureCustom).some((issue) => issue.id === 'inventory-invalid')).toBe(false)
+
+    const classUnknown: CharacterDraft = {
+      ...createDraft(),
+      inventory: [{
+        id: 'class:test:unknown-item:1',
+        itemId: '不存在物品',
+        quantity: 1,
+        sourceKind: 'class',
+        sourceId: 'test',
+        equippedQuantity: 0,
+      }],
+    }
+    expect(validateDraft(classUnknown).some((issue) => issue.id === 'inventory-invalid')).toBe(true)
   })
 })

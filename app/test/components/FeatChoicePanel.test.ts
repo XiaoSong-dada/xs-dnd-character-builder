@@ -24,6 +24,7 @@ const draft: CharacterDraft = {
   startingEquipmentSelections: [],
   inventory: [],
   currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+  adventureGold: 0,
   equipmentNeedsReview: false,
   spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
   name: '',
