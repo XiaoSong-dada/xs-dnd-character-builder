@@ -1,4 +1,5 @@
 import { classPreviews2014 } from '@/rules/data/classes-2014'
+import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { arcaneCasterClasses2014, arcaneCasterOptions2014 } from '@/rules/data/arcane-casters-2014'
 import { fighterOptions, fighterRule } from '@/rules/data/fighter'
 import { martialClasses2014, martialOptions2014 } from '@/rules/data/martials-2014'
@@ -44,10 +45,11 @@ const withoutLegacySubclassOptions = <T extends { readonly id: string }>(options
 
 export const rulesRepository: RulesRepository = {
   sources,
-  classes: classPreviews2014.map((item) =>
-    [fighterRule, ...martialClasses2014, ...halfCasterClasses2014, ...arcaneCasterClasses2014, ...fullCasterClasses2014].find((classRule) => classRule.id === item.id)
-    ?? { ...item, checkpoints: [] },
-  ),
+  classes: classPreviews2014.map((item) => {
+    const classRule = [fighterRule, ...martialClasses2014, ...halfCasterClasses2014, ...arcaneCasterClasses2014, ...fullCasterClasses2014].find((classRule) => classRule.id === item.id)
+      ?? { ...item, checkpoints: [] }
+    return { ...classRule, features: getClassFeatures2014(item.id) }
+  }),
   subclasses: subclasses2014,
   races: races2014,
   backgrounds: backgrounds2014,

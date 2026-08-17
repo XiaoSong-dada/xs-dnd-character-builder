@@ -107,6 +107,8 @@ export interface ClassRule {
   readonly sourceIds: readonly string[]
   readonly checkpoints: readonly ChoiceCheckpoint[]
   readonly spellcasting?: SpellcastingConfig
+  /** 职业等级特性（含升级增强项，每条独立登记）；由 class-features-2014 挂载。 */
+  readonly features?: readonly ClassFeature[]
 }
 
 export interface SubclassRule {
@@ -143,6 +145,20 @@ export interface SubclassFeature {
   readonly optionIds?: readonly string[]
   /** 选项 id → 中文名（用于子职特性选择检查点的界面渲染）。 */
   readonly optionLabels?: Readonly<Record<string, string>>
+  readonly status: CompatibilityStatus
+  readonly sourceIds: readonly string[]
+}
+
+/** 职业等级特性（2014 基础职业）。升级增强项每个等级各登记一条；需要玩家选择的特性标记 requiresChoice。 */
+export interface ClassFeature {
+  readonly id: string
+  readonly classId: string
+  readonly name: string
+  readonly englishName: string
+  readonly level: number
+  readonly summary: string
+  readonly kind: SubclassFeatureKind
+  readonly requiresChoice?: boolean
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }

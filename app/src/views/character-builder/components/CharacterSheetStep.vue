@@ -12,6 +12,7 @@ import { rulesRepository } from '@/rules/repository'
 import { addAdventureItem } from '@/rules/starting-equipment'
 import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
+import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { buildTimeline } from '@/rules/timeline'
 import type { AbilityKey, CharacterDraft, DerivedCharacter, InventoryEntry, SpellSelections } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
@@ -188,6 +189,16 @@ function applyCurrency(mode: 'add' | 'set'): void {
   currencyInput.value = ''
   currencyError.value = ''
 }
+const classInfo = computed(() => {
+  const classId = props.draft.classId
+  if (!classId) return undefined
+  const classRule = rulesRepository.getClass(classId)
+  if (!classRule) return undefined
+  // 角色卡只展示当前等级已解锁的特性（更高等级的特性不显示）。
+  const features = getClassFeatures2014(classId)
+    .filter((feature) => feature.level <= props.draft.targetLevel)
+  return { classRule, features }
+})
 const subclassInfo = computed(() => {
   const subclassId = props.draft.subclassId
   if (!subclassId) return undefined
@@ -256,6 +267,27 @@ const needsReview = computed(() => {
             :note="value.sources.map((source) => source.detail).join(' · ')"
           />
         </div>
+      </section>
+      <section v-if="classInfo">
+        <section v-if="classInfo.features.length" class="character-sheet__subclass-features">
+          <header class="character-sheet__subclass-features-header">
+            <h3>职业特性 · {{ classInfo.classRule.name }}</h3>
+            <span v-if="classInfo.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
+          </header>
+          <ul class="character-sheet__feature-list">
+            <li v-for="feature in classInfo.features" :key="feature.id" class="character-sheet__feature">
+              <span class="character-sheet__feature-level">{{ feature.level }}级</span>
+              <div>
+                <strong>
+                  {{ feature.name }} <small>{{ feature.englishName }}</small>
+                  <em v-if="feature.requiresChoice" class="character-sheet__feature-choice">需选择</em>
+                </strong>
+                <p>{{ feature.summary }}</p>
+              </div>
+            </li>
+          </ul>
+        </section>
+        <p v-else class="character-sheet__empty-features">该职业在当前等级暂无已登记特性。</p>
       </section>
       <template v-if="subclassInfo">
         <section v-if="subclassInfo.features.length" class="character-sheet__subclass-features">

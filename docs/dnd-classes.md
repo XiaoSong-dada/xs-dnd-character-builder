@@ -20,6 +20,7 @@
 - 对非开放商业内容只记录必要的索引、来源和项目内兼容说明，不复制完整规则正文。
 - 现有 2024 文件作为未来独立规则集资料保留，不进入当前注册表。扩展子职目录仅表示“已建立资料入口”，不表示车卡程序已经实现。
 - 当前实现说明见 [2014 战士](classes/subclasses/fighter/fighter-2014.md)、[2014 战斗大师](classes/subclasses/fighter/fighter-battle-master-2014.md)、[2014 野蛮人](classes/subclasses/barbarian/barbarian-2014.md)、[2014 武僧](classes/subclasses/monk/monk-2014.md)、[2014 游荡者](classes/subclasses/rogue/rogue-2014.md)、[2014 圣武士](classes/subclasses/paladin/paladin-2014.md)、[2014 游侠](classes/subclasses/ranger/ranger-2014.md)、[2014 法师](classes/subclasses/wizard/wizard-2014.md)与[2014 邪术师](classes/subclasses/warlock/warlock-2014.md)。
+- 职业基础等级特性：12 个 2014 基础职业已全量登记于 `app/src/rules/data/class-features-2014.ts`（升级增强项每个等级各登记一条；需玩家选择的特性标记 `requiresChoice`，角色卡展示“需选择”并沿用既有检查点入口），经 `repository` 挂载到 `ClassRule.features`，角色卡“能力”页签与时间线首个职业检查点展示。
 - 子职覆盖：112 个玩家可用子职已按纵向切片接入车卡（等级特性注册表 `app/src/rules/data/subclass-features-2014.ts`、子职选择与互斥校验、子职派生钩子）；死亡领域与破誓者仍为 DM 专用索引。未核验的具体效果保持 `index-only`，不参与自动计算。
 
 ## 3. 数据字段约定

@@ -83,6 +83,49 @@ describe('CharacterSheetStep', () => {
     expect(text.indexOf('技能')).toBeLessThan(text.indexOf('子职特性'))
   })
 
+  it('shows class features in the features tab filtered by current level', async () => {
+    const fighterDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-fighter',
+      targetLevel: 4,
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: fighterDraft, derived: deriveCharacter(fighterDraft) },
+    })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    // 职业特性区块：当前等级（4）已解锁的特性展示，5 级及以后不展示
+    expect(wrapper.text()).toContain('职业特性 · 战士')
+    expect(wrapper.text()).toContain('回气')
+    expect(wrapper.text()).toContain('动作如潮')
+    expect(wrapper.text()).toContain('战斗风格')
+    expect(wrapper.text()).toContain('需选择')
+    expect(wrapper.text()).not.toContain('额外攻击')
+
+    // 职业特性区块位于技能之后、子职特性之前
+    const text = wrapper.text()
+    expect(text.indexOf('技能')).toBeLessThan(text.indexOf('职业特性'))
+    expect(text.indexOf('职业特性')).toBeLessThan(text.indexOf('尚未选择子职'))
+  })
+
+  it('shows an empty hint when the class has no registered features at the current level', async () => {
+    const wizardDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-wizard',
+      targetLevel: 1,
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: wizardDraft, derived: deriveCharacter(wizardDraft) },
+    })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('职业特性 · 法师')
+    expect(wrapper.text()).toContain('法术书')
+    expect(wrapper.text()).toContain('奥术回想')
+  })
+
   it('shows an empty hint in the features tab when no subclass is selected', async () => {
     const wrapper = mount(CharacterSheetStep, {
       props: { draft, derived: deriveCharacter(draft) },

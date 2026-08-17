@@ -8,6 +8,7 @@ import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePane
 import { rulesRepository } from '@/rules/repository'
 import { buildTimeline } from '@/rules/timeline'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
+import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
 import type { SubclassFeature } from '@/types/rules'
 
@@ -37,6 +38,9 @@ const selectedSubclassId = computed(() => {
   return subclassCheckpoint ? selectedIds(subclassCheckpoint.id)[0] : undefined
 })
 const subclassFeatures = computed(() => selectedSubclassId.value ? getSubclassFeatures2014(selectedSubclassId.value) : [])
+/** 职业基础特性（只读展示）：只列自动获得项，需玩家选择的特性已在对应检查点提供选择入口。 */
+const classFeatures = computed(() => getClassFeatures2014(props.classId).filter((feature) => !feature.requiresChoice))
+const firstClassCheckpointId = computed(() => checkpoints.value.find((checkpoint) => checkpoint.kind !== 'subclass-feature')?.id)
 const featureByCheckpointId = computed(() => {
   const map = new Map<string, SubclassFeature>()
   for (const checkpoint of checkpoints.value) {
@@ -169,6 +173,17 @@ function saveSpecialSelection(checkpointId: string, optionId?: string): void {
         <div v-if="checkpoint.kind === 'subclass' && subclassFeatures.length" class="timeline-step__subclass-features">
           <h4>子职特性 · {{ rulesRepository.getSubclass(selectedSubclassId ?? '')?.name ?? '' }}</h4>
           <div v-for="feature in subclassFeatures" :key="feature.id" class="timeline-step__feature">
+            <span class="timeline-step__feature-level">{{ feature.level }}级</span>
+            <div>
+              <strong>{{ feature.name }} <small>{{ feature.englishName }}</small></strong>
+              <p>{{ feature.summary }}</p>
+              <small v-if="feature.status === 'index-only'" class="timeline-step__feature-note">仅索引 · 具体效果未核验，不参与自动计算</small>
+            </div>
+          </div>
+        </div>
+        <div v-if="checkpoint.id === firstClassCheckpointId && classFeatures.length" class="timeline-step__subclass-features">
+          <h4>职业特性 · {{ rulesRepository.getClass(classId)?.name ?? '' }}</h4>
+          <div v-for="feature in classFeatures" :key="feature.id" class="timeline-step__feature">
             <span class="timeline-step__feature-level">{{ feature.level }}级</span>
             <div>
               <strong>{{ feature.name }} <small>{{ feature.englishName }}</small></strong>

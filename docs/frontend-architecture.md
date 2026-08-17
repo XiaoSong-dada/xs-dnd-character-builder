@@ -304,7 +304,7 @@ src/config/setting.ts （空占位文件，无消费者）
 ### 8.7 rules 层
 
 ```text
-src/rules/repository.ts          -> src/rules/data/{classes-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
+src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
 src/rules/derive.ts              -> src/rules/{repository,feats,subclass-effects}
 src/rules/validate.ts            -> src/rules/{repository,derive,feats,abilities,timeline,spellcasting,starting-equipment} + src/rules/data/subclass-features-2014
 src/rules/dependency.ts          -> src/rules/{derive,repository,timeline} + src/rules/data/subclass-features-2014
@@ -370,7 +370,7 @@ views/character-builder/index.vue
   -> features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
   -> stores/character-drafts.ts
       -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}
-          -> rules/data/{subclasses-2014,subclass-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,starting-equipment-2014,feats-2014,spells-2014,preferences-2014}
+          -> rules/data/{subclasses-2014,subclass-features-2014,class-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,starting-equipment-2014,feats-2014,spells-2014,preferences-2014}
       -> services/{draft-storage,character-json}
           -> rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点，见 8.9
   -> components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
@@ -379,7 +379,7 @@ views/character-builder/index.vue
 规则层仍保持框架无关，不读取 DOM、路由或存储。Store 只保存原始选择；文件和
 localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层依赖见 8.9 越权点说明）；路由查询同步和步骤编排只存在于页面 hook。
 
-`rules/data/subclasses-2014.ts` 是当前 2014 子职元数据和普通玩家可选 ID 的唯一聚合入口；`rules/data/subclass-features-2014.ts` 登记各子职等级特性（纵向切片，未核验效果保持 `index-only`），`rules/subclass-effects.ts` 提供子职派生效果钩子（按可核验条目返回效果，首批含龙族血脉的 AC 基础公式与每级生命加成）。`repository` 负责登记完整目录，`timeline` 接收 `subclassId` 上下文，按所选子职追加 `kind: 'subclass-feature'` 的特性选择检查点（`requiresChoice` 特性），并只装配玩家可用检查点；DM 专用条目可被仓库查询，但不进入普通时间线。页面层 `TimelineStep` 选中子职后展示其特性列表并提供特性选择检查点交互，`CharacterSheetStep` 能力页签展示子职特性区块；两者都只从 `SubclassRule.features` 读取数据，不硬编码规则。各职业旧数据文件中已有的子职常量暂保留供局部实现引用，不再作为仓库目录来源。
+`rules/data/class-features-2014.ts` 登记 12 个 2014 基础职业的全部等级特性（升级增强项每个等级各登记一条，`requiresChoice` 标记需玩家选择的特性），`repository` 的 classes 装配处经 `getClassFeatures2014` 挂载到 `ClassRule.features`，角色卡“能力”页签展示职业特性区块、时间线首个职业检查点展示自动获得特性（只读）。`rules/data/subclass-features-2014.ts` 登记各子职等级特性（纵向切片，未核验效果保持 `index-only`），`rules/subclass-effects.ts` 提供子职派生效果钩子（按可核验条目返回效果，首批含龙族血脉的 AC 基础公式与每级生命加成）。`repository` 负责登记完整目录，`timeline` 接收 `subclassId` 上下文，按所选子职追加 `kind: 'subclass-feature'` 的特性选择检查点（`requiresChoice` 特性），并只装配玩家可用检查点；DM 专用条目可被仓库查询，但不进入普通时间线。页面层 `TimelineStep` 选中子职后展示其特性列表并提供特性选择检查点交互，`CharacterSheetStep` 能力页签展示子职特性区块；两者都只从注册表读取数据，不硬编码规则。各职业旧数据文件中已有的子职常量暂保留供局部实现引用，不再作为仓库目录来源。
 
 `rules/data/spells-2014.ts` 是 2014 全量法术元数据（稳定 ID、中英文名、环级、8 主施法职业归属、来源索引与**原创中文效果摘要** `description`）的唯一聚合入口，收录 PHB/XGtE/EGtW（非 dunamancy）/TCoE/FTD/SCC 法术；`repository.spells` 直接引用该表。三个旧施法者文件（`half-casters-2014`、`arcane-casters-2014`、`full-casters-2014`）不再持有法术 seed，仅保留职业等级表与子职配置，其 `classSpellIds` 均从 `spells-2014` 按职业过滤派生；跨职业共享法术只登记一次并合并归属，历史 `spell-2014-<slug>` ID 规则保持不变以保证草稿兼容。
 
