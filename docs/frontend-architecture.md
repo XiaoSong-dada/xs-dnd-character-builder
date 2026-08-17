@@ -323,6 +323,7 @@ src/rules/subclass-effects.ts    （无依赖，纯函数）
 feats-2014             <- {martials-2014, fighter, arcane-casters-2014, half-casters-2014, full-casters-2014}（属性提升/专长选项）
 subclass-features-2014 <- {martials-2014, fighter, arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（子职特性）
 spells-2014            <- {arcane-casters-2014, half-casters-2014, full-casters-2014}（职业法术归属）
+spell-slots-2014       <- {arcane-casters-2014, half-casters-2014, full-casters-2014}（法术位表与最高施法环级常量；无依赖，最底层）
 ```
 
 ### 8.8 types / styles

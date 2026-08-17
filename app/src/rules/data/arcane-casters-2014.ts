@@ -1,12 +1,11 @@
 import type { ClassRule, RuleOption, SubclassRule } from '@/types/rules'
 import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
+import { FULL_CASTER_SPELL_SLOTS, PACT_SPELL_SLOTS, fullCasterMaximumSpellLevels, pactMaximumSpellLevels } from '@/rules/data/spell-slots-2014'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
-const fullCasterMaximumSpellLevels = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9, 9] as const
-const pactMaximumSpellLevels = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5] as const
 const wizardCantrips = [3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5] as const
 const wizardSpellbookCounts = Array.from({ length: 20 }, (_, index) => 6 + index * 2)
 const warlockCantrips = [2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4] as const
@@ -38,7 +37,7 @@ export const arcaneCasterClasses2014: readonly ClassRule[] = [
       { id: 'wizard-2014-subclass-2', level: 2, step: 'timeline', kind: 'subclass', title: '选择奥术传统', description: '奥术传统在2级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: wizardSubclassIds },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'wizard')),
     ],
-    spellcasting: { ruleset: '5e-2014', mode: 'spellbook', ability: 'int', startsAtLevel: 1, preparedFormula: 'ability-plus-level', cantripsKnownByLevel: wizardCantrips, spellbookSpellsByLevel: wizardSpellbookCounts, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, classSpellIds: spellIds('class-2014-wizard') },
+    spellcasting: { ruleset: '5e-2014', mode: 'spellbook', ability: 'int', startsAtLevel: 1, preparedFormula: 'ability-plus-level', cantripsKnownByLevel: wizardCantrips, spellbookSpellsByLevel: wizardSpellbookCounts, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-wizard') },
   },
   {
     id: 'class-2014-warlock', ruleset: '5e-2014', name: '邪术师', englishName: 'Warlock', summary: '2014版契约施法者，以短休恢复的契约法术位施法。', hitDie: 8, primaryAbilities: ['cha'], playStyleTags: ['spellcaster', 'striker', 'control', 'utility'], savingThrowAbilities: ['wis', 'cha'], status: 'implemented', sourceIds: basicSource,
@@ -49,7 +48,7 @@ export const arcaneCasterClasses2014: readonly ClassRule[] = [
       { id: 'warlock-2014-pact-3', level: 3, step: 'timeline', kind: 'class-choice', title: '选择契约恩赐', description: '锁链、刀锋或魔典契约。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['pact-chain', 'pact-blade', 'pact-tome'] },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'warlock')),
     ],
-    spellcasting: { ruleset: '5e-2014', mode: 'pact', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: warlockCantrips, spellsKnownByLevel: warlockSpellsKnown, maxSpellLevelByClassLevel: pactMaximumSpellLevels, classSpellIds: spellIds('class-2014-warlock') },
+    spellcasting: { ruleset: '5e-2014', mode: 'pact', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: warlockCantrips, spellsKnownByLevel: warlockSpellsKnown, maxSpellLevelByClassLevel: pactMaximumSpellLevels, pactSlotsByClassLevel: PACT_SPELL_SLOTS, classSpellIds: spellIds('class-2014-warlock') },
   },
 ]
 

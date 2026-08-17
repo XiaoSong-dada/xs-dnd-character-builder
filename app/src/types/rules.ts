@@ -70,6 +70,10 @@ export interface SpellcastingConfig {
   readonly preparedFormula?: 'ability-plus-half-level' | 'ability-plus-level'
   readonly cantripsKnownByLevel?: readonly number[]
   readonly maxSpellLevelByClassLevel: readonly number[]
+  /** 标准法术位表（1—20 级各一项，每项元素下标 = 环级 − 1，值为该环法术位数量）；非 pact 模式使用。 */
+  readonly slotsByClassLevel?: readonly (readonly number[])[]
+  /** 契约法术位表（1—20 级各一项，每项 [法术位数量, 契约环级]）；仅 mode: 'pact' 使用。 */
+  readonly pactSlotsByClassLevel?: readonly (readonly [number, number])[]
   readonly classSpellIds: readonly string[]
   readonly spellbookSpellsByLevel?: readonly number[]
 }

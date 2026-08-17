@@ -11,6 +11,7 @@ import {
   getRequiredSpellbookCount,
   getRequiredSpellCount,
   getSelectedSpellIds,
+  getSpellSlots,
 } from '@/rules/spellcasting'
 import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
@@ -25,6 +26,15 @@ const requiredSpellbookCount = computed(() => config.value ? getRequiredSpellboo
 const selectedIds = computed(() => config.value ? getSelectedSpellIds(props.draft, config.value) : [])
 const cantrips = computed(() => config.value ? getAvailableSpells(props.draft, config.value).filter((spell) => spell.level === 0) : [])
 const maximumLevel = computed(() => config.value ? getMaximumSpellLevel(config.value, props.draft.targetLevel) : 0)
+const spellSlots = computed(() => config.value ? getSpellSlots(config.value, props.draft.targetLevel) : [])
+const spellSlotsLabel = computed(() => {
+  if (!spellSlots.value.length) return ''
+  if (spellSlots.value[0]?.pact) {
+    const slot = spellSlots.value[0]
+    return `${slot.count} 个 ${slot.level} 环契约法术位（短休恢复）`
+  }
+  return spellSlots.value.map((slot) => `${slot.level}环×${slot.count}`).join(' · ')
+})
 const invalidSelectedCount = computed(() => {
   if (!config.value) return 0
   const availableIds = new Set(getAvailableSpells(props.draft, config.value).filter((spell) => spell.level > 0).map((spell) => spell.id))
@@ -93,6 +103,7 @@ function toggleSpellbook(id: string): void {
       <header>
         <div>
           <span>{{ config.ability.toUpperCase() }}施法 · 最高{{ maximumLevel }}环</span>
+          <p v-if="spellSlots.length" class="spellcasting-step__slots">{{ spellSlotsLabel }}</p>
           <h3>{{ modeLabel }}法术</h3>
         </div>
         <strong :class="{ 'spellcasting-step__count--complete': selectedIds.length === requiredCount }">
@@ -193,8 +204,7 @@ function toggleSpellbook(id: string): void {
     background: var(--color-surface);
 
     span { color: var(--color-text-muted); font-size: 0.72rem; font-weight: 700; }
-    h3 { margin: 0.2rem 0 0; }
-    > strong {
+    h3 { margin: 0.2rem 0 0; }    > strong {
       min-width: 4.5rem;
       padding: 0.5rem 0.7rem;
       border-radius: var(--radius-md);
@@ -202,6 +212,13 @@ function toggleSpellbook(id: string): void {
       background: var(--color-primary-soft);
       text-align: center;
     }
+  }
+
+  &__slots {
+    display: block;
+    margin: 0.15rem 0 0;
+    color: var(--color-primary);
+    font-weight: 600;
   }
 
   &__count--complete {

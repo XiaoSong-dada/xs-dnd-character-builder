@@ -11,6 +11,28 @@ export function getMaximumSpellLevel(config: SpellcastingConfig, classLevel: num
   return config.maxSpellLevelByClassLevel[Math.max(0, classLevel - 1)] ?? 0
 }
 
+/** 单个环位的法术位信息；pact 模式下 count 为契约法术位数量、level 为契约环级。 */
+export interface SpellSlotInfo {
+  readonly level: number
+  readonly count: number
+  /** 是否为契约法术位（短休恢复）；仅邪术师（pact 模式）为 true。 */
+  readonly pact?: boolean
+}
+
+/** 当前职业等级的法术位明细（派生展示数据，不持久化）；越界等级或未挂表时返回空数组。 */
+export function getSpellSlots(config: SpellcastingConfig, classLevel: number): readonly SpellSlotInfo[] {
+  if (classLevel < 1 || classLevel > 20) return []
+  if (config.mode === 'pact') {
+    const pact = config.pactSlotsByClassLevel?.[classLevel - 1]
+    return pact ? [{ level: pact[1], count: pact[0], pact: true }] : []
+  }
+  const slots = config.slotsByClassLevel?.[classLevel - 1]
+  if (!slots) return []
+  return slots
+    .map((count, index) => ({ level: index + 1, count }))
+    .filter((slot) => slot.count > 0)
+}
+
 export function getRequiredSpellCount(draft: CharacterDraft, config: SpellcastingConfig): number {
   if (draft.targetLevel < config.startsAtLevel) return 0
   if (config.mode === 'known' || config.mode === 'pact') return config.spellsKnownByLevel?.[draft.targetLevel - 1] ?? 0

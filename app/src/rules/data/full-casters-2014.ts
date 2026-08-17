@@ -1,11 +1,11 @@
 import type { ClassRule, RuleOption, SubclassRule } from '@/types/rules'
 import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
+import { FULL_CASTER_SPELL_SLOTS, fullCasterMaximumSpellLevels } from '@/rules/data/spell-slots-2014'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
-const fullCasterMaximumSpellLevels = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9, 9] as const
 
 const bardCantrips = [2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4] as const
 const bardSpellsKnown = [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 22] as const
@@ -55,7 +55,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
       { id: 'bard-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择吟游学院', description: '学院在3级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: bardSubclassIds },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'bard')),
     ],
-    spellcasting: { ruleset: '5e-2014', mode: 'known', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: bardCantrips, spellsKnownByLevel: bardSpellsKnown, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, classSpellIds: spellIds('class-2014-bard') },
+    spellcasting: { ruleset: '5e-2014', mode: 'known', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: bardCantrips, spellsKnownByLevel: bardSpellsKnown, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-bard') },
   },
   {
     id: 'class-2014-cleric', ruleset: '5e-2014', name: '牧师', englishName: 'Cleric', summary: '2014版神术施法者：领域、引导神力与准备法术。', hitDie: 8, primaryAbilities: ['wis'], playStyleTags: ['spellcaster', 'support', 'durable'], savingThrowAbilities: ['wis', 'cha'], status: 'implemented', sourceIds: basicSource,
@@ -64,7 +64,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
       { id: 'cleric-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择神圣领域', description: '领域在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: clericSubclassIds },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'cleric')),
     ],
-    spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'wis', startsAtLevel: 1, preparedFormula: 'ability-plus-level', maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, classSpellIds: spellIds('class-2014-cleric') },
+    spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'wis', startsAtLevel: 1, preparedFormula: 'ability-plus-level', maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-cleric') },
   },
   {
     id: 'class-2014-druid', ruleset: '5e-2014', name: '德鲁伊', englishName: 'Druid', summary: '2014版自然施法者：荒野变形与准备法术。', hitDie: 8, primaryAbilities: ['wis'], playStyleTags: ['spellcaster', 'control', 'support', 'durable'], savingThrowAbilities: ['int', 'wis'], status: 'implemented', sourceIds: basicSource,
@@ -73,7 +73,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
       { id: 'druid-2014-subclass-2', level: 2, step: 'timeline', kind: 'subclass', title: '选择德鲁伊结社', description: '结社在2级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: druidSubclassIds },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'druid')),
     ],
-    spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'wis', startsAtLevel: 1, preparedFormula: 'ability-plus-level', maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, classSpellIds: spellIds('class-2014-druid') },
+    spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'wis', startsAtLevel: 1, preparedFormula: 'ability-plus-level', maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-druid') },
   },
   {
     id: 'class-2014-sorcerer', ruleset: '5e-2014', name: '术士', englishName: 'Sorcerer', summary: '2014版天生施法者：术法点、超魔法与已知法术。', hitDie: 6, primaryAbilities: ['cha'], playStyleTags: ['spellcaster', 'striker', 'control'], savingThrowAbilities: ['con', 'cha'], status: 'implemented', sourceIds: basicSource,
@@ -82,7 +82,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
       { id: 'sorcerer-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择术法起源', description: '起源在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: sorcererSubclassIds },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'sorcerer')),
     ],
-    spellcasting: { ruleset: '5e-2014', mode: 'known', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: sorcererCantrips, spellsKnownByLevel: sorcererSpellsKnown, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, classSpellIds: spellIds('class-2014-sorcerer') },
+    spellcasting: { ruleset: '5e-2014', mode: 'known', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: sorcererCantrips, spellsKnownByLevel: sorcererSpellsKnown, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-sorcerer') },
   },
 ]
 

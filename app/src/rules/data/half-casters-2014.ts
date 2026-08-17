@@ -1,11 +1,11 @@
 import type { ClassRule, RuleOption, SubclassRule } from '@/types/rules'
 import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
+import { HALF_CASTER_SPELL_SLOTS, halfCasterMaximumSpellLevels } from '@/rules/data/spell-slots-2014'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
-const halfCasterMaximumSpellLevels = [0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5] as const
 const rangerSpellsKnown = [0, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11] as const
 
 const paladinSpellIds = spells2014.filter((spell) => spell.classIds.includes('class-2014-paladin')).map((spell) => spell.id)
@@ -45,7 +45,7 @@ export const halfCasterClasses2014: readonly ClassRule[] = [
       { id: 'paladin-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择神圣誓言', description: '誓言在3级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: paladinSubclassIds },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'paladin')),
     ],
-    spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'cha', startsAtLevel: 2, preparedFormula: 'ability-plus-half-level', maxSpellLevelByClassLevel: halfCasterMaximumSpellLevels, classSpellIds: paladinSpellIds },
+    spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'cha', startsAtLevel: 2, preparedFormula: 'ability-plus-half-level', maxSpellLevelByClassLevel: halfCasterMaximumSpellLevels, slotsByClassLevel: HALF_CASTER_SPELL_SLOTS, classSpellIds: paladinSpellIds },
   },
   {
     id: 'class-2014-ranger',
@@ -71,7 +71,7 @@ export const halfCasterClasses2014: readonly ClassRule[] = [
       { id: 'ranger-2014-enemy-14', level: 14, step: 'timeline', kind: 'class-choice', title: '新增宿敌', description: '选择第三种宿敌。', required: true, minSelections: 1, maxSelections: 1, optionIds: favoredEnemyIds },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'ranger')),
     ],
-    spellcasting: { ruleset: '5e-2014', mode: 'known', ability: 'wis', startsAtLevel: 2, spellsKnownByLevel: rangerSpellsKnown, maxSpellLevelByClassLevel: halfCasterMaximumSpellLevels, classSpellIds: rangerSpellIds },
+    spellcasting: { ruleset: '5e-2014', mode: 'known', ability: 'wis', startsAtLevel: 2, spellsKnownByLevel: rangerSpellsKnown, maxSpellLevelByClassLevel: halfCasterMaximumSpellLevels, slotsByClassLevel: HALF_CASTER_SPELL_SLOTS, classSpellIds: rangerSpellIds },
   },
 ]
 

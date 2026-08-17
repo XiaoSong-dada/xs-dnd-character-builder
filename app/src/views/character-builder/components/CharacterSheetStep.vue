@@ -10,7 +10,7 @@ import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { rulesRepository } from '@/rules/repository'
 import { addAdventureItem } from '@/rules/starting-equipment'
-import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates } from '@/rules/spellcasting'
+import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { buildTimeline } from '@/rules/timeline'
 import type { AbilityKey, CharacterDraft, DerivedCharacter, InventoryEntry, SpellSelections } from '@/types/character'
@@ -52,6 +52,15 @@ const identityLine = computed(() => {
   return `${draft.targetLevel}级 · ${names.join(' · ')}`
 })
 const spellcastingConfig = computed(() => (props.draft.classId ? rulesRepository.getClass(props.draft.classId)?.spellcasting : undefined))
+const spellSlots = computed(() => spellcastingConfig.value ? getSpellSlots(spellcastingConfig.value, props.draft.targetLevel) : [])
+const spellSlotsLabel = computed(() => {
+  if (!spellSlots.value.length) return ''
+  if (spellSlots.value[0]?.pact) {
+    const slot = spellSlots.value[0]
+    return `契约法术位：${slot.count} 个 ${slot.level} 环（短休恢复）`
+  }
+  return spellSlots.value.map((slot) => `${slot.level}环×${slot.count}`).join(' · ')
+})
 const cantripSpells = computed(() => props.draft.spellSelections.cantripIds
   .map((id) => rulesRepository.getSpell(id))
   .filter((spell): spell is SpellRule => Boolean(spell)))
@@ -276,6 +285,7 @@ const needsReview = computed(() => {
         <StatTile label="法术攻击" :value="derived.spellAttackBonus ? `+${derived.spellAttackBonus.value}` : '—'" :note="derived.spellAttackBonus?.sources.map((item) => item.label).join(' + ') ?? '当前职业无施法能力'" />
         <StatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? '—'" :note="derived.spellSaveDc?.sources.map((item) => item.label).join(' + ') ?? '当前职业无施法能力'" />
       </div>
+      <p v-if="spellSlots.length" class="character-sheet__spell-slots">法术位：{{ spellSlotsLabel }}</p>
       <template v-if="hasSpellContent">
         <section v-if="cantripSpells.length" class="character-sheet__spell-section">
           <h4>戏法 · {{ draft.spellSelections.cantripIds.length }} / {{ requiredCantripCount }}</h4>
@@ -495,8 +505,12 @@ const needsReview = computed(() => {
   &__spells {
     display: grid;
     gap: 0.75rem;
+  }
 
-    > p { color: var(--color-text-muted); }
+  &__spell-slots {
+    margin: 0;
+    color: var(--color-primary);
+    font-weight: 600;
   }
 
   &__spell-section {

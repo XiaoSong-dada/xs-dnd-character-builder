@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
+import {
+  FULL_CASTER_SPELL_SLOTS,
+  HALF_CASTER_SPELL_SLOTS,
+  PACT_SPELL_SLOTS,
+} from '@/rules/data/spell-slots-2014'
 import { rulesRepository } from '@/rules/repository'
-import { getMaximumSpellLevel, getRequiredSpellCount, validateSpellSelections } from '@/rules/spellcasting'
+import { getMaximumSpellLevel, getRequiredSpellCount, getSpellSlots, validateSpellSelections } from '@/rules/spellcasting'
 import { validateDraft } from '@/rules/validate'
 import type { CharacterDraft } from '@/types/character'
 
@@ -88,5 +93,87 @@ describe('2014 half-caster spellcasting', () => {
       'spell-dc-proficiency',
       'spell-dc-ability',
     ])
+  })
+})
+
+describe('2014 spell slots', () => {
+  const fullCasterIds = ['class-2014-bard', 'class-2014-cleric', 'class-2014-druid', 'class-2014-sorcerer', 'class-2014-wizard']
+  const halfCasterIds = ['class-2014-paladin', 'class-2014-ranger']
+
+  it('follows the full-caster slot table for all five full casters at every level', () => {
+    for (const classId of fullCasterIds) {
+      const config = rulesRepository.getClass(classId)?.spellcasting
+      expect(config, classId).toBeDefined()
+      for (let level = 1; level <= 20; level += 1) {
+        const expected = FULL_CASTER_SPELL_SLOTS[level - 1].map((count, index) => ({ level: index + 1, count }))
+        expect(config && getSpellSlots(config, level), `${classId} L${level}`).toEqual(expected)
+      }
+    }
+  })
+
+  it('exposes key full-caster levels (wizard 1/5/9/20)', () => {
+    const config = rulesRepository.getClass('class-2014-wizard')?.spellcasting
+    expect(config && getSpellSlots(config, 1)).toEqual([{ level: 1, count: 2 }])
+    expect(config && getSpellSlots(config, 5)).toEqual([
+      { level: 1, count: 4 }, { level: 2, count: 3 }, { level: 3, count: 2 },
+    ])
+    expect(config && getSpellSlots(config, 9)).toEqual([
+      { level: 1, count: 4 }, { level: 2, count: 3 }, { level: 3, count: 3 }, { level: 4, count: 3 }, { level: 5, count: 1 },
+    ])
+    expect(config && getSpellSlots(config, 20)).toEqual([
+      { level: 1, count: 4 }, { level: 2, count: 3 }, { level: 3, count: 3 }, { level: 4, count: 3 },
+      { level: 5, count: 3 }, { level: 6, count: 2 }, { level: 7, count: 2 }, { level: 8, count: 1 }, { level: 9, count: 1 },
+    ])
+  })
+
+  it('starts half casters with no slots and follows the half-caster table', () => {
+    for (const classId of halfCasterIds) {
+      const config = rulesRepository.getClass(classId)?.spellcasting
+      expect(config && getSpellSlots(config, 1)).toEqual([])
+      expect(config && getSpellSlots(config, 2)).toEqual([{ level: 1, count: 2 }])
+      expect(config && getSpellSlots(config, 5)).toEqual([{ level: 1, count: 4 }, { level: 2, count: 2 }])
+      expect(config && getSpellSlots(config, 20)).toEqual([
+        { level: 1, count: 4 }, { level: 2, count: 3 }, { level: 3, count: 3 }, { level: 4, count: 3 }, { level: 5, count: 2 },
+      ])
+      for (let level = 1; level <= 20; level += 1) {
+        const expected = HALF_CASTER_SPELL_SLOTS[level - 1].map((count, index) => ({ level: index + 1, count }))
+        expect(config && getSpellSlots(config, level), `${classId} L${level}`).toEqual(expected)
+      }
+    }
+  })
+
+  it('returns pact slots with count, level and pact flag (warlock 1/5/11/17/20)', () => {
+    const config = rulesRepository.getClass('class-2014-warlock')?.spellcasting
+    expect(config && getSpellSlots(config, 1)).toEqual([{ level: 1, count: 1, pact: true }])
+    expect(config && getSpellSlots(config, 5)).toEqual([{ level: 3, count: 2, pact: true }])
+    expect(config && getSpellSlots(config, 11)).toEqual([{ level: 5, count: 3, pact: true }])
+    expect(config && getSpellSlots(config, 17)).toEqual([{ level: 5, count: 4, pact: true }])
+    expect(config && getSpellSlots(config, 20)).toEqual([{ level: 5, count: 4, pact: true }])
+    for (let level = 1; level <= 20; level += 1) {
+      const [count, slotLevel] = PACT_SPELL_SLOTS[level - 1]
+      expect(config && getSpellSlots(config, level), `warlock L${level}`).toEqual([{ level: slotLevel, count, pact: true }])
+    }
+  })
+
+  it('returns empty slots for out-of-range levels and no config for non-casters', () => {
+    const wizard = rulesRepository.getClass('class-2014-wizard')?.spellcasting
+    expect(wizard && getSpellSlots(wizard, 0)).toEqual([])
+    expect(wizard && getSpellSlots(wizard, 21)).toEqual([])
+    expect(rulesRepository.getClass('class-2014-fighter')?.spellcasting).toBeUndefined()
+  })
+
+  it('keeps slot tables consistent with maxSpellLevelByClassLevel', () => {
+    for (const classId of ['class-2014-wizard', 'class-2014-paladin', 'class-2014-warlock']) {
+      const config = rulesRepository.getClass(classId)?.spellcasting
+      for (let level = 1; level <= 20; level += 1) {
+        const slots = config && getSpellSlots(config, level)
+        const maxLevel = config && getMaximumSpellLevel(config, level)
+        if (slots && slots.length) {
+          expect(Math.max(...slots.map((slot) => slot.level)), `${classId} L${level}`).toBe(maxLevel)
+        } else {
+          expect(maxLevel, `${classId} L${level}`).toBe(0)
+        }
+      }
+    }
   })
 })
