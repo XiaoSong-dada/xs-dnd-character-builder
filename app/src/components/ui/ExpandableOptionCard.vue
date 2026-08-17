@@ -11,6 +11,8 @@ const props = withDefaults(
     disabledReason?: string
     /** 单击选择时同时展开介绍区（用于弹窗类紧凑列表的下拉式介绍）。 */
     expandOnSelect?: boolean
+    /** 是否显示左侧单选标记（radio 样式：圆形，选中时显示实心圆点）；默认关闭（不显示选择框）。 */
+    radio?: boolean
   }>(),
   {
     description: '',
@@ -18,6 +20,7 @@ const props = withDefaults(
     state: 'default',
     disabledReason: '',
     expandOnSelect: false,
+    radio: false,
   },
 )
 
@@ -74,9 +77,7 @@ onBeforeUnmount(() => {
         :aria-pressed="state === 'selected'"
         @click="handleMainClick"
       >
-        <span class="expandable-option-card__mark" aria-hidden="true">
-          {{ state === 'selected' || state === 'complete' ? '✓' : '' }}
-        </span>
+        <span v-if="radio" class="expandable-option-card__mark" aria-hidden="true" />
         <span class="expandable-option-card__content">
           <span class="expandable-option-card__title-line">
             <strong>{{ title }}</strong>
@@ -144,6 +145,16 @@ onBeforeUnmount(() => {
     border-radius: 50%;
     color: var(--color-surface);
     font-size: 0.75rem;
+
+    // 单选标记：选中时显示实心圆点（radio 样式）
+    &::after {
+      content: '';
+      width: 0.6rem;
+      height: 0.6rem;
+      border-radius: 50%;
+      background: transparent;
+      transition: background 0.15s ease;
+    }
   }
 
   &__content {
@@ -249,8 +260,11 @@ onBeforeUnmount(() => {
   }
 
   &--selected &__mark,
-  &--recommended &__mark { border-color: var(--color-primary); background: var(--color-primary); }
-  &--complete &__mark { border-color: var(--color-success); background: var(--color-success); }
+  &--recommended &__mark { border-color: var(--color-primary); }
+  &--selected &__mark::after,
+  &--recommended &__mark::after { background: var(--color-primary); }
+  &--complete &__mark { border-color: var(--color-success); }
+  &--complete &__mark::after { background: var(--color-success); }
   &--incompatible { border-color: var(--color-warning); background: var(--color-warning-soft); }
   &--error { border-color: var(--color-error); background: var(--color-error-soft); }
   &--locked { opacity: 0.6; }

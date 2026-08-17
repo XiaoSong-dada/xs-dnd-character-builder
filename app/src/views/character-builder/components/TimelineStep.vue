@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import ListShell from '@/components/ui/ListShell.vue'
 import OptionCard from '@/components/ui/OptionCard.vue'
+import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
 import { rulesRepository } from '@/rules/repository'
@@ -172,25 +173,33 @@ function saveSpecialSelection(checkpointId: string, optionId?: string): void {
         </ListShell>
         <div v-if="checkpoint.kind === 'subclass' && subclassFeatures.length" class="timeline-step__subclass-features">
           <h4>子职特性 · {{ rulesRepository.getSubclass(selectedSubclassId ?? '')?.name ?? '' }}</h4>
-          <div v-for="feature in subclassFeatures" :key="feature.id" class="timeline-step__feature">
-            <span class="timeline-step__feature-level">{{ feature.level }}级</span>
-            <div>
-              <strong>{{ feature.name }} <small>{{ feature.englishName }}</small></strong>
-              <p>{{ feature.summary }}</p>
-              <small v-if="feature.status === 'index-only'" class="timeline-step__feature-note">仅索引 · 具体效果未核验，不参与自动计算</small>
-            </div>
-          </div>
+          <ExpandableOptionCard
+            v-for="feature in subclassFeatures"
+            :key="feature.id"
+            :title="feature.name"
+            :description="`${feature.level}级 · ${feature.englishName}`"
+            expanded-label="特性详情"
+          >
+            <template #suffix>
+              <UiBadge v-if="feature.status === 'index-only'" tone="warning">仅索引</UiBadge>
+            </template>
+            <template #expanded>{{ feature.description }}</template>
+          </ExpandableOptionCard>
         </div>
         <div v-if="checkpoint.id === firstClassCheckpointId && classFeatures.length" class="timeline-step__subclass-features">
           <h4>职业特性 · {{ rulesRepository.getClass(classId)?.name ?? '' }}</h4>
-          <div v-for="feature in classFeatures" :key="feature.id" class="timeline-step__feature">
-            <span class="timeline-step__feature-level">{{ feature.level }}级</span>
-            <div>
-              <strong>{{ feature.name }} <small>{{ feature.englishName }}</small></strong>
-              <p>{{ feature.summary }}</p>
-              <small v-if="feature.status === 'index-only'" class="timeline-step__feature-note">仅索引 · 具体效果未核验，不参与自动计算</small>
-            </div>
-          </div>
+          <ExpandableOptionCard
+            v-for="feature in classFeatures"
+            :key="feature.id"
+            :title="feature.name"
+            :description="`${feature.level}级 · ${feature.englishName}`"
+            expanded-label="特性详情"
+          >
+            <template #suffix>
+              <UiBadge v-if="feature.status === 'index-only'" tone="warning">仅索引</UiBadge>
+            </template>
+            <template #expanded>{{ feature.description }}</template>
+          </ExpandableOptionCard>
         </div>
       </div>
     </article>

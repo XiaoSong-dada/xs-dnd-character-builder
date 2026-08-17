@@ -65,6 +65,29 @@ describe('FeatChoicePanel', () => {
 
     expect(wrapper.text()).toContain('战地施法者 · War Caster')
     expect(wrapper.text()).toContain('需要能够施放至少一个法术')
-    expect(wrapper.get('.option-card').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('.expandable-option-card').find('.expandable-option-card__main').attributes('disabled')).toBeDefined()
+  })
+
+  it('expands a feat card to show its detailed effect without selecting it', async () => {
+    const wrapper = mountPanel()
+    await wrapper.get('.feat-choice__kind button:last-child').trigger('click')
+    const selectCountBefore = wrapper.emitted('select')?.length ?? 0
+    await wrapper.get('input[type="search"]').setValue('幸运')
+
+    expect(wrapper.text()).toContain('幸运 · Lucky')
+    expect(wrapper.text()).not.toContain('幸运点')
+    await wrapper.get('.expandable-option-card__arrow').trigger('click')
+    expect(wrapper.text()).toContain('幸运点')
+    // 展开不产生新的选择事件
+    expect(wrapper.emitted('select')?.length).toBe(selectCountBefore)
+  })
+
+  it('no longer shows the index-only badge for feats', async () => {
+    const wrapper = mountPanel()
+    await wrapper.get('.feat-choice__kind button:last-child').trigger('click')
+    await wrapper.get('input[type="search"]').setValue('警觉')
+
+    expect(wrapper.text()).toContain('警觉 · Alert')
+    expect(wrapper.text()).not.toContain('仅索引')
   })
 })

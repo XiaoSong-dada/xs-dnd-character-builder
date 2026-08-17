@@ -26,6 +26,20 @@ describe('2014 feats and ability improvements', () => {
     )).toBe(true)
   })
 
+  it('registers detailed effect text and promotes every feat to implemented', () => {
+    expect(feats2014.every((feat) =>
+      feat.detail.length > 0
+      && feat.detail !== feat.description
+      && feat.status === 'implemented',
+    )).toBe(true)
+    const lucky = feats2014.find((feat) => feat.id === 'feat-lucky')
+    expect(lucky?.detail).toContain('幸运点')
+    const sharpshooter = feats2014.find((feat) => feat.id === 'feat-sharpshooter')
+    expect(sharpshooter?.detail).toContain('-5 命中')
+    const gwm = feats2014.find((feat) => feat.id === 'feat-great-weapon-master')
+    expect(gwm?.detail).toContain('+10 伤害')
+  })
+
   it('provides six +2 choices and fifteen distinct +1/+1 choices', () => {
     expect(abilityImprovementOptions2014).toHaveLength(21)
     expect(ABILITY_IMPROVEMENT_OPTION_IDS.filter((id) => id.endsWith('-2'))).toHaveLength(6)

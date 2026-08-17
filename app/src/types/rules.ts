@@ -46,6 +46,8 @@ export interface FeatRule extends RuleOption {
   readonly englishName: string
   readonly tags: readonly string[]
   readonly prerequisite?: FeatPrerequisite
+  /** 原创中文详细效果（展开区展示）：触发时机、资源与恢复、数值/范围、前置条件重申。 */
+  readonly detail: string
 }
 
 export interface ChoiceCheckpoint {
@@ -140,6 +142,8 @@ export interface SubclassFeature {
   readonly englishName: string
   readonly level: number
   readonly summary: string
+  /** 原创中文详细效果（展开区展示）：触发时机、资源消耗与恢复、数值、持续/范围。 */
+  readonly description: string
   readonly kind: SubclassFeatureKind
   readonly requiresChoice?: boolean
   readonly optionIds?: readonly string[]
@@ -157,6 +161,8 @@ export interface ClassFeature {
   readonly englishName: string
   readonly level: number
   readonly summary: string
+  /** 原创中文详细效果（展开区展示）：触发时机、资源消耗与恢复、数值、持续/范围。 */
+  readonly description: string
   readonly kind: SubclassFeatureKind
   readonly requiresChoice?: boolean
   readonly status: CompatibilityStatus

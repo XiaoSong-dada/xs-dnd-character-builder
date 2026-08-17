@@ -48,6 +48,7 @@ describe('2014 subclass features catalog', () => {
       expect(feature.name.length).toBeGreaterThan(0)
       expect(feature.englishName.length).toBeGreaterThan(0)
       expect(feature.summary.length).toBeGreaterThan(0)
+      expect(feature.description.length).toBeGreaterThan(0)
       expect(feature.level).toBeGreaterThan(0)
       expect(['implemented', 'index-only']).toContain(feature.status)
       expect(feature.sourceIds.length).toBeGreaterThan(0)
@@ -101,6 +102,15 @@ describe('2014 subclass features catalog', () => {
     for (const id of spotChecks) {
       expect(getSubclassFeatures2014(id).length).toBeGreaterThan(0)
     }
+  })
+
+  it('registers a detailed description for every subclass feature', () => {
+    const empty = subclassFeatures2014.filter((feature) => !feature.description?.length)
+    expect(empty).toEqual([])
+    const sample = getSubclassFeatures2014('subclass-2014-sorcerer-draconic-bloodline')
+      .find((feature) => feature.id === 'sorcerer-draconic-bloodline-draconic-resilience')
+    expect(sample?.description.length).toBeGreaterThan(sample?.summary.length ?? 0)
+    expect(sample?.description).toContain('13 + 敏捷调整值')
   })
 })
 

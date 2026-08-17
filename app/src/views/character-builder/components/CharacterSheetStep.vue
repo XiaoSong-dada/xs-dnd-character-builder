@@ -8,6 +8,7 @@ import StatTile from '@/components/ui/StatTile.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
+import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { addAdventureItem } from '@/rules/starting-equipment'
 import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
@@ -199,6 +200,38 @@ const classInfo = computed(() => {
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { classRule, features }
 })
+/** 已选择的专长与属性提升（来自草稿 selections，只读展示）。 */
+const featAndAsiEntries = computed(() => {
+  const draft = props.draft
+  if (!draft.classId) return []
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const entries: {
+    id: string
+    level: number
+    label: string
+    detail?: string
+  }[] = []
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt) continue
+    const checkpoint = timeline.find((item) => item.id === selection.checkpointId)
+    for (const optionId of selection.optionIds) {
+      if (optionId.startsWith('feat-')) {
+        const feat = rulesRepository.feats.find((item) => item.id === optionId)
+        if (feat) {
+          entries.push({ id: feat.id, level: checkpoint?.level ?? 1, label: `${feat.name} · ${feat.englishName}`, detail: feat.detail })
+        }
+      } else if (optionId.startsWith('asi-')) {
+        const improvement = decodeAbilityImprovement(optionId)
+        if (!improvement) continue
+        const text = improvement.mode === 'single'
+          ? `属性提升（${ABILITY_LABELS[improvement.abilities[0]]}+2）`
+          : `属性提升（${improvement.abilities.map((ability) => `${ABILITY_LABELS[ability]}+1`).join('、')}）`
+        entries.push({ id: optionId, level: checkpoint?.level ?? 1, label: text })
+      }
+    }
+  }
+  return entries.sort((left, right) => left.level - right.level)
+})
 const subclassInfo = computed(() => {
   const subclassId = props.draft.subclassId
   if (!subclassId) return undefined
@@ -274,18 +307,20 @@ const needsReview = computed(() => {
             <h3>职业特性 · {{ classInfo.classRule.name }}</h3>
             <span v-if="classInfo.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
           </header>
-          <ul class="character-sheet__feature-list">
-            <li v-for="feature in classInfo.features" :key="feature.id" class="character-sheet__feature">
-              <span class="character-sheet__feature-level">{{ feature.level }}级</span>
-              <div>
-                <strong>
-                  {{ feature.name }} <small>{{ feature.englishName }}</small>
-                  <em v-if="feature.requiresChoice" class="character-sheet__feature-choice">需选择</em>
-                </strong>
-                <p>{{ feature.summary }}</p>
-              </div>
-            </li>
-          </ul>
+          <ListShell>
+            <ExpandableOptionCard
+              v-for="feature in classInfo.features"
+              :key="feature.id"
+              :title="feature.name"
+              :description="`${feature.level}级 · ${feature.englishName}`"
+              expanded-label="特性详情"
+            >
+              <template #suffix>
+                <em v-if="feature.requiresChoice" class="character-sheet__feature-choice">需选择</em>
+              </template>
+              <template #expanded>{{ feature.description }}</template>
+            </ExpandableOptionCard>
+          </ListShell>
         </section>
         <p v-else class="character-sheet__empty-features">该职业在当前等级暂无已登记特性。</p>
       </section>
@@ -295,22 +330,41 @@ const needsReview = computed(() => {
             <h3>子职特性 · {{ subclassInfo.subclass.name }}</h3>
             <span v-if="subclassInfo.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
           </header>
-          <ul class="character-sheet__feature-list">
-            <li v-for="feature in subclassInfo.features" :key="feature.id" class="character-sheet__feature">
-              <span class="character-sheet__feature-level">{{ feature.level }}级</span>
-              <div>
-                <strong>
-                  {{ feature.name }} <small>{{ feature.englishName }}</small>
-                  <em v-if="feature.requiresChoice" class="character-sheet__feature-choice">需选择</em>
-                </strong>
-                <p>{{ feature.summary }}</p>
-              </div>
-            </li>
-          </ul>
+          <ListShell>
+            <ExpandableOptionCard
+              v-for="feature in subclassInfo.features"
+              :key="feature.id"
+              :title="feature.name"
+              :description="`${feature.level}级 · ${feature.englishName}`"
+              expanded-label="特性详情"
+            >
+              <template #suffix>
+                <em v-if="feature.requiresChoice" class="character-sheet__feature-choice">需选择</em>
+              </template>
+              <template #expanded>{{ feature.description }}</template>
+            </ExpandableOptionCard>
+          </ListShell>
         </section>
         <p v-else class="character-sheet__empty-features">该子职在当前等级暂无已登记特性。</p>
       </template>
       <p v-else class="character-sheet__empty-features">尚未选择子职，完成时间线步骤后这里会展示子职特性。</p>
+      <section v-if="featAndAsiEntries.length" class="character-sheet__subclass-features">
+        <header class="character-sheet__subclass-features-header">
+          <h3>专长与属性提升</h3>
+        </header>
+        <ListShell>
+          <ExpandableOptionCard
+            v-for="entry in featAndAsiEntries"
+            :key="entry.id"
+            :title="entry.label"
+            :description="`${entry.level}级`"
+            expanded-label="专长效果"
+          >
+            <template v-if="entry.detail" #expanded>{{ entry.detail }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+      </section>
+      <p v-else-if="draft.classId" class="character-sheet__empty-features">尚未选择专长或属性提升。</p>
     </div>
     <div v-else-if="activeTab === 'spells'" class="character-sheet__spells">
       <div class="character-sheet__spell-stats">

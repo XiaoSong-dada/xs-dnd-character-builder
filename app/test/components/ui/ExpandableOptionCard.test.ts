@@ -130,4 +130,33 @@ describe('ExpandableOptionCard', () => {
     await wrapper.find('.expandable-option-card__arrow').trigger('click')
     expect(wrapper.find('.expandable-option-card__growth').exists()).toBe(true)
   })
+
+  describe('radio 单选标记（默认关闭）', () => {
+    it('默认不渲染左侧单选标记', () => {
+      const wrapper = mountCard()
+      expect(wrapper.find('.expandable-option-card__mark').exists()).toBe(false)
+    })
+
+    it('开启 radio 后渲染空心圆标记，未选中时无实心圆点', () => {
+      const wrapper = mountCard({ props: { title: '火焰箭', description: '', radio: true } })
+      const mark = wrapper.find('.expandable-option-card__mark')
+      expect(mark.exists()).toBe(true)
+      expect(mark.classes()).toContain('expandable-option-card__mark')
+      // 未选中：空心圆（::after 透明，无文字内容）
+      expect(mark.text()).toBe('')
+    })
+
+    it('选中状态下标记边框与实心圆点使用主题色', () => {
+      const wrapper = mountCard({ props: { title: '火焰箭', description: '', state: 'selected', radio: true } })
+      const mark = wrapper.find('.expandable-option-card__mark')
+      expect(mark.exists()).toBe(true)
+      expect(mark.classes()).toContain('expandable-option-card__mark')
+      expect(wrapper.find('.expandable-option-card__main').attributes('aria-pressed')).toBe('true')
+    })
+
+    it('关闭 radio 时即使选中也不显示标记', () => {
+      const wrapper = mountCard({ props: { title: '火焰箭', description: '', state: 'selected' } })
+      expect(wrapper.find('.expandable-option-card__mark').exists()).toBe(false)
+    })
+  })
 })

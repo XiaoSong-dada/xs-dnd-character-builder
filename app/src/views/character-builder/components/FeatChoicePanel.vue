@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
-import OptionCard from '@/components/ui/OptionCard.vue'
+import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import { ABILITY_KEYS, ABILITY_LABELS } from '@/rules/data/feats-2014'
@@ -194,21 +194,21 @@ function selectFeat(featId: string, available: boolean): void {
             <UiBadge>2014 · {{ visibleFeats.length }}/{{ rulesRepository.feats.length }}</UiBadge>
           </div>
         </template>
-        <OptionCard
+        <ExpandableOptionCard
           v-for="{ feat, eligibility } in visibleFeats"
           :key="feat.id"
           :title="`${feat.name} · ${feat.englishName}`"
           :description="feat.description"
+          expanded-label="专长效果"
           :state="selectedOptionId === feat.id ? 'selected' : eligibility.available ? 'incompatible' : 'locked'"
           :disabled-reason="eligibility.reasons.join('；')"
           @select="selectFeat(feat.id, eligibility.available)"
         >
+          <template #expanded>{{ feat.detail }}</template>
           <template #suffix>
-            <UiBadge :tone="eligibility.available ? 'warning' : 'error'">
-              {{ eligibility.available ? '仅索引' : '不可选' }}
-            </UiBadge>
+            <UiBadge v-if="!eligibility.available" tone="error">不可选</UiBadge>
           </template>
-        </OptionCard>
+        </ExpandableOptionCard>
         <template #empty>
           <strong>没有符合条件的专长</strong>
           <span>清除搜索或筛选后可继续浏览完整目录。</span>

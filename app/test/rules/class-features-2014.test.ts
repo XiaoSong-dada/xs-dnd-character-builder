@@ -28,11 +28,21 @@ describe('2014 class features catalog', () => {
       expect(feature.name.length).toBeGreaterThan(0)
       expect(feature.englishName.length).toBeGreaterThan(0)
       expect(feature.summary.length).toBeGreaterThan(0)
+      expect(feature.description.length).toBeGreaterThan(0)
       expect(feature.level).toBeGreaterThan(0)
       expect(feature.level).toBeLessThanOrEqual(20)
       expect(['implemented', 'index-only']).toContain(feature.status)
       expect(feature.sourceIds.length).toBeGreaterThan(0)
     }
+  })
+
+  it('registers a detailed description longer than the summary for representative features', () => {
+    const secondWind = classFeatures2014.find((feature) => feature.id === 'fighter-2014-class-second-wind')
+    expect(secondWind?.description.length).toBeGreaterThan(secondWind?.summary.length ?? 0)
+    expect(secondWind?.description).toContain('附赠动作')
+    const rage = classFeatures2014.find((feature) => feature.id === 'barbarian-2014-class-rage')
+    expect(rage?.description.length).toBeGreaterThan(rage?.summary.length ?? 0)
+    expect(rage?.description).toContain('长休后全部恢复')
   })
 
   it('keeps feature id prefixes consistent with the owning class', () => {

@@ -126,6 +126,44 @@ describe('CharacterSheetStep', () => {
     expect(wrapper.text()).toContain('奥术回想')
   })
 
+  it('shows feats and ability improvements in the features tab', async () => {
+    const fighterDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-fighter',
+      targetLevel: 4,
+      selections: [
+        { checkpointId: 'fighter-2014-asi-4', optionIds: ['feat-lucky'], confirmedAt: '' },
+        { checkpointId: 'fighter-2014-asi-6', optionIds: ['asi-int-2'], confirmedAt: '' },
+        { checkpointId: 'fighter-2014-asi-8', optionIds: ['asi-str-dex'], confirmedAt: '' },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: fighterDraft, derived: deriveCharacter(fighterDraft) },
+    })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('专长与属性提升')
+    expect(wrapper.text()).toContain('幸运 · Lucky')
+    expect(wrapper.text()).toContain('属性提升（智力+2）')
+    expect(wrapper.text()).toContain('属性提升（力量+1、敏捷+1）')
+    // 幸运专长可展开查看 detail
+    const luckyCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('幸运'))
+    expect(luckyCard).toBeTruthy()
+    await luckyCard!.find('.expandable-option-card__arrow').trigger('click')
+    expect(luckyCard!.text()).toContain('幸运点')
+  })
+
+  it('shows an empty hint for feats and ability improvements when none are selected', async () => {
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft, derived: deriveCharacter(draft) },
+    })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('尚未选择专长或属性提升')
+  })
+
   it('shows an empty hint in the features tab when no subclass is selected', async () => {
     const wrapper = mount(CharacterSheetStep, {
       props: { draft, derived: deriveCharacter(draft) },
