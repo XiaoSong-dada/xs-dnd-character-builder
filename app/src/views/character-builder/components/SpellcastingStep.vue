@@ -18,8 +18,15 @@ import type { CharacterDraft, SpellSelections } from '@/types/character'
 
 const props = defineProps<{ draft: CharacterDraft }>()
 const emit = defineEmits<{ change: [value: SpellSelections] }>()
-const classRule = computed(() => props.draft.classId ? rulesRepository.getClass(props.draft.classId) : undefined)
-const config = computed(() => classRule.value?.spellcasting)
+const config = computed(() => rulesRepository.getSpellcastingConfig(props.draft))
+/** 施法来源名称（子职施法优先，如奥法骑士/诡术师；否则职业）。 */
+const castingSourceName = computed(() => {
+  if (props.draft.subclassId) {
+    const subclass = rulesRepository.getSubclass(props.draft.subclassId)
+    if (subclass?.spellcasting) return subclass.name
+  }
+  return props.draft.classId ? rulesRepository.getClass(props.draft.classId)?.name ?? '' : ''
+})
 const requiredCount = computed(() => config.value ? getRequiredSpellCount(props.draft, config.value) : 0)
 const requiredCantripCount = computed(() => config.value ? getRequiredCantripCount(props.draft, config.value) : 0)
 const requiredSpellbookCount = computed(() => config.value ? getRequiredSpellbookCount(props.draft, config.value) : 0)
@@ -97,7 +104,7 @@ function toggleSpellbook(id: string): void {
       这一步会自动跳过，不影响角色完成。
     </UiNotice>
     <UiNotice v-else-if="draft.targetLevel < config.startsAtLevel" tone="info" title="施法尚未开始">
-      {{ classRule?.name }}从{{ config.startsAtLevel }}级开始施法；当前等级无需选择法术。
+      {{ castingSourceName }}从{{ config.startsAtLevel }}级开始施法；当前等级无需选择法术。
     </UiNotice>
     <template v-else>
       <header>

@@ -185,7 +185,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
       : 0
   const speed = raceSpeed + classSpeedBonus + subclassEffects.speedBonus
   const attackAbility: AbilityKey = ['class-2014-rogue', 'class-2014-monk', 'class-2014-ranger'].includes(draft.classId ?? '') ? 'dex' : 'str'
-  const spellcasting = classRule?.spellcasting
+  const spellcasting = rulesRepository.getSpellcastingConfig(draft)
   const spellAbilityModifier = spellcasting ? modifiers[spellcasting.ability] : undefined
 
   return {

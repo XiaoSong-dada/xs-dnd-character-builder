@@ -6,6 +6,7 @@
  * - FULL_CASTER_SPELL_SLOTS：吟游诗人、牧师、德鲁伊、术士、法师（1 级起全施法者表）。
  * - HALF_CASTER_SPELL_SLOTS：圣武士、游侠（2 级起半施法者表，1 级无环位）。
  * - PACT_SPELL_SLOTS：邪术师契约法术位（数量少、随等级提升到 5 环，短休恢复）。
+ * - THIRD_CASTER_SPELL_SLOTS：奥法骑士、诡术师（3 级起三分之一施法者表，1—2 级无环位）。
  *
  * 结构约定：
  * - 标准表：20 项，下标 = 职业等级 − 1；每项为数组，元素下标 = 环级 − 1（0 = 1 环），
@@ -85,6 +86,30 @@ export const PACT_SPELL_SLOTS = [
   [4, 5],
 ] as const satisfies readonly (readonly [number, number])[]
 
+/** 三分之一施法者法术位表（奥法骑士、诡术师共用，来源 PHB 2014；1—2 级无环位，3 级起推进）。 */
+export const THIRD_CASTER_SPELL_SLOTS = [
+  [],
+  [],
+  [2],
+  [3],
+  [3, 1],
+  [3, 2],
+  [3, 2],
+  [3, 2],
+  [3, 2],
+  [3, 2],
+  [3, 2, 1],
+  [3, 2, 1],
+  [3, 2, 1],
+  [3, 2, 2],
+  [3, 2, 2],
+  [3, 2, 2],
+  [3, 2, 2],
+  [3, 2, 2],
+  [3, 2, 2, 1],
+  [3, 2, 2, 1],
+] as const satisfies readonly (readonly number[])[]
+
 /** 全施法者每级最高施法环级（由法术位表长度派生，保持与旧常量数值一致）。 */
 export const fullCasterMaximumSpellLevels: readonly number[] = FULL_CASTER_SPELL_SLOTS.map((slots) => slots.length)
 
@@ -93,3 +118,6 @@ export const halfCasterMaximumSpellLevels: readonly number[] = HALF_CASTER_SPELL
 
 /** 邪术师每级契约法术位环级（由契约表派生）。 */
 export const pactMaximumSpellLevels: readonly number[] = PACT_SPELL_SLOTS.map(([, level]) => level)
+
+/** 三分之一施法者每级最高施法环级（由法术位表长度派生）。 */
+export const thirdCasterMaximumSpellLevels: readonly number[] = THIRD_CASTER_SPELL_SLOTS.map((slots) => slots.length)

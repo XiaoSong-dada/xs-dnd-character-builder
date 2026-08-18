@@ -1,4 +1,4 @@
-import type { AbilityKey, CompatibilityStatus, DraftStep, RuleSource, RulesetId, SpellcastingMode } from '@/types/character'
+import type { AbilityKey, CharacterDraft, CompatibilityStatus, DraftStep, RuleSource, RulesetId, SpellcastingMode } from '@/types/character'
 
 export type CheckpointKind =
   | 'skills'
@@ -124,6 +124,8 @@ export interface SubclassRule {
   readonly availability?: 'player' | 'dm-only'
   readonly sourceIds: readonly string[]
   readonly features: readonly SubclassFeature[]
+  /** 子职级施法配置（如奥法骑士、诡术师）；解析时优先于职业配置。 */
+  readonly spellcasting?: SpellcastingConfig
 }
 
 export type SubclassFeatureKind =
@@ -292,6 +294,8 @@ export interface RulesRepository {
   readonly spells: readonly SpellRule[]
   getClass(id: string): ClassRule | undefined
   getSubclass(id: string): SubclassRule | undefined
+  /** 解析角色当前施法配置：子职级（奥法骑士、诡术师）优先，否则回退职业级。 */
+  getSpellcastingConfig(draft: Pick<CharacterDraft, 'classId' | 'subclassId'>): SpellcastingConfig | undefined
   getOption(id: string): RuleOption | undefined
   getFeat(id: string): FeatRule | undefined
   getRace(id: string): RaceRule | undefined

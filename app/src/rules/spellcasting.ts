@@ -98,8 +98,15 @@ export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingCo
     .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell && spell.level <= maximumLevel))
 }
 
+/**
+ * 解析角色当前施法配置：子职级施法（奥法骑士、诡术师）优先，否则回退职业级。
+ */
+export function getSpellcastingConfig(draft: Pick<CharacterDraft, 'classId' | 'subclassId'>): SpellcastingConfig | undefined {
+  return rulesRepository.getSpellcastingConfig(draft)
+}
+
 export function validateSpellSelections(draft: CharacterDraft): boolean {
-  const config = draft.classId ? rulesRepository.getClass(draft.classId)?.spellcasting : undefined
+  const config = getSpellcastingConfig(draft)
   if (!config || draft.targetLevel < config.startsAtLevel) return true
   const selected = getSelectedSpellIds(draft, config)
   const availableSpells = getAvailableSpells(draft, config)

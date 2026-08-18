@@ -58,8 +58,8 @@ function buildLevelReductionReviews(draft: CharacterDraft, newLevel: number): re
     const newFeatures = featureCount(newLevel)
     if (newFeatures < oldFeatures) reviews.push(`子职特性由 ${oldFeatures} 项减少为 ${newFeatures} 项（更高等级的特性不再生效）`)
   }
-  const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
-  const knownByLevel = classRule?.spellcasting?.mode === 'known' ? classRule.spellcasting.spellsKnownByLevel : undefined
+  const spellcasting = rulesRepository.getSpellcastingConfig(draft)
+  const knownByLevel = spellcasting?.mode === 'known' ? spellcasting.spellsKnownByLevel : undefined
   if (knownByLevel) {
     const oldMax = knownByLevel[oldLevel - 1] ?? 0
     const newMax = knownByLevel[newLevel - 1] ?? 0

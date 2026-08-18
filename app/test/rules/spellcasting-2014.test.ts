@@ -5,9 +5,10 @@ import {
   FULL_CASTER_SPELL_SLOTS,
   HALF_CASTER_SPELL_SLOTS,
   PACT_SPELL_SLOTS,
+  THIRD_CASTER_SPELL_SLOTS,
 } from '@/rules/data/spell-slots-2014'
 import { rulesRepository } from '@/rules/repository'
-import { getMaximumSpellLevel, getRequiredSpellCount, getSpellSlots, validateSpellSelections } from '@/rules/spellcasting'
+import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellCount, getSpellcastingConfig, getSpellSlots, validateSpellSelections } from '@/rules/spellcasting'
 import { validateDraft } from '@/rules/validate'
 import type { CharacterDraft } from '@/types/character'
 
@@ -175,5 +176,93 @@ describe('2014 spell slots', () => {
         }
       }
     }
+  })
+})
+
+describe('三分之一施法者（奥法骑士 / 诡术师）', () => {
+  function ekDraft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
+    return draft({
+      classId: 'class-2014-fighter',
+      subclassId: 'subclass-2014-fighter-eldritch-knight',
+      targetLevel: 3,
+      baseAbilities: { str: 15, dex: 10, con: 13, int: 16, wis: 12, cha: 8 },
+      ...patch,
+    })
+  }
+
+  it('EK/AT 共用 1/3 施法者法术位表（3/5/11/14/19 关键等级与逐级一致）', () => {
+    const ek = rulesRepository.getSubclass('subclass-2014-fighter-eldritch-knight')?.spellcasting
+    const at = rulesRepository.getSubclass('subclass-2014-rogue-arcane-trickster')?.spellcasting
+    expect(ek).toBeDefined()
+    expect(at).toBeDefined()
+    expect(ek?.slotsByClassLevel).toBe(at?.slotsByClassLevel)
+    expect(ek && getSpellSlots(ek, 3)).toEqual([{ level: 1, count: 2 }])
+    expect(ek && getSpellSlots(ek, 5)).toEqual([{ level: 1, count: 3 }, { level: 2, count: 1 }])
+    expect(ek && getSpellSlots(ek, 11)).toEqual([{ level: 1, count: 3 }, { level: 2, count: 2 }, { level: 3, count: 1 }])
+    expect(ek && getSpellSlots(ek, 14)).toEqual([{ level: 1, count: 3 }, { level: 2, count: 2 }, { level: 3, count: 2 }])
+    expect(ek && getSpellSlots(ek, 19)).toEqual([{ level: 1, count: 3 }, { level: 2, count: 2 }, { level: 3, count: 2 }, { level: 4, count: 1 }])
+    for (let level = 1; level <= 20; level += 1) {
+      const expected = THIRD_CASTER_SPELL_SLOTS[level - 1].map((count, index) => ({ level: index + 1, count }))
+      expect(ek && getSpellSlots(ek, level), `EK L${level}`).toEqual(expected)
+    }
+    // 1—2 级无环位；最大环级与表一致。
+    expect(ek && getSpellSlots(ek, 1)).toEqual([])
+    expect(ek && getSpellSlots(ek, 2)).toEqual([])
+    expect(ek && getMaximumSpellLevel(ek!, 3)).toBe(1)
+    expect(ek && getMaximumSpellLevel(ek!, 11)).toBe(3)
+  })
+
+  it('子职施法配置优先于职业：战士+EK 生效，战士无子职不施法，法师回退职业配置', () => {
+    const fighter = draft({ classId: 'class-2014-fighter', subclassId: undefined })
+    expect(getSpellcastingConfig(fighter)).toBeUndefined()
+    const ek = ekDraft()
+    const ekConfig = getSpellcastingConfig(ek)
+    expect(ekConfig?.mode).toBe('known')
+    expect(ekConfig?.ability).toBe('int')
+    expect(ekConfig?.startsAtLevel).toBe(3)
+    // 法师子职无施法配置时回退职业配置。
+    const wizard = draft({ classId: 'class-2014-wizard', subclassId: 'subclass-2014-wizard-evocation' })
+    expect(getSpellcastingConfig(wizard)?.mode).toBe('spellbook')
+  })
+
+  it('已知法术与戏法数量按 1/3 进度推进（3 级 3/2，10 级 7/3）', () => {
+    const level3 = ekDraft()
+    expect(getRequiredSpellCount(level3, getSpellcastingConfig(level3)!)).toBe(3)
+    expect(getRequiredCantripCount(level3, getSpellcastingConfig(level3)!)).toBe(2)
+    const level10 = ekDraft({ targetLevel: 10 })
+    expect(getRequiredSpellCount(level10, getSpellcastingConfig(level10)!)).toBe(7)
+    expect(getRequiredCantripCount(level10, getSpellcastingConfig(level10)!)).toBe(3)
+    const level20 = ekDraft({ targetLevel: 20 })
+    expect(getRequiredSpellCount(level20, getSpellcastingConfig(level20)!)).toBe(11)
+  })
+
+  it('EK 从法师法术池选择：选满戏法与已知法术后校验通过，未选满不通过', () => {
+    const complete = ekDraft({
+      spellSelections: {
+        cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand'],
+        knownSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands'],
+        preparedSpellIds: [],
+        spellbookSpellIds: [],
+      },
+    })
+    expect(validateSpellSelections(complete)).toBe(true)
+    const missing = ekDraft({
+      spellSelections: {
+        cantripIds: ['spell-2014-fire-bolt'],
+        knownSpellIds: ['spell-2014-magic-missile'],
+        preparedSpellIds: [],
+        spellbookSpellIds: [],
+      },
+    })
+    expect(validateSpellSelections(missing)).toBe(false)
+  })
+
+  it('EK 法术攻击与法术豁免 DC 使用智力', () => {
+    const ek = ekDraft()
+    const derived = deriveCharacter(ek)
+    // 3 级熟练 +2，智力 16 调整 +3。
+    expect(derived.spellAttackBonus?.value).toBe(5)
+    expect(derived.spellSaveDc?.value).toBe(13)
+    expect(derived.spellAttackBonus?.sources.some((source) => source.label.includes('INT'))).toBe(true)
   })
 })

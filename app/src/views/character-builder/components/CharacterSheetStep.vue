@@ -54,7 +54,7 @@ const identityLine = computed(() => {
   ].filter(Boolean)
   return `${draft.targetLevel}级 · ${names.join(' · ')}`
 })
-const spellcastingConfig = computed(() => (props.draft.classId ? rulesRepository.getClass(props.draft.classId)?.spellcasting : undefined))
+const spellcastingConfig = computed(() => rulesRepository.getSpellcastingConfig(props.draft))
 const spellSlots = computed(() => spellcastingConfig.value ? getSpellSlots(spellcastingConfig.value, props.draft.targetLevel) : [])
 const spellSlotsLabel = computed(() => {
   if (!spellSlots.value.length) return ''

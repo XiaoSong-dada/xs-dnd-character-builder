@@ -15,6 +15,7 @@ import { backgroundStartingEquipment2014, classStartingEquipment2014 } from '@/r
 import { subclasses2014, subclassOptions2014 } from '@/rules/data/subclasses-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
 import type { RulesRepository } from '@/types/rules'
+import type { CharacterDraft } from '@/types/character'
 
 const sources = [
   { id: 'basic-rules-2014', title: '2014 Basic Rules / SRD 5.1', ruleset: '5e-2014' as const, url: 'https://www.dndbeyond.com/sources/dnd/basic-rules-2014' },
@@ -72,6 +73,13 @@ export const rulesRepository: RulesRepository = {
   },
   getSubclass(id) {
     return this.subclasses.find((item) => item.id === id)
+  },
+  getSpellcastingConfig(draft: Pick<CharacterDraft, 'classId' | 'subclassId'>) {
+    if (draft.subclassId) {
+      const subclass = this.getSubclass(draft.subclassId)
+      if (subclass?.spellcasting) return subclass.spellcasting
+    }
+    return draft.classId ? this.getClass(draft.classId)?.spellcasting : undefined
   },
   getOption(id) {
     return this.options.find((item) => item.id === id)

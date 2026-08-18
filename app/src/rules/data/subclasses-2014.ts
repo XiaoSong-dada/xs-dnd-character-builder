@@ -1,5 +1,7 @@
-import type { RuleOption, SubclassRule } from '@/types/rules'
+import type { RuleOption, SpellcastingConfig, SubclassRule } from '@/types/rules'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
+import { THIRD_CASTER_SPELL_SLOTS, thirdCasterMaximumSpellLevels } from '@/rules/data/spell-slots-2014'
+import { spells2014 } from '@/rules/data/spells-2014'
 
 type SubclassEntry = readonly [slug: string, name: string, englishName: string, sourceId: string, availability?: 'dm-only']
 
@@ -277,6 +279,42 @@ const implementedIds = new Set([
   'subclass-2014-wizard-order-of-scribes',
 ])
 
+/** 法师法术池（奥法骑士、诡术师从该列表选择已知法术）。 */
+const wizardSpellIds: readonly string[] = spells2014
+  .filter((spell) => spell.classIds.includes('class-2014-wizard'))
+  .map((spell) => spell.id)
+
+/** 三分之一施法者（奥法骑士、诡术师）戏法数量：3 级 2 个、10 级 3 个。 */
+const THIRD_CASTER_CANTRIPS = [0, 0, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3] as const
+/** 三分之一施法者已知法术数量：3 级 3 个，4/7/8/10/11/14/16/19 级各 +1（共 11 个）。 */
+const THIRD_CASTER_SPELLS_KNOWN = [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 8, 9, 9, 10, 10, 10, 11, 11] as const
+
+/** 子职级施法配置：奥法骑士、诡术师（2014 三分之一施法者，智力施法，已知法术制）。 */
+const subclassSpellcasting: Readonly<Record<string, SpellcastingConfig>> = {
+  'subclass-2014-fighter-eldritch-knight': {
+    ruleset: '5e-2014',
+    mode: 'known',
+    ability: 'int',
+    startsAtLevel: 3,
+    cantripsKnownByLevel: THIRD_CASTER_CANTRIPS,
+    spellsKnownByLevel: THIRD_CASTER_SPELLS_KNOWN,
+    maxSpellLevelByClassLevel: thirdCasterMaximumSpellLevels,
+    slotsByClassLevel: THIRD_CASTER_SPELL_SLOTS,
+    classSpellIds: wizardSpellIds,
+  },
+  'subclass-2014-rogue-arcane-trickster': {
+    ruleset: '5e-2014',
+    mode: 'known',
+    ability: 'int',
+    startsAtLevel: 3,
+    cantripsKnownByLevel: THIRD_CASTER_CANTRIPS,
+    spellsKnownByLevel: THIRD_CASTER_SPELLS_KNOWN,
+    maxSpellLevelByClassLevel: thirdCasterMaximumSpellLevels,
+    slotsByClassLevel: THIRD_CASTER_SPELL_SLOTS,
+    classSpellIds: wizardSpellIds,
+  },
+}
+
 export const subclasses2014: readonly SubclassRule[] = Object.entries(entriesByClass).flatMap(([classSlug, entries]) =>
   entries.map(([slug, name, englishName, sourceId, availability]) => {
     const id = `subclass-2014-${classSlug}-${slug}`
@@ -295,6 +333,7 @@ export const subclasses2014: readonly SubclassRule[] = Object.entries(entriesByC
       availability: dmOnly ? 'dm-only' as const : 'player' as const,
       sourceIds: [sourceId],
       features: getSubclassFeatures2014(id),
+      spellcasting: subclassSpellcasting[id],
     }
   }),
 )

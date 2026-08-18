@@ -40,11 +40,10 @@ const tagFilters = ['all', '战斗', '施法', '属性', '探索', '支援'] as 
 const tagFilterOptions = tagFilters.map((id) => ({ id, label: id === 'all' ? '全部' : id }))
 
 const abilitiesBeforeCheckpoint = computed(() => deriveAbilities(props.draft, props.checkpointId))
-const classRule = computed(() => rulesRepository.getClass(props.draft.classId ?? ''))
-const canCastSpells = computed(() => Boolean(
-  classRule.value?.spellcasting
-  && props.checkpointLevel >= classRule.value.spellcasting.startsAtLevel,
-))
+const canCastSpells = computed(() => {
+  const spellcasting = rulesRepository.getSpellcastingConfig(props.draft)
+  return Boolean(spellcasting && props.checkpointLevel >= spellcasting.startsAtLevel)
+})
 const featEntries = computed(() => rulesRepository.feats.map((feat) => ({
   feat,
   eligibility: getFeatEligibility(feat, {

@@ -150,21 +150,22 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         resolution: '可以继续生成预览草稿，但不能标记为资料完整角色。',
       })
     }
-    if (classRule?.spellcasting && draft.targetLevel >= classRule.spellcasting.startsAtLevel) {
-      const selectedSpellIds = getSelectedSpellIds(draft, classRule.spellcasting)
-      const requiredCount = getRequiredSpellCount(draft, classRule.spellcasting)
-      const availableSpells = getAvailableSpells(draft, classRule.spellcasting)
+    const spellcasting = rulesRepository.getSpellcastingConfig(draft)
+    if (spellcasting && draft.targetLevel >= spellcasting.startsAtLevel) {
+      const selectedSpellIds = getSelectedSpellIds(draft, spellcasting)
+      const requiredCount = getRequiredSpellCount(draft, spellcasting)
+      const availableSpells = getAvailableSpells(draft, spellcasting)
       const availableIds = new Set(availableSpells.filter((spell) => spell.level > 0).map((spell) => spell.id))
       const cantripIds = new Set(availableSpells.filter((spell) => spell.level === 0).map((spell) => spell.id))
-      const requiredCantrips = getRequiredCantripCount(draft, classRule.spellcasting)
-      const requiredSpellbook = getRequiredSpellbookCount(draft, classRule.spellcasting)
+      const requiredCantrips = getRequiredCantripCount(draft, spellcasting)
+      const requiredSpellbook = getRequiredSpellbookCount(draft, spellcasting)
       if (selectedSpellIds.length !== requiredCount) {
         issues.push({
           id: 'spell-count',
           step: 'spells',
           severity: 'error',
-          message: `${classRule.name}的法术选择尚未完成。`,
-          resolution: `需要${classRule.spellcasting.mode === 'prepared' ? '准备' : '掌握'}${requiredCount}个法术。`,
+          message: `${classRule?.name ?? '角色'}的法术选择尚未完成。`,
+          resolution: `需要${spellcasting.mode === 'prepared' ? '准备' : '掌握'}${requiredCount}个法术。`,
         })
       }
       if (selectedSpellIds.length !== new Set(selectedSpellIds).size) {
@@ -183,7 +184,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         issues.push({ id: 'cantrip-count', step: 'spells', severity: 'error', message: '戏法选择尚未完成或包含不可用项。', resolution: `需要选择${requiredCantrips}个当前职业戏法。` })
       }
       if (
-        classRule.spellcasting.mode === 'spellbook'
+        spellcasting.mode === 'spellbook'
         && (
           draft.spellSelections.spellbookSpellIds.length !== requiredSpellbook
           || draft.spellSelections.spellbookSpellIds.some((id) => !availableIds.has(id))
@@ -223,11 +224,11 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         }
         const selectedFeat = rulesRepository.getFeat(optionId)
         if (selectedFeat && draft.classId) {
-          const classRule = rulesRepository.getClass(draft.classId)
+          const spellcasting = rulesRepository.getSpellcastingConfig(draft)
           const eligibility = getFeatEligibility(selectedFeat, {
             abilities: deriveAbilities(draft, checkpoint.id),
             classId: draft.classId,
-            canCastSpells: Boolean(classRule?.spellcasting && checkpoint.level >= classRule.spellcasting.startsAtLevel),
+            canCastSpells: Boolean(spellcasting && checkpoint.level >= spellcasting.startsAtLevel),
           })
           if (!eligibility.available) {
             issues.push({
