@@ -6,7 +6,6 @@ export type CheckpointKind =
   | 'subclass'
   | 'subclass-feature'
   | 'ability-improvement'
-  | 'maneuvers'
   | 'expertise'
   | 'class-choice'
 
@@ -149,6 +148,9 @@ export interface SubclassFeature {
   readonly optionIds?: readonly string[]
   /** 选项 id → 中文名（用于子职特性选择检查点的界面渲染）。 */
   readonly optionLabels?: Readonly<Record<string, string>>
+  /** 选择检查点的最少/最多选择数（缺省 1/1；多选特性如战斗大师战技填写 3/3）。 */
+  readonly minSelections?: number
+  readonly maxSelections?: number
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }

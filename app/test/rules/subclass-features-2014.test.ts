@@ -157,7 +157,7 @@ describe('validateSubclassSelections', () => {
 
     const duplicated: CharacterDraft = {
       ...base,
-      selections: [{ checkpointId: 'class-2014-barbarian-subclass-3', optionIds: ['totem-bear', 'totem-eagle'], confirmedAt: '' }],
+      selections: [{ checkpointId: 'subclass-feature-barbarian-totem-warrior-totem-spirit', optionIds: ['totem-bear', 'totem-eagle'], confirmedAt: '' }],
     }
     expect(validateSubclassSelections(duplicated).some((issue) => issue.id.startsWith('subclass-feature-exclusive-'))).toBe(true)
   })

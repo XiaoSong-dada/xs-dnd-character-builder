@@ -247,8 +247,7 @@ onBeforeUnmount(() => {
     font-size: 0.78rem;
   }
 
-  &--selected,
-  &--recommended {
+  &--selected {
     border-color: var(--color-primary);
     background: #fff9f6;
     box-shadow: inset 0.2rem 0 var(--color-primary);
@@ -259,10 +258,8 @@ onBeforeUnmount(() => {
     background: var(--color-success-soft);
   }
 
-  &--selected &__mark,
-  &--recommended &__mark { border-color: var(--color-primary); }
-  &--selected &__mark::after,
-  &--recommended &__mark::after { background: var(--color-primary); }
+  &--selected &__mark { border-color: var(--color-primary); }
+  &--selected &__mark::after { background: var(--color-primary); }
   &--complete &__mark { border-color: var(--color-success); }
   &--complete &__mark::after { background: var(--color-success); }
   &--incompatible { border-color: var(--color-warning); background: var(--color-warning-soft); }

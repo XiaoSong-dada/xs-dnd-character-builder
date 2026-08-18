@@ -84,8 +84,7 @@ defineEmits<{ select: [] }>()
     font-size: 1.25rem;
   }
 
-  &--selected,
-  &--recommended {
+  &--selected {
     border-color: var(--color-primary);
     background: #fff9f6;
     box-shadow: inset 0.2rem 0 var(--color-primary);
@@ -96,8 +95,7 @@ defineEmits<{ select: [] }>()
     background: var(--color-success-soft);
   }
 
-  &--selected &__mark,
-  &--recommended &__mark { border-color: var(--color-primary); background: var(--color-primary); }
+  &--selected &__mark { border-color: var(--color-primary); background: var(--color-primary); }
   &--complete &__mark { border-color: var(--color-success); background: var(--color-success); }
   &--incompatible { border-color: var(--color-warning); background: var(--color-warning-soft); }
   &--error { border-color: var(--color-error); background: var(--color-error-soft); }

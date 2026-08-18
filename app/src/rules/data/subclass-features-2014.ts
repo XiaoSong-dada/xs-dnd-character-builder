@@ -1,5 +1,33 @@
 import type { SubclassFeature } from '@/types/rules'
 
+/** 战斗大师战技选项（11 项，与 `fighterOptions` / docs 资料一致）。 */
+const BATTLE_MASTER_MANEUVER_OPTION_IDS: readonly string[] = [
+  'maneuver-precision',
+  'maneuver-trip',
+  'maneuver-rally',
+  'maneuver-menacing',
+  'maneuver-riposte',
+  'maneuver-pushing',
+  'maneuver-disarming',
+  'maneuver-commanders-strike',
+  'maneuver-goading',
+  'maneuver-maneuvering',
+  'maneuver-sweeping',
+]
+const BATTLE_MASTER_MANEUVER_LABELS: Readonly<Record<string, string>> = {
+  'maneuver-precision': '精准攻击',
+  'maneuver-trip': '绊摔攻击',
+  'maneuver-rally': '激励集结',
+  'maneuver-menacing': '恐吓攻击',
+  'maneuver-riposte': '还击',
+  'maneuver-pushing': '推撞攻击',
+  'maneuver-disarming': '缴械攻击',
+  'maneuver-commanders-strike': '指挥官突袭',
+  'maneuver-goading': '挑衅攻击',
+  'maneuver-maneuvering': '机动攻击',
+  'maneuver-sweeping': '横扫攻击',
+}
+
 /**
  * 2014 子职特性注册表（纵向切片）。
  *
@@ -16,11 +44,12 @@ import type { SubclassFeature } from '@/types/rules'
  */
 export const subclassFeatures2014: readonly SubclassFeature[] = [
   // ============ 战士 fighter（原有已实现子职） ============
-  { id: 'fighter-battle-master-combat-superiority', subclassId: 'subclass-2014-fighter-battle-master', name: '战斗超驰', englishName: 'Combat Superiority', level: 3, summary: '获得优势骰与四项战技选择；战技具体效果保持 index-only。', description: '获得 4 枚 d8 优势骰（10 级 d10、18 级 d12）与四项战技；战技在命中后消耗优势骰触发，优势骰短休或长休后恢复。具体战技效果以 2014 PHB 为准，当前仅索引。', kind: 'choice', requiresChoice: true, optionIds: ['maneuver-precision', 'maneuver-trip', 'maneuver-rally', 'maneuver-menacing', 'maneuver-riposte', 'maneuver-pushing', 'maneuver-disarming', 'maneuver-commanders-strike', 'maneuver-goading', 'maneuver-maneuvering', 'maneuver-sweeping'], optionLabels: { 'maneuver-precision': '精准攻击', 'maneuver-trip': '绊摔攻击', 'maneuver-rally': '激励集结', 'maneuver-menacing': '恐吓攻击', 'maneuver-riposte': '还击', 'maneuver-pushing': '推撞攻击', 'maneuver-disarming': '缴械攻击', 'maneuver-commanders-strike': '指挥官突袭', 'maneuver-goading': '挑衅攻击', 'maneuver-maneuvering': '机动攻击', 'maneuver-sweeping': '横扫攻击' }, status: 'implemented', sourceIds: ['phb-2014-index'] },
+  { id: 'fighter-battle-master-combat-superiority', subclassId: 'subclass-2014-fighter-battle-master', name: '战斗超驰', englishName: 'Combat Superiority', level: 3, summary: '获得优势骰与三项战技选择；战技具体效果保持 index-only。', description: '获得 4 枚 d8 优势骰（10 级 d10、18 级 d12）与三项战技；战技在命中后消耗优势骰触发，优势骰短休或长休后恢复。具体战技效果以 2014 PHB 为准，当前仅索引。', kind: 'choice', requiresChoice: true, optionIds: BATTLE_MASTER_MANEUVER_OPTION_IDS, optionLabels: BATTLE_MASTER_MANEUVER_LABELS, minSelections: 3, maxSelections: 3, status: 'implemented', sourceIds: ['phb-2014-index'] },
   { id: 'fighter-battle-master-student-of-war', subclassId: 'subclass-2014-fighter-battle-master', name: '学生战士', englishName: 'Student of War', level: 3, summary: '获得一种工匠工具熟练。', description: '获得一种工匠工具熟练；可用该工具进行观察与记忆检定。', kind: 'passive', status: 'implemented', sourceIds: ['phb-2014-index'] },
-  { id: 'fighter-battle-master-extra-maneuvers-7', subclassId: 'subclass-2014-fighter-battle-master', name: '额外战技', englishName: 'Additional Maneuvers', level: 7, summary: '再选择两项尚未掌握的战技。', description: '再选择两项尚未掌握的战技；战技总数随之增加。', kind: 'choice', status: 'implemented', sourceIds: ['phb-2014-index'] },
+  { id: 'fighter-battle-master-extra-maneuvers-7', subclassId: 'subclass-2014-fighter-battle-master', name: '额外战技', englishName: 'Additional Maneuvers', level: 7, summary: '再选择两项尚未掌握的战技。', description: '再选择两项尚未掌握的战技；战技总数随之增加。', kind: 'choice', requiresChoice: true, optionIds: BATTLE_MASTER_MANEUVER_OPTION_IDS, optionLabels: BATTLE_MASTER_MANEUVER_LABELS, minSelections: 2, maxSelections: 2, status: 'implemented', sourceIds: ['phb-2014-index'] },
   { id: 'fighter-battle-master-superiority-die-10', subclassId: 'subclass-2014-fighter-battle-master', name: '优势骰强化', englishName: 'Improved Superiority Dice', level: 10, summary: '优势骰提升为 d10。', description: '优势骰由 d8 提升为 d10，战技伤害与效果随之增强。', kind: 'passive', status: 'implemented', sourceIds: ['phb-2014-index'] },
-  { id: 'fighter-battle-master-extra-maneuvers-15', subclassId: 'subclass-2014-fighter-battle-master', name: '额外战技（15级）', englishName: 'Additional Maneuvers (15th)', level: 15, summary: '再选择两项尚未掌握的战技。', description: '再选择两项尚未掌握的战技；战技总数随之增加。', kind: 'choice', status: 'implemented', sourceIds: ['phb-2014-index'] },
+  { id: 'fighter-battle-master-extra-maneuvers-10', subclassId: 'subclass-2014-fighter-battle-master', name: '额外战技（10级）', englishName: 'Additional Maneuvers (10th)', level: 10, summary: '再选择两项尚未掌握的战技。', description: '再选择两项尚未掌握的战技；战技总数随之增加。', kind: 'choice', requiresChoice: true, optionIds: BATTLE_MASTER_MANEUVER_OPTION_IDS, optionLabels: BATTLE_MASTER_MANEUVER_LABELS, minSelections: 2, maxSelections: 2, status: 'implemented', sourceIds: ['phb-2014-index'] },
+  { id: 'fighter-battle-master-extra-maneuvers-15', subclassId: 'subclass-2014-fighter-battle-master', name: '额外战技（15级）', englishName: 'Additional Maneuvers (15th)', level: 15, summary: '再选择两项尚未掌握的战技。', description: '再选择两项尚未掌握的战技；战技总数随之增加。', kind: 'choice', requiresChoice: true, optionIds: BATTLE_MASTER_MANEUVER_OPTION_IDS, optionLabels: BATTLE_MASTER_MANEUVER_LABELS, minSelections: 2, maxSelections: 2, status: 'implemented', sourceIds: ['phb-2014-index'] },
   { id: 'fighter-battle-master-superiority-die-18', subclassId: 'subclass-2014-fighter-battle-master', name: '优势骰强化（18级）', englishName: 'Superiority Dice (18th)', level: 18, summary: '优势骰提升为 d12。', description: '优势骰由 d10 提升为 d12。', kind: 'passive', status: 'implemented', sourceIds: ['phb-2014-index'] },
 
   { id: 'fighter-champion-improved-critical', subclassId: 'subclass-2014-fighter-champion', name: '改良暴击', englishName: 'Improved Critical', level: 3, summary: '武器攻击的暴击范围提升为 19-20。', description: '武器攻击的暴击范围由 20 扩展为 19-20。', kind: 'passive', status: 'implemented', sourceIds: ['phb-2014-index'] },

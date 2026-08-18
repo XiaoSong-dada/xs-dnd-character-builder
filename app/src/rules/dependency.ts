@@ -30,6 +30,13 @@ function countCheckpointKind(draft: CharacterDraft, level: number, kind: Checkpo
     .filter((checkpoint) => checkpoint.kind === kind).length
 }
 
+/** 统计某目标等级时间线中战技选择检查点的数量（战技选项统一 maneuver- 前缀）。 */
+function countManeuverCheckpoints(draft: CharacterDraft, level: number): number {
+  return buildTimeline(draft.classId ?? '', level, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+    .filter((checkpoint) => checkpoint.optionIds.length > 0 && checkpoint.optionIds.every((optionId) => optionId.startsWith('maneuver-')))
+    .length
+}
+
 /** 降级时按新等级计算"数量减少、需复查"的资源清单。 */
 function buildLevelReductionReviews(draft: CharacterDraft, newLevel: number): readonly string[] {
   const oldLevel = draft.targetLevel
@@ -41,8 +48,8 @@ function buildLevelReductionReviews(draft: CharacterDraft, newLevel: number): re
   const oldAsi = countCheckpointKind(draft, oldLevel, 'ability-improvement')
   const newAsi = countCheckpointKind(draft, newLevel, 'ability-improvement')
   if (newAsi < oldAsi) reviews.push(`属性提升/专长次数由 ${oldAsi} 次减少为 ${newAsi} 次，超出部分的选择将标记失效并需重新分配`)
-  const oldManeuvers = countCheckpointKind(draft, oldLevel, 'maneuvers')
-  const newManeuvers = countCheckpointKind(draft, newLevel, 'maneuvers')
+  const oldManeuvers = countManeuverCheckpoints(draft, oldLevel)
+  const newManeuvers = countManeuverCheckpoints(draft, newLevel)
   if (newManeuvers < oldManeuvers) reviews.push(`战技数量由 ${oldManeuvers} 项减少为 ${newManeuvers} 项，需移除多余战技`)
   if (draft.subclassId) {
     const featureCount = (level: number): number =>

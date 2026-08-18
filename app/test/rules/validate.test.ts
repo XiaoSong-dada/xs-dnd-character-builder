@@ -229,3 +229,103 @@ describe('validateDraft', () => {
     expect(validateDraft(classUnknown).some((issue) => issue.id === 'inventory-invalid')).toBe(true)
   })
 })
+
+describe('validateSubclassSelections 子职特性多选校验', () => {
+  const battleMasterSelections = (combatSuperiority: readonly string[] = [], extra7: readonly string[] = [], extra10: readonly string[] = []) => [
+    { checkpointId: 'fighter-2014-skills-1', optionIds: ['skill-acrobatics', 'skill-athletics'], confirmedAt: '' },
+    { checkpointId: 'fighter-2014-style-1', optionIds: ['style-dueling'], confirmedAt: '' },
+    { checkpointId: 'fighter-2014-subclass-3', optionIds: ['subclass-2014-fighter-battle-master'], confirmedAt: '' },
+    ...(combatSuperiority.length ? [{ checkpointId: 'subclass-feature-fighter-battle-master-combat-superiority', optionIds: combatSuperiority, confirmedAt: '' }] : []),
+    ...(extra7.length ? [{ checkpointId: 'subclass-feature-fighter-battle-master-extra-maneuvers-7', optionIds: extra7, confirmedAt: '' }] : []),
+    ...(extra10.length ? [{ checkpointId: 'subclass-feature-fighter-battle-master-extra-maneuvers-10', optionIds: extra10, confirmedAt: '' }] : []),
+  ]
+
+  function battleMasterDraft(targetLevel: number, selections: CharacterDraft['selections']): CharacterDraft {
+    return {
+      ...createDraft(),
+      targetLevel,
+      classId: 'class-2014-fighter',
+      subclassId: 'subclass-2014-fighter-battle-master',
+      selections,
+    }
+  }
+
+  function issueIds(draft: CharacterDraft): string[] {
+    return validateDraft(draft).map((issue) => issue.id)
+  }
+
+  it('选满 3 项战技：无互斥与未完成提示（仅 index-only 提示）', () => {
+    const draft = battleMasterDraft(3, battleMasterSelections(['maneuver-precision', 'maneuver-trip', 'maneuver-rally']))
+    const ids = issueIds(draft)
+    expect(ids.some((id) => id.startsWith('subclass-feature-exclusive-'))).toBe(false)
+    expect(ids.some((id) => id.startsWith('subclass-feature-choice-'))).toBe(false)
+    expect(ids.some((id) => id.startsWith('checkpoint-subclass-feature-fighter-battle-master-combat-superiority'))).toBe(false)
+    // 战技为索引数据，index-only 提示仍存在（不影响生成角色卡）。
+    expect(ids.some((id) => id.startsWith('index-only-subclass-feature-fighter-battle-master-combat-superiority'))).toBe(true)
+  })
+
+  it('只选 2 项战技：无互斥报错，检查点报未完成', () => {
+    const draft = battleMasterDraft(3, battleMasterSelections(['maneuver-precision', 'maneuver-trip']))
+    const ids = issueIds(draft)
+    expect(ids.some((id) => id.startsWith('subclass-feature-exclusive-'))).toBe(false)
+    expect(ids).toContain('checkpoint-subclass-feature-fighter-battle-master-combat-superiority')
+  })
+
+  it('选 4 项战技（超选）：报最多只能选择 3 项', () => {
+    const draft = battleMasterDraft(3, battleMasterSelections(['maneuver-precision', 'maneuver-trip', 'maneuver-rally', 'maneuver-menacing']))
+    const exclusive = validateDraft(draft).find((issue) => issue.id === 'subclass-feature-exclusive-fighter-battle-master-combat-superiority')
+    expect(exclusive?.severity).toBe('error')
+    expect(exclusive?.message).toContain('最多只能选择 3 项')
+  })
+
+  it('单选特性互斥语义保持：图腾之灵选 2 项仍报选项互斥', () => {
+    const totemDraft: CharacterDraft = {
+      ...createDraft(),
+      classId: 'class-2014-barbarian',
+      subclassId: 'subclass-2014-barbarian-totem-warrior',
+      selections: [
+        { checkpointId: 'barbarian-2014-subclass-3', optionIds: ['subclass-2014-barbarian-totem-warrior'], confirmedAt: '' },
+        { checkpointId: 'subclass-feature-barbarian-totem-warrior-totem-spirit', optionIds: ['totem-bear', 'totem-eagle'], confirmedAt: '' },
+      ],
+    }
+    const exclusive = validateDraft(totemDraft).find((issue) => issue.id === 'subclass-feature-exclusive-barbarian-totem-warrior-totem-spirit')
+    expect(exclusive?.severity).toBe('error')
+    expect(exclusive?.message).toContain('选项互斥')
+    expect(exclusive?.resolution).toContain('每个特性只能选择其中一项')
+  })
+
+  it('3 级战斗大师未选战技：不出现高等级额外战技提示，战斗超驰提示存在', () => {
+    const draft = battleMasterDraft(3, battleMasterSelections())
+    const ids = issueIds(draft)
+    // 7/10/15 级额外战技未解锁，不校验。
+    expect(ids.some((id) => id.includes('extra-maneuvers'))).toBe(false)
+    expect(ids).toContain('subclass-feature-choice-fighter-battle-master-combat-superiority')
+    expect(ids).toContain('checkpoint-subclass-feature-fighter-battle-master-combat-superiority')
+  })
+
+  it('10 级完成 3/7 级战技、未完成 10 级：仅 10 级额外战技提示', () => {
+    const draft = battleMasterDraft(10, battleMasterSelections(
+      ['maneuver-precision', 'maneuver-trip', 'maneuver-rally'],
+      ['maneuver-riposte', 'maneuver-menacing'],
+    ))
+    const ids = issueIds(draft)
+    // 排除 index-only 提示（只针对已选选项生成，ID 也含特性名）。
+    const relevant = (id: string): boolean => id.startsWith('subclass-feature-') || id.startsWith('checkpoint-subclass-feature-')
+    expect(ids.some((id) => relevant(id) && id.includes('combat-superiority'))).toBe(false)
+    expect(ids.some((id) => relevant(id) && id.includes('extra-maneuvers-7'))).toBe(false)
+    expect(ids).toContain('subclass-feature-choice-fighter-battle-master-extra-maneuvers-10')
+    expect(ids).toContain('checkpoint-subclass-feature-fighter-battle-master-extra-maneuvers-10')
+  })
+
+  it('10 级全部选满（3/2/2）：无子职特性选择相关报错', () => {
+    const draft = battleMasterDraft(10, battleMasterSelections(
+      ['maneuver-precision', 'maneuver-trip', 'maneuver-rally'],
+      ['maneuver-riposte', 'maneuver-menacing'],
+      ['maneuver-pushing', 'maneuver-disarming'],
+    ))
+    const ids = issueIds(draft)
+    expect(ids.some((id) => id.startsWith('subclass-feature-exclusive-'))).toBe(false)
+    expect(ids.some((id) => id.startsWith('subclass-feature-choice-'))).toBe(false)
+    expect(ids.some((id) => id.startsWith('checkpoint-subclass-feature-fighter-battle-master-'))).toBe(false)
+  })
+})

@@ -57,17 +57,12 @@ function buildSubclassCheckpoint(classId: string): ChoiceCheckpoint | undefined 
   }
 }
 
-/** 已由职业时间线检查点承接选择、不再生成特性检查点的特性（如战斗大师战技）。 */
-const SUBCLASS_FEATURE_CHECKPOINT_EXCLUSIONS = new Set([
-  'fighter-battle-master-combat-superiority',
-])
-
+/** 子职特性选择检查点：由 `requiresChoice` 且带选项的特性生成（按特性多选规格）。 */
 function buildSubclassFeatureCheckpoints(subclassId: string): readonly ChoiceCheckpoint[] {
   return getSubclassFeatures2014(subclassId)
     .filter((feature) =>
       feature.requiresChoice
-      && (feature.optionIds?.length ?? 0) > 0
-      && !SUBCLASS_FEATURE_CHECKPOINT_EXCLUSIONS.has(feature.id),
+      && (feature.optionIds?.length ?? 0) > 0,
     )
     .map((feature) => ({
       id: `subclass-feature-${feature.id}`,
@@ -77,8 +72,8 @@ function buildSubclassFeatureCheckpoints(subclassId: string): readonly ChoiceChe
       title: `选择${feature.name}`,
       description: feature.summary,
       required: true,
-      minSelections: 1,
-      maxSelections: 1,
+      minSelections: feature.minSelections ?? 1,
+      maxSelections: feature.maxSelections ?? 1,
       optionIds: feature.optionIds ?? [],
     }))
 }

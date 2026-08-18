@@ -12,6 +12,7 @@ import { getAvailableSpells, getRequiredCantripCount, getRequiredSpellbookCount,
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import type { CharacterDraft, ValidationIssue } from '@/types/character'
+import type { ChoiceCheckpoint } from '@/types/rules'
 
 export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[] {
   const issues: ValidationIssue[] = []
@@ -249,8 +250,11 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         }
       }
     }
+    // 战技检查点：选项统一以 maneuver- 前缀命名（跨检查点不可重复选择同一战技）。
+    const isManeuverCheckpoint = (checkpoint: ChoiceCheckpoint): boolean =>
+      checkpoint.optionIds.length > 0 && checkpoint.optionIds.every((optionId) => optionId.startsWith('maneuver-'))
     const maneuverIds = timeline
-      .filter((checkpoint) => checkpoint.kind === 'maneuvers')
+      .filter(isManeuverCheckpoint)
       .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? [])
     if (new Set(maneuverIds).size !== maneuverIds.length) {
       issues.push({
@@ -324,29 +328,33 @@ export function validateSubclassSelections(draft: CharacterDraft): readonly Vali
     issues.push({ id: 'subclass-index-only', step: 'timeline', severity: 'warning', message: `“${subclass.name}”目前只有2014规则索引。`, resolution: '可以继续生成预览草稿，但不能标记为资料完整角色。' })
   }
   const features = getSubclassFeatures2014(draft.subclassId)
-  const selectedOptionIds = new Set(
-    draft.selections
-      .filter((item) => !item.invalidatedAt)
-      .flatMap((item) => item.optionIds),
-  )
   for (const feature of features) {
     if (!feature.requiresChoice || !feature.optionIds?.length) continue
-    const chosen = feature.optionIds.filter((optionId) => selectedOptionIds.has(optionId))
-    if (chosen.length === 0) {
+    // 未解锁等级的特性不校验（与时间线检查点按等级过滤一致）。
+    if (feature.level > draft.targetLevel) continue
+    const min = feature.minSelections ?? 1
+    const max = feature.maxSelections ?? 1
+    const checkpointId = `subclass-feature-${feature.id}`
+    const count = draft.selections
+      .find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)
+      ?.optionIds.length ?? 0
+    if (count < min) {
       issues.push({
         id: `subclass-feature-choice-${feature.id}`,
         step: 'timeline',
         severity: 'warning',
-        message: `子职特性「${feature.name}」需要选择一项。`,
+        message: `子职特性「${feature.name}」需要选择${min === max ? min : `${min}—${max}`}项。`,
         resolution: '完成子职特性选择后角色资料才完整。',
       })
-    } else if (chosen.length > 1) {
+    } else if (count > max) {
       issues.push({
         id: `subclass-feature-exclusive-${feature.id}`,
         step: 'timeline',
         severity: 'error',
-        message: `子职特性「${feature.name}」的选项互斥。`,
-        resolution: '每个特性只能选择其中一项。',
+        message: max === 1
+          ? `子职特性「${feature.name}」的选项互斥。`
+          : `子职特性「${feature.name}」最多只能选择 ${max} 项。`,
+        resolution: max === 1 ? '每个特性只能选择其中一项。' : `请移除多余选项，仅保留 ${max} 项。`,
       })
     }
   }

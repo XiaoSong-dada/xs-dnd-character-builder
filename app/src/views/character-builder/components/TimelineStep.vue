@@ -73,11 +73,18 @@ function toggleCheckpoint(checkpointId: string): void {
   expandedCheckpointId.value = currentCheckpointId.value === checkpointId ? undefined : checkpointId
 }
 
+/** 战技检查点：选项统一以 maneuver- 前缀命名（跨检查点不可重复选择同一战技）。 */
+function isManeuverCheckpoint(checkpoint: { readonly optionIds: readonly string[] }): boolean {
+  return checkpoint.optionIds.length > 0 && checkpoint.optionIds.every((optionId) => optionId.startsWith('maneuver-'))
+}
+
 function isUniqueOptionUsedElsewhere(checkpointId: string, optionId: string): boolean {
   const checkpoint = checkpoints.value.find((item) => item.id === checkpointId)
-  if (checkpoint?.kind !== 'maneuvers' && checkpoint?.kind !== 'expertise') return false
+  const maneuverCheckpoint = Boolean(checkpoint && isManeuverCheckpoint(checkpoint))
+  const expertiseCheckpoint = checkpoint?.kind === 'expertise'
+  if (!maneuverCheckpoint && !expertiseCheckpoint) return false
   return checkpoints.value
-    .filter((item) => item.kind === checkpoint.kind && item.id !== checkpointId)
+    .filter((item) => item.id !== checkpointId && (maneuverCheckpoint ? isManeuverCheckpoint(item) : item.kind === 'expertise'))
     .some((item) => selectedIds(item.id).includes(optionId))
 }
 

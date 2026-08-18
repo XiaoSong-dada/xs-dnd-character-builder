@@ -1,4 +1,6 @@
 import { mount } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import ClassStep from '@/views/character-builder/components/ClassStep.vue'
@@ -45,7 +47,17 @@ describe('ClassStep 职业选择', () => {
     const cards = wrapper.findAll('.expandable-option-card')
     const recommended = cards.find((card) => card.find('.ui-badge').exists())
     expect(recommended).toBeTruthy()
+    // 推荐是独立状态（语义标记），但不带选中强调样式。
+    expect(recommended!.classes()).toContain('expandable-option-card--recommended')
     expect(recommended!.classes()).not.toContain('expandable-option-card--selected')
+  })
+
+  it('推荐样式不得与选中样式共享声明块（源码契约，防回归）', () => {
+    const expandable = readFileSync(resolve(process.cwd(), 'src/components/ui/ExpandableOptionCard.vue'), 'utf-8')
+    const option = readFileSync(resolve(process.cwd(), 'src/components/ui/OptionCard.vue'), 'utf-8')
+    // 一旦 --recommended 与 --selected 重新合并声明，推荐职业将与选中职业视觉一致。
+    expect(expandable).not.toMatch(/&--selected,\s*&--recommended/)
+    expect(option).not.toMatch(/&--selected,\s*&--recommended/)
   })
 
   it('选中卡片带选中样式', () => {
