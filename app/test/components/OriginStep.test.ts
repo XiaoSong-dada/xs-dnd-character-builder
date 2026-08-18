@@ -82,3 +82,68 @@ describe('OriginStep 种族展开', () => {
     expect(pirateCard!.text()).toContain('恶名')
   })
 })
+
+describe('OriginStep 种族熟练自选', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  function mountWith(patch: Record<string, unknown> = {}) {
+    return mount(OriginStep, { props: { languages: [], raceSkillChoices: [], ...patch } })
+  }
+
+  function choiceButtons(wrapper: ReturnType<typeof mount>, block: string): ReturnType<typeof mount>['element'][] {
+    return Array.from(wrapper.element.querySelectorAll(`.origin-step__race-choices .origin-step__choices button`))
+  }
+
+  it('半精灵展示全技能 2 选且点击 emit raceSkills', async () => {
+    const wrapper = mountWith({ raceId: 'race-2014-half-elf' })
+    expect(wrapper.text()).toContain('半精灵熟练选择')
+    expect(wrapper.text()).toContain('选择2项技能熟练')
+    const buttons = choiceButtons(wrapper)
+    expect(buttons.length).toBe(18)
+    // 模拟父组件回写：每次点击后把 emit 结果写回 props。
+    ;(buttons.find((button) => button.textContent?.includes('欺瞒')) as HTMLButtonElement).click()
+    await wrapper.setProps({ raceSkillChoices: ['skill-deception'] })
+    const nextButtons = choiceButtons(wrapper)
+    ;(nextButtons.find((button) => button.textContent?.includes('游说')) as HTMLButtonElement).click()
+    expect(wrapper.emitted('raceSkills')).toHaveLength(2)
+    expect(wrapper.emitted('raceSkills')![1][0]).toEqual(['skill-deception', 'skill-persuasion'])
+  })
+
+  it('兽人限定 7 项技能', () => {
+    const wrapper = mountWith({ raceId: 'race-2014-orc' })
+    const block = wrapper.find('.origin-step__race-choices')
+    expect(block.findAll('button').length).toBe(7)
+    // 区块内不包含限定列表外的技能（背景列表中的“欺瞒”不影响）。
+    expect(block.text()).not.toContain('欺瞒')
+  })
+
+  it('矮人展示工具选择并 emit raceTool（子种族继承父种族工具规格）', () => {
+    const wrapper = mountWith({ raceId: 'race-2014-dwarf', subraceId: 'race-2014-dwarf-mountain' })
+    expect(wrapper.text()).toContain('选择一项工具熟练')
+    const buttons = choiceButtons(wrapper)
+    ;(buttons.find((button) => button.textContent?.includes('盗贼工具')) as HTMLButtonElement).click()
+    expect(wrapper.emitted('raceTool')).toEqual([['tool-thieves-tools']])
+  })
+
+  it('吉斯洋基技能/工具二选一互斥：选工具清空技能，选技能清空工具', async () => {
+    const wrapper = mountWith({ raceId: 'race-2014-gith-githyanki', raceSkillChoices: ['skill-arcana'] })
+    expect(wrapper.text()).toContain('或选择一项工具熟练（与技能二选一）')
+    const buttons = choiceButtons(wrapper)
+    ;(buttons.find((button) => button.textContent?.includes('盗贼工具')) as HTMLButtonElement).click()
+    expect(wrapper.emitted('raceTool')?.[0]?.[0]).toBe('tool-thieves-tools')
+    // 选工具时清空技能侧。
+    expect(wrapper.emitted('raceSkills')?.[0]?.[0]).toEqual([])
+
+    const skillOnly = mountWith({ raceId: 'race-2014-gith-githyanki', raceToolChoice: 'tool-thieves-tools' })
+    const skillButtons = choiceButtons(skillOnly)
+    ;(skillButtons.find((button) => button.textContent?.includes('奥秘')) as HTMLButtonElement).click()
+    expect(skillOnly.emitted('raceSkills')?.[0]?.[0]).toEqual(['skill-arcana'])
+    expect(skillOnly.emitted('raceTool')?.[0]?.[0]).toBeUndefined()
+  })
+
+  it('无熟练规格的种族不显示自选区块', () => {
+    const wrapper = mountWith({ raceId: 'race-2014-human' })
+    expect(wrapper.text()).not.toContain('熟练选择')
+  })
+})

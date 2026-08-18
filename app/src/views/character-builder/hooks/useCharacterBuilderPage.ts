@@ -319,7 +319,7 @@ export function useCharacterBuilderPage() {
     requestChange(change, '更换种族', () => {
       const impact = getDependencyImpact(draft, change)
       store.invalidateSelections(impact.invalidated, '更换种族后需要重新确认')
-      store.updateDraft({ raceId: id, subraceId: undefined, raceAbilityChoices: [] })
+      store.updateDraft({ raceId: id, subraceId: undefined, raceAbilityChoices: [], raceSkillChoices: [], raceToolChoice: undefined })
     })
   }
 
@@ -330,7 +330,7 @@ export function useCharacterBuilderPage() {
     requestChange(change, '更换子种族', () => {
       const impact = getDependencyImpact(draft, change)
       store.invalidateSelections(impact.invalidated, '更换子种族后需要重新确认')
-      store.updateDraft({ subraceId: id, raceAbilityChoices: [] })
+      store.updateDraft({ subraceId: id, raceAbilityChoices: [], raceSkillChoices: [], raceToolChoice: undefined })
     })
   }
 

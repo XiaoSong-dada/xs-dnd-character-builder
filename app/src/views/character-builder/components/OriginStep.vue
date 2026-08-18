@@ -6,6 +6,7 @@ import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import { getBackgroundRecommendationReason, getRaceRecommendationReason } from '@/rules/recommend'
 import { rulesRepository } from '@/rules/repository'
+import { SKILL_IDS } from '@/rules/derive'
 
 const props = defineProps<{
   classId?: string
@@ -14,6 +15,8 @@ const props = defineProps<{
   backgroundId?: string
   backgroundVariantId?: string
   languages: readonly string[]
+  raceSkillChoices: readonly string[]
+  raceToolChoice?: string
 }>()
 const raceSearch = ref('')
 const backgroundSearch = ref('')
@@ -33,6 +36,58 @@ const variants = computed(() => props.backgroundId
 const languageChoiceCount = computed(() => props.backgroundId ? rulesRepository.getBackground(props.backgroundId)?.languageChoices ?? 0 : 0)
 const languageOptions = ['矮人语', '精灵语', '巨人语', '侏儒语', '地精语', '半身人语', '兽人语', '龙语', '炼狱语', '天界语'] as const
 
+/** 当前种族（子种族优先）：提供熟练选择规格。 */
+const currentRace = computed(() => props.subraceId
+  ? rulesRepository.getRace(props.subraceId)
+  : props.raceId
+    ? rulesRepository.getRace(props.raceId)
+    : undefined)
+/** 沿父链查找熟练规格（子种族未登记时继承父种族，如山地矮人继承矮人工具熟练）。 */
+function findProficiencySpec(key: 'skillProficiencyChoices' | 'toolProficiencyChoices'): { readonly count: number; readonly optionIds?: readonly string[] } | undefined {
+  const visited = new Set<string>()
+  const visit = (raceId: string | undefined): { readonly count: number; readonly optionIds?: readonly string[] } | undefined => {
+    if (!raceId || visited.has(raceId)) return undefined
+    visited.add(raceId)
+    const race = rulesRepository.getRace(raceId)
+    if (!race) return undefined
+    const own = race[key]
+    if (own !== undefined) return own
+    return visit(race.parentRaceId)
+  }
+  return visit(currentRace.value?.id)
+}
+const raceSkillSpec = computed(() => findProficiencySpec('skillProficiencyChoices'))
+const raceToolSpec = computed(() => findProficiencySpec('toolProficiencyChoices'))
+const isGithyanki = computed(() => currentRace.value?.id === 'race-2014-gith-githyanki')
+const raceSkillOptions = computed(() => {
+  const spec = raceSkillSpec.value
+  if (!spec) return []
+  return (spec.optionIds ?? SKILL_IDS)
+    .map((id) => ({ id, name: rulesRepository.getOption(id)?.name ?? id }))
+})
+const raceToolOptions = computed(() => rulesRepository.options
+  .filter((option) => option.id.startsWith('tool-'))
+  .map((option) => ({ id: option.id, name: option.name })))
+
+function toggleRaceSkill(id: string): void {
+  const spec = raceSkillSpec.value
+  if (!spec) return
+  const current = props.raceSkillChoices
+  const next = current.includes(id)
+    ? current.filter((item) => item !== id)
+    : [...current, id].slice(0, spec.count)
+  emit('raceSkills', next)
+  // 吉斯洋基：选技能时清空工具侧（二选一）。
+  if (isGithyanki.value && next.length > 0) emit('raceTool', undefined)
+}
+
+function toggleRaceTool(id: string): void {
+  const next = props.raceToolChoice === id ? undefined : id
+  emit('raceTool', next)
+  // 吉斯洋基：选工具时清空技能侧（二选一）。
+  if (isGithyanki.value && next) emit('raceSkills', [])
+}
+
 function toggleLanguage(id: string): void {
   const next = props.languages.includes(id)
     ? props.languages.filter((item) => item !== id)
@@ -46,6 +101,8 @@ const emit = defineEmits<{
   background: [id: string]
   variant: [id: string | undefined]
   languages: [ids: readonly string[]]
+  raceSkills: [ids: readonly string[]]
+  raceTool: [id: string | undefined]
 }>()
 </script>
 
@@ -97,6 +154,38 @@ const emit = defineEmits<{
         </template>
         <template #expanded>{{ subrace.description }}</template>
       </ExpandableOptionCard>
+    </div>
+
+    <div v-if="raceSkillSpec || raceToolSpec" class="origin-step__race-choices">
+      <strong>{{ currentRace?.name }}熟练选择</strong>
+      <template v-if="raceSkillSpec">
+        <p>{{ isGithyanki ? '选择一项技能熟练' : `选择${raceSkillSpec.count}项技能熟练` }}</p>
+        <div class="origin-step__choices">
+          <button
+            v-for="option in raceSkillOptions"
+            :key="option.id"
+            type="button"
+            :aria-pressed="raceSkillChoices.includes(option.id)"
+            @click="toggleRaceSkill(option.id)"
+          >
+            {{ raceSkillChoices.includes(option.id) ? '✓ ' : '' }}{{ option.name }}
+          </button>
+        </div>
+      </template>
+      <template v-if="raceToolSpec">
+        <p>{{ isGithyanki ? '或选择一项工具熟练（与技能二选一）' : '选择一项工具熟练' }}</p>
+        <div class="origin-step__choices">
+          <button
+            v-for="option in raceToolOptions"
+            :key="option.id"
+            type="button"
+            :aria-pressed="raceToolChoice === option.id"
+            @click="toggleRaceTool(option.id)"
+          >
+            {{ raceToolChoice === option.id ? '✓ ' : '' }}{{ option.name }}
+          </button>
+        </div>
+      </template>
     </div>
 
     <header>
@@ -188,6 +277,27 @@ const emit = defineEmits<{
     background: var(--color-surface);
 
     strong { width: 100%; font-size: 0.8rem; }
+    button { min-height: 2.75rem; padding: 0.4rem 0.65rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-background); }
+    button[aria-pressed="true"] { border-color: var(--color-primary); color: var(--color-primary); font-weight: 700; }
+  }
+
+  &__race-choices {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+
+    > strong { font-size: 0.8rem; }
+    > p { margin: 0; color: var(--color-text-muted); font-size: 0.75rem; }
+  }
+
+  &__choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+
     button { min-height: 2.75rem; padding: 0.4rem 0.65rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-background); }
     button[aria-pressed="true"] { border-color: var(--color-primary); color: var(--color-primary); font-weight: 700; }
   }

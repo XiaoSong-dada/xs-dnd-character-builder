@@ -96,6 +96,10 @@ export interface CharacterDraft {
   readonly backgroundId?: string
   readonly backgroundVariantId?: string
   readonly raceAbilityChoices: readonly AbilityKey[]
+  /** 种族自选技能熟练结果（如半精灵 2 项、兽人 7 选 2）；旧草稿缺省为空。 */
+  readonly raceSkillChoices?: readonly string[]
+  /** 种族自选工具熟练结果（矮人/战俑/维达肯/吉斯洋基）；展示级，不参与派生。 */
+  readonly raceToolChoice?: string
   readonly backgroundSkillIds: readonly string[]
   readonly backgroundToolIds: readonly string[]
   readonly languages: readonly string[]

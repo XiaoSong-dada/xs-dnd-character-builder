@@ -130,4 +130,39 @@ describe('2014 origins', () => {
       }
     }
   })
+
+  it('种族熟练登记完整：固定/自选/工具/武器字段与 ID 合法', () => {
+    const byId = new Map(rulesRepository.races.map((race) => [race.id, race]))
+    // 固定技能熟练（11 处，含精灵系与兽化人系继承源）。
+    expect(byId.get('race-2014-elf')?.skillProficiencies).toEqual(['skill-perception'])
+    expect(byId.get('race-2014-half-orc')?.skillProficiencies).toEqual(['skill-intimidation'])
+    expect(byId.get('race-2014-goliath')?.skillProficiencies).toEqual(['skill-athletics'])
+    expect(byId.get('race-2014-tabaxi')?.skillProficiencies).toEqual(['skill-perception', 'skill-stealth'])
+    expect(byId.get('race-2014-shifter')?.skillProficiencies).toEqual(['skill-perception'])
+    expect(byId.get('race-2014-shifter-beasthide')?.skillProficiencies).toEqual(['skill-athletics'])
+    // 自选技能熟练（13 处规格存在）。
+    expect(byId.get('race-2014-half-elf')?.skillProficiencyChoices).toEqual({ count: 2 })
+    expect(byId.get('race-2014-orc')?.skillProficiencyChoices?.count).toBe(2)
+    expect(byId.get('race-2014-orc')?.skillProficiencyChoices?.optionIds).toHaveLength(7)
+    expect(byId.get('race-2014-minotaur')?.skillProficiencyChoices?.optionIds).toEqual(['skill-intimidation', 'skill-persuasion'])
+    expect(byId.get('race-2014-centaur')?.skillProficiencyChoices?.optionIds).toHaveLength(4)
+    // 工具熟练（4 处）与武器/护甲（9 处）。
+    expect(byId.get('race-2014-dwarf')?.toolProficiencyChoices).toEqual({ count: 1 })
+    expect(byId.get('race-2014-warforged')?.toolProficiencyChoices).toEqual({ count: 1 })
+    expect(byId.get('race-2014-gith-githyanki')?.weaponArmorProficiencies).toContain('longsword')
+    expect(byId.get('race-2014-dwarf')?.weaponArmorProficiencies).toEqual(['battleaxe', 'handaxe', 'light-hammer', 'warhammer'])
+    expect(byId.get('race-2014-elf-high')?.weaponArmorProficiencies).toEqual(['longsword', 'shortsword', 'longbow', 'shortbow'])
+    // 所有熟练字段的选项 ID 必须可解析（技能）或为展示级 ID。
+    for (const race of rulesRepository.races) {
+      for (const skillId of race.skillProficiencies ?? []) {
+        expect(rulesRepository.getOption(skillId), `${race.id} 固定技能 ${skillId} 应可解析`).toBeTruthy()
+      }
+      for (const optionId of race.skillProficiencyChoices?.optionIds ?? []) {
+        expect(rulesRepository.getOption(optionId), `${race.id} 自选技能 ${optionId} 应可解析`).toBeTruthy()
+      }
+    }
+    // 矮人描述补全（战斗训练 + 工具熟练）。
+    expect(byId.get('race-2014-dwarf')?.description).toContain('矮人战斗训练')
+    expect(byId.get('race-2014-dwarf')?.description).toContain('工具熟练')
+  })
 })

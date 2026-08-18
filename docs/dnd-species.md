@@ -23,6 +23,7 @@
 - 创建角色时的必选项、互斥项、派生值与玩法定位。
 - “快速索引 + 特性详解”，包含获得等级、特性 ID、动作或触发、资源恢复、效果和实现校验。
 - 分支入口、继承关系，以及 2014/2024 兼容边界。
+- 熟练项字段（`RaceRule`）：固定技能熟练 `skillProficiencies`、自选技能规格 `skillProficiencyChoices`（`count` + 限定 `optionIds`，缺省全部 18 项）、工具熟练规格 `toolProficiencyChoices`、武器/护甲熟练 `weaponArmorProficiencies`（展示级）；子种族沿 `parentRaceId` 继承父种族熟练，分支文件可不重复登记继承项。
 
 分支文件只记录相对父项新增或替换的内容，并必须链接回父文件。ID 使用版本前缀，例如：
 

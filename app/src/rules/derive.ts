@@ -20,6 +20,46 @@ export function proficiencyBonus(level: number): number {
   return 2 + Math.floor((Math.max(1, level) - 1) / 4)
 }
 
+/**
+ * 收集种族固定技能熟练与自选结果（沿 parentRaceId 链叠加，子种族不替换父种族）。
+ */
+export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subraceId' | 'raceSkillChoices'>): readonly string[] {
+  const ids: string[] = [...(draft.raceSkillChoices ?? [])]
+  const visited = new Set<string>()
+  const visit = (raceId: string | undefined): void => {
+    if (!raceId || visited.has(raceId)) return
+    visited.add(raceId)
+    const race = rulesRepository.getRace(raceId)
+    if (!race) return
+    if (race.parentRaceId) visit(race.parentRaceId)
+    ids.push(...(race.skillProficiencies ?? []))
+  }
+  visit(draft.subraceId ?? draft.raceId)
+  return ids
+}
+
+/** 全部 18 项 2014 技能 ID（种族自选规格的缺省选项列表）。 */
+export const SKILL_IDS: readonly string[] = [
+  'skill-acrobatics',
+  'skill-animal-handling',
+  'skill-arcana',
+  'skill-athletics',
+  'skill-deception',
+  'skill-history',
+  'skill-insight',
+  'skill-intimidation',
+  'skill-investigation',
+  'skill-medicine',
+  'skill-nature',
+  'skill-perception',
+  'skill-performance',
+  'skill-persuasion',
+  'skill-religion',
+  'skill-sleight-of-hand',
+  'skill-stealth',
+  'skill-survival',
+]
+
 function addAbilities(base: AbilityScores, bonus: Partial<AbilityScores>): AbilityScores {
   return {
     str: base.str + (bonus.str ?? 0),
@@ -127,7 +167,9 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const selectedClassSkillIds = (classRule?.checkpoints ?? [])
     .filter((checkpoint) => checkpoint.kind === 'skills')
     .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? [])
-  const proficientSkillIds = new Set([...draft.backgroundSkillIds, ...selectedClassSkillIds])
+  // 种族熟练：沿父链收集固定项 + 自选结果（子种族不替换父种族熟练）。
+  const raceSkillIds = collectRaceSkillIds(draft)
+  const proficientSkillIds = new Set([...draft.backgroundSkillIds, ...selectedClassSkillIds, ...raceSkillIds])
   const expertiseIds = new Set((classRule?.checkpoints ?? [])
     .filter((checkpoint) => checkpoint.kind === 'expertise')
     .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? []))
@@ -167,7 +209,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
         id: `${skillId}-proficiency`,
         label: '技能熟练',
         value: proficiency,
-        detail: draft.backgroundSkillIds.includes(skillId) ? '来自背景' : '来自职业',
+        detail: draft.backgroundSkillIds.includes(skillId) ? '来自背景' : raceSkillIds.includes(skillId) ? '来自种族' : '来自职业',
       }] : []),
       ...(expertise ? [{
         id: `${skillId}-expertise`,

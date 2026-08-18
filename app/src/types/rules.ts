@@ -190,6 +190,14 @@ export interface RaceRule {
   readonly speed?: number
   readonly flexibleBonusCount?: number
   readonly flexibleBonusValue?: number
+  /** 种族固定技能熟练（如精灵察觉）；沿 parentRaceId 链叠加。 */
+  readonly skillProficiencies?: readonly string[]
+  /** 种族自选技能熟练规格（如半精灵 2 项全技能、兽人 7 选 2）；optionIds 缺省为全部 18 项技能。 */
+  readonly skillProficiencyChoices?: { readonly count: number; readonly optionIds?: readonly string[] }
+  /** 种族自选工具熟练规格（如矮人 1 项工匠工具）；展示级，不参与派生。 */
+  readonly toolProficiencyChoices?: { readonly count: number }
+  /** 种族武器/护甲熟练（如精灵武器训练）；展示级，不参与派生。 */
+  readonly weaponArmorProficiencies?: readonly string[]
   /** 灵活加值分组（如费兹本龙裔：第一项 +2、第二项 +1）；与 flexibleBonusCount/Value 二选一。 */
   readonly flexibleBonusGroups?: readonly { readonly count: number; readonly value: number }[]
   readonly excludedFlexibleAbilityKeys?: readonly AbilityKey[]

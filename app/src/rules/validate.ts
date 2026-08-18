@@ -6,7 +6,7 @@ import {
   getFeatEligibility,
 } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abilities'
-import { getFlexibleBonusRule, getRaceAbilityBonuses } from '@/rules/derive'
+import { getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
@@ -308,6 +308,68 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     }
   }
   issues.push(...validateSubclassSelections(draft))
+  issues.push(...validateRaceSkillChoices(draft))
+  return issues
+}
+
+/** 校验种族自选技能/工具熟练：数量、选项合法性、吉斯洋基技能/工具互斥。 */
+function validateRaceSkillChoices(draft: CharacterDraft): readonly ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+  const race = draft.subraceId
+    ? rulesRepository.getRace(draft.subraceId)
+    : draft.raceId
+      ? rulesRepository.getRace(draft.raceId)
+      : undefined
+  if (!race) return issues
+  const isGithyanki = race.id === 'race-2014-gith-githyanki'
+  const chosen = draft.raceSkillChoices ?? []
+  const toolChosen = Boolean(race.toolProficiencyChoices && draft.raceToolChoice)
+  const skillSpec = race.skillProficiencyChoices
+  if (skillSpec) {
+    // 吉斯洋基选了工具侧时不再要求技能（二选一）。
+    if (!(isGithyanki && toolChosen) && chosen.length !== skillSpec.count) {
+      issues.push({
+        id: 'race-skill-choice-count',
+        step: 'origin',
+        severity: 'error',
+        message: isGithyanki && chosen.length === 0
+          ? `${race.name}需要选择一项技能或工具熟练。`
+          : `${race.name}需要选择${skillSpec.count}项技能熟练。`,
+        resolution: `已选 ${chosen.length} 项，请返回起源步骤补选或移除。`,
+      })
+    }
+    const allowed = skillSpec.optionIds ?? SKILL_IDS
+    for (const skillId of chosen) {
+      if (!allowed.includes(skillId)) {
+        issues.push({
+          id: `race-skill-choice-invalid-${skillId}`,
+          step: 'origin',
+          severity: 'error',
+          message: `${race.name}的技能熟练选项“${skillId}”不在可选范围内。`,
+          resolution: '请返回起源步骤重新选择。',
+        })
+      }
+    }
+    if (isGithyanki && toolChosen && chosen.length > 0) {
+      issues.push({
+        id: 'githyanki-choice-exclusive',
+        step: 'origin',
+        severity: 'error',
+        message: '吉斯洋基人的腐化精通只能选择一项技能或工具熟练。',
+        resolution: '请只保留技能或工具其中一项。',
+      })
+    }
+  }
+  if (race.toolProficiencyChoices && !isGithyanki && !draft.raceToolChoice) {
+    // 工具熟练不参与派生，未选仅提示（不阻塞角色完成）。
+    issues.push({
+      id: 'race-tool-choice-missing',
+      step: 'origin',
+      severity: 'warning',
+      message: `${race.name}可自选一种工具熟练。`,
+      resolution: '在起源步骤选择工具（仅记录与展示，不影响数值）。',
+    })
+  }
   return issues
 }
 

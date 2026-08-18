@@ -151,11 +151,15 @@ function updateMethod(value: AbilityMethod): void {
       :background-id="activeDraft.backgroundId"
       :background-variant-id="activeDraft.backgroundVariantId"
       :languages="activeDraft.languages"
+      :race-skill-choices="activeDraft.raceSkillChoices ?? []"
+      :race-tool-choice="activeDraft.raceToolChoice"
       @race="selectRace"
       @subrace="selectSubrace"
       @background="selectBackground"
       @variant="selectBackgroundVariant"
       @languages="updateDraft({ languages: $event })"
+      @race-skills="updateDraft({ raceSkillChoices: $event })"
+      @race-tool="updateDraft({ raceToolChoice: $event })"
     />
     <AbilitiesStep
       v-else-if="step === 'abilities'"

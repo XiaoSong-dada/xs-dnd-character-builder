@@ -329,3 +329,55 @@ describe('validateSubclassSelections 子职特性多选校验', () => {
     expect(ids.some((id) => id.startsWith('checkpoint-subclass-feature-fighter-battle-master-'))).toBe(false)
   })
 })
+
+describe('validateRaceSkillChoices 种族自选熟练校验', () => {
+  function raceDraft(raceId: string, patch: Partial<CharacterDraft> = {}): CharacterDraft {
+    return {
+      ...createDraft(),
+      raceId,
+      backgroundId: 'background-2014-soldier',
+      name: '测试',
+      ...patch,
+    }
+  }
+
+  function ids(draft: CharacterDraft): string[] {
+    return validateDraft(draft).map((issue) => issue.id)
+  }
+
+  it('半精灵选满 2 项通过，选 3 项或越权选项报错', () => {
+    const ok = raceDraft('race-2014-half-elf', { raceSkillChoices: ['skill-deception', 'skill-persuasion'] })
+    expect(ids(ok).some((id) => id.startsWith('race-skill-choice-'))).toBe(false)
+
+    const over = raceDraft('race-2014-half-elf', { raceSkillChoices: ['skill-deception', 'skill-persuasion', 'skill-stealth'] })
+    expect(ids(over)).toContain('race-skill-choice-count')
+
+    const missing = raceDraft('race-2014-half-elf')
+    expect(ids(missing)).toContain('race-skill-choice-count')
+  })
+
+  it('兽人限定列表外选项报错', () => {
+    const invalid = raceDraft('race-2014-orc', { raceSkillChoices: ['skill-deception', 'skill-persuasion'] })
+    expect(ids(invalid)).toContain('race-skill-choice-invalid-skill-deception')
+  })
+
+  it('吉斯洋基技能/工具二选一互斥，工具侧满足时不要求技能', () => {
+    const toolOnly = raceDraft('race-2014-gith-githyanki', { raceToolChoice: 'tool-thieves-tools' })
+    expect(ids(toolOnly).some((id) => id.startsWith('race-skill-choice-') || id === 'githyanki-choice-exclusive')).toBe(false)
+
+    const both = raceDraft('race-2014-gith-githyanki', { raceToolChoice: 'tool-thieves-tools', raceSkillChoices: ['skill-arcana'] })
+    expect(ids(both)).toContain('githyanki-choice-exclusive')
+
+    const neither = raceDraft('race-2014-gith-githyanki')
+    expect(ids(neither)).toContain('race-skill-choice-count')
+  })
+
+  it('战俑未选工具给出警告但不阻塞；旧草稿无字段不报错', () => {
+    const warforged = raceDraft('race-2014-warforged', { raceSkillChoices: ['skill-perception'] })
+    expect(ids(warforged)).toContain('race-tool-choice-missing')
+    expect(ids(warforged).filter((id) => id === 'race-tool-choice-missing')).toHaveLength(1)
+
+    const legacy = raceDraft('race-2014-human')
+    expect(ids(legacy).some((id) => id.startsWith('race-skill-choice-'))).toBe(false)
+  })
+})

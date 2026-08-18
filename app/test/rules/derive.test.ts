@@ -102,4 +102,46 @@ describe('deriveCharacter', () => {
     expect(result.skills['skill-investigation']?.value).toBe(7)
     expect(result.skills['skill-investigation']?.sources.some((source) => source.id === 'skill-investigation-expertise')).toBe(true)
   })
+
+  it('种族技能熟练进入派生且来源可解释（精灵察觉、子种族继承）', () => {
+    const elf: CharacterDraft = {
+      ...draft,
+      raceId: 'race-2014-elf',
+      subraceId: 'race-2014-elf-high',
+      backgroundSkillIds: ['skill-history'],
+    }
+    const derived = deriveCharacter(elf)
+    const perception = derived.skills['skill-perception']
+    // 感知 12 → +1，10 级熟练 +4。
+    expect(perception?.value).toBe(5)
+    expect(perception?.sources.some((source) => source.detail === '来自种族')).toBe(true)
+    // 子种族继承父种族熟练：高等精灵仍拥有精灵的察觉。
+    expect(perception?.sources.some((source) => source.id === 'skill-perception-proficiency')).toBe(true)
+  })
+
+  it('半兽人种族威吓与背景重叠时只加一次熟练', () => {
+    // draft 为半兽人且背景已含威吓与运动。
+    const derived = deriveCharacter(draft)
+    const intimidation = derived.skills['skill-intimidation']
+    // 魅力 10 → +0，熟练 +4，只加一次（不因种族+背景双来源叠加）。
+    expect(intimidation?.value).toBe(4)
+    expect(intimidation?.sources.filter((source) => source.label === '技能熟练')).toHaveLength(1)
+  })
+
+  it('半精灵自选技能熟练生效，工具选择不影响数值', () => {
+    const halfElf: CharacterDraft = {
+      ...draft,
+      raceId: 'race-2014-half-elf',
+      subraceId: undefined,
+      raceSkillChoices: ['skill-deception', 'skill-persuasion'],
+      raceToolChoice: 'tool-thieves-tools',
+    }
+    const derived = deriveCharacter(halfElf)
+    // 半精灵魅力 +2 → 12 → 调整 +1，10 级熟练 +4。
+    expect(derived.skills['skill-deception']?.value).toBe(5)
+    expect(derived.skills['skill-persuasion']?.value).toBe(5)
+    expect(derived.skills['skill-deception']?.sources.some((source) => source.detail === '来自种族')).toBe(true)
+    // 工具选择不改变攻击等任何数值。
+    expect(derived.attackBonus.value).toBe(proficiencyBonus(10) + 2)
+  })
 })
