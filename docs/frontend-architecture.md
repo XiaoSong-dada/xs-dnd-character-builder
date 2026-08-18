@@ -325,6 +325,9 @@ src/services/draft-storage.ts
 src/services/dice-random.ts
   -> Web Crypto（可靠 uint32 随机源与拒绝采样）
 
+src/services/umami.ts
+  -> src/config/site.ts（域名匹配后幂等加载 Umami 统计脚本）
+
 src/config/site.ts    （无依赖；项目内唯一读取 import.meta.env 的入口）
 src/config/setting.ts （空占位文件，无消费者）
 ```
@@ -419,4 +422,4 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 
 `views/character-builder/steps.ts` 是车卡步骤顺序（`STEP_ORDER`）与友好文案（`STEP_META`，`eyebrow`/`title`）的公共常量模块，仅依赖 `types/character`（`DraftStep`）；`useCharacterBuilderPage`（步骤编排、`stepMeta`/`stepNumber`）与 `StartPanel`（首页角色条第三段信息）共用。`StartPanel` 的角色条信息分级展示：完成态（`sheet`）显示职业名（查询不到回退"角色完成"），进行中已选职业显示"职业 · 第N步"，未选职业显示"第N步 · 步骤名"，不再裸显 `currentStep` 英文 ID。
 
-`src/config/site.ts` 是站点信息配置模块，为项目内**唯一**读取 `import.meta.env` 的入口（`VITE_AUTHOR_NAME`/`VITE_GITHUB_URL`/`VITE_AUTHOR_TAGLINE`/`VITE_APP_VERSION`，可选，空串归一化为 `undefined`），导出 `siteConfig`；`StartPanel` 消费它在 hero 底部渲染署名行（"由 X 制作 · GitHub · v版本"，全部未配置时隐藏）。其余业务模块一律不直接读取 `import.meta.env`。
+`src/config/site.ts` 是站点与统计配置模块，为项目内**唯一**读取 `import.meta.env` 的入口（站点信息及 `VITE_UMAMI_SCRIPT_URL`/`VITE_UMAMI_WEBSITE_ID`/`VITE_UMAMI_DOMAINS`，空串归一化为 `undefined`，统计域名解析为列表），导出 `siteConfig`；`StartPanel` 消费站点信息渲染署名行，`main.ts` 在应用挂载后调用 `services/umami.ts`，由该服务校验当前域名并幂等加载 Umami 脚本。Umami 自行监听 History API，不额外注册 Router 页面访问钩子。其余业务模块一律不直接读取 `import.meta.env`。

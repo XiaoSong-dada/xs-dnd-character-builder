@@ -65,9 +65,9 @@ pnpm preview
 
 生产构建输出到 `app/dist`。提交修改前至少应运行 `pnpm test:run` 和 `pnpm build`。
 
-## 可选站点配置
+## 可选站点与访问统计配置
 
-复制 `.env.example` 为 `.env.local`，即可配置主页署名。所有字段均为可选；未配置时不会显示对应内容。
+复制 `.env.example` 为 `.env.local`，即可配置主页署名与 Umami 访问统计。站点字段均为可选；Umami 配置缺失或当前域名不匹配时不会加载统计脚本。
 
 ```sh
 cp .env.example .env.local
@@ -79,8 +79,14 @@ cp .env.example .env.local
 | `VITE_GITHUB_URL` | 主页 GitHub 图标的跳转地址 |
 | `VITE_AUTHOR_TAGLINE` | 预留的作者标语，当前尚未展示 |
 | `VITE_APP_VERSION` | 主页显示的版本号 |
+| `VITE_UMAMI_SCRIPT_URL` | Umami 统计脚本地址 |
+| `VITE_UMAMI_WEBSITE_ID` | Umami 后台生成的网站标识 |
+| `VITE_UMAMI_DOMAINS` | 允许统计的域名，多个域名使用英文逗号分隔 |
 
 Vite 环境变量会在构建时写入前端资源，不要在这些变量中保存密钥或其他敏感信息。
+Umami 的脚本地址和 Website ID 会公开在浏览器中，不属于密钥。当前配置只在 `dnd.xsmach.cn` 加载脚本，因此 localhost、IP 地址和未登记的预览域名不会产生生产统计。
+
+Umami 会自动监听 History API，Vue Router 的前端路由切换无需额外埋点。“实时”统计表示近期仍活跃的访客，并非严格的 WebSocket 同时在线连接数。
 
 ## 数据保存与导入导出
 
@@ -141,8 +147,13 @@ docker build \
   --build-arg VITE_AUTHOR_NAME="小宋哒哒" \
   --build-arg VITE_GITHUB_URL="https://github.com/XiaoSong-dada" \
   --build-arg VITE_APP_VERSION="0.1.0" \
+  --build-arg VITE_UMAMI_SCRIPT_URL="https://your_url/script.js" \
+  --build-arg VITE_UMAMI_WEBSITE_ID="your website id" \
+  --build-arg VITE_UMAMI_DOMAINS="dnd.xsmach.cn" \
   -t dnd-character-builder .
 ```
+
+使用仓库根目录的 `docker-compose.yml` 时，可复制根目录 `.env.example` 为 `.env` 后调整配置。以上变量均在 Vite 构建期注入；修改后必须重新执行 `docker compose up -d --build`，仅重启现有容器不会更新统计配置。
 
 ## 开发约定
 

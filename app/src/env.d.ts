@@ -9,6 +9,12 @@ interface ImportMetaEnv {
   readonly VITE_AUTHOR_TAGLINE?: string
   /** 可选版本号（如 0.1.0），未配置则不显示 */
   readonly VITE_APP_VERSION?: string
+  /** Umami 追踪脚本地址 */
+  readonly VITE_UMAMI_SCRIPT_URL?: string
+  /** Umami 网站标识 */
+  readonly VITE_UMAMI_WEBSITE_ID?: string
+  /** 允许追踪的域名，多个域名使用英文逗号分隔 */
+  readonly VITE_UMAMI_DOMAINS?: string
 }
 
 interface ImportMeta {
