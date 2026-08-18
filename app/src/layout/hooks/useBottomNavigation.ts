@@ -21,7 +21,7 @@ const navigationItems = [
   },
   {
     routeName: 'dice',
-    label: '赛博骰子',
+    label: '赛博骰娘',
     iconId: 'navigation-dice',
   },
   {

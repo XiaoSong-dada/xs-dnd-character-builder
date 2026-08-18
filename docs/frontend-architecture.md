@@ -231,13 +231,34 @@ src/layout/hooks/useBottomNavigation.ts
 
 ### 8.3 页面层（车卡页之外）
 
-其余四个页面均为「入口 `index.vue` + 页面私有 hooks」，无页面私有 `components`：
+职业、个人中心与 404 页面仍为「入口 `index.vue` + 页面私有 hooks」，无页面私有 `components`：
 
 ```text
 src/views/classes/index.vue    -> src/views/classes/hooks/useClassesPage.ts
-src/views/dice/index.vue       -> src/views/dice/hooks/useDicePage.ts
 src/views/profile/index.vue    -> src/views/profile/hooks/useProfilePage.ts
 src/views/not-found/index.vue  -> src/views/not-found/hooks/useNotFoundPage.ts（-> vue-router useRouter）
+```
+
+赛博骰娘页面为独立的页面内聚模块：
+
+```text
+src/views/dice/index.vue
+  -> src/views/dice/hooks/useDicePage.ts
+  -> src/views/dice/components/{DiceTypeSelector,DicePoolPanel,DiceTray,DiceResultPanel}
+
+src/views/dice/hooks/useDicePage.ts
+  -> src/rules/dice.ts
+  -> src/services/dice-random.ts
+  -> src/views/dice/engine/dice-worker-client.ts
+  -> src/types/dice.ts
+
+src/views/dice/engine/*
+  -> Three.js（渲染、骰面旋转）
+  -> cannon-es（凸多面体刚体、固定步长物理）
+  -> src/types/dice.ts
+
+src/views/dice/workers/dicePhysics.worker.ts
+  -> src/views/dice/engine/dice-physics.ts
 ```
 
 ### 8.4 车卡页面（views/character-builder）
@@ -297,6 +318,9 @@ src/services/draft-storage.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
   -> src/types/character
 
+src/services/dice-random.ts
+  -> Web Crypto（可靠 uint32 随机源与拒绝采样）
+
 src/config/site.ts    （无依赖；项目内唯一读取 import.meta.env 的入口）
 src/config/setting.ts （空占位文件，无消费者）
 ```
@@ -315,6 +339,7 @@ src/rules/feats.ts               -> src/rules/data/feats-2014
 src/rules/recommend.ts           -> src/rules/data/{feats-2014,preferences-2014}
 src/rules/abilities.ts           （无 rules 内部依赖，最纯）
 src/rules/subclass-effects.ts    （无依赖，纯函数）
+src/rules/dice.ts                -> src/types/dice（骰池、d100、总和与投掷准备纯函数）
 ```
 
 规则层保持框架无关：不导入 Vue、Pinia、Router、DOM、Cookie、存储或 `import.meta.env`。`rules/data` 之间仅存在单向、无环的横向依赖：
@@ -331,6 +356,7 @@ spell-slots-2014       <- {arcane-casters-2014, half-casters-2014, full-casters-
 ```text
 src/types/character.ts（叶子类型，全项目共享）
 src/types/rules.ts     -> src/types/character（type-only）
+src/types/dice.ts      （骰池、逻辑结果、物理请求与轨迹协议）
 src/styles/index.scss  -> @use src/styles/flex.scss
 ```
 

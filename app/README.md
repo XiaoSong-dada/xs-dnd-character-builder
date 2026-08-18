@@ -15,16 +15,18 @@
 - 在角色完成后调整等级或重新编辑；失效选择会保留并提示复查，不会静默删除。
 - 将草稿自动保存在当前浏览器，并支持角色 JSON 导入、导出。
 - 隔离旧版 2024 草稿，保留原始数据导出能力。
+- 使用赛博骰娘投掷 d4、d6、d8、d10、d12、d20 与 d100，支持混合骰池、3D 物理动画、逐颗结果和自动合计。
 
-当前未包含多职业、2024 规则编辑、云同步、PDF 导出和 DM 房规编辑器。“职业介绍”“赛博骰子”“个人中心”目前为开发中占位页。
+当前未包含多职业、2024 规则编辑、云同步、PDF 导出和 DM 房规编辑器。“职业介绍”和“个人中心”目前为开发中占位页。
 
 更完整的规则与实现范围请阅读[规则约定](../docs/rules.md)和[快速车卡实现说明](../docs/quick-build-implementation.md)。
 
 ## 技术栈
 
-- Vue 3、TypeScript、Vite
+- Vue 3、TypeScript、Vite、Web Worker
 - Vue Router、Pinia
 - Reka UI
+- Three.js、cannon-es
 - SCSS、CSS Variables
 - Vitest、Vue Test Utils、happy-dom
 - Nginx（容器部署）
