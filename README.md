@@ -1,10 +1,60 @@
-# D&D 快速车卡辅助
+# D&D 5e 2014 快速车卡辅助
 
-一个面向手机端的 Vue 3 Web 应用，用分步引导、自动计算和规则校验降低 D&D 5e 车卡门槛。
+一个移动端优先的 D&D 5e 2014 车卡 Web 应用，通过分步引导、自动计算和规则校验，帮助新玩家快速创建并使用角色卡。
 
-## 当前约定
+## 当前支持
 
-- 默认规则集：D&D 5e 2024
-- 首个版本：1 级角色、公开 SRD 内容、移动端优先
-- 规则与产品约定：见 [`docs/rules.md`](docs/rules.md)
+- D&D 5e 2014 规则集
+- 1—20 级单职业角色
+- 标准数组、27 点购点和自定义属性
+- 职业推荐、种族与背景、升级时间线、装备及法术配置
+- 角色数值自动计算与选择合法性校验
+- 浏览器本地保存和角色 JSON 导入、导出
 
+当前暂不支持 2024 规则编辑、多职业、云同步、PDF 导出和 DM 房规编辑器。
+
+## v0.2.0
+
+- 新增物品添加、增减与数量管理
+- 完善职业及职业特性详情展示
+- 新增法术环位展示
+- 修复战士职业能力相关问题
+
+## 快速开始
+
+项目代码位于 `app`，建议使用 Node.js 22 和 pnpm 10。
+
+```sh
+cd app
+corepack enable
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+测试与构建：
+
+```sh
+cd app
+pnpm test:run
+pnpm build
+```
+
+## Docker 部署
+
+复制环境变量示例并启动服务：
+
+```sh
+cp .env.example .env
+docker compose up -d --build
+```
+
+默认访问地址为 `http://localhost:8080`，可通过根目录 `.env` 中的 `APP_PORT` 修改端口。
+
+## 项目文档
+
+- [应用开发、配置与部署说明](app/README.md)
+- [产品与规则约定](docs/rules.md)
+- [前端架构与依赖边界](docs/frontend-architecture.md)
+- [快速车卡实现说明](docs/quick-build-implementation.md)
+
+> 本项目不提供或替代 D&D 官方规则书。商业资料仅保留必要索引和原创摘要，具体规则以合法来源及 DM 裁定为准。
