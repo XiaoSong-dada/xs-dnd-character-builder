@@ -12,10 +12,32 @@ export interface SiteConfig {
   readonly tagline?: string
   /** 可选版本号（未配置则不显示） */
   readonly version?: string
+  /** Umami 访问统计配置 */
+  readonly umami: UmamiConfig
+}
+
+export interface UmamiConfig {
+  /** Umami 追踪脚本地址 */
+  readonly scriptUrl?: string
+  /** Umami 网站标识 */
+  readonly websiteId?: string
+  /** 允许记录访问的域名列表 */
+  readonly domains: readonly string[]
 }
 
 function defined(value: string | undefined): string | undefined {
-  return value && value.trim() ? value : undefined
+  const normalized = value?.trim()
+  return normalized || undefined
+}
+
+function parseDomains(value: string | undefined): readonly string[] {
+  const normalized = defined(value)
+  if (!normalized) return []
+
+  return normalized
+    .split(',')
+    .map((domain) => domain.trim())
+    .filter(Boolean)
 }
 
 export const siteConfig: SiteConfig = {
@@ -23,4 +45,9 @@ export const siteConfig: SiteConfig = {
   githubUrl: defined(import.meta.env.VITE_GITHUB_URL),
   tagline: defined(import.meta.env.VITE_AUTHOR_TAGLINE),
   version: defined(import.meta.env.VITE_APP_VERSION),
+  umami: {
+    scriptUrl: defined(import.meta.env.VITE_UMAMI_SCRIPT_URL),
+    websiteId: defined(import.meta.env.VITE_UMAMI_WEBSITE_ID),
+    domains: parseDomains(import.meta.env.VITE_UMAMI_DOMAINS),
+  },
 }

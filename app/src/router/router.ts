@@ -34,7 +34,7 @@ const router = createRouter({
           name: 'dice',
           component: () => import('@/views/dice/index.vue'),
           meta: {
-            title: '赛博骰子 | D&D车卡辅助',
+            title: '赛博骰娘 | D&D车卡辅助',
           },
         },
         {

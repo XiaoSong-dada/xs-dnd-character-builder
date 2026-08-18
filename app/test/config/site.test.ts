@@ -15,6 +15,9 @@ describe('siteConfig 环境变量归一化', () => {
     vi.stubEnv('VITE_AUTHOR_NAME', '小宋哒哒')
     vi.stubEnv('VITE_GITHUB_URL', 'https://github.com/XiaoSong-dada')
     vi.stubEnv('VITE_APP_VERSION', '0.1.0')
+    vi.stubEnv('VITE_UMAMI_SCRIPT_URL', ' https://umami.example.com/script.js ')
+    vi.stubEnv('VITE_UMAMI_WEBSITE_ID', ' website-id ')
+    vi.stubEnv('VITE_UMAMI_DOMAINS', 'example.com, www.example.com ')
 
     const config = await loadConfig()
     expect(config).toEqual({
@@ -22,6 +25,11 @@ describe('siteConfig 环境变量归一化', () => {
       githubUrl: 'https://github.com/XiaoSong-dada',
       tagline: undefined,
       version: '0.1.0',
+      umami: {
+        scriptUrl: 'https://umami.example.com/script.js',
+        websiteId: 'website-id',
+        domains: ['example.com', 'www.example.com'],
+      },
     })
   })
 
@@ -29,10 +37,18 @@ describe('siteConfig 环境变量归一化', () => {
     vi.stubEnv('VITE_AUTHOR_NAME', '')
     vi.stubEnv('VITE_GITHUB_URL', '   ')
     vi.stubEnv('VITE_APP_VERSION', '')
+    vi.stubEnv('VITE_UMAMI_SCRIPT_URL', ' ')
+    vi.stubEnv('VITE_UMAMI_WEBSITE_ID', '')
+    vi.stubEnv('VITE_UMAMI_DOMAINS', ' , ')
 
     const config = await loadConfig()
     expect(config.authorName).toBeUndefined()
     expect(config.githubUrl).toBeUndefined()
     expect(config.version).toBeUndefined()
+    expect(config.umami).toEqual({
+      scriptUrl: undefined,
+      websiteId: undefined,
+      domains: [],
+    })
   })
 })

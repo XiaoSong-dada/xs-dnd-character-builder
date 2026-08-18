@@ -231,13 +231,38 @@ src/layout/hooks/useBottomNavigation.ts
 
 ### 8.3 页面层（车卡页之外）
 
-其余四个页面均为「入口 `index.vue` + 页面私有 hooks」，无页面私有 `components`：
+职业、个人中心与 404 页面仍为「入口 `index.vue` + 页面私有 hooks」，无页面私有 `components`：
 
 ```text
 src/views/classes/index.vue    -> src/views/classes/hooks/useClassesPage.ts
-src/views/dice/index.vue       -> src/views/dice/hooks/useDicePage.ts
 src/views/profile/index.vue    -> src/views/profile/hooks/useProfilePage.ts
 src/views/not-found/index.vue  -> src/views/not-found/hooks/useNotFoundPage.ts（-> vue-router useRouter）
+```
+
+赛博骰娘页面为独立的页面内聚模块：
+
+```text
+src/views/dice/index.vue
+  -> src/views/dice/hooks/useDicePage.ts
+  -> src/views/dice/components/{DiceTypeSelector,DicePoolPanel,DiceTray,DiceResultPanel}
+
+src/views/dice/hooks/useDicePage.ts
+  -> src/rules/dice.ts
+  -> src/services/dice-random.ts
+  -> src/views/dice/engine/dice-worker-client.ts
+  -> src/types/dice.ts
+
+src/views/dice/engine/*
+  -> Three.js（渲染、骰面旋转）
+  -> cannon-es（凸多面体刚体、固定步长物理）
+  -> src/types/dice.ts
+
+src/views/dice/engine/dice-tray-layout.ts
+  -> 动态骰盘尺寸、出生网格、摄像机适配与视图边界纯函数
+  <- dice-physics.ts、dice-renderer.ts
+
+src/views/dice/workers/dicePhysics.worker.ts
+  -> src/views/dice/engine/dice-physics.ts
 ```
 
 ### 8.4 车卡页面（views/character-builder）
@@ -297,6 +322,12 @@ src/services/draft-storage.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
   -> src/types/character
 
+src/services/dice-random.ts
+  -> Web Crypto（可靠 uint32 随机源与拒绝采样）
+
+src/services/umami.ts
+  -> src/config/site.ts（域名匹配后幂等加载 Umami 统计脚本）
+
 src/config/site.ts    （无依赖；项目内唯一读取 import.meta.env 的入口）
 src/config/setting.ts （空占位文件，无消费者）
 ```
@@ -315,6 +346,7 @@ src/rules/feats.ts               -> src/rules/data/feats-2014
 src/rules/recommend.ts           -> src/rules/data/{feats-2014,preferences-2014}
 src/rules/abilities.ts           （无 rules 内部依赖，最纯）
 src/rules/subclass-effects.ts    （无依赖，纯函数）
+src/rules/dice.ts                -> src/types/dice（骰池、d100、总和与投掷准备纯函数）
 ```
 
 规则层保持框架无关：不导入 Vue、Pinia、Router、DOM、Cookie、存储或 `import.meta.env`。`rules/data` 之间仅存在单向、无环的横向依赖：
@@ -331,6 +363,7 @@ spell-slots-2014       <- {arcane-casters-2014, half-casters-2014, full-casters-
 ```text
 src/types/character.ts（叶子类型，全项目共享）
 src/types/rules.ts     -> src/types/character（type-only）
+src/types/dice.ts      （骰池、逻辑结果、物理请求与轨迹协议）
 src/styles/index.scss  -> @use src/styles/flex.scss
 ```
 
@@ -389,4 +422,4 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 
 `views/character-builder/steps.ts` 是车卡步骤顺序（`STEP_ORDER`）与友好文案（`STEP_META`，`eyebrow`/`title`）的公共常量模块，仅依赖 `types/character`（`DraftStep`）；`useCharacterBuilderPage`（步骤编排、`stepMeta`/`stepNumber`）与 `StartPanel`（首页角色条第三段信息）共用。`StartPanel` 的角色条信息分级展示：完成态（`sheet`）显示职业名（查询不到回退"角色完成"），进行中已选职业显示"职业 · 第N步"，未选职业显示"第N步 · 步骤名"，不再裸显 `currentStep` 英文 ID。
 
-`src/config/site.ts` 是站点信息配置模块，为项目内**唯一**读取 `import.meta.env` 的入口（`VITE_AUTHOR_NAME`/`VITE_GITHUB_URL`/`VITE_AUTHOR_TAGLINE`/`VITE_APP_VERSION`，可选，空串归一化为 `undefined`），导出 `siteConfig`；`StartPanel` 消费它在 hero 底部渲染署名行（"由 X 制作 · GitHub · v版本"，全部未配置时隐藏）。其余业务模块一律不直接读取 `import.meta.env`。
+`src/config/site.ts` 是站点与统计配置模块，为项目内**唯一**读取 `import.meta.env` 的入口（站点信息及 `VITE_UMAMI_SCRIPT_URL`/`VITE_UMAMI_WEBSITE_ID`/`VITE_UMAMI_DOMAINS`，空串归一化为 `undefined`，统计域名解析为列表），导出 `siteConfig`；`StartPanel` 消费站点信息渲染署名行，`main.ts` 在应用挂载后调用 `services/umami.ts`，由该服务校验当前域名并幂等加载 Umami 脚本。Umami 自行监听 History API，不额外注册 Router 页面访问钩子。其余业务模块一律不直接读取 `import.meta.env`。
