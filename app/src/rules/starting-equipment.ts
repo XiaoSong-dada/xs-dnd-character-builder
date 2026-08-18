@@ -183,3 +183,53 @@ export function addAdventureItem(
     return { ...entry, quantity: nextQuantity, equippedQuantity: nextEquipped }
   })
 }
+
+/**
+ * 移除指定的冒险获得物品条目（按 entry.id 精确匹配）；非 adventure 条目不可删除，原样返回。
+ */
+export function removeAdventureItem(
+  inventory: readonly InventoryEntry[],
+  entryId: string,
+): readonly InventoryEntry[] {
+  const target = inventory.find((entry) => entry.id === entryId)
+  if (!target || target.sourceKind !== 'adventure') return inventory
+  return inventory.filter((entry) => entry.id !== entryId)
+}
+
+/**
+ * 将冒险获得物品数量减少 count（≥ 1）；装备数量同步收缩，恒满足 equippedQuantity ≤ quantity；
+ * 数量减至 0 或以下时移除整条；非 adventure 条目原样返回。
+ */
+export function decreaseAdventureItem(
+  inventory: readonly InventoryEntry[],
+  entryId: string,
+  count: number,
+): readonly InventoryEntry[] {
+  if (count < 1) return inventory
+  const target = inventory.find((entry) => entry.id === entryId)
+  if (!target || target.sourceKind !== 'adventure') return inventory
+  const nextQuantity = target.quantity - count
+  if (nextQuantity <= 0) return inventory.filter((entry) => entry.id !== entryId)
+  return inventory.map((entry) =>
+    entry.id === entryId
+      ? { ...entry, quantity: nextQuantity, equippedQuantity: Math.min(entry.equippedQuantity, nextQuantity) }
+      : entry,
+  )
+}
+
+/**
+ * 向冒险获得物品条目追加 count（≥ 1），等价于添加弹窗的同条目合并逻辑；
+ * 仅增加物品栏数量，不改变装备数量（如需装备可另行装备/卸下）；非 adventure 条目原样返回。
+ */
+export function increaseAdventureItem(
+  inventory: readonly InventoryEntry[],
+  entryId: string,
+  count: number,
+): readonly InventoryEntry[] {
+  if (count < 1) return inventory
+  const target = inventory.find((entry) => entry.id === entryId)
+  if (!target || target.sourceKind !== 'adventure') return inventory
+  return inventory.map((entry) =>
+    entry.id === entryId ? { ...entry, quantity: entry.quantity + count } : entry,
+  )
+}

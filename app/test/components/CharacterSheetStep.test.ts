@@ -729,3 +729,145 @@ describe('CharacterSheetStep 物品添加与金币调整', () => {
   })
 })
 
+describe('CharacterSheetStep 物品数量调整', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    document.body.innerHTML = ''
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    document.body.innerHTML = ''
+  })
+
+  const adjustDraft: CharacterDraft = {
+    ...draft,
+    inventory: [
+      { id: 'adventure:sheet:longsword:1', itemId: 'longsword', quantity: 3, sourceKind: 'adventure', sourceId: 'adventure', equippedQuantity: 2 },
+      { id: 'class:fighter:chain-mail', itemId: 'chain-mail', quantity: 1, sourceKind: 'class', sourceId: 'class-2014-fighter', equippedQuantity: 1 },
+    ],
+  }
+
+  async function mountToItemsTab(patch: Partial<CharacterDraft> = {}): Promise<ReturnType<typeof mount>> {
+    const itemDraft: CharacterDraft = { ...adjustDraft, ...patch }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: itemDraft, derived: deriveCharacter(itemDraft) },
+      attachTo: document.body,
+    })
+    await wrapper.get('[role="tab"]:nth-child(5)').trigger('click')
+    return wrapper
+  }
+
+  function bodyButton(text: string): HTMLButtonElement | undefined {
+    return Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.trim() === text)
+  }
+
+  async function openAdjust(wrapper: ReturnType<typeof mount>, itemName: string): Promise<void> {
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes(itemName))
+    expect(card).toBeTruthy()
+    await card!.find('button.character-sheet__spell-action').trigger('click')
+  }
+
+  function setCount(value: string): void {
+    const input = document.body.querySelector<HTMLInputElement>('input[aria-label="调整数量数值"]')
+    expect(input).toBeTruthy()
+    input!.value = value
+    input!.dispatchEvent(new Event('input'))
+  }
+
+  it('adventure 条目显示调整入口，起始装备条目只显示来源徽标', async () => {
+    const wrapper = await mountToItemsTab()
+    const longswordCards = wrapper.findAll('.expandable-option-card').filter((item) => item.text().includes('长剑'))
+    expect(longswordCards.length).toBeGreaterThan(0)
+    for (const card of longswordCards) {
+      expect(card.find('button.character-sheet__spell-action').exists()).toBe(true)
+    }
+
+    const chainMailCards = wrapper.findAll('.expandable-option-card').filter((item) => item.text().includes('链甲'))
+    expect(chainMailCards.length).toBeGreaterThan(0)
+    for (const card of chainMailCards) {
+      expect(card.find('button.character-sheet__spell-action').exists()).toBe(false)
+      expect(card.text()).toContain('起始装备')
+    }
+    expect(longswordCards[0]!.text()).not.toContain('起始装备')
+  })
+
+  it('弹层「减少」emit changeInventory 且数量正确扣减、装备数量收缩', async () => {
+    const wrapper = await mountToItemsTab()
+    await openAdjust(wrapper, '长剑')
+    setCount('2')
+    await vi.advanceTimersByTimeAsync(0)
+    bodyButton('减少')!.click()
+
+    const emitted = wrapper.emitted('changeInventory')
+    expect(emitted).toHaveLength(1)
+    const inventory = emitted![0][0] as readonly { itemId: string; quantity: number; equippedQuantity: number }[]
+    const longsword = inventory.find((entry) => entry.itemId === 'longsword')
+    expect(longsword?.quantity).toBe(1)
+    expect(longsword?.equippedQuantity).toBe(1)
+  })
+
+  it('弹层「增加」emit 且数量追加、装备数量不变', async () => {
+    const wrapper = await mountToItemsTab()
+    await openAdjust(wrapper, '长剑')
+    setCount('2')
+    await vi.advanceTimersByTimeAsync(0)
+    bodyButton('增加')!.click()
+
+    const inventory = wrapper.emitted('changeInventory')![0][0] as readonly { itemId: string; quantity: number; equippedQuantity: number }[]
+    const longsword = inventory.find((entry) => entry.itemId === 'longsword')
+    expect(longsword?.quantity).toBe(5)
+    expect(longsword?.equippedQuantity).toBe(2)
+  })
+
+  it('「删除全部」先弹确认：取消不移除，确认后条目消失且不返还金币', async () => {
+    const wrapper = await mountToItemsTab()
+    await openAdjust(wrapper, '长剑')
+    bodyButton('删除全部')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+
+    // 确认视图出现，尚未 emit。
+    expect(document.body.textContent).toContain('将移除 长剑')
+    expect(document.body.textContent).toContain('不返还金币')
+    expect(wrapper.emitted('changeInventory')).toBeUndefined()
+
+    bodyButton('取消')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(wrapper.emitted('changeInventory')).toBeUndefined()
+    expect(bodyButton('减少')).toBeTruthy()
+
+    bodyButton('删除全部')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+    bodyButton('删除')!.click()
+    const inventory = wrapper.emitted('changeInventory')![0][0] as readonly { itemId: string }[]
+    expect(inventory.some((entry) => entry.itemId === 'longsword')).toBe(false)
+    expect(inventory.some((entry) => entry.itemId === 'chain-mail')).toBe(true)
+  })
+
+  it('输入数量 ≥ 当前数量的扣减触发确认流程，确认后移除整条', async () => {
+    const wrapper = await mountToItemsTab()
+    await openAdjust(wrapper, '长剑')
+    setCount('3')
+    await vi.advanceTimersByTimeAsync(0)
+    bodyButton('减少')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+
+    // 等价于删除整条：进入确认，不直接 emit。
+    expect(document.body.textContent).toContain('将移除 长剑')
+    expect(wrapper.emitted('changeInventory')).toBeUndefined()
+
+    bodyButton('删除')!.click()
+    const inventory = wrapper.emitted('changeInventory')![0][0] as readonly { itemId: string }[]
+    expect(inventory.some((entry) => entry.itemId === 'longsword')).toBe(false)
+  })
+
+  it('数量输入小于 1 或非整数时操作按钮禁用', async () => {
+    const wrapper = await mountToItemsTab()
+    await openAdjust(wrapper, '长剑')
+    setCount('0')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(bodyButton('减少')!.disabled).toBe(true)
+    expect(bodyButton('增加')!.disabled).toBe(true)
+  })
+})
+

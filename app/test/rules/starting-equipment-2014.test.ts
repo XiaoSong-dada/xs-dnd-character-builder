@@ -4,10 +4,13 @@ import { rulesRepository } from '@/rules/repository'
 import {
   addAdventureItem,
   buildStartingEquipmentState,
+  decreaseAdventureItem,
+  increaseAdventureItem,
   isStartingEquipmentComplete,
+  removeAdventureItem,
   updateEquippedQuantity,
 } from '@/rules/starting-equipment'
-import type { CharacterDraft } from '@/types/character'
+import type { CharacterDraft, InventoryEntry } from '@/types/character'
 
 function wizardDraft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
@@ -178,5 +181,75 @@ describe('2014 starting equipment', () => {
 
     // quantity < 1 直接返回原数组。
     expect(addAdventureItem(draft.inventory, draft.id, { itemId: 'torch', quantity: 0, equip: false })).toBe(draft.inventory)
+  })
+})
+
+describe('adventure item remove / decrease / increase', () => {
+  function sampleInventory(): InventoryEntry[] {
+    return [
+      { id: 'adventure:1:torch:1', itemId: 'torch', quantity: 5, sourceKind: 'adventure', sourceId: 'adventure', equippedQuantity: 3 },
+      { id: 'adventure:1:rope:1', itemId: 'rope', quantity: 1, sourceKind: 'adventure', sourceId: 'adventure', equippedQuantity: 0 },
+      { id: 'class:wizard:quarterstaff', itemId: 'quarterstaff', quantity: 1, sourceKind: 'class', sourceId: 'class-2014-wizard', equippedQuantity: 1 },
+    ]
+  }
+
+  it('删除冒险条目：按 id 移除，其余保留', () => {
+    const next = removeAdventureItem(sampleInventory(), 'adventure:1:torch:1')
+    expect(next).toHaveLength(2)
+    expect(next.some((entry) => entry.id === 'adventure:1:torch:1')).toBe(false)
+    expect(next.find((entry) => entry.id === 'adventure:1:rope:1')?.quantity).toBe(1)
+    expect(next.find((entry) => entry.id === 'class:wizard:quarterstaff')?.quantity).toBe(1)
+  })
+
+  it('删除非 adventure 条目：原数组返回', () => {
+    const inventory = sampleInventory()
+    expect(removeAdventureItem(inventory, 'class:wizard:quarterstaff')).toBe(inventory)
+    expect(removeAdventureItem(inventory, 'not-exist')).toBe(inventory)
+  })
+
+  it('减少指定数量：quantity 减 count，equippedQuantity 收缩到新数量', () => {
+    const next = decreaseAdventureItem(sampleInventory(), 'adventure:1:torch:1', 3)
+    const torch = next.find((entry) => entry.id === 'adventure:1:torch:1')
+    expect(torch?.quantity).toBe(2)
+    // 原装备 3 件收缩为 min(3, 2) = 2。
+    expect(torch?.equippedQuantity).toBe(2)
+    expect(next.find((entry) => entry.id === 'adventure:1:rope:1')?.quantity).toBe(1)
+  })
+
+  it('扣减至 0 或以下：整条移除', () => {
+    const exact = decreaseAdventureItem(sampleInventory(), 'adventure:1:torch:1', 5)
+    expect(exact.some((entry) => entry.id === 'adventure:1:torch:1')).toBe(false)
+
+    const over = decreaseAdventureItem(sampleInventory(), 'adventure:1:torch:1', 99)
+    expect(over.some((entry) => entry.id === 'adventure:1:torch:1')).toBe(false)
+  })
+
+  it('增加指定数量：quantity 加 count，equippedQuantity 不变', () => {
+    const next = increaseAdventureItem(sampleInventory(), 'adventure:1:torch:1', 3)
+    const torch = next.find((entry) => entry.id === 'adventure:1:torch:1')
+    expect(torch?.quantity).toBe(8)
+    expect(torch?.equippedQuantity).toBe(3)
+  })
+
+  it('增减非 adventure 条目：原数组返回；count < 1 也原样返回', () => {
+    const inventory = sampleInventory()
+    expect(decreaseAdventureItem(inventory, 'class:wizard:quarterstaff', 1)).toBe(inventory)
+    expect(increaseAdventureItem(inventory, 'class:wizard:quarterstaff', 1)).toBe(inventory)
+    expect(decreaseAdventureItem(inventory, 'adventure:1:torch:1', 0)).toBe(inventory)
+    expect(increaseAdventureItem(inventory, 'adventure:1:torch:1', 0)).toBe(inventory)
+  })
+
+  it('不变量：所有操作后 equippedQuantity ≤ quantity 恒成立', () => {
+    const base = sampleInventory()
+    const operations: InventoryEntry[][] = [
+      removeAdventureItem(base, 'adventure:1:torch:1'),
+      decreaseAdventureItem(base, 'adventure:1:torch:1', 3),
+      decreaseAdventureItem(base, 'adventure:1:torch:1', 5),
+      increaseAdventureItem(base, 'adventure:1:torch:1', 3),
+      decreaseAdventureItem(base, 'adventure:1:torch:1', 99),
+    ]
+    for (const inventory of operations) {
+      expect(inventory.every((entry) => entry.equippedQuantity <= entry.quantity)).toBe(true)
+    }
   })
 })

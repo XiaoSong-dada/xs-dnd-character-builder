@@ -366,7 +366,7 @@ src/styles/index.scss  -> @use src/styles/flex.scss
 views/character-builder/index.vue
   -> views/character-builder/hooks/useCharacterBuilderPage.ts
   -> views/character-builder/steps.ts（STEP_META/STEP_ORDER 步骤顺序与友好文案公共常量，被 hook 与 StartPanel 共用）
-  -> views/character-builder/components/*（15 个：AbilitiesStep、CharacterSheetStep、ClassStep、EquipmentStep、FeatChoicePanel、IdentityStep、LevelAdjustModal、OriginStep、PreferencesStep、SetupStep、SpellcastingStep、StartPanel、TimelineStep、ValidationStep）
+  -> views/character-builder/components/*（16 个：AbilitiesStep、AddItemModal、AdjustItemModal、CharacterSheetStep、ClassStep、EquipmentStep、FeatChoicePanel、IdentityStep、LevelAdjustModal、OriginStep、PreferencesStep、SetupStep、SpellcastingStep、StartPanel、TimelineStep、ValidationStep）
   -> features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
   -> stores/character-drafts.ts
       -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}

@@ -142,6 +142,7 @@
 - 代码现状：`app/src/rules/data/equipment-2014.ts` 已登记 SRD 子集（护甲/盾牌、37 种武器全量、冒险装备、工具、法器、套组），`EquipmentRule` 含 `category` 与 `equippable`；价格/重量字段与魔法物品登记属后续批次（见 `docs/需求文档/角色卡物品与金币需求.md` R7/R8）。
 - 魔法物品无固定价格，价格按稀有度参考区间（常见 50–100 gp、非普通 101–500 gp、稀有 501–5,000 gp、非常稀有 5,001–50,000 gp、传说 50,001+ gp）；扩展书补充魔法物品（XGtE 常见魔法物品、TCoE 刺青等）列为待补批次。
 - 魔法物品效果未核验前保持 `index-only`（`pending`），不进入自动派生计算；"添加物品"弹窗在数据补全前以自定义物品入口兜底。
+- 物品栏数量调整边界：仅"冒险获得"（`sourceKind === 'adventure'`）条目可在角色卡物品页签调整数量（减少/增加/删除全部）；职业与背景起始装备条目由重新编辑流程管理、不直接调整。减少时装备数量同步收缩（恒满足 `equippedQuantity ≤ quantity`），扣减至 0 或删除整条需二次确认且不返还金币；增加只入物品栏、不改变装备数量。删除/减量/增量由 `app/src/rules/starting-equipment.ts` 的 `removeAdventureItem` / `decreaseAdventureItem` / `increaseAdventureItem` 纯函数处理，变更随草稿持久化。
 
 ## 当前规则来源边界
 

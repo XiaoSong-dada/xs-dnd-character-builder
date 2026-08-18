@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 
 import AddItemModal from './AddItemModal.vue'
+import AdjustItemModal from './AdjustItemModal.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import StatTile from '@/components/ui/StatTile.vue'
@@ -10,7 +11,7 @@ import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
-import { addAdventureItem } from '@/rules/starting-equipment'
+import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
@@ -169,6 +170,32 @@ function handleAddItem(payload: { itemId: string; quantity: number; equip: boole
   })
   emit('changeInventory', inventory)
   showAddItemModal.value = false
+}
+/** 数量调整弹窗：目标条目与开关。 */
+const showAdjustItemModal = ref(false)
+const adjustEntryId = ref('')
+const adjustEntry = computed(() => props.draft.inventory.find((entry) => entry.id === adjustEntryId.value))
+function openAdjustItem(entry: InventoryEntry): void {
+  adjustEntryId.value = entry.id
+  showAdjustItemModal.value = true
+}
+function handleAdjustItem(payload: { action: 'decrease' | 'increase' | 'remove'; count: number }): void {
+  const entry = adjustEntry.value
+  if (!entry) return
+  let inventory = props.draft.inventory
+  if (payload.action === 'remove') {
+    inventory = removeAdventureItem(inventory, entry.id)
+  } else if (payload.action === 'decrease') {
+    inventory = decreaseAdventureItem(inventory, entry.id, payload.count)
+  } else {
+    inventory = increaseAdventureItem(inventory, entry.id, payload.count)
+  }
+  emit('changeInventory', inventory)
+  showAdjustItemModal.value = false
+}
+/** 非冒险物品的来源徽标文案（不提供数量调整）。 */
+function inventorySourceLabel(entry: InventoryEntry): string {
+  return entry.sourceKind === 'class' || entry.sourceKind === 'background' ? '起始装备' : '旧草稿'
 }
 /** 金币调整：操作冒险净增金币（adventureGold），持有总额 = currency.gp + adventureGold。 */
 const currencyInput = ref('')
@@ -497,7 +524,11 @@ const needsReview = computed(() => {
             :description="equipmentSummary(entry.itemId)"
             expanded-label="装备详情"
           >
-            <template #suffix><span class="character-sheet__item-qty">×{{ entry.equippedQuantity }}</span></template>
+            <template #suffix>
+              <span class="character-sheet__item-qty">×{{ entry.equippedQuantity }}</span>
+              <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
+              <button v-else type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
+            </template>
             <template #expanded>{{ rulesRepository.getEquipment(entry.itemId)?.description }}</template>
           </ExpandableOptionCard>
         </ListShell>
@@ -513,7 +544,11 @@ const needsReview = computed(() => {
             :description="equipmentSummary(entry.itemId)"
             expanded-label="装备详情"
           >
-            <template #suffix><span class="character-sheet__item-qty">×{{ entry.quantity }}</span></template>
+            <template #suffix>
+              <span class="character-sheet__item-qty">×{{ entry.quantity }}</span>
+              <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
+              <button v-else type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
+            </template>
             <template #expanded>{{ rulesRepository.getEquipment(entry.itemId)?.description }}</template>
           </ExpandableOptionCard>
         </ListShell>
@@ -535,6 +570,15 @@ const needsReview = computed(() => {
     </div>
     <div v-else class="character-sheet__panel"><h3>{{ tabs.find((tab) => tab.id === activeTab)?.label }}</h3><p>该部分将在对应职业与施法批次继续扩展。</p></div>
     <AddItemModal :open="showAddItemModal" @close="showAddItemModal = false" @add="handleAddItem" />
+    <AdjustItemModal
+      v-if="adjustEntry"
+      :open="showAdjustItemModal"
+      :item-name="equipmentName(adjustEntry.itemId)"
+      :quantity="adjustEntry.quantity"
+      :equipped-quantity="adjustEntry.equippedQuantity"
+      @close="showAdjustItemModal = false"
+      @adjust="handleAdjustItem"
+    />
     <div class="character-sheet__footer">
       <button type="button" class="character-sheet__export" @click="$emit('export')">导出角色 JSON</button>
       <button type="button" class="character-sheet__export character-sheet__export--secondary" @click="$emit('reedit')">重新编辑</button>
@@ -734,6 +778,16 @@ const needsReview = computed(() => {
     color: var(--color-text-muted);
     font-size: 0.8rem;
     font-weight: 700;
+  }
+
+  &__item-source {
+    padding: 0.05rem 0.4rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    color: var(--color-text-muted);
+    font-size: 0.62rem;
+    font-style: normal;
+    white-space: nowrap;
   }
 
   &__spell-stats {
