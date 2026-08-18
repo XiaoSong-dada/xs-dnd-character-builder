@@ -257,6 +257,10 @@ src/views/dice/engine/*
   -> cannon-es（凸多面体刚体、固定步长物理）
   -> src/types/dice.ts
 
+src/views/dice/engine/dice-tray-layout.ts
+  -> 动态骰盘尺寸、出生网格、摄像机适配与视图边界纯函数
+  <- dice-physics.ts、dice-renderer.ts
+
 src/views/dice/workers/dicePhysics.worker.ts
   -> src/views/dice/engine/dice-physics.ts
 ```

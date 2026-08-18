@@ -23,7 +23,7 @@ const {
       :can-add="canAdd" @add="addDie" @remove="removeDie"
     />
     <DiceTray
-      :presentation="presentation" :status="status" :reduced-motion="reducedMotion"
+      :presentation="presentation" :status="status" :reduced-motion="reducedMotion" :physical-count="physicalDiceCount"
       @complete="handlePlaybackComplete" @unavailable="handleRendererUnavailable"
     />
     <p v-if="notice" class="dice-page__notice" role="status">{{ notice }}</p>

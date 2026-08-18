@@ -6,7 +6,6 @@ export class DiceWorkerClient {
   private worker: Worker | undefined
   private pending = new Map<string, {
     resolve: (response: DiceWorkerResponse) => void
-    timer: ReturnType<typeof setTimeout>
   }>()
 
   simulate(request: RollRequest): Promise<DiceWorkerResponse> {
@@ -17,22 +16,26 @@ export class DiceWorkerClient {
     }
 
     return new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(request.id)
-        resolve({ type: 'failure', rollId: request.id, reason: 'timeout' })
-      }, 9000)
-      this.pending.set(request.id, { resolve, timer })
+      this.pending.set(request.id, { resolve })
       this.worker?.postMessage(request)
     })
   }
 
+  cancel(rollId: string) {
+    const cancelled = this.pending.get(rollId)
+    if (!cancelled) return
+    this.pending.delete(rollId)
+    this.disposeWorker()
+    cancelled.resolve({ type: 'failure', rollId, reason: 'timeout' })
+    for (const [pendingRollId, pending] of this.pending) {
+      pending.resolve({ type: 'failure', rollId: pendingRollId, reason: 'worker-error' })
+    }
+    this.pending.clear()
+  }
+
   terminate() {
-    this.worker?.removeEventListener('message', this.handleMessage)
-    this.worker?.removeEventListener('error', this.handleError)
-    this.worker?.terminate()
-    this.worker = undefined
+    this.disposeWorker()
     for (const [rollId, pending] of this.pending) {
-      clearTimeout(pending.timer)
       pending.resolve({ type: 'failure', rollId, reason: 'worker-error' })
     }
     this.pending.clear()
@@ -42,17 +45,21 @@ export class DiceWorkerClient {
     const rollId = event.data.type === 'success' ? event.data.trajectory.rollId : event.data.rollId
     const pending = this.pending.get(rollId)
     if (!pending) return
-    clearTimeout(pending.timer)
     this.pending.delete(rollId)
     pending.resolve(event.data)
   }
 
   private handleError = () => {
     for (const [rollId, pending] of this.pending) {
-      clearTimeout(pending.timer)
       pending.resolve({ type: 'failure', rollId, reason: 'worker-error' })
     }
     this.pending.clear()
   }
-}
 
+  private disposeWorker() {
+    this.worker?.removeEventListener('message', this.handleMessage)
+    this.worker?.removeEventListener('error', this.handleError)
+    this.worker?.terminate()
+    this.worker = undefined
+  }
+}

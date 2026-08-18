@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import type { DicePresentation, RollStatus } from '@/types/dice'
 import { DiceRenderer } from '@/views/dice/engine/dice-renderer'
 
-const props = defineProps<{ presentation?: DicePresentation; status: RollStatus; reducedMotion: boolean }>()
+const props = defineProps<{
+  presentation?: DicePresentation
+  status: RollStatus
+  reducedMotion: boolean
+  physicalCount: number
+}>()
 const emit = defineEmits<{ complete: [rollId: string]; unavailable: [] }>()
 const canvas = ref<HTMLCanvasElement>()
+const viewControlsEnabled = computed(() => props.status === 'complete' && Boolean(props.presentation))
 let renderer: DiceRenderer | undefined
 let resizeObserver: ResizeObserver | undefined
 let animationFrame = 0
@@ -43,12 +49,21 @@ function play(presentation: DicePresentation) {
   animationFrame = requestAnimationFrame(frame)
 }
 
-watch(() => props.presentation, (presentation) => { if (presentation) play(presentation) })
+watch(() => props.presentation, (presentation) => {
+  if (presentation) play(presentation)
+  else {
+    stopPlayback()
+    renderer?.clearPresentation()
+  }
+})
+watch(() => props.physicalCount, (count) => renderer?.setTrayLayout(count))
+watch(viewControlsEnabled, (enabled) => renderer?.setInteractionEnabled(enabled))
 
 onMounted(() => {
   if (!canvas.value) return
   try {
     renderer = new DiceRenderer(canvas.value)
+    renderer.setTrayLayout(props.physicalCount)
     resizeObserver = new ResizeObserver(([entry]) => { if (entry) renderer?.resize(entry.contentRect.width, entry.contentRect.height) })
     resizeObserver.observe(canvas.value)
     const bounds = canvas.value.getBoundingClientRect()
@@ -72,6 +87,20 @@ onBeforeUnmount(() => {
     <div v-if="status === 'preparing'" class="dice-tray__state" role="status"><span class="dice-tray__spinner" aria-hidden="true" />正在准备物理轨迹…</div>
     <div v-else-if="status === 'idle'" class="dice-tray__state dice-tray__state--muted">骰子将在这里滚动并停稳</div>
     <div v-else-if="status === 'rolling'" class="dice-tray__rolling" role="status">投掷中</div>
+    <div class="dice-tray__controls" aria-label="骰盘视图控制">
+      <button
+        class="dice-tray__control" type="button" aria-label="放大骰盘视图"
+        :disabled="!viewControlsEnabled" @click="renderer?.zoomIn()"
+      >放大</button>
+      <button
+        class="dice-tray__control" type="button" aria-label="缩小骰盘视图"
+        :disabled="!viewControlsEnabled" @click="renderer?.zoomOut()"
+      >缩小</button>
+      <button
+        class="dice-tray__control" type="button" aria-label="复位骰盘视图"
+        :disabled="!viewControlsEnabled" @click="renderer?.resetView()"
+      >复位</button>
+    </div>
   </section>
 </template>
 
@@ -112,6 +141,34 @@ onBeforeUnmount(() => {
     @media (prefers-reduced-motion: reduce) { animation: none; }
   }
   &__rolling { position: absolute; top: 0.7rem; left: 50%; padding: 0.35rem 0.7rem; border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-primary); background: rgb(255 253 248 / 88%); font-size: 0.72rem; font-weight: 800; transform: translateX(-50%); }
+  &__controls {
+    position: absolute;
+    right: 0.65rem;
+    bottom: 0.65rem;
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.35rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: rgb(255 253 248 / 90%);
+    box-shadow: var(--shadow-subtle);
+    backdrop-filter: blur(6px);
+  }
+  &__control {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-primary);
+    background: var(--color-surface);
+    font-size: 0.75rem;
+    font-weight: 800;
+    cursor: pointer;
+
+    &:focus-visible { outline: 3px solid var(--color-primary-soft); outline-offset: 2px; }
+    &:disabled { color: #9d968b; background: #e5ddd1; cursor: not-allowed; }
+  }
 }
 
 @keyframes dice-spin { to { transform: rotate(360deg); } }

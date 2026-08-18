@@ -13,6 +13,7 @@ import {
 
 import type { DiceWorkerResponse, PhysicsTrajectory, RollRequest, Vector3Tuple } from '@/types/dice'
 import { DIE_DEFINITIONS } from '@/views/dice/engine/dice-definitions'
+import { getDiceSpawnCells, getDiceTrayLayout } from '@/views/dice/engine/dice-tray-layout'
 
 const FRAME_RATE = 60
 const MAX_FRAMES = 8 * FRAME_RATE
@@ -34,7 +35,8 @@ function randomBetween(random: () => number, minimum: number, maximum: number): 
   return minimum + (maximum - minimum) * random()
 }
 
-function createWorld() {
+function createWorld(physicalDiceCount: number) {
+  const layout = getDiceTrayLayout(physicalDiceCount)
   const solver = new GSSolver()
   solver.iterations = 12
   const world = new World({ gravity: new Vec3(0, -9.82, 0), allowSleep: true, solver })
@@ -58,10 +60,10 @@ function createWorld() {
   world.addBody(floor)
 
   const walls: Array<{ position: Vector3Tuple; rotation: Vector3Tuple }> = [
-    { position: [-6, 2, 0], rotation: [0, Math.PI / 2, 0] },
-    { position: [6, 2, 0], rotation: [0, -Math.PI / 2, 0] },
-    { position: [0, 2, -4.4], rotation: [0, 0, 0] },
-    { position: [0, 2, 4.4], rotation: [0, Math.PI, 0] },
+    { position: [-layout.halfWidth, layout.wallHeight, 0], rotation: [0, Math.PI / 2, 0] },
+    { position: [layout.halfWidth, layout.wallHeight, 0], rotation: [0, -Math.PI / 2, 0] },
+    { position: [0, layout.wallHeight, -layout.halfDepth], rotation: [0, 0, 0] },
+    { position: [0, layout.wallHeight, layout.halfDepth], rotation: [0, Math.PI, 0] },
   ]
   for (const wall of walls) {
     const body = new Body({ mass: 0, material: trayMaterial, shape: new Plane() })
@@ -70,7 +72,7 @@ function createWorld() {
     world.addBody(body)
   }
 
-  return { world, diceMaterial }
+  return { world, diceMaterial, layout }
 }
 
 function getLandingDirection(body: Body, directions: readonly Vector3Tuple[]) {
@@ -87,9 +89,11 @@ function getLandingDirection(body: Body, directions: readonly Vector3Tuple[]) {
 
 function runAttempt(request: RollRequest, attempt: number): PhysicsTrajectory | 'timeout' | 'cocked' {
   const random = createPrng((request.seed + attempt * 0x9e37_79b9) >>> 0)
-  const { world, diceMaterial } = createWorld()
+  const { world, diceMaterial, layout } = createWorld(request.dice.length)
+  const spawnCells = getDiceSpawnCells(request.dice.length, layout)
   const bodies = request.dice.map((die, index) => {
     const definition = DIE_DEFINITIONS[die.type]
+    const spawnCell = spawnCells[index]
     const scaledVertices = definition.vertices.map((vertex) => new Vec3(
       vertex[0] * definition.radius,
       vertex[1] * definition.radius,
@@ -105,12 +109,10 @@ function runAttempt(request: RollRequest, attempt: number): PhysicsTrajectory | 
       sleepSpeedLimit: 0.22,
       sleepTimeLimit: 0.4,
     })
-    const column = index % 5
-    const row = Math.floor(index / 5)
     body.position.set(
-      (column - 2) * 1.45 + randomBetween(random, -0.18, 0.18),
-      3.4 + row * 1.15 + randomBetween(random, 0, 0.35),
-      -2.5 + row * 1.15 + randomBetween(random, -0.2, 0.2),
+      (spawnCell?.x ?? 0) + randomBetween(random, -(spawnCell?.jitterX ?? 0), spawnCell?.jitterX ?? 0),
+      randomBetween(random, 3.4, 4.2),
+      (spawnCell?.z ?? 0) + randomBetween(random, -(spawnCell?.jitterZ ?? 0), spawnCell?.jitterZ ?? 0),
     )
     const initialQuaternion = new Quaternion()
     initialQuaternion.setFromEuler(
@@ -119,10 +121,12 @@ function runAttempt(request: RollRequest, attempt: number): PhysicsTrajectory | 
       randomBetween(random, 0, Math.PI * 2),
     )
     body.quaternion.copy(initialQuaternion)
+    const horizontalAngle = randomBetween(random, 0, Math.PI * 2)
+    const horizontalSpeed = randomBetween(random, 1.2, 3.2)
     body.velocity.set(
-      randomBetween(random, -1.8, 1.8),
+      Math.cos(horizontalAngle) * horizontalSpeed,
       randomBetween(random, 2.5, 5),
-      randomBetween(random, 1.2, 3.8),
+      Math.sin(horizontalAngle) * horizontalSpeed,
     )
     body.angularVelocity.set(
       randomBetween(random, -13, 13),

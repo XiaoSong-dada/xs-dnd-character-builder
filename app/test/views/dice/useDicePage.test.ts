@@ -3,22 +3,23 @@ import { defineComponent, nextTick } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { DiceWorkerResponse, RollRequest } from '@/types/dice'
-import { useDicePage } from '@/views/dice/hooks/useDicePage'
+import { DICE_ROLL_DEADLINE_MS, useDicePage } from '@/views/dice/hooks/useDicePage'
 
-function mountDicePage(responseFactory: (request: RollRequest) => DiceWorkerResponse) {
+function mountDicePage(responseFactory: (request: RollRequest) => DiceWorkerResponse | Promise<DiceWorkerResponse>) {
   const terminate = vi.fn()
-  const simulate = vi.fn(async (request: RollRequest) => responseFactory(request))
+  const cancel = vi.fn()
+  const simulate = vi.fn((request: RollRequest) => Promise.resolve(responseFactory(request)))
   const component = defineComponent({
     setup() {
       return useDicePage({
         randomUint32: () => 123,
         randomInteger: (minimum) => minimum,
-        createWorkerClient: () => ({ simulate, terminate }),
+        createWorkerClient: () => ({ simulate, cancel, terminate }),
       })
     },
     template: '<div />',
   })
-  return { wrapper: mount(component), simulate, terminate }
+  return { wrapper: mount(component), simulate, cancel, terminate }
 }
 
 function successResponse(request: RollRequest): DiceWorkerResponse {
@@ -94,5 +95,52 @@ describe('useDicePage', () => {
     expect(page.results).toEqual([])
     expect(page.status).toBe('idle')
     wrapper.unmount()
+  })
+
+  it('falls back at the twenty second deadline and ignores a late worker response', async () => {
+    vi.useFakeTimers()
+    let pendingRequest: RollRequest | undefined
+    let resolveResponse: ((response: DiceWorkerResponse) => void) | undefined
+    const deferred = new Promise<DiceWorkerResponse>((resolve) => { resolveResponse = resolve })
+    const { wrapper, cancel } = mountDicePage((request) => {
+      pendingRequest = request
+      return deferred
+    })
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    const rolling = page.roll()
+
+    await vi.advanceTimersByTimeAsync(DICE_ROLL_DEADLINE_MS - 1)
+    expect(page.status).toBe('preparing')
+    await vi.advanceTimersByTimeAsync(1)
+    expect(page.status).toBe('fallback')
+    expect(page.results[0]?.value).toBe(1)
+    expect(page.notice).toContain('超过 20 秒')
+    expect(cancel).toHaveBeenCalledWith(pendingRequest?.id)
+
+    if (pendingRequest) resolveResponse?.(successResponse(pendingRequest))
+    await rolling
+    expect(page.status).toBe('fallback')
+    expect(page.results[0]?.value).toBe(1)
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it('applies the same deadline while a successful trajectory is playing', async () => {
+    vi.useFakeTimers()
+    const { wrapper } = mountDicePage(successResponse)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d20')
+    await page.roll()
+    expect(page.status).toBe('rolling')
+    const staleRollId = page.presentation?.request.id ?? ''
+
+    await vi.advanceTimersByTimeAsync(DICE_ROLL_DEADLINE_MS)
+    expect(page.status).toBe('fallback')
+    expect(page.presentation).toBeUndefined()
+    page.handlePlaybackComplete(staleRollId)
+    expect(page.status).toBe('fallback')
+    wrapper.unmount()
+    vi.useRealTimers()
   })
 })

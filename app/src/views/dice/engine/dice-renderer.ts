@@ -18,14 +18,18 @@ import {
   Quaternion,
   Scene,
   SRGBColorSpace,
+  TOUCH,
   Vector3,
   WebGLRenderer,
 } from 'three'
+import { MapControls } from 'three/addons/controls/MapControls.js'
 
 import type { DicePresentation, PhysicalDieSpec, PhysicsTrajectory } from '@/types/dice'
 import type { DieDefinition } from '@/views/dice/engine/dice-definitions'
 import { DIE_DEFINITIONS } from '@/views/dice/engine/dice-definitions'
 import { findLabelOffsetQuaternion } from '@/views/dice/engine/dice-symmetry'
+import type { DiceViewState } from '@/views/dice/engine/dice-tray-layout'
+import { clampDiceViewState, getDiceTrayLayout, getTrayFitDistance } from '@/views/dice/engine/dice-tray-layout'
 
 interface RenderedDie {
   group: Group
@@ -143,10 +147,19 @@ function addLabels(
 export class DiceRenderer {
   private renderer: WebGLRenderer
   private scene = new Scene()
-  private camera = new PerspectiveCamera(35, 1, 0.1, 100)
+  private camera = new PerspectiveCamera(35, 1, 0.1, 250)
+  private controls: MapControls
+  private light = new DirectionalLight('#fff3d7', 3.2)
+  private tray = new Group()
+  private layout = getDiceTrayLayout(1)
+  private physicalDiceCount = 1
+  private aspect = 1
+  private fullViewDistance = 1
+  private interactionEnabled = false
+  private constrainingView = false
   private dice: RenderedDie[] = []
-  private geometries: BufferGeometry[] = []
-  private materials: Array<MeshStandardMaterial | LineBasicMaterial> = []
+  private trayGeometries: BufferGeometry[] = []
+  private trayMaterials: MeshStandardMaterial[] = []
   private diceGeometries: BufferGeometry[] = []
   private diceMaterials: Array<MeshStandardMaterial | LineBasicMaterial> = []
   private diceTextures: CanvasTexture[] = []
@@ -158,48 +171,115 @@ export class DiceRenderer {
     this.renderer.setClearColor(new Color('#f4ecde'))
 
     this.camera.position.set(0, 10.5, 9.5)
-    this.camera.lookAt(0, 0.4, 0)
+    this.controls = new MapControls(this.camera, canvas)
+    this.controls.target.set(0, 0.4, 0)
+    this.controls.enableRotate = false
+    this.controls.enableDamping = false
+    this.controls.screenSpacePanning = false
+    this.controls.touches.ONE = null
+    this.controls.touches.TWO = TOUCH.DOLLY_PAN
+    this.controls.enabled = false
+    canvas.style.touchAction = 'pan-y'
+    this.controls.addEventListener('change', this.handleControlsChange)
 
     this.scene.add(new AmbientLight('#fff7e8', 2.1))
-    const light = new DirectionalLight('#fff3d7', 3.2)
-    light.position.set(-4, 9, 6)
-    light.castShadow = true
-    light.shadow.mapSize.set(1024, 1024)
-    this.scene.add(light)
-
-    const floorGeometry = new PlaneGeometry(12, 8.8)
-    const floorMaterial = new MeshStandardMaterial({ color: '#efe4d1', roughness: 0.92 })
-    const floor = new Mesh(floorGeometry, floorMaterial)
-    floor.rotation.x = -Math.PI / 2
-    floor.receiveShadow = true
-    this.scene.add(floor)
-    this.geometries.push(floorGeometry)
-    this.materials.push(floorMaterial)
-
-    const rimMaterial = new MeshStandardMaterial({ color: '#b9873d', roughness: 0.75 })
-    const longRim = new BoxGeometry(12.3, 0.35, 0.22)
-    const shortRim = new BoxGeometry(0.22, 0.35, 8.8)
-    for (const [geometry, x, z] of [
-      [longRim, 0, -4.4], [longRim, 0, 4.4], [shortRim, -6, 0], [shortRim, 6, 0],
-    ] as const) {
-      const rim = new Mesh(geometry, rimMaterial)
-      rim.position.set(x, 0.16, z)
-      rim.castShadow = true
-      this.scene.add(rim)
-    }
-    this.geometries.push(longRim, shortRim)
-    this.materials.push(rimMaterial)
+    this.light.castShadow = true
+    this.light.shadow.mapSize.set(1024, 1024)
+    this.scene.add(this.light, this.tray)
+    this.rebuildTray()
+    this.fullViewDistance = getTrayFitDistance(this.layout, this.aspect)
+    this.resetView()
     this.render()
   }
 
   resize(width: number, height: number) {
+    const previousZoom = this.getViewState().zoomLevel
     this.renderer.setSize(Math.max(1, width), Math.max(1, height), false)
-    this.camera.aspect = Math.max(1, width) / Math.max(1, height)
+    this.aspect = Math.max(1, width) / Math.max(1, height)
+    this.camera.aspect = this.aspect
     this.camera.updateProjectionMatrix()
+    this.configureCamera(previousZoom)
+  }
+
+  setTrayLayout(physicalDiceCount: number) {
+    const normalizedCount = Math.max(1, physicalDiceCount)
+    if (normalizedCount === this.physicalDiceCount) return
+    this.physicalDiceCount = normalizedCount
+    this.layout = getDiceTrayLayout(normalizedCount)
+    this.rebuildTray()
+    this.resetView()
+  }
+
+  setInteractionEnabled(enabled: boolean) {
+    this.interactionEnabled = enabled
+    this.controls.enabled = enabled
+    if (!enabled) this.resetView()
+  }
+
+  zoomIn() {
+    if (!this.interactionEnabled) return
+    this.applyViewState({ ...this.getViewState(), zoomLevel: this.getViewState().zoomLevel * 1.25 })
+  }
+
+  zoomOut() {
+    if (!this.interactionEnabled) return
+    this.applyViewState({ ...this.getViewState(), zoomLevel: this.getViewState().zoomLevel / 1.25 })
+  }
+
+  resetView() {
+    this.applyViewState({ zoomLevel: 1, targetX: 0, targetZ: 0 })
+  }
+
+  clearPresentation() {
+    this.clearDice()
+    this.setInteractionEnabled(false)
+    this.render()
+  }
+
+  private rebuildTray() {
+    for (const geometry of this.trayGeometries) geometry.dispose()
+    for (const material of this.trayMaterials) material.dispose()
+    this.tray.clear()
+    this.trayGeometries = []
+    this.trayMaterials = []
+
+    const floorGeometry = new PlaneGeometry(this.layout.width, this.layout.depth)
+    const floorMaterial = new MeshStandardMaterial({ color: '#efe4d1', roughness: 0.92 })
+    const floor = new Mesh(floorGeometry, floorMaterial)
+    floor.rotation.x = -Math.PI / 2
+    floor.receiveShadow = true
+    this.tray.add(floor)
+    this.trayGeometries.push(floorGeometry)
+    this.trayMaterials.push(floorMaterial)
+
+    const rimMaterial = new MeshStandardMaterial({ color: '#b9873d', roughness: 0.75 })
+    const longRim = new BoxGeometry(this.layout.width + 0.3, 0.35, 0.22)
+    const shortRim = new BoxGeometry(0.22, 0.35, this.layout.depth)
+    for (const [geometry, x, z] of [
+      [longRim, 0, -this.layout.halfDepth], [longRim, 0, this.layout.halfDepth],
+      [shortRim, -this.layout.halfWidth, 0], [shortRim, this.layout.halfWidth, 0],
+    ] as const) {
+      const rim = new Mesh(geometry, rimMaterial)
+      rim.position.set(x, 0.16, z)
+      rim.castShadow = true
+      this.tray.add(rim)
+    }
+    this.trayGeometries.push(longRim, shortRim)
+    this.trayMaterials.push(rimMaterial)
+
+    const shadowExtent = Math.max(this.layout.width, this.layout.depth) * 0.7
+    this.light.position.set(-4 * this.layout.scale, 9 * this.layout.scale, 6 * this.layout.scale)
+    this.light.shadow.camera.left = -shadowExtent
+    this.light.shadow.camera.right = shadowExtent
+    this.light.shadow.camera.top = shadowExtent
+    this.light.shadow.camera.bottom = -shadowExtent
+    this.light.shadow.camera.far = 40 * this.layout.scale
+    this.light.shadow.camera.updateProjectionMatrix()
     this.render()
   }
 
   setPresentation(presentation: DicePresentation) {
+    this.setTrayLayout(presentation.request.dice.length)
     this.clearDice()
     presentation.request.dice.forEach((spec, index) => {
       const definition = DIE_DEFINITIONS[spec.type]
@@ -231,6 +311,7 @@ export class DiceRenderer {
       this.diceMaterials.push(material, edgeMaterial)
       this.scene.add(group)
     })
+    this.setInteractionEnabled(false)
     this.renderAt(presentation.trajectory, 0)
   }
 
@@ -273,11 +354,52 @@ export class DiceRenderer {
   }
 
   dispose() {
+    this.controls.removeEventListener('change', this.handleControlsChange)
+    this.controls.dispose()
     this.clearDice()
-    for (const geometry of this.geometries) geometry.dispose()
-    for (const material of this.materials) material.dispose()
+    for (const geometry of this.trayGeometries) geometry.dispose()
+    for (const material of this.trayMaterials) material.dispose()
     this.renderer.dispose()
     this.renderer.forceContextLoss()
+  }
+
+  private getViewState(): DiceViewState {
+    const distance = Math.max(0.001, this.camera.position.distanceTo(this.controls.target))
+    return clampDiceViewState(this.layout, {
+      zoomLevel: this.fullViewDistance / distance,
+      targetX: this.controls.target.x,
+      targetZ: this.controls.target.z,
+    })
+  }
+
+  private applyViewState(state: DiceViewState) {
+    const clamped = clampDiceViewState(this.layout, state)
+    const direction = this.camera.position.clone().sub(this.controls.target)
+    if (direction.lengthSq() < 0.001) direction.set(0, 10.1, 9.5)
+    direction.normalize()
+    this.controls.target.set(clamped.targetX, 0.4, clamped.targetZ)
+    this.camera.position.copy(this.controls.target).addScaledVector(direction, this.fullViewDistance / clamped.zoomLevel)
+    this.camera.lookAt(this.controls.target)
+    this.controls.minDistance = this.fullViewDistance / 3
+    this.controls.maxDistance = this.fullViewDistance
+    this.render()
+  }
+
+  private configureCamera(zoomLevel: number) {
+    this.fullViewDistance = getTrayFitDistance(this.layout, this.aspect)
+    this.applyViewState({ ...this.getViewState(), zoomLevel })
+  }
+
+  private handleControlsChange = () => {
+    if (this.constrainingView) return
+    this.constrainingView = true
+    const state = this.getViewState()
+    const direction = this.camera.position.clone().sub(this.controls.target).normalize()
+    this.controls.target.set(state.targetX, 0.4, state.targetZ)
+    this.camera.position.copy(this.controls.target).addScaledVector(direction, this.fullViewDistance / state.zoomLevel)
+    this.camera.lookAt(this.controls.target)
+    this.constrainingView = false
+    this.render()
   }
 
   private render() {
