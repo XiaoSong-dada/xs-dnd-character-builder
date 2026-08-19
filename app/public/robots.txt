@@ -1,0 +1,9 @@
+# robots.txt — D&D 车卡辅助
+# 允许所有爬虫抓取；个人中心占位页不收录（功能完成后按 seo-requirements.md §7 评估）
+
+User-agent: *
+Allow: /
+Disallow: /profile
+
+# 站点地图地址需与构建配置 VITE_SITE_URL 保持一致
+Sitemap: https://your_url/sitemap.xml

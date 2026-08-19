@@ -15,7 +15,10 @@ services:
         VITE_APP_VERSION: ${VITE_APP_VERSION:-}
         VITE_UMAMI_SCRIPT_URL: ${VITE_UMAMI_SCRIPT_URL:-https://your_url/script.js}
         VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-your website id}
-        VITE_UMAMI_DOMAINS: ${VITE_UMAMI_DOMAINS:-dnd.xsmach.cn}
+        VITE_UMAMI_DOMAINS: ${VITE_UMAMI_DOMAINS:-your_url}
+        # SEO 站点 URL（canonical/og:url/sitemap；与 docs/seo-requirements.md 一致）
+        VITE_SITE_URL: ${VITE_SITE_URL:-https://your_url}
+        VITE_SITE_IMAGE: ${VITE_SITE_IMAGE:-}
     ports:
       - "${APP_PORT:-8080}:80"
     restart: unless-stopped

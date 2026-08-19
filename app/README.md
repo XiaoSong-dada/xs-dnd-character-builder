@@ -84,7 +84,7 @@ cp .env.example .env.local
 | `VITE_UMAMI_DOMAINS` | 允许统计的域名，多个域名使用英文逗号分隔 |
 
 Vite 环境变量会在构建时写入前端资源，不要在这些变量中保存密钥或其他敏感信息。
-Umami 的脚本地址和 Website ID 会公开在浏览器中，不属于密钥。当前配置只在 `dnd.xsmach.cn` 加载脚本，因此 localhost、IP 地址和未登记的预览域名不会产生生产统计。
+Umami 的脚本地址和 Website ID 会公开在浏览器中，不属于密钥。当前配置只在 `your_url` 加载脚本，因此 localhost、IP 地址和未登记的预览域名不会产生生产统计。
 
 Umami 会自动监听 History API，Vue Router 的前端路由切换无需额外埋点。“实时”统计表示近期仍活跃的访客，并非严格的 WebSocket 同时在线连接数。
 
@@ -149,7 +149,7 @@ docker build \
   --build-arg VITE_APP_VERSION="0.1.0" \
   --build-arg VITE_UMAMI_SCRIPT_URL="https://your_url/script.js" \
   --build-arg VITE_UMAMI_WEBSITE_ID="your website id" \
-  --build-arg VITE_UMAMI_DOMAINS="dnd.xsmach.cn" \
+  --build-arg VITE_UMAMI_DOMAINS="your_url" \
   -t dnd-character-builder .
 ```
 

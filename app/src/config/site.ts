@@ -12,6 +12,10 @@ export interface SiteConfig {
   readonly tagline?: string
   /** 可选版本号（未配置则不显示） */
   readonly version?: string
+  /** 站点公开根 URL（SEO canonical、og:url、sitemap 使用；无尾斜杠，未配置则不输出 canonical） */
+  readonly siteUrl?: string
+  /** 站点分享/OG 图片绝对 URL（可选，建议 1200×630） */
+  readonly siteImage?: string
   /** Umami 访问统计配置 */
   readonly umami: UmamiConfig
 }
@@ -30,6 +34,12 @@ function defined(value: string | undefined): string | undefined {
   return normalized || undefined
 }
 
+function normalizeSiteUrl(value: string | undefined): string | undefined {
+  const normalized = defined(value)
+  if (!normalized) return undefined
+  return normalized.replace(/\/+$/, '')
+}
+
 function parseDomains(value: string | undefined): readonly string[] {
   const normalized = defined(value)
   if (!normalized) return []
@@ -45,6 +55,8 @@ export const siteConfig: SiteConfig = {
   githubUrl: defined(import.meta.env.VITE_GITHUB_URL),
   tagline: defined(import.meta.env.VITE_AUTHOR_TAGLINE),
   version: defined(import.meta.env.VITE_APP_VERSION),
+  siteUrl: normalizeSiteUrl(import.meta.env.VITE_SITE_URL),
+  siteImage: defined(import.meta.env.VITE_SITE_IMAGE),
   umami: {
     scriptUrl: defined(import.meta.env.VITE_UMAMI_SCRIPT_URL),
     websiteId: defined(import.meta.env.VITE_UMAMI_WEBSITE_ID),
