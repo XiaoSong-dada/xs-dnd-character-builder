@@ -13,6 +13,25 @@ const props = defineProps<{
 const emit = defineEmits<{ complete: [rollId: string]; unavailable: [] }>()
 const canvas = ref<HTMLCanvasElement>()
 const viewControlsEnabled = computed(() => props.status === 'complete' && Boolean(props.presentation))
+
+// 双指操作提示：进入交互启用态时展示，短暂停留后自动消失，不阻断操作
+const HINT_DURATION_MS = 4000
+const showHint = ref(false)
+let hintTimer: ReturnType<typeof setTimeout> | undefined
+function dismissHint() {
+  if (hintTimer) clearTimeout(hintTimer)
+  hintTimer = undefined
+  showHint.value = false
+}
+watch(viewControlsEnabled, (enabled) => {
+  dismissHint()
+  if (!enabled) return
+  showHint.value = true
+  hintTimer = setTimeout(() => {
+    showHint.value = false
+    hintTimer = undefined
+  }, HINT_DURATION_MS)
+})
 let renderer: DiceRenderer | undefined
 let resizeObserver: ResizeObserver | undefined
 let animationFrame = 0
@@ -64,6 +83,7 @@ onMounted(() => {
   try {
     renderer = new DiceRenderer(canvas.value)
     renderer.setTrayLayout(props.physicalCount)
+    renderer.setInteractionEnabled(viewControlsEnabled.value)
     resizeObserver = new ResizeObserver(([entry]) => { if (entry) renderer?.resize(entry.contentRect.width, entry.contentRect.height) })
     resizeObserver.observe(canvas.value)
     const bounds = canvas.value.getBoundingClientRect()
@@ -75,6 +95,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  dismissHint()
   stopPlayback()
   resizeObserver?.disconnect()
   renderer?.dispose()
@@ -87,6 +108,7 @@ onBeforeUnmount(() => {
     <div v-if="status === 'preparing'" class="dice-tray__state" role="status"><span class="dice-tray__spinner" aria-hidden="true" />正在准备物理轨迹…</div>
     <div v-else-if="status === 'idle'" class="dice-tray__state dice-tray__state--muted">骰子将在这里滚动并停稳</div>
     <div v-else-if="status === 'rolling'" class="dice-tray__rolling" role="status">投掷中</div>
+    <div v-if="showHint" class="dice-tray__hint" role="status">双指拖动移动视图 · 双指捏合缩放</div>
     <div class="dice-tray__controls" aria-label="骰盘视图控制">
       <button
         class="dice-tray__control" type="button" aria-label="放大骰盘视图"
@@ -141,6 +163,27 @@ onBeforeUnmount(() => {
     @media (prefers-reduced-motion: reduce) { animation: none; }
   }
   &__rolling { position: absolute; top: 0.7rem; left: 50%; padding: 0.35rem 0.7rem; border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-primary); background: rgb(255 253 248 / 88%); font-size: 0.72rem; font-weight: 800; transform: translateX(-50%); }
+  &__hint {
+    position: absolute;
+    bottom: 4.6rem;
+    left: 50%;
+    z-index: 2;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    color: var(--color-primary);
+    background: rgb(255 253 248 / 94%);
+    box-shadow: var(--shadow-subtle);
+    font-size: 0.75rem;
+    font-weight: 800;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateX(-50%);
+    animation: hint-fade-in 0.25s ease-out;
+
+    @media (max-width: 26rem) { white-space: normal; text-align: center; }
+    @media (prefers-reduced-motion: reduce) { animation: none; }
+  }
   &__controls {
     position: absolute;
     right: 0.65rem;
@@ -165,6 +208,7 @@ onBeforeUnmount(() => {
     font-size: 0.75rem;
     font-weight: 800;
     cursor: pointer;
+    touch-action: manipulation;
 
     &:focus-visible { outline: 3px solid var(--color-primary-soft); outline-offset: 2px; }
     &:disabled { color: #9d968b; background: #e5ddd1; cursor: not-allowed; }
@@ -172,4 +216,5 @@ onBeforeUnmount(() => {
 }
 
 @keyframes dice-spin { to { transform: rotate(360deg); } }
+@keyframes hint-fade-in { from { opacity: 0; transform: translate(-50%, 0.3rem); } to { opacity: 1; transform: translate(-50%, 0); } }
 </style>

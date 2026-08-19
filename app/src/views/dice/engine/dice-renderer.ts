@@ -144,8 +144,18 @@ function addLabels(
   })
 }
 
+/**
+ * 骰盘 canvas 的 touch-action 策略：
+ * - 交互禁用期（idle/preparing/rolling）：manipulation —— 保留页面滚动与双指捏合缩放，禁用双击缩放与点击延迟；
+ * - 交互启用期（complete 且存在展示结果）：none —— 手势全部交给 OrbitControls，浏览器缩放/滚动/双击不介入。
+ */
+export function resolveTrayTouchAction(interactionEnabled: boolean): 'none' | 'manipulation' {
+  return interactionEnabled ? 'none' : 'manipulation'
+}
+
 export class DiceRenderer {
   private renderer: WebGLRenderer
+  private canvas: HTMLCanvasElement
   private scene = new Scene()
   private camera = new PerspectiveCamera(35, 1, 0.1, 250)
   private controls: MapControls
@@ -165,6 +175,7 @@ export class DiceRenderer {
   private diceTextures: CanvasTexture[] = []
 
   constructor(canvas: HTMLCanvasElement) {
+    this.canvas = canvas
     this.renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' })
     this.renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2))
     this.renderer.shadowMap.enabled = true
@@ -179,7 +190,9 @@ export class DiceRenderer {
     this.controls.touches.ONE = null
     this.controls.touches.TWO = TOUCH.DOLLY_PAN
     this.controls.enabled = false
-    canvas.style.touchAction = 'pan-y'
+    // 交互禁用期：manipulation（保留页面纵向滚动与双指捏合缩放，禁用双击缩放）；
+    // 交互启用期：none（手势全部交给 OrbitControls，浏览器缩放/滚动/双击不介入）
+    canvas.style.touchAction = resolveTrayTouchAction(false)
     this.controls.addEventListener('change', this.handleControlsChange)
 
     this.scene.add(new AmbientLight('#fff7e8', 2.1))
@@ -213,6 +226,7 @@ export class DiceRenderer {
   setInteractionEnabled(enabled: boolean) {
     this.interactionEnabled = enabled
     this.controls.enabled = enabled
+    this.canvas.style.touchAction = resolveTrayTouchAction(enabled)
     if (!enabled) this.resetView()
   }
 

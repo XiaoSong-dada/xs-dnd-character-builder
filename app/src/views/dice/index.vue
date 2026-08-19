@@ -45,6 +45,8 @@ const {
   margin-inline: auto;
   padding: 1.25rem 0 calc(1.25rem + env(safe-area-inset-bottom));
   gap: 1rem;
+  /* 页面级禁双击缩放（保留双指捏合缩放与纵向滚动）；骰盘交互启用期由渲染器切换为 none */
+  touch-action: manipulation;
 
   &__header {
     padding: 0.45rem 0 0.2rem;

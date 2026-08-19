@@ -29,6 +29,7 @@ describe('resolveCanonicalUrl', () => {
   })
 
   it('未配置站点 URL 时返回 undefined', async () => {
+    vi.stubEnv('VITE_SITE_URL', '')
     const { resolveCanonicalUrl } = await loadSeo()
     expect(resolveCanonicalUrl('/character-builder')).toBeUndefined()
   })
@@ -64,6 +65,7 @@ describe('applySeoMeta', () => {
 
     vi.unstubAllEnvs()
     vi.resetModules()
+    vi.stubEnv('VITE_SITE_URL', '')
     const seoReloaded = await loadSeo()
     seoReloaded.applySeoMeta(routeContext({ title: '无站点配置页' }, '/profile'))
     expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
