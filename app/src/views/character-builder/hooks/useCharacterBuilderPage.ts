@@ -11,6 +11,8 @@ import { validateSpellSelections } from '@/rules/spellcasting'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
+import { downloadXlsx } from '@/services/export-xlsx'
+import { buildCharacterExportData } from '@/features/character-export/build-export-data'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type {
   AbilityKey,
@@ -421,6 +423,15 @@ export function useCharacterBuilderPage() {
     if (activeDraft.value) CharacterJsonService.downloadDraft(activeDraft.value)
   }
 
+  /** XLSX 自动卡导出：数据组装与 xlsx 服务均按需加载，不阻塞页面。 */
+  async function exportXlsx(): Promise<void> {
+    const draft = activeDraft.value
+    const currentDerived = derived.value
+    if (!draft || !currentDerived) return
+    const data = buildCharacterExportData(draft, currentDerived)
+    await downloadXlsx(data, `${draft.name.trim() || 'dnd-character'}-dnd5e.xlsx`)
+  }
+
   onMounted(() => {
     const draftId = typeof route.query.draft === 'string' ? route.query.draft : undefined
     if (draftId && store.activateDraft(draftId)) {
@@ -479,6 +490,7 @@ export function useCharacterBuilderPage() {
     updateAbilities,
     updateRaceAbilityChoices,
     exportDraft,
+    exportXlsx,
     exportLegacyDraft: store.exportLegacyDraft,
     confirmPendingChange,
     cancelPendingChange,

@@ -23,6 +23,7 @@
 - 子职特性界面：时间线选中子职后展示其等级特性列表；`requiresChoice` 特性（图腾/猎人/战技等）以 `subclass-feature` 检查点提供选择并持久化；角色卡"能力"页签新增"子职特性"区块；首批可核验派生（龙族血脉 AC/HP）已接入 `derive`。
 - 2014 草稿已升级为 schema v3，物品栏记录数量、来源与装备数量；v2 草稿会保留旧物品并要求重新确认职业装备。
 - 草稿保存、刷新恢复、JSON 导入导出、规则校验、依赖失效保留和角色卡预览已经接通。
+- 角色卡导出：角色卡页底部「导出」弹层菜单提供 PDF / XLSX / JSON 三项。PDF 为自绘中文打印版面（`CharacterPrintSheet.vue`，Teleport 到 body，`@media print` + `window.print()` 输出 A4，`afterprint` 自动关闭）；XLSX 为 exceljs 自生成自动卡（`services/export-xlsx.ts`，动态 import 独立分包，中文工作表、冻结前两行）；JSON 复用 `CharacterJsonService.downloadDraft`。三种导出的数据统一来自 `features/character-export/build-export-data.ts` 同一份组装（数值全部来自 rules 派生，保证与页面一致）；导出不持久化到草稿。
 - 车卡编辑流程与最终角色卡顶部可直接返回草稿首页；退出只关闭当前活动草稿，保留全部内容和当前步骤，之后可继续编辑。
 - 首页角色条第三段信息分级展示：完成态显示职业名；进行中已选职业显示"职业 · 第N步"；未选职业显示"第N步 · 步骤名"（步骤文案来自公共 `STEP_META`，不再裸显 `currentStep` 英文 ID）。
 - 主页站点信息：`src/config/site.ts` 为唯一读取 `import.meta.env` 的模块（`VITE_AUTHOR_NAME`/`VITE_GITHUB_URL`/`VITE_AUTHOR_TAGLINE`/`VITE_APP_VERSION`，可选）；首页 hero 底部渲染署名行"由 X 制作 · GitHub · v版本"，全部未配置时隐藏；模板见 `app/.env.example`。
@@ -50,6 +51,6 @@ test                                 规则、服务、Store 与组件测试
 1. 牧师、德鲁伊、吟游诗人和术士的完整施法数据与职业检查点。
 2. 邪术师高等级秘法奥秘与完整祈唤数量增长。
 3. 其余4个职业的完整1—20级检查点。
-4. 完整五页签角色卡、资源追踪与角色抽屉全展开态。
+4. 完整五页签角色卡、资源追踪与角色抽屉全展开态（角色卡导出 PDF/XLSX 已接通，五页签版面完善仍属后续批次）。
 
 每一批均需通过类型检查、自动测试、生产构建及 375/390/430 px 浏览器验收。

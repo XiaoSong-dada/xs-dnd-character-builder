@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { defineComponent } from 'vue'
+import { defineComponent, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
@@ -868,6 +868,80 @@ describe('CharacterSheetStep 物品数量调整', () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(bodyButton('减少')!.disabled).toBe(true)
     expect(bodyButton('增加')!.disabled).toBe(true)
+  })
+})
+
+describe('CharacterSheetStep 导出入口', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  async function openExportMenu(): Promise<void> {
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft, derived: deriveCharacter(draft) },
+      attachTo: document.body,
+    })
+    await wrapper.get('.character-sheet__export').trigger('click')
+    await nextTick()
+    return wrapper
+  }
+
+  it('点击导出打开菜单，PDF/XLSX/JSON 三个格式选项齐全', async () => {
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft, derived: deriveCharacter(draft) },
+      attachTo: document.body,
+    })
+    expect(document.body.textContent).not.toContain('导出 PDF 角色卡')
+
+    await wrapper.get('.character-sheet__export').trigger('click')
+    await nextTick()
+
+    expect(document.body.textContent).toContain('导出 PDF 角色卡（打印）')
+    expect(document.body.textContent).toContain('导出 XLSX 自动计算卡')
+    expect(document.body.textContent).toContain('导出 JSON 数据文件')
+  })
+
+  it('JSON 菜单项触发 export 事件，XLSX 菜单项触发 exportXlsx 事件', async () => {
+    const wrapper = await openExportMenu()
+    const items = Array.from(document.body.querySelectorAll('.character-sheet__export-menu-item'))
+    expect(items).toHaveLength(3)
+
+    ;(items[2] as HTMLButtonElement).click()
+    await nextTick()
+    expect(wrapper.emitted('export')).toEqual([[]])
+    expect(wrapper.emitted('exportXlsx')).toBeUndefined()
+
+    await wrapper.get('.character-sheet__export').trigger('click')
+    await nextTick()
+    const itemsAgain = Array.from(document.body.querySelectorAll('.character-sheet__export-menu-item'))
+    ;(itemsAgain[1] as HTMLButtonElement).click()
+    await nextTick()
+    expect(wrapper.emitted('exportXlsx')).toEqual([[]])
+  })
+
+  it('PDF 菜单项打开打印视图并调用 window.print，afterprint 后自动关闭', async () => {
+    const printSpy = vi.fn()
+    vi.stubGlobal('print', printSpy)
+    try {
+      const wrapper = await openExportMenu()
+      const items = Array.from(document.body.querySelectorAll('.character-sheet__export-menu-item'))
+      ;(items[0] as HTMLButtonElement).click()
+      await nextTick()
+
+      expect(printSpy).toHaveBeenCalledTimes(1)
+      const sheet = document.querySelector('.print-sheet')
+      expect(sheet).not.toBeNull()
+      expect(sheet?.textContent).toContain('测试角色')
+      expect(sheet?.textContent).toContain('核心数值')
+
+      window.dispatchEvent(new Event('afterprint'))
+      await nextTick()
+      expect(document.querySelector('.print-sheet')).toBeNull()
+      expect(wrapper.emitted('exportXlsx')).toBeUndefined()
+      expect(wrapper.emitted('export')).toBeUndefined()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
 

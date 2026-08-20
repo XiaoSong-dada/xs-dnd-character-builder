@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "cannon-es": "^0.20.0",
+    "exceljs": "^4.4.0",
     "js-cookie": "^3.0.5",
     "pinia": "^2.1.7",
     "reka-ui": "^2.10.1",

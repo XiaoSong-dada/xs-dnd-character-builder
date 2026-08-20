@@ -65,6 +65,7 @@ const {
   updateAbilities,
   updateRaceAbilityChoices,
   exportDraft,
+  exportXlsx,
   exportLegacyDraft,
   confirmPendingChange,
   cancelPendingChange,
@@ -191,7 +192,7 @@ function updateMethod(value: AbilityMethod): void {
     <SpellcastingStep v-else-if="step === 'spells'" :draft="activeDraft" @change="updateSpells" />
     <IdentityStep v-else-if="step === 'identity'" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" />
     <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" @go="setStep($event as DraftStep)" />
-    <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" @export="exportDraft" @adjust-level="openLevelModal" @reedit="startReedit" @change-spell-selections="updateSpells" @change-inventory="updateInventory" @change-adventure-gold="updateAdventureGold" />
+    <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" @export="exportDraft" @export-xlsx="exportXlsx" @adjust-level="openLevelModal" @reedit="startReedit" @change-spell-selections="updateSpells" @change-inventory="updateInventory" @change-adventure-gold="updateAdventureGold" />
 
     <template v-if="step !== 'sheet' && derivedSummary" #drawer>
       <CharacterDrawer :summary="derivedSummary" :completion="completion" />

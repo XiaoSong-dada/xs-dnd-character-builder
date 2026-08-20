@@ -280,13 +280,16 @@ src/views/character-builder/hooks/useCharacterBuilderPage.ts
   -> src/views/character-builder/steps.ts
   -> src/stores/character-drafts.ts
   -> src/services/character-json.ts
+  -> src/services/export-xlsx.ts（exportXlsx：导出数据组装 + xlsx 下载）
+  -> src/features/character-export/build-export-data.ts
   -> src/rules/{derive,abilities,dependency,repository,timeline,spellcasting,starting-equipment}
   -> vue-router（useRoute / useRouter，路由查询与步骤编排）
 
 src/views/character-builder/components/*
-  -> src/views/character-builder/components/{FeatChoicePanel}（页面内复用）
+  -> src/views/character-builder/components/{FeatChoicePanel,CharacterPrintSheet}（页面内复用）
   -> src/components/ui/*
   -> src/rules/* 与 src/rules/data/*（推荐、时间线、法术、装备、子职特性等只读消费）
+  -> src/features/character-export/build-export-data.ts（仅 CharacterPrintSheet：打印版面数据源）
   -> src/config/site.ts（仅 StartPanel）
   -> src/types/*
 ```
@@ -318,6 +321,15 @@ src/services/character-json.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
   -> src/types/character
 
+src/services/export-xlsx.ts
+  -> exceljs（动态 import，仅导出时按需加载；不进入 SSG 预渲染路径）
+  -> src/types/character（间接：仅消费 features 组装好的纯数据，不导入 rules）
+
+src/features/character-export/build-export-data.ts
+  -> src/rules/{repository,spellcasting} + src/rules/data/feats-2014（ABILITY_LABELS）
+  -> src/services/export-xlsx（类型 XlsxExportData）
+  -> src/types/{character,rules}
+
 src/services/draft-storage.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
   -> src/types/character
@@ -330,6 +342,10 @@ src/services/umami.ts
 
 src/config/site.ts    （无依赖；项目内唯一读取 import.meta.env 的入口）
 src/config/setting.ts （空占位文件，无消费者）
+
+src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打印版面）
+  -> src/features/character-export/build-export-data（与 XLSX 共用同一导出数据）
+  -> src/types/character
 ```
 
 ### 8.7 rules 层
