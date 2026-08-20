@@ -1,187 +1,254 @@
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
+import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
-import { getSelectedSpellIds, getSpellSlots } from '@/rules/spellcasting'
-import type { XlsxExportData } from '@/services/export-xlsx'
-import type { AbilityKey, CharacterDraft, DerivedCharacter, InventorySourceKind, ValueSource } from '@/types/character'
-import type { SpellRule } from '@/types/rules'
+import { getSpellSlots } from '@/rules/spellcasting'
+import { deriveWeaponAttack } from '@/rules/weapon-attacks'
+import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
 
-/**
- * 角色导出数据组装（PDF 打印版面与 XLSX 自动卡共用同一事实源）。
- * 全部数值来自 rules 派生函数与草稿原始选择，不在此重复计算规则。
- */
+export type ExportDiagnosticCode =
+  | 'missing-rule-data'
+  | 'missing-template-field'
+  | 'unsupported-template-field'
+  | 'invalid-template-target'
+  | 'content-truncated'
+  | 'formula-not-recalculated'
+
+export interface ExportDiagnostic {
+  readonly code: ExportDiagnosticCode
+  readonly severity: 'warning' | 'error'
+  readonly field: string
+  readonly message: string
+}
+
+export interface ExportAbility {
+  readonly key: AbilityKey
+  readonly label: string
+  readonly score: number
+  readonly modifier: number
+  readonly savingThrow: number
+  readonly savingThrowProficient: boolean
+}
+
+export interface ExportSkill {
+  readonly id: string
+  readonly name: string
+  readonly value: number
+  readonly proficiency: 'none' | 'proficient' | 'expertise'
+}
+
+export interface ExportAttack {
+  readonly itemId: string
+  readonly name: string
+  readonly attackBonus: number
+  readonly damage: string
+  readonly note: string
+}
+
+export interface ExportFeature {
+  readonly id: string
+  readonly category: 'feat' | 'subclass' | 'class' | 'race' | 'background'
+  readonly name: string
+  readonly summary: string
+  readonly priority: number
+}
+
+export interface ExportSpell {
+  readonly id: string
+  readonly name: string
+  readonly level: number
+  readonly prepared: boolean
+}
+
+export interface CharacterExportModel {
+  readonly identity: {
+    readonly characterName: string
+    readonly className: string
+    readonly level: number
+    readonly classLevel: string
+    readonly subclassName: string
+    readonly raceName: string
+    readonly backgroundName: string
+    readonly alignment: string
+    readonly playerName: string
+    readonly experience: number
+  }
+  readonly abilities: Readonly<Record<AbilityKey, ExportAbility>>
+  readonly combat: {
+    readonly proficiencyBonus: number
+    readonly armorClass: number
+    readonly initiative: number
+    readonly speed: number
+    readonly hitPointMaximum: number
+    readonly hitPointCurrent: number
+    readonly hitPointTemporary: number
+    readonly hitDice: string
+    readonly passivePerception: number
+  }
+  readonly skills: readonly ExportSkill[]
+  readonly proficiencies: { readonly languages: readonly string[]; readonly text: string }
+  readonly attacks: readonly ExportAttack[]
+  readonly inventory: readonly { readonly itemId: string; readonly name: string; readonly quantity: number; readonly equippedQuantity: number }[]
+  readonly currency: { readonly cp: number; readonly sp: number; readonly ep: number; readonly gp: number; readonly pp: number }
+  readonly features: readonly ExportFeature[]
+  readonly spellcasting?: {
+    readonly className: string
+    readonly abilityLabel: string
+    readonly saveDc: number
+    readonly attackBonus: number
+    readonly slots: readonly { readonly level: number; readonly count: number; readonly pact: boolean }[]
+    readonly spells: readonly ExportSpell[]
+  }
+  readonly profile: { readonly backstory: string }
+  readonly diagnostics: readonly ExportDiagnostic[]
+}
 
 const ABILITY_KEYS: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
-type ExportRow = readonly (string | number)[]
+function signed(value: number): string {
+  return `${value >= 0 ? '+' : ''}${value}`
+}
 
-function skillName(id: string): string {
+function optionName(id: string): string {
   return rulesRepository.getOption(id)?.name ?? id
 }
 
-function sourceJoin(sources: readonly ValueSource[], mode: 'label' | 'detail'): string {
-  return sources.map((source) => source[mode] || source.label).join(' + ')
-}
-
-function inventorySourceLabel(kind: InventorySourceKind): string {
-  switch (kind) {
-    case 'class':
-    case 'background':
-      return '起始装备'
-    case 'adventure':
-      return '冒险获得'
-    case 'legacy':
-      return '旧草稿'
+function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
+  const selectedIds = draft.selections.filter((selection) => !selection.invalidatedAt).flatMap((selection) => selection.optionIds)
+  const features: ExportFeature[] = []
+  for (const optionId of selectedIds) {
+    const feat = rulesRepository.getFeat(optionId)
+    if (feat) {
+      features.push({ id: feat.id, category: 'feat', name: feat.name, summary: feat.detail, priority: 10 })
+      continue
+    }
+    const abilityImprovement = decodeAbilityImprovement(optionId)
+    if (!abilityImprovement) continue
+    const summary = abilityImprovement.mode === 'single'
+      ? `${ABILITY_LABELS[abilityImprovement.abilities[0]]} +2`
+      : abilityImprovement.abilities.map((ability) => `${ABILITY_LABELS[ability]} +1`).join('、')
+    features.push({ id: optionId, category: 'feat', name: '属性值提升', summary, priority: 10 })
   }
+  return features
 }
 
-function spellRows(ids: readonly string[], note: string): ExportRow[] {
-  return ids
-    .map((id) => rulesRepository.getSpell(id))
-    .filter((spell): spell is SpellRule => Boolean(spell))
-    .map((spell) => [spell.name, spell.englishName, note] as const)
+function buildFeatures(draft: CharacterDraft): ExportFeature[] {
+  const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
+  const subclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
+  const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
+  const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+  const background = draft.backgroundVariantId
+    ? rulesRepository.getBackground(draft.backgroundVariantId)
+    : draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
+  return [
+    ...resolveSelectedFeatures(draft),
+    ...(subclass?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'subclass' as const, name: feature.name, summary: feature.summary, priority: 20 })),
+    ...(classRule?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'class' as const, name: feature.name, summary: feature.summary, priority: 30 })),
+    ...[race, subrace].filter((item): item is NonNullable<typeof item> => Boolean(item)).map((item) => ({ id: item.id, category: 'race' as const, name: item.name, summary: item.summary, priority: 40 })),
+    ...(background ? [{ id: background.id, category: 'background' as const, name: background.featureName || background.name, summary: background.summary, priority: 50 }] : []),
+  ].sort((left, right) => left.priority - right.priority)
 }
 
-export function buildCharacterExportData(draft: CharacterDraft, derived: DerivedCharacter): XlsxExportData {
+function buildInventory(draft: CharacterDraft, diagnostics: ExportDiagnostic[]) {
+  const grouped = new Map<string, { quantity: number; equippedQuantity: number }>()
+  for (const entry of draft.inventory) {
+    const current = grouped.get(entry.itemId) ?? { quantity: 0, equippedQuantity: 0 }
+    current.quantity += entry.quantity
+    current.equippedQuantity += entry.equippedQuantity
+    grouped.set(entry.itemId, current)
+  }
+  return [...grouped.entries()].map(([itemId, totals]) => {
+    const equipment = rulesRepository.getEquipment(itemId)
+    if (!equipment) diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `inventory.${itemId}`, message: `无法解析物品 ${itemId}，已使用原始 ID。` })
+    return { itemId, name: equipment?.name ?? itemId, ...totals }
+  })
+}
+
+function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): readonly ExportSpell[] {
+  const config = rulesRepository.getSpellcastingConfig(draft)
+  if (!config) return []
+  const ids = config.mode === 'spellbook'
+    ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.spellbookSpellIds]
+    : config.mode === 'prepared'
+      ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.preparedSpellIds]
+      : [...draft.spellSelections.cantripIds, ...draft.spellSelections.knownSpellIds]
+  const prepared = new Set(draft.spellSelections.preparedSpellIds)
+  return ids.map((id) => {
+    const spell = rulesRepository.getSpell(id)
+    if (!spell) diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `spell.${id}`, message: `无法解析法术 ${id}。` })
+    return spell ? { id, name: spell.name, level: spell.level, prepared: prepared.has(id) } : undefined
+  }).filter((spell): spell is ExportSpell => Boolean(spell)).sort((left, right) => left.level - right.level || left.name.localeCompare(right.name, 'zh-CN'))
+}
+
+export function buildCharacterExportModel(draft: CharacterDraft, derived: DerivedCharacter): CharacterExportModel {
+  const diagnostics: ExportDiagnostic[] = []
   const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
   const subclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
   const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
   const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
   const background = draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
   const backgroundVariant = draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId) : undefined
+  if (draft.classId && !classRule) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.class', message: '无法解析角色职业。' })
+  if (draft.raceId && !race) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.race', message: '无法解析角色种族。' })
 
-  const subtitle = [
-    `${draft.targetLevel} 级`,
-    classRule?.name,
-    subclass?.name,
-    subrace?.name ?? race?.name,
-    backgroundVariant?.name ?? background?.name,
-  ].filter(Boolean).join(' · ')
-
-  const passivePerception = 10 + (derived.skills['skill-perception']?.value ?? 0)
-
-  const spellcastingConfig = rulesRepository.getSpellcastingConfig(draft)
-  const spellSlots = spellcastingConfig ? getSpellSlots(spellcastingConfig, draft.targetLevel) : []
-  const spellSlotsLabel = spellSlots.length === 0
-    ? ''
-    : spellSlots[0]?.pact
-      ? `契约法术位：${spellSlots[0].count} 个 ${spellSlots[0].level} 环（短休恢复）`
-      : spellSlots.map((slot) => `${slot.level}环×${slot.count}`).join(' · ')
-
-  const sections: { title: string; rows: ExportRow[] }[] = [
-    {
-      title: '基础信息',
-      rows: [
-        ['角色名', draft.name || '未命名角色', ''],
-        ['职业', classRule?.name ?? '—', classRule?.englishName ?? ''],
-        ['等级', draft.targetLevel, ''],
-        ['子职', subclass?.name ?? '—', ''],
-        ['种族', subrace?.name ?? race?.name ?? '—', ''],
-        ['背景', backgroundVariant?.name ?? background?.name ?? '—', ''],
-        ['阵营', draft.alignment || '—', ''],
-        ['备注', draft.notes || '—', ''],
-      ],
-    },
-    {
-      title: '属性',
-      rows: ABILITY_KEYS.map((key) => [
-        ABILITY_LABELS[key],
-        derived.abilities[key],
-        `调整值 ${derived.modifiers[key] >= 0 ? '+' : ''}${derived.modifiers[key]}`,
-      ]),
-    },
-    {
-      title: '核心数值',
-      rows: [
-        ['熟练加值', `+${derived.proficiencyBonus.value}`, sourceJoin(derived.proficiencyBonus.sources, 'label')],
-        ['生命值', derived.hitPoints.value, sourceJoin(derived.hitPoints.sources, 'label')],
-        ['护甲等级', derived.armorClass.value, sourceJoin(derived.armorClass.sources, 'label')],
-        ['先攻', `${derived.initiative.value >= 0 ? '+' : ''}${derived.initiative.value}`, sourceJoin(derived.initiative.sources, 'label')],
-        ['速度', `${derived.speed.value} 尺`, derived.speed.sources[0]?.detail ?? ''],
-        ['被动感知', passivePerception, '10 + 察觉'],
-      ],
-    },
-    {
-      title: '豁免',
-      rows: ABILITY_KEYS.map((key) => [
-        ABILITY_LABELS[key],
-        `${derived.savingThrows[key].value >= 0 ? '+' : ''}${derived.savingThrows[key].value}`,
-        sourceJoin(derived.savingThrows[key].sources, 'label'),
-      ]),
-    },
-    {
-      title: '技能',
-      rows: Object.entries(derived.skills).map(([id, value]) => [
-        skillName(id),
-        `${value.value >= 0 ? '+' : ''}${value.value}`,
-        sourceJoin(value.sources, 'detail'),
-      ]),
-    },
-    {
-      title: '攻击与法术',
-      rows: [
-        ['攻击加值', `+${derived.attackBonus.value}`, sourceJoin(derived.attackBonus.sources, 'label')],
-        ['伤害加值', `+${derived.attackDamageBonus.value}`, sourceJoin(derived.attackDamageBonus.sources, 'label')],
-        ['法术攻击', derived.spellAttackBonus ? `+${derived.spellAttackBonus.value}` : '—', derived.spellAttackBonus ? sourceJoin(derived.spellAttackBonus.sources, 'label') : '当前职业无施法能力'],
-        ['法术豁免 DC', derived.spellSaveDc ? String(derived.spellSaveDc.value) : '—', derived.spellSaveDc ? sourceJoin(derived.spellSaveDc.sources, 'label') : '当前职业无施法能力'],
-        ...(spellSlotsLabel ? [['法术位', spellSlotsLabel, ''] as const] : []),
-      ],
-    },
-  ]
-
-  const spellSections: { title: string; rows: ExportRow[] }[] = []
-  const cantrips = draft.spellSelections.cantripIds
-    .map((id) => rulesRepository.getSpell(id))
-    .filter((spell): spell is SpellRule => Boolean(spell))
-  if (cantrips.length) {
-    spellSections.push({
-      title: '戏法',
-      rows: cantrips.map((spell) => [spell.name, spell.englishName, ''] as const),
-    })
-  }
-  if (spellcastingConfig) {
-    const selectedIds = getSelectedSpellIds(draft, spellcastingConfig)
-    const byLevel = selectedIds
-      .map((id) => rulesRepository.getSpell(id))
-      .filter((spell): spell is SpellRule => Boolean(spell))
-      .sort((left, right) => left.level - right.level)
-    if (byLevel.length) {
-      const levels = [...new Set(byLevel.map((spell) => spell.level))].sort((a, b) => a - b)
-      for (const level of levels) {
-        spellSections.push({
-          title: `${level} 环法术`,
-          rows: byLevel.filter((spell) => spell.level === level).map((spell) => [spell.name, spell.englishName, ''] as const),
-        })
-      }
+  const inventory = buildInventory(draft, diagnostics)
+  const attacks = inventory.filter((entry) => entry.equippedQuantity > 0).flatMap((entry) => {
+    const equipment = rulesRepository.getEquipment(entry.itemId)
+    if (!equipment) return []
+    const attack = deriveWeaponAttack(draft, derived, equipment)
+    if (!attack) {
+      if (equipment.category === 'weapon') diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `attacks.${entry.itemId}`, message: `${equipment.name} 缺少可计算的基础武器结构，未生成攻击数据。` })
+      return []
     }
-    if (spellcastingConfig.mode === 'spellbook' && draft.spellSelections.spellbookSpellIds.length) {
-      spellSections.push({
-        title: '法术书',
-        rows: spellRows(draft.spellSelections.spellbookSpellIds, '在书中'),
-      })
-    }
-  }
-
-  sections.push(...spellSections)
-
-  sections.push({
-    title: '物品与金币',
-    rows: [
-      ...draft.inventory.map((entry) => [
-        rulesRepository.getEquipment(entry.itemId)?.name ?? entry.itemId,
-        `数量 ×${entry.quantity}（装备 ${entry.equippedQuantity}）`,
-        inventorySourceLabel(entry.sourceKind),
-      ] as const),
-      ['持有金币（GP）', draft.currency.gp + draft.adventureGold, `起始 ${draft.currency.gp} · 冒险净增 ${draft.adventureGold >= 0 ? '+' : ''}${draft.adventureGold}`],
-      ['铜币（CP）', draft.currency.cp, ''],
-      ['银币（SP）', draft.currency.sp, ''],
-      ['电金币（EP）', draft.currency.ep, ''],
-      ['白金币（PP）', draft.currency.pp, ''],
-    ],
+    const damageBonus = attack.damageBonus === 0 ? '' : signed(attack.damageBonus)
+    const notes = [attack.versatileDamageDice ? `双手 ${attack.versatileDamageDice}${damageBonus}` : '', attack.range ? `射程 ${attack.range[0]}/${attack.range[1]} 尺` : '', attack.proficient ? '' : '未熟练'].filter(Boolean)
+    return [{ itemId: attack.itemId, name: attack.name, attackBonus: attack.attackBonus, damage: `${attack.damageDice}${damageBonus} ${attack.damageType}`, note: notes.join('；') }]
   })
 
+  const abilities = Object.fromEntries(ABILITY_KEYS.map((key) => [key, {
+    key,
+    label: ABILITY_LABELS[key],
+    score: derived.abilities[key],
+    modifier: derived.modifiers[key],
+    savingThrow: derived.savingThrows[key].value,
+    savingThrowProficient: derived.savingThrows[key].sources.some((source) => source.label === '职业豁免熟练'),
+  }])) as Record<AbilityKey, ExportAbility>
+  const skills = Object.entries(derived.skills).map(([id, value]) => {
+    const labels = value.sources.map((source) => source.label)
+    return { id, name: optionName(id), value: value.value, proficiency: labels.includes('专精') ? 'expertise' as const : labels.includes('技能熟练') ? 'proficient' as const : 'none' as const }
+  })
+  const languages = draft.languages.map(optionName)
+  const spellcastingConfig = rulesRepository.getSpellcastingConfig(draft)
+
   return {
-    title: draft.name || '未命名角色',
-    subtitle,
-    sections,
+    identity: {
+      characterName: draft.name || '', className: classRule?.name ?? '', level: draft.targetLevel, classLevel: classRule ? `${classRule.name}（${draft.targetLevel}级）` : '',
+      subclassName: subclass?.name ?? '', raceName: subrace?.name ?? race?.name ?? '', backgroundName: backgroundVariant?.name ?? background?.name ?? '',
+      alignment: draft.alignment, playerName: '', experience: 0,
+    },
+    abilities,
+    combat: {
+      proficiencyBonus: derived.proficiencyBonus.value, armorClass: derived.armorClass.value, initiative: derived.initiative.value, speed: derived.speed.value,
+      hitPointMaximum: derived.hitPoints.value, hitPointCurrent: derived.hitPoints.value, hitPointTemporary: 0,
+      hitDice: classRule ? `d${classRule.hitDie}` : '', passivePerception: 10 + (derived.skills['skill-perception']?.value ?? 0),
+    },
+    skills,
+    proficiencies: { languages, text: languages.join('、') },
+    attacks,
+    inventory,
+    currency: { ...draft.currency, gp: draft.currency.gp + draft.adventureGold },
+    features: buildFeatures(draft),
+    ...(spellcastingConfig && derived.spellSaveDc && derived.spellAttackBonus ? {
+      spellcasting: {
+        className: classRule?.name ?? subclass?.name ?? '', abilityLabel: ABILITY_LABELS[spellcastingConfig.ability], saveDc: derived.spellSaveDc.value,
+        attackBonus: derived.spellAttackBonus.value, slots: getSpellSlots(spellcastingConfig, draft.targetLevel).map((slot) => ({ ...slot, pact: Boolean(slot.pact) })),
+        spells: spellList(draft, diagnostics),
+      },
+    } : {}),
+    profile: { backstory: draft.notes },
+    diagnostics,
   }
+}
+
+export function formatSigned(value: number): string {
+  return signed(value)
 }

@@ -280,16 +280,16 @@ src/views/character-builder/hooks/useCharacterBuilderPage.ts
   -> src/views/character-builder/steps.ts
   -> src/stores/character-drafts.ts
   -> src/services/character-json.ts
-  -> src/services/export-xlsx.ts（exportXlsx：导出数据组装 + xlsx 下载）
-  -> src/features/character-export/build-export-data.ts
+  -> src/services/export-xlsx.ts（exportXlsx：v4 模板加载 + 输入/公式缓存填充 + 校验 + 下载）
+  -> src/services/export-pdf.ts（exportPdf：v4 三页区域映射填充 + 诊断 + 下载）
+  -> src/features/character-export/build-export-data.ts（buildCharacterExportModel）
   -> src/rules/{derive,abilities,dependency,repository,timeline,spellcasting,starting-equipment}
   -> vue-router（useRoute / useRouter，路由查询与步骤编排）
 
 src/views/character-builder/components/*
-  -> src/views/character-builder/components/{FeatChoicePanel,CharacterPrintSheet}（页面内复用）
+  -> src/views/character-builder/components/{FeatChoicePanel}（页面内复用）
   -> src/components/ui/*
   -> src/rules/* 与 src/rules/data/*（推荐、时间线、法术、装备、子职特性等只读消费）
-  -> src/features/character-export/build-export-data.ts（仅 CharacterPrintSheet：打印版面数据源）
   -> src/config/site.ts（仅 StartPanel）
   -> src/types/*
 ```
@@ -323,12 +323,18 @@ src/services/character-json.ts
 
 src/services/export-xlsx.ts
   -> exceljs（动态 import，仅导出时按需加载；不进入 SSG 预渲染路径）
-  -> src/types/character（间接：仅消费 features 组装好的纯数据，不导入 rules）
+  -> src/config/site（baseUrl：模板资产前缀）
+  -> src/features/character-export/build-export-data（消费唯一 CharacterExportModel，不导入 rules）
+
+src/services/export-pdf.ts
+  -> pdf-lib + @pdf-lib/fontkit（动态 import，仅导出时按需加载）
+  -> src/config/site（baseUrl：模板/字体资产前缀）
+  -> src/features/character-export/build-export-data（消费唯一 CharacterExportModel，不导入 rules）
 
 src/features/character-export/build-export-data.ts
-  -> src/rules/{repository,spellcasting} + src/rules/data/feats-2014（ABILITY_LABELS）
-  -> src/services/export-xlsx（类型 XlsxExportData）
-  -> src/types/{character,rules}
+  -> src/rules/{repository,spellcasting,weapon-attacks} + src/rules/data/feats-2014（ABILITY_LABELS）
+  -> src/types/character
+  （唯一导出模型：身份、属性、战斗、攻击、物品、钱币、特性、法术、人物资料与诊断）
 
 src/services/draft-storage.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
@@ -340,7 +346,7 @@ src/services/dice-random.ts
 src/services/umami.ts
   -> src/config/site.ts（域名匹配后幂等加载 Umami 统计脚本）
 
-src/config/site.ts    （无依赖；项目内唯一读取 import.meta.env 的入口）
+src/config/site.ts    （无依赖；项目内唯一读取 import.meta.env 的入口；导出 baseUrl 供模板资产 URL）
 src/config/setting.ts （空占位文件，无消费者）
 
 src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打印版面）

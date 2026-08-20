@@ -39,7 +39,29 @@ function weapon(
   traits = '',
 ): EquipmentRule {
   const description = traits ? `${damageDice} ${damageType}伤害；${traits}。` : `${damageDice} ${damageType}伤害。`
-  return item({ id, name, description, category: 'weapon', equippable: true, weaponKind, damageDice, damageType })
+  const propertyMap = [
+    ['灵巧', 'finesse'], ['轻', 'light'], ['重', 'heavy'], ['触及', 'reach'], ['装填', 'loading'],
+    ['弹药', 'ammunition'], ['投掷', 'thrown'], ['双手', 'two-handed'], ['多用', 'versatile'],
+  ] as const
+  const weaponProperties = propertyMap.filter(([label]) => traits.includes(label)).map(([, property]) => property)
+  const versatileDamageDice = traits.match(/多用\s+(\d+d\d+)/)?.[1]
+  const rangeMatch = traits.match(/(?:弹药|投掷)\s+(\d+)\/(\d+)\s*米/)
+  const range = rangeMatch
+    ? [Math.round(Number(rangeMatch[1]) / 0.3), Math.round(Number(rangeMatch[2]) / 0.3)] as const
+    : undefined
+  return item({
+    id,
+    name,
+    description,
+    category: 'weapon',
+    equippable: true,
+    weaponKind,
+    damageDice,
+    damageType,
+    weaponProperties,
+    versatileDamageDice,
+    range,
+  })
 }
 
 function pack(id: string, name: string, contents: readonly EquipmentGrant[]): EquipmentRule {

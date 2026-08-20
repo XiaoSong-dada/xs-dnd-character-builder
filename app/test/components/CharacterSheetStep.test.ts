@@ -896,7 +896,7 @@ describe('CharacterSheetStep 导出入口', () => {
     await wrapper.get('.character-sheet__export').trigger('click')
     await nextTick()
 
-    expect(document.body.textContent).toContain('导出 PDF 角色卡（打印）')
+    expect(document.body.textContent).toContain('导出 PDF 角色卡')
     expect(document.body.textContent).toContain('导出 XLSX 自动计算卡')
     expect(document.body.textContent).toContain('导出 JSON 数据文件')
   })
@@ -919,29 +919,36 @@ describe('CharacterSheetStep 导出入口', () => {
     expect(wrapper.emitted('exportXlsx')).toEqual([[]])
   })
 
-  it('PDF 菜单项打开打印视图并调用 window.print，afterprint 后自动关闭', async () => {
-    const printSpy = vi.fn()
-    vi.stubGlobal('print', printSpy)
-    try {
-      const wrapper = await openExportMenu()
-      const items = Array.from(document.body.querySelectorAll('.character-sheet__export-menu-item'))
-      ;(items[0] as HTMLButtonElement).click()
-      await nextTick()
+  it('PDF 菜单项触发 exportPdf 事件（模板填充下载）', async () => {
+    const wrapper = await openExportMenu()
+    const items = Array.from(document.body.querySelectorAll('.character-sheet__export-menu-item'))
+    ;(items[0] as HTMLButtonElement).click()
+    await nextTick()
 
-      expect(printSpy).toHaveBeenCalledTimes(1)
-      const sheet = document.querySelector('.print-sheet')
-      expect(sheet).not.toBeNull()
-      expect(sheet?.textContent).toContain('测试角色')
-      expect(sheet?.textContent).toContain('核心数值')
+    expect(wrapper.emitted('exportPdf')).toEqual([[]])
+    expect(wrapper.emitted('exportXlsx')).toBeUndefined()
+    expect(wrapper.emitted('export')).toBeUndefined()
+  })
 
-      window.dispatchEvent(new Event('afterprint'))
-      await nextTick()
-      expect(document.querySelector('.print-sheet')).toBeNull()
-      expect(wrapper.emitted('exportXlsx')).toBeUndefined()
-      expect(wrapper.emitted('export')).toBeUndefined()
-    } finally {
-      vi.unstubAllGlobals()
-    }
+  it('导出期间禁用重复点击并展示中文诊断摘要', async () => {
+    const wrapper = mount(CharacterSheetStep, {
+      props: {
+        draft,
+        derived: deriveCharacter(draft),
+        exportingFormat: 'pdf',
+        exportNotice: { tone: 'warning', title: 'PDF 已导出，但有内容省略', message: '受影响类别：特性。' },
+      },
+      attachTo: document.body,
+    })
+    expect(wrapper.get('.character-sheet__export').attributes('disabled')).toBeDefined()
+    await wrapper.setProps({ exportingFormat: undefined })
+    await wrapper.get('.character-sheet__export').trigger('click')
+    await nextTick()
+    const buttons = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.character-sheet__export-menu-item'))
+    expect(document.body.textContent).toContain('PDF 已导出，但有内容省略')
+    await wrapper.setProps({ exportingFormat: 'pdf' })
+    expect(buttons.every((button) => button.disabled)).toBe(true)
+    expect(document.body.textContent).toContain('正在生成 PDF')
   })
 })
 

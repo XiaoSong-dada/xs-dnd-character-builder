@@ -135,24 +135,3 @@ textarea:focus-visible {
     }
   }
 }
-
-/* 导出 PDF 打印版面：仅打印视图可见（CharacterPrintSheet Teleport 到 body）。 */
-@page {
-  size: A4;
-  margin: 12mm;
-}
-
-@media print {
-  body {
-    overflow: visible !important;
-  }
-
-  #app {
-    height: auto;
-    overflow: visible;
-  }
-
-  body > *:not(.print-sheet) {
-    display: none !important;
-  }
-}

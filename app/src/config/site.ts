@@ -63,3 +63,6 @@ export const siteConfig: SiteConfig = {
     domains: parseDomains(import.meta.env.VITE_UMAMI_DOMAINS),
   },
 }
+
+/** 部署基路径（vite BASE_URL，静态资源/模板资产前缀）。 */
+export const baseUrl: string = import.meta.env.BASE_URL
