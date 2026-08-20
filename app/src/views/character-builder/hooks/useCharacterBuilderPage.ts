@@ -11,6 +11,9 @@ import { validateSpellSelections } from '@/rules/spellcasting'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
+import { downloadXlsx, fillTemplate, loadCharacterSheetTemplate } from '@/services/export-xlsx'
+import { buildCharacterSheetPdf, downloadPdf } from '@/services/export-pdf'
+import { buildCharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type {
   AbilityKey,
@@ -35,6 +38,8 @@ export function useCharacterBuilderPage() {
   const store = useCharacterDraftsStore()
   const { drafts, legacyDrafts, activeDraft, derivedSummary, validationIssues, completion } = storeToRefs(store)
   const importError = ref('')
+  const exportingFormat = ref<'pdf' | 'xlsx'>()
+  const exportNotice = ref<{ readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }>()
   const pendingChange = ref<{
     readonly title: string
     readonly affected: readonly string[]
@@ -421,6 +426,68 @@ export function useCharacterBuilderPage() {
     if (activeDraft.value) CharacterJsonService.downloadDraft(activeDraft.value)
   }
 
+  function diagnosticSummary(diagnostics: readonly ExportDiagnostic[]): string {
+    const warnings = [...new Set(diagnostics.filter((item) => item.severity === 'warning').map((item) => item.message))]
+    return warnings.length ? warnings.join('；') : ''
+  }
+
+  function blockingMessage(diagnostics: readonly ExportDiagnostic[]): string | undefined {
+    const first = diagnostics.find((item) => item.severity === 'error')
+    return first?.message
+  }
+
+  function exportErrorMessage(error: unknown): string {
+    return error instanceof Error && error.message ? error.message : '导出失败，请稍后重试。'
+  }
+
+  /** PDF 角色卡导出：统一模型 → 三页 AcroForm 模板 → 诊断 → 下载。 */
+  async function exportPdf(): Promise<void> {
+    const draft = activeDraft.value
+    const currentDerived = derived.value
+    if (!draft || !currentDerived || exportingFormat.value) return
+    exportingFormat.value = 'pdf'
+    exportNotice.value = undefined
+    try {
+      const model = buildCharacterExportModel(draft, currentDerived)
+      const modelBlocker = blockingMessage(model.diagnostics)
+      if (modelBlocker) throw new Error(modelBlocker)
+      const result = await buildCharacterSheetPdf(model)
+      const blocker = blockingMessage(result.diagnostics)
+      if (blocker) throw new Error(blocker)
+      await downloadPdf(result.bytes, `${draft.name.trim() || 'dnd-character'}-dnd5e.pdf`)
+      const warning = diagnosticSummary(result.diagnostics)
+      exportNotice.value = warning ? { tone: 'warning', title: 'PDF 已导出，但有内容省略', message: warning } : { tone: 'success', title: 'PDF 导出完成', message: '三页角色卡已生成并开始下载。' }
+    } catch (error) {
+      exportNotice.value = { tone: 'error', title: 'PDF 导出失败', message: exportErrorMessage(error) }
+    } finally {
+      exportingFormat.value = undefined
+    }
+  }
+
+  async function exportXlsx(): Promise<void> {
+    const draft = activeDraft.value
+    const currentDerived = derived.value
+    if (!draft || !currentDerived || exportingFormat.value) return
+    exportingFormat.value = 'xlsx'
+    exportNotice.value = undefined
+    try {
+      const model = buildCharacterExportModel(draft, currentDerived)
+      const modelBlocker = blockingMessage(model.diagnostics)
+      if (modelBlocker) throw new Error(modelBlocker)
+      const workbook = await loadCharacterSheetTemplate()
+      const result = fillTemplate(workbook, model)
+      const blocker = blockingMessage(result.diagnostics)
+      if (blocker) throw new Error(blocker)
+      await downloadXlsx(workbook, `${draft.name.trim() || 'dnd-character'}-dnd5e.xlsx`)
+      const warning = diagnosticSummary(result.diagnostics)
+      exportNotice.value = warning ? { tone: 'warning', title: 'XLSX 已导出，但有内容省略', message: warning } : { tone: 'success', title: 'XLSX 导出完成', message: '自动计算角色卡已校验并开始下载。' }
+    } catch (error) {
+      exportNotice.value = { tone: 'error', title: 'XLSX 导出失败', message: exportErrorMessage(error) }
+    } finally {
+      exportingFormat.value = undefined
+    }
+  }
+
   onMounted(() => {
     const draftId = typeof route.query.draft === 'string' ? route.query.draft : undefined
     if (draftId && store.activateDraft(draftId)) {
@@ -451,6 +518,8 @@ export function useCharacterBuilderPage() {
     validationIssues,
     completion,
     importError,
+    exportingFormat,
+    exportNotice,
     pendingChange,
     step,
     stepMeta,
@@ -479,6 +548,8 @@ export function useCharacterBuilderPage() {
     updateAbilities,
     updateRaceAbilityChoices,
     exportDraft,
+    exportPdf,
+    exportXlsx,
     exportLegacyDraft: store.exportLegacyDraft,
     confirmPendingChange,
     cancelPendingChange,

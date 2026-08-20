@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 
 import AddItemModal from './AddItemModal.vue'
 import AdjustItemModal from './AdjustItemModal.vue'
+import UiModal from '@/components/ui/UiModal.vue'
+import UiNotice from '@/components/ui/UiNotice.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import StatTile from '@/components/ui/StatTile.vue'
@@ -19,9 +21,16 @@ import { buildTimeline } from '@/rules/timeline'
 import type { AbilityKey, CharacterDraft, DerivedCharacter, InventoryEntry, SpellSelections } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
 
-const props = defineProps<{ draft: CharacterDraft; derived: DerivedCharacter }>()
+const props = defineProps<{
+  draft: CharacterDraft
+  derived: DerivedCharacter
+  exportingFormat?: 'pdf' | 'xlsx'
+  exportNotice?: { readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }
+}>()
 const emit = defineEmits<{
   export: []
+  exportPdf: []
+  exportXlsx: []
   adjustLevel: []
   reedit: []
   changeSpellSelections: [value: SpellSelections]
@@ -281,6 +290,18 @@ const needsReview = computed(() => {
   })
   return hasInvalidated || incomplete
 })
+/** 导出：菜单弹层；PDF/XLSX 走模板填充下载（hook 处理）。 */
+const showExportMenu = ref(false)
+function handleExportJson(): void {
+  showExportMenu.value = false
+  emit('export')
+}
+function handleExportXlsx(): void {
+  emit('exportXlsx')
+}
+function handleExportPdf(): void {
+  emit('exportPdf')
+}
 </script>
 
 <template>
@@ -580,9 +601,17 @@ const needsReview = computed(() => {
       @adjust="handleAdjustItem"
     />
     <div class="character-sheet__footer">
-      <button type="button" class="character-sheet__export" @click="$emit('export')">导出角色 JSON</button>
+      <button type="button" class="character-sheet__export" :disabled="Boolean(exportingFormat)" @click="showExportMenu = true">{{ exportingFormat ? '正在导出…' : '导出' }}</button>
       <button type="button" class="character-sheet__export character-sheet__export--secondary" @click="$emit('reedit')">重新编辑</button>
     </div>
+    <UiModal :open="showExportMenu" title="导出角色" @close="showExportMenu = false">
+      <div class="character-sheet__export-menu">
+        <UiNotice v-if="exportNotice" :tone="exportNotice.tone" :title="exportNotice.title">{{ exportNotice.message }}</UiNotice>
+        <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportPdf">{{ exportingFormat === 'pdf' ? '正在生成 PDF…' : '导出 PDF 角色卡' }}</button>
+        <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportXlsx">{{ exportingFormat === 'xlsx' ? '正在生成 XLSX…' : '导出 XLSX 自动计算卡' }}</button>
+        <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportJson">导出 JSON 数据文件</button>
+      </div>
+    </UiModal>
   </section>
 </template>
 
@@ -796,7 +825,31 @@ const needsReview = computed(() => {
     gap: 0.5rem;
   }
 
-  &__export { min-height: 3rem; border: 0; border-radius: var(--radius-md); color: white; background: var(--color-primary); font-weight: 700; }
+  &__export {
+    min-height: 3rem;
+    border: 0;
+    border-radius: var(--radius-md);
+    color: white;
+    background: var(--color-primary);
+    font-weight: 700;
+
+    &:disabled { cursor: wait; opacity: 0.65; }
+  }
+
+  &__export-menu { display: grid; gap: 0.5rem; }
+
+  &__export-menu-item {
+    min-height: 3rem;
+    padding: 0 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-primary);
+    background: var(--color-surface);
+    font-weight: 700;
+    text-align: left;
+
+    &:disabled { cursor: wait; opacity: 0.6; }
+  }
 
   &__footer { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 

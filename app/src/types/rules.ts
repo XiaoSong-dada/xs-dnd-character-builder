@@ -237,6 +237,12 @@ export interface EquipmentRule {
   readonly damageDice?: string
   /** 武器伤害类型（如 '穿刺'）；仅武器条目使用。 */
   readonly damageType?: string
+  /** 结构化武器特性；规则计算不得解析展示用 description。 */
+  readonly weaponProperties?: readonly ('finesse' | 'light' | 'heavy' | 'reach' | 'loading' | 'ammunition' | 'thrown' | 'two-handed' | 'versatile')[]
+  /** 两用武器双手持握时的伤害骰。 */
+  readonly versatileDamageDice?: string
+  /** 弹药或投掷武器的常规/长程距离（尺）。 */
+  readonly range?: readonly [normal: number, long: number]
   readonly contents?: readonly EquipmentGrant[]
   readonly armorBase?: number
   readonly addsDexterityToArmor?: boolean
