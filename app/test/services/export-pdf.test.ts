@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { CHARACTER_SHEET_PDF_MAPPING_VERSION, fillPdfTemplate, inspectPdfSpellTemplate, wrapPdfText } from '@/services/export-pdf'
+import { CHARACTER_SHEET_PDF_MAPPING_VERSION, fillPdfTemplate, inspectPdfSpellTemplate, layoutPdfTreasureItems, wrapPdfText } from '@/services/export-pdf'
 import { fighterExportModel, levelSixWizardExportModel, wizardExportModel } from '../fixtures/export-character'
 
 const TEMPLATE_PATH = resolve(__dirname, '../../../docs/export-templates/DND_5E_2014_国内5E术语版角色卡_最终版.pdf')
@@ -46,6 +46,37 @@ describe('export-pdf v6 国内 5E 术语版表单适配器', () => {
     expect(lines).toContain('第二段内容')
     expect(lines.every((line) => embeddedFont.widthOfTextAtSize(line, 8) <= 42)).toBe(true)
     expect(lines.every((line) => !/^[，。！？；：、）》】}〉”’…]/u.test(line))).toBe(true)
+  })
+
+  it('宝物按完整条目横向排列、按边界换行，并在容量耗尽后报告省略数量', async () => {
+    const { PDFDocument } = await import('pdf-lib')
+    const fontkitModule = await import('@pdf-lib/fontkit')
+    const document = await PDFDocument.create()
+    document.registerFontkit(fontkitModule.default)
+    const embeddedFont = await document.embedFont(font())
+    const fontSize = 8
+    const firstTwo = '法术书 × 1  长棍 × 1（已装备 × 1）'
+    const boundaryWidth = embeddedFont.widthOfTextAtSize(firstTwo, fontSize)
+    const flowed = layoutPdfTreasureItems(['法术书 × 1', '长棍 × 1（已装备 × 1）', '背包 × 1'], embeddedFont, fontSize, boundaryWidth, 3)
+    expect(flowed.text.split('\n')).toEqual([firstTwo, '背包 × 1'])
+    expect(flowed.text).not.toMatch(/[；、]/u)
+    expect(flowed.omittedCount).toBe(0)
+
+    const longItem = layoutPdfTreasureItems(['特别特别长的单件物品名称 × 1'], embeddedFont, fontSize, 45, 5)
+    expect(longItem.text.split('\n').length).toBeGreaterThan(1)
+    expect(longItem.text.split('\n').every((line) => embeddedFont.widthOfTextAtSize(line, fontSize) <= 45)).toBe(true)
+
+    const singleItemWidth = Math.max(
+      embeddedFont.widthOfTextAtSize('背包 × 1', fontSize),
+      embeddedFont.widthOfTextAtSize('法术书 × 1', fontSize),
+      embeddedFont.widthOfTextAtSize('墨水笔 × 1', fontSize),
+    )
+    const exact = layoutPdfTreasureItems(['背包 × 1', '法术书 × 1'], embeddedFont, fontSize, singleItemWidth, 2)
+    expect(exact.omittedCount).toBe(0)
+    const overflowWidth = singleItemWidth + embeddedFont.widthOfTextAtSize('…', fontSize)
+    const truncated = layoutPdfTreasureItems(['背包 × 1', '法术书 × 1', '墨水笔 × 1'], embeddedFont, fontSize, overflowWidth, 1)
+    expect(truncated.text).toMatch(/…$/u)
+    expect(truncated.omittedCount).toBe(2)
   })
 
   it('战士样例填充后保留三页并扁平化表单', async () => {

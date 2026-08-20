@@ -238,6 +238,87 @@ function setSingleLineText(field: PDFTextField, value: string, font: PDFFont, fo
   if (clipped) diagnostic(diagnostics, 'warning', 'content-truncated', logicalField, `${logicalField} 超出 PDF 字段宽度，已省略尾部内容。`)
 }
 
+interface TreasureLine {
+  readonly text: string
+  readonly itemIndexes: ReadonlySet<number>
+}
+
+export interface PdfTreasureLayout {
+  readonly text: string
+  readonly omittedCount: number
+}
+
+function markTreasureOverflow(line: TreasureLine, omittedItemIndexes: Set<number>, font: PDFFont, fontSize: number, maxWidth: number): string {
+  let value = line.text
+  const lineItemIndexes = [...line.itemIndexes]
+  while (value.includes('  ') && textWidth(font, `${value}…`, fontSize) > maxWidth) {
+    value = value.slice(0, value.lastIndexOf('  '))
+    const omittedIndex = lineItemIndexes.pop()
+    if (omittedIndex !== undefined) omittedItemIndexes.add(omittedIndex)
+  }
+  if (textWidth(font, `${value}…`, fontSize) <= maxWidth) return `${value}…`
+  lineItemIndexes.forEach((itemIndex) => omittedItemIndexes.add(itemIndex))
+  return ellipsizeLine(value, font, fontSize, maxWidth)
+}
+
+/** 以完整物品条目为单位横向排列，条目之间固定使用两个 ASCII 空格。 */
+export function layoutPdfTreasureItems(items: readonly string[], font: PDFFont, fontSize: number, maxWidth: number, maxLines: number): PdfTreasureLayout {
+  const lines: TreasureLine[] = []
+  let currentText = ''
+  let currentIndexes = new Set<number>()
+
+  const flush = (): void => {
+    if (!currentText) return
+    lines.push({ text: currentText, itemIndexes: new Set(currentIndexes) })
+    currentText = ''
+    currentIndexes = new Set<number>()
+  }
+
+  items.forEach((item, itemIndex) => {
+    const candidate = currentText ? `${currentText}  ${item}` : item
+    if (textWidth(font, candidate, fontSize) <= maxWidth) {
+      currentText = candidate
+      currentIndexes.add(itemIndex)
+      return
+    }
+
+    if (textWidth(font, item, fontSize) <= maxWidth) {
+      flush()
+      currentText = item
+      currentIndexes.add(itemIndex)
+      return
+    }
+
+    flush()
+    const wrapped = wrapPdfText(item, font, fontSize, maxWidth)
+    wrapped.forEach((line, lineIndex) => {
+      if (lineIndex < wrapped.length - 1) lines.push({ text: line, itemIndexes: new Set([itemIndex]) })
+      else {
+        currentText = line
+        currentIndexes.add(itemIndex)
+      }
+    })
+  })
+  flush()
+
+  if (lines.length <= maxLines) return { text: lines.map((line) => line.text).join('\n'), omittedCount: 0 }
+  const hiddenItemIndexes = new Set(lines.slice(maxLines).flatMap((line) => [...line.itemIndexes]))
+  const visible = lines.slice(0, maxLines).map((line) => line.text)
+  const finalVisibleLine = lines[maxLines - 1]
+  if (finalVisibleLine) visible[visible.length - 1] = markTreasureOverflow(finalVisibleLine, hiddenItemIndexes, font, fontSize, maxWidth)
+  return { text: visible.join('\n'), omittedCount: hiddenItemIndexes.size }
+}
+
+function setTreasureField(field: PDFTextField, items: readonly string[], font: PDFFont, fontSize: number, diagnostics: ExportDiagnostic[]): void {
+  field.enableMultiline()
+  setFieldFontSize(field, fontSize)
+  const layout = layoutPdfTreasureItems(items, font, fontSize, fieldTextWidth(field), fieldLineCapacity(field, fontSize))
+  field.setText(layout.text)
+  if (layout.omittedCount) {
+    diagnostic(diagnostics, 'warning', 'content-truncated', 'inventory', `宝物超出 PDF 模板容量，已省略 ${layout.omittedCount} 项物品。`)
+  }
+}
+
 function featureEntryText(feature: CharacterExportModel['features'][number]): string {
   return `${feature.name}${feature.summary ? `：${feature.summary.replace(/\s+/g, ' ').trim()}` : ''}`
 }
@@ -551,8 +632,9 @@ export async function fillPdfTemplate(templateBytes: Uint8Array, fontBytes: Uint
   setText(index, ['PP'], model.currency.pp, 'currency.pp', diagnostics, true, 7)
   setWrappedField(index, ['ProficienciesLang'], model.proficiencies.text, font, 8, 'proficiencies', diagnostics)
   setWrappedField(index, ['Equipment'], '物品详见第2页宝物', font, 8, 'inventory.index', diagnostics)
-  const treasure = model.inventory.map((item) => `${item.name} × ${item.quantity}${item.equippedQuantity ? `（已装备 × ${item.equippedQuantity}）` : ''}`).join('\n')
-  setWrappedField(index, ['Treasure'], treasure, font, 8, 'inventory', diagnostics)
+  const treasureItems = model.inventory.map((item) => `${item.name} × ${item.quantity}${item.equippedQuantity ? `（已装备 × ${item.equippedQuantity}）` : ''}`)
+  const treasureField = textField(index, ['Treasure'], 'inventory', diagnostics)
+  if (treasureField) setTreasureField(treasureField, treasureItems, font, 8, diagnostics)
 
   const primaryFeatureField = textField(index, ['Features and Traits'], 'features.primary', diagnostics)
   const additionalFeatureField = textField(index, ['Feat+Traits'], 'features.additional', diagnostics)
