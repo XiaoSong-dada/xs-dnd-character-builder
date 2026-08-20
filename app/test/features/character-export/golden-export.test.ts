@@ -9,7 +9,7 @@ import { fillPdfTemplate } from '@/services/export-pdf'
 import { buildXlsxFieldValues } from '@/services/export-xlsx'
 
 const FIXTURE = resolve(__dirname, '../../fixtures/vv-ff800d07-a8b9-4c1b-a51d-5b4cd25efe24.json')
-const PDF_TEMPLATE = resolve(__dirname, '../../../public/templates/character-sheet-zh.pdf')
+const PDF_TEMPLATE = resolve(__dirname, '../../../../docs/export-templates/DND_5E_2014_国内5E术语版角色卡_最终版.pdf')
 const PDF_FONT = resolve(__dirname, '../../../public/templates/fonts/noto-sans-sc-subset.ttf')
 
 describe('角色卡导出黄金样例', () => {

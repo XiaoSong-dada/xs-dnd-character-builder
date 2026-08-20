@@ -27,5 +27,28 @@ export const wizardDraft: CharacterDraft = {
   },
 }
 
+export const levelSixWizardDraft: CharacterDraft = {
+  ...wizardDraft,
+  id: 'export-level-six-wizard-fixture',
+  targetLevel: 6,
+  subclassId: 'subclass-2014-wizard-chronurgy',
+  spellSelections: {
+    cantripIds: ['spell-2014-friends', 'spell-2014-mage-hand', 'spell-2014-fire-bolt', 'spell-2014-toll-the-dead'],
+    knownSpellIds: [],
+    preparedSpellIds: [
+      'spell-2014-chromatic-orb', 'spell-2014-mage-armor', 'spell-2014-silvery-barbs',
+      'spell-2014-detect-thoughts', 'spell-2014-hold-person', 'spell-2014-misty-step',
+      'spell-2014-counterspell', 'spell-2014-lightning-bolt', 'spell-2014-fireball',
+    ],
+    spellbookSpellIds: [
+      'spell-2014-find-familiar', 'spell-2014-detect-magic', 'spell-2014-magic-missile', 'spell-2014-mage-armor',
+      'spell-2014-silvery-barbs', 'spell-2014-thunderwave', 'spell-2014-hold-person', 'spell-2014-ray-of-enfeeblement',
+      'spell-2014-scorching-ray', 'spell-2014-counterspell', 'spell-2014-fireball', 'spell-2014-lightning-bolt',
+      'spell-2014-misty-step', 'spell-2014-chromatic-orb', 'spell-2014-detect-thoughts', 'spell-2014-rime-s-binding-ice',
+    ],
+  },
+}
+
 export function fighterExportModel() { return buildCharacterExportModel(fighterDraft, deriveCharacter(fighterDraft)) }
 export function wizardExportModel() { return buildCharacterExportModel(wizardDraft, deriveCharacter(wizardDraft)) }
+export function levelSixWizardExportModel() { return buildCharacterExportModel(levelSixWizardDraft, deriveCharacter(levelSixWizardDraft)) }

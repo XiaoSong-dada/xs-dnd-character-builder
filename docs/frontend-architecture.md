@@ -328,7 +328,8 @@ src/services/export-xlsx.ts
 
 src/services/export-pdf.ts
   -> pdf-lib + @pdf-lib/fontkit（动态 import，仅导出时按需加载）
-  -> src/config/site（baseUrl：模板/字体资产前缀）
+  -> src/config/site（baseUrl：字体资产前缀）
+  -> docs/export-templates/DND_5E_2014_国内5E术语版角色卡_最终版.pdf（经 Vite `@export-templates` 别名作为 URL 资产输出）
   -> src/features/character-export/build-export-data（消费唯一 CharacterExportModel，不导入 rules）
 
 src/features/character-export/build-export-data.ts
@@ -346,7 +347,7 @@ src/services/dice-random.ts
 src/services/umami.ts
   -> src/config/site.ts（域名匹配后幂等加载 Umami 统计脚本）
 
-src/config/site.ts    （无依赖；项目内唯一读取 import.meta.env 的入口；导出 baseUrl 供模板资产 URL）
+src/config/site.ts    （无依赖；项目内唯一读取 import.meta.env 的入口；导出 baseUrl 供字体等 public 资产 URL）
 src/config/setting.ts （空占位文件，无消费者）
 
 src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打印版面）

@@ -427,8 +427,8 @@ export function useCharacterBuilderPage() {
   }
 
   function diagnosticSummary(diagnostics: readonly ExportDiagnostic[]): string {
-    const affected = [...new Set(diagnostics.filter((item) => item.severity === 'warning').map((item) => item.field.split('.')[0]))]
-    return affected.length ? `部分内容因模板容量或规则数据限制被省略。受影响类别：${affected.join('、')}。` : ''
+    const warnings = [...new Set(diagnostics.filter((item) => item.severity === 'warning').map((item) => item.message))]
+    return warnings.length ? warnings.join('；') : ''
   }
 
   function blockingMessage(diagnostics: readonly ExportDiagnostic[]): string | undefined {
@@ -440,7 +440,7 @@ export function useCharacterBuilderPage() {
     return error instanceof Error && error.message ? error.message : '导出失败，请稍后重试。'
   }
 
-  /** PDF 角色卡导出：统一模型 → 三页区域映射 → 诊断 → 下载。 */
+  /** PDF 角色卡导出：统一模型 → 三页 AcroForm 模板 → 诊断 → 下载。 */
   async function exportPdf(): Promise<void> {
     const draft = activeDraft.value
     const currentDerived = derived.value
