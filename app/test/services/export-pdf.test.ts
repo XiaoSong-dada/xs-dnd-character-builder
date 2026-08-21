@@ -5,10 +5,42 @@ import { describe, expect, it } from 'vitest'
 import { CHARACTER_SHEET_PDF_MAPPING_VERSION, fillPdfTemplate, inspectPdfSpellTemplate, layoutPdfTreasureItems, wrapPdfText } from '@/services/export-pdf'
 import { fighterExportModel, levelSixWizardExportModel, wizardExportModel } from '../fixtures/export-character'
 
-const TEMPLATE_PATH = resolve(__dirname, '../../../docs/export-templates/DND_5E_2014_国内5E术语版角色卡_最终版.pdf')
+const TEMPLATE_PATH = resolve(__dirname, '../../public/templates/character-sheet-zh-plus.pdf')
+const BASELINE_TEMPLATE_PATH = resolve(__dirname, '../../../docs/export-templates/DND_5E_2014_国内5E术语版角色卡_最终版.pdf')
 const FONT_PATH = resolve(__dirname, '../../public/templates/fonts/noto-sans-sc-subset.ttf')
 const template = () => new Uint8Array(readFileSync(TEMPLATE_PATH))
+const baselineTemplate = () => new Uint8Array(readFileSync(BASELINE_TEMPLATE_PATH))
 const font = () => new Uint8Array(readFileSync(FONT_PATH))
+
+async function templateStructure(bytes: Uint8Array) {
+  const { PDFDocument } = await import('pdf-lib')
+  const document = await PDFDocument.load(bytes)
+  const widgetPages = new Map<object, number>()
+  document.getPages().forEach((page, pageIndex) => {
+    for (const annotationRef of page.node.Annots()?.asArray() ?? []) {
+      const annotation = document.context.lookup(annotationRef)
+      if (annotation) widgetPages.set(annotation, pageIndex)
+    }
+  })
+  const fields = document.getForm().getFields().map((field) => ({
+    name: field.getName(),
+    type: field.acroField.FT().asString(),
+    flags: field.acroField.getFlags(),
+    kidCount: field.acroField.Kids()?.size() ?? 0,
+    widgets: field.acroField.getWidgets().map((widget) => ({
+      page: widgetPages.get(widget.dict) ?? -1,
+      rectangle: widget.getRectangle(),
+      flags: widget.getFlags(),
+      onValue: widget.getOnValue()?.asString(),
+    })),
+  }))
+  const pages = document.getPages().map((page) => ({
+    mediaBox: page.getMediaBox(),
+    cropBox: page.getCropBox(),
+    rotation: page.getRotation().angle,
+  }))
+  return { pages, fields, hasXfa: document.getForm().hasXFA() }
+}
 
 const REQUIRED_FIRST_PAGE_FIELDS = [
   'CharacterName', 'ClassLevel', 'Background', 'Race ', 'Alignment', 'XP',
@@ -19,6 +51,11 @@ const REQUIRED_FIRST_PAGE_FIELDS = [
 const REQUIRED_PROFILE_FIELDS = ['CharacterName 2', 'Backstory', 'Feat+Traits', 'Treasure'] as const
 
 describe('export-pdf v6 国内 5E 术语版表单适配器', () => {
+  it('运行时瘦身模板完整保留源模板页面、字段和 Widget 结构', async () => {
+    expect(await templateStructure(template())).toEqual(await templateStructure(baselineTemplate()))
+    expect(template().byteLength).toBeLessThanOrEqual(5 * 1024 * 1024)
+  })
+
   it('目标模板为三页 AcroForm 且包含基础页和人物资料页必需字段', async () => {
     expect(CHARACTER_SHEET_PDF_MAPPING_VERSION).toBe(6)
     const { PDFDocument } = await import('pdf-lib')
@@ -87,6 +124,7 @@ describe('export-pdf v6 国内 5E 术语版表单适配器', () => {
     const output = await PDFDocument.load(result.bytes)
     expect(output.getPageCount()).toBe(3)
     expect(output.getForm().getFields()).toHaveLength(0)
+    expect(result.bytes.byteLength).toBeLessThanOrEqual(5 * 1024 * 1024)
   }, 30_000)
 
   it('不依赖 pdf-lib 运行时类名判断字段类型', async () => {
@@ -111,6 +149,7 @@ describe('export-pdf v6 国内 5E 术语版表单适配器', () => {
     const output = await PDFDocument.load(result.bytes)
     expect(output.getPageCount()).toBe(3)
     expect(output.getForm().getFields()).toHaveLength(0)
+    expect(result.bytes.byteLength).toBeLessThanOrEqual(5 * 1024 * 1024)
   }, 30_000)
 
   it('六级法师的四个戏法和一至三环法术可以写入真实模板', async () => {

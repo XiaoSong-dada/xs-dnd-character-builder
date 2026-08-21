@@ -329,7 +329,7 @@ src/services/export-xlsx.ts
 src/services/export-pdf.ts
   -> pdf-lib + @pdf-lib/fontkit（动态 import，仅导出时按需加载）
   -> src/config/site（baseUrl：字体资产前缀）
-  -> docs/export-templates/DND_5E_2014_国内5E术语版角色卡_最终版.pdf（经 Vite `@export-templates` 别名作为 URL 资产输出）
+  -> public/templates/character-sheet-zh-plus.pdf（静态中文字体子集化后的运行时模板；原始底稿保留在 docs/export-templates）
   -> src/features/character-export/build-export-data（消费唯一 CharacterExportModel，不导入 rules）
 
 src/features/character-export/build-export-data.ts

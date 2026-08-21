@@ -8,3 +8,12 @@ dist
 .env.*
 !.env.example
 .reasonix
+tmp/**
+__pycache__/
+*.pyc
+
+*.py
+scripts/*.py
+scripts/*.txt
+app/scripts/*.py
+app/scripts/*.txt
