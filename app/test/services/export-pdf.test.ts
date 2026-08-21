@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { CHARACTER_SHEET_PDF_MAPPING_VERSION, fillPdfTemplate, inspectPdfSpellTemplate, layoutPdfTreasureItems, wrapPdfText } from '@/services/export-pdf'
 import { fighterExportModel, levelSixWizardExportModel, wizardExportModel } from '../fixtures/export-character'
+import { inspectGeneratedPdfFont } from '../fixtures/pdf-font'
 
 const TEMPLATE_PATH = resolve(__dirname, '../../public/templates/character-sheet-zh-plus.pdf')
 const BASELINE_TEMPLATE_PATH = resolve(__dirname, '../../../docs/export-templates/DND_5E_2014_国内5E术语版角色卡_最终版.pdf')
@@ -125,6 +126,7 @@ describe('export-pdf v6 国内 5E 术语版表单适配器', () => {
     expect(output.getPageCount()).toBe(3)
     expect(output.getForm().getFields()).toHaveLength(0)
     expect(result.bytes.byteLength).toBeLessThanOrEqual(5 * 1024 * 1024)
+    expect(await inspectGeneratedPdfFont(result.bytes)).toEqual({ embeddedRegularFontCount: 1, hasNeedAppearances: false, widgetCount: 0 })
   }, 30_000)
 
   it('不依赖 pdf-lib 运行时类名判断字段类型', async () => {
@@ -150,6 +152,7 @@ describe('export-pdf v6 国内 5E 术语版表单适配器', () => {
     expect(output.getPageCount()).toBe(3)
     expect(output.getForm().getFields()).toHaveLength(0)
     expect(result.bytes.byteLength).toBeLessThanOrEqual(5 * 1024 * 1024)
+    expect(await inspectGeneratedPdfFont(result.bytes)).toEqual({ embeddedRegularFontCount: 1, hasNeedAppearances: false, widgetCount: 0 })
   }, 30_000)
 
   it('六级法师的四个戏法和一至三环法术可以写入真实模板', async () => {

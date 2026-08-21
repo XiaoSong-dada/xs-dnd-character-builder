@@ -7,6 +7,7 @@ import { deriveCharacter } from '@/rules/derive'
 import { CharacterJsonService } from '@/services/character-json'
 import { fillPdfTemplate } from '@/services/export-pdf'
 import { buildXlsxFieldValues } from '@/services/export-xlsx'
+import { inspectGeneratedPdfFont } from '../../fixtures/pdf-font'
 
 const FIXTURE = resolve(__dirname, '../../fixtures/vv-ff800d07-a8b9-4c1b-a51d-5b4cd25efe24.json')
 const PDF_TEMPLATE = resolve(__dirname, '../../../public/templates/character-sheet-zh-plus.pdf')
@@ -34,6 +35,10 @@ describe('角色卡导出黄金样例', () => {
     const pdf = await fillPdfTemplate(new Uint8Array(readFileSync(PDF_TEMPLATE)), new Uint8Array(readFileSync(PDF_FONT)), model)
     expect(pdf.diagnostics.filter((item) => item.severity === 'error')).toEqual([])
     const { PDFDocument } = await import('pdf-lib')
-    expect((await PDFDocument.load(pdf.bytes)).getPageCount()).toBe(3)
+    const output = await PDFDocument.load(pdf.bytes)
+    expect(output.getPageCount()).toBe(3)
+    expect(output.getForm().getFields()).toHaveLength(0)
+    expect(pdf.bytes.byteLength).toBeLessThanOrEqual(5 * 1024 * 1024)
+    expect(await inspectGeneratedPdfFont(pdf.bytes)).toEqual({ embeddedRegularFontCount: 1, hasNeedAppearances: false, widgetCount: 0 })
   }, 30_000)
 })
