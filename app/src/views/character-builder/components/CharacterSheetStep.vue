@@ -161,6 +161,48 @@ const magicalSecretsSpells = computed(() => getMagicalSecretsSpellIds(props.draf
   .map((id) => rulesRepository.getSpell(id))
   .filter((spell): spell is SpellRule => Boolean(spell)))
 
+/** 已选选择类选项的详情条目（超魔、战技与其余子职选项、法术专精/招牌法术等）：供能力页签"已选选项详情"区块展示。 */
+const selectedOptionEntries = computed(() => {
+  const draft = props.draft
+  if (!draft.classId) return []
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const choiceCheckpointIds = [
+    ...(classInfo.value?.features ?? []).flatMap((feature) => feature.checkpointIds ?? []),
+    ...(subclassInfo.value?.features ?? [])
+      .filter((feature) => feature.requiresChoice)
+      .map((feature) => `subclass-feature-${feature.id}`),
+  ]
+  const entries: {
+    id: string
+    name: string
+    caption: string
+    detail?: string
+    expandedLabel: string
+  }[] = []
+  for (const checkpointId of choiceCheckpointIds) {
+    if (!timeline.some((item) => item.id === checkpointId)) continue
+    const selection = draft.selections.find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)
+    for (const optionId of selection?.optionIds ?? []) {
+      const spell = rulesRepository.getSpell(optionId)
+      if (spell) {
+        entries.push({ id: optionId, name: spell.name, caption: `${spell.level}环 · ${spell.englishName}`, detail: spell.description, expandedLabel: '法术效果' })
+        continue
+      }
+      const option = rulesRepository.getOption(optionId)
+      if (option) {
+        entries.push({
+          id: optionId,
+          name: option.name,
+          caption: option.englishName ?? '',
+          detail: option.description,
+          expandedLabel: optionId.startsWith('metamagic-') ? '超魔效果' : '选项详情',
+        })
+      }
+    }
+  }
+  return entries
+})
+
 /** 选择类特性的完成度徽标：关联检查点已完成显示"已选择 N 项"，否则"需选择 N/M"。 */
 function featureChoiceLabel(feature: ClassFeature): string {
   const checkpointIds = feature.checkpointIds ?? []
@@ -175,15 +217,6 @@ function featureChoiceLabel(feature: ClassFeature): string {
   const done = unlocked.reduce((sum, checkpoint) => sum
     + (draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds.length ?? 0), 0)
   return total === 0 ? '需选择' : done >= total ? `已选择 ${total} 项` : `需选择 ${done}/${total}`
-}
-
-/** 选择类特性已选选项的中文名（超魔、法术专精、招牌法术等，只读展示）。 */
-function featureSelectedLabels(feature: ClassFeature): readonly string[] {
-  const draft = props.draft
-  return (feature.checkpointIds ?? [])
-    .flatMap((checkpointId) =>
-      draft.selections.find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)?.optionIds ?? [])
-    .map((optionId) => rulesRepository.getOption(optionId)?.name ?? rulesRepository.getSpell(optionId)?.name ?? optionId)
 }
 function isPreparedSpell(id: string): boolean {
   return props.draft.spellSelections.preparedSpellIds.includes(id)
@@ -396,7 +429,6 @@ function handleExportPdf(): void {
               <template #suffix>
                 <template v-if="feature.requiresChoice">
                   <em class="character-sheet__feature-choice">{{ featureChoiceLabel(feature) }}</em>
-                  <span v-if="featureSelectedLabels(feature).length" class="character-sheet__feature-selected">{{ featureSelectedLabels(feature).join('、') }}</span>
                 </template>
               </template>
               <template #expanded>{{ feature.description }}</template>
@@ -440,6 +472,22 @@ function handleExportPdf(): void {
             :title="entry.label"
             :description="`${entry.level}级`"
             expanded-label="专长效果"
+          >
+            <template v-if="entry.detail" #expanded>{{ entry.detail }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+      </section>
+      <section v-if="selectedOptionEntries.length" class="character-sheet__subclass-features">
+        <header class="character-sheet__subclass-features-header">
+          <h3>已选选项详情</h3>
+        </header>
+        <ListShell>
+          <ExpandableOptionCard
+            v-for="entry in selectedOptionEntries"
+            :key="entry.id"
+            :title="entry.name"
+            :description="entry.caption"
+            :expanded-label="entry.expandedLabel"
           >
             <template v-if="entry.detail" #expanded>{{ entry.detail }}</template>
           </ExpandableOptionCard>

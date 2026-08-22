@@ -11,6 +11,7 @@ import { abilityImprovementOptions2014, feats2014 } from '@/rules/data/feats-201
 import { halfCasterClasses2014, halfCasterOptions2014 } from '@/rules/data/half-casters-2014'
 import { fullCasterClasses2014 } from '@/rules/data/full-casters-2014'
 import { metamagicOptions2014 } from '@/rules/data/metamagic-2014'
+import { subclassChoiceOptions2014 } from '@/rules/data/subclass-choice-options-2014'
 import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
 import { backgroundStartingEquipment2014, classStartingEquipment2014 } from '@/rules/data/starting-equipment-2014'
 import { subclasses2014, subclassOptions2014 } from '@/rules/data/subclasses-2014'
@@ -64,6 +65,7 @@ export const rulesRepository: RulesRepository = {
     ...withoutLegacySubclassOptions(halfCasterOptions2014),
     ...withoutLegacySubclassOptions(arcaneCasterOptions2014),
     ...metamagicOptions2014,
+    ...subclassChoiceOptions2014,
   ],
   feats: feats2014,
   equipment: [...equipment2014, ...magicItems2014, ...magicItemsXgteTcoe2014, ...magicItems2024],

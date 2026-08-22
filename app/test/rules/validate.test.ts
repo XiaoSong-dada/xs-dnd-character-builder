@@ -254,14 +254,14 @@ describe('validateSubclassSelections 子职特性多选校验', () => {
     return validateDraft(draft).map((issue) => issue.id)
   }
 
-  it('选满 3 项战技：无互斥与未完成提示（仅 index-only 提示）', () => {
+  it('选满 3 项战技：无互斥、未完成与索引提示', () => {
     const draft = battleMasterDraft(3, battleMasterSelections(['maneuver-precision', 'maneuver-trip', 'maneuver-rally']))
     const ids = issueIds(draft)
     expect(ids.some((id) => id.startsWith('subclass-feature-exclusive-'))).toBe(false)
     expect(ids.some((id) => id.startsWith('subclass-feature-choice-'))).toBe(false)
     expect(ids.some((id) => id.startsWith('checkpoint-subclass-feature-fighter-battle-master-combat-superiority'))).toBe(false)
-    // 战技为索引数据，index-only 提示仍存在（不影响生成角色卡）。
-    expect(ids.some((id) => id.startsWith('index-only-subclass-feature-fighter-battle-master-combat-superiority'))).toBe(true)
+    // 战技效果摘要已核验为 implemented，不再产生 index-only 提示。
+    expect(ids.some((id) => id.startsWith('index-only-subclass-feature-fighter-battle-master-combat-superiority'))).toBe(false)
   })
 
   it('只选 2 项战技：无互斥报错，检查点报未完成', () => {

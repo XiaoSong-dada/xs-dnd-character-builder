@@ -1,4 +1,5 @@
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
+import { SUBCLASS_CHOICE_OPTION_IDS } from '@/rules/data/subclass-choice-options-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { getMagicalSecretsSpellIds, getSpellSlots } from '@/rules/spellcasting'
@@ -113,20 +114,45 @@ function optionName(id: string): string {
 }
 
 function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
-  const selectedIds = draft.selections.filter((selection) => !selection.invalidatedAt).flatMap((selection) => selection.optionIds)
   const features: ExportFeature[] = []
-  for (const optionId of selectedIds) {
-    const feat = rulesRepository.getFeat(optionId)
-    if (feat) {
-      features.push({ id: feat.id, category: 'feat', name: feat.name, summary: feat.detail, priority: 10 })
-      continue
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt) continue
+    for (const optionId of selection.optionIds) {
+      const feat = rulesRepository.getFeat(optionId)
+      if (feat) {
+        features.push({ id: feat.id, category: 'feat', name: feat.name, summary: feat.detail, priority: 10 })
+        continue
+      }
+      const abilityImprovement = decodeAbilityImprovement(optionId)
+      if (abilityImprovement) {
+        const summary = abilityImprovement.mode === 'single'
+          ? `${ABILITY_LABELS[abilityImprovement.abilities[0]]} +2`
+          : abilityImprovement.abilities.map((ability) => `${ABILITY_LABELS[ability]} +1`).join('、')
+        features.push({ id: optionId, category: 'feat', name: '属性值提升', summary, priority: 10 })
+        continue
+      }
+      // 已选选择类选项（超魔、战技与其余子职选项、法术专精/招牌法术）进入导出
+      const isMetamagic = optionId.startsWith('metamagic-')
+      const isSpellMasterySelection = selection.checkpointId.startsWith('wizard-2014-spell-mastery-')
+        || selection.checkpointId.startsWith('wizard-2014-signature-spells-')
+      if (isMetamagic || isSpellMasterySelection || SUBCLASS_CHOICE_OPTION_IDS.includes(optionId)) {
+        const spell = rulesRepository.getSpell(optionId)
+        if (spell) {
+          features.push({ id: spell.id, category: 'class', name: spell.name, summary: spell.description, priority: 10 })
+          continue
+        }
+        const option = rulesRepository.getOption(optionId)
+        if (option) {
+          features.push({
+            id: option.id,
+            category: isMetamagic ? 'class' : 'subclass',
+            name: option.name,
+            summary: option.description,
+            priority: 10,
+          })
+        }
+      }
     }
-    const abilityImprovement = decodeAbilityImprovement(optionId)
-    if (!abilityImprovement) continue
-    const summary = abilityImprovement.mode === 'single'
-      ? `${ABILITY_LABELS[abilityImprovement.abilities[0]]} +2`
-      : abilityImprovement.abilities.map((ability) => `${ABILITY_LABELS[ability]} +1`).join('、')
-    features.push({ id: optionId, category: 'feat', name: '属性值提升', summary, priority: 10 })
   }
   return features
 }

@@ -400,7 +400,7 @@ describe('CharacterSheetStep 法术展示', () => {
 })
 
 describe('CharacterSheetStep 超魔与魔法奥秘展示', () => {
-  it('术士能力页签展示超魔完成度与已选超魔', async () => {
+  it('术士能力页签展示超魔完成度与已选选项详情', async () => {
     const sorcererDraft: CharacterDraft = {
       ...draft,
       classId: 'class-2014-sorcerer',
@@ -418,7 +418,61 @@ describe('CharacterSheetStep 超魔与魔法奥秘展示', () => {
 
     expect(wrapper.text()).toContain('超魔法')
     expect(wrapper.text()).toContain('已选择 2 项')
-    expect(wrapper.text()).toContain('谨慎法术、迅捷法术')
+    expect(wrapper.text()).toContain('已选选项详情')
+    expect(wrapper.text()).toContain('谨慎法术')
+    expect(wrapper.text()).toContain('迅捷法术')
+    expect(wrapper.text()).toContain('Careful Spell')
+  })
+
+  it('已选超魔卡片可展开查看英文名与效果摘要', async () => {
+    const sorcererDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-sorcerer',
+      targetLevel: 3,
+      selections: [
+        { checkpointId: 'sorcerer-2014-skills-1', optionIds: ['skill-arcana', 'skill-persuasion'], confirmedAt: '' },
+        { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
+        { checkpointId: 'sorcerer-2014-metamagic-3', optionIds: ['metamagic-careful'], confirmedAt: '' },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: sorcererDraft, derived: deriveCharacter(sorcererDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('谨慎法术'))
+    expect(card?.text()).toContain('Careful Spell')
+    await card!.find('.expandable-option-card__arrow').trigger('click')
+    expect(card?.text()).toContain('豁免自动视为成功')
+  })
+
+  it('战士能力页签展示已选战技并可展开查看详情', async () => {
+    const battleMasterDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-fighter',
+      subclassId: 'subclass-2014-fighter-battle-master',
+      targetLevel: 3,
+      selections: [
+        { checkpointId: 'fighter-2014-skills-1', optionIds: ['skill-acrobatics', 'skill-athletics'], confirmedAt: '' },
+        { checkpointId: 'fighter-2014-style-1', optionIds: ['style-dueling'], confirmedAt: '' },
+        { checkpointId: 'fighter-2014-subclass-3', optionIds: ['subclass-2014-fighter-battle-master'], confirmedAt: '' },
+        {
+          checkpointId: 'subclass-feature-fighter-battle-master-combat-superiority',
+          optionIds: ['maneuver-precision', 'maneuver-trip'],
+          confirmedAt: '',
+        },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: battleMasterDraft, derived: deriveCharacter(battleMasterDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('已选选项详情')
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('精准攻击'))
+    expect(card?.text()).toContain('Precision Attack')
+    await card!.find('.expandable-option-card__arrow').trigger('click')
+    expect(card?.text()).toContain('优势骰')
   })
 
   it('术士未完成超魔时能力页签提示需选择', async () => {

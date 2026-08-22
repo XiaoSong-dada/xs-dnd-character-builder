@@ -50,4 +50,47 @@ describe('CharacterExportModel', () => {
     expect(model.inventory[0].name).toBe('missing-weapon')
     expect(model.diagnostics).toContainEqual(expect.objectContaining({ code: 'missing-rule-data', field: 'inventory.missing-weapon' }))
   })
+
+  it('已选选择类选项（超魔、战技、法术专精）进入导出特性列表', () => {
+    const draft = {
+      ...fighterDraft,
+      classId: 'class-2014-sorcerer',
+      subclassId: undefined,
+      targetLevel: 3,
+      selections: [
+        { checkpointId: 'sorcerer-2014-metamagic-3', optionIds: ['metamagic-careful', 'metamagic-quickened'], confirmedAt: '' },
+      ],
+    }
+    const model = buildCharacterExportModel(draft, deriveCharacter(draft))
+    const metamagicFeatures = model.features.filter((feature) => feature.id.startsWith('metamagic-'))
+    expect(metamagicFeatures.map((feature) => feature.name)).toEqual(['谨慎法术', '迅捷法术'])
+    expect(metamagicFeatures[0]?.summary).toContain('豁免自动视为成功')
+  })
+
+  it('战斗大师战技与法术专精选项同样导出', () => {
+    const battleMaster = {
+      ...fighterDraft,
+      targetLevel: 3,
+      subclassId: 'subclass-2014-fighter-battle-master',
+      selections: [
+        { checkpointId: 'subclass-feature-fighter-battle-master-combat-superiority', optionIds: ['maneuver-precision', 'maneuver-trip'], confirmedAt: '' },
+      ],
+    }
+    const model = buildCharacterExportModel(battleMaster, deriveCharacter(battleMaster))
+    expect(model.features.find((feature) => feature.id === 'maneuver-precision')?.name).toBe('精准攻击')
+    expect(model.features.find((feature) => feature.id === 'maneuver-precision')?.summary).toContain('优势骰')
+
+    const wizard = {
+      ...fighterDraft,
+      classId: 'class-2014-wizard',
+      subclassId: undefined,
+      targetLevel: 18,
+      spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: ['spell-2014-magic-missile'] },
+      selections: [
+        { checkpointId: 'wizard-2014-spell-mastery-1', optionIds: ['spell-2014-magic-missile'], confirmedAt: '' },
+      ],
+    }
+    const wizardModel = buildCharacterExportModel(wizard, deriveCharacter(wizard))
+    expect(wizardModel.features.find((feature) => feature.id === 'spell-2014-magic-missile')?.name).toBe('魔法飞弹')
+  })
 })
