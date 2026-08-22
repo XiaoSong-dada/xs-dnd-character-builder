@@ -2,6 +2,7 @@ import { deriveCharacter, proficiencyBonus } from '@/rules/derive'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { rulesRepository } from '@/rules/repository'
 import { buildTimeline } from '@/rules/timeline'
+import { getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
 import type { CharacterDraft, DependencyCheckpointRef, DependencyImpact } from '@/types/character'
 import type { CheckpointKind } from '@/types/rules'
 
@@ -35,6 +36,29 @@ function countManeuverCheckpoints(draft: CharacterDraft, level: number): number 
   return buildTimeline(draft.classId ?? '', level, { subraceId: draft.subraceId, subclassId: draft.subclassId })
     .filter((checkpoint) => checkpoint.optionIds.length > 0 && checkpoint.optionIds.every((optionId) => optionId.startsWith('maneuver-')))
     .length
+}
+
+/** 升级时：按新等级统计施法配置需补全的说明（已知/准备/法术书/戏法数量不足时）。 */
+function buildSpellUpdates(draft: CharacterDraft, newLevel: number): readonly string[] | undefined {
+  const config = rulesRepository.getSpellcastingConfig(draft)
+  if (!config || newLevel < config.startsAtLevel) return undefined
+  const next = { ...draft, targetLevel: newLevel }
+  const parts: string[] = []
+  const requiredCount = getRequiredSpellCount(next, config)
+  const selectedCount = getSelectedSpellIds(draft, config).length
+  if (selectedCount < requiredCount) {
+    const label = config.mode === 'prepared' || config.mode === 'spellbook' ? '准备法术' : '已知法术'
+    parts.push(`${label} ${selectedCount}/${requiredCount}`)
+  }
+  if (config.mode === 'spellbook') {
+    const requiredBook = getRequiredSpellbookCount(next, config)
+    const bookCount = draft.spellSelections.spellbookSpellIds.length
+    if (bookCount < requiredBook) parts.push(`法术书 ${bookCount}/${requiredBook}`)
+  }
+  const requiredCantrips = getRequiredCantripCount(next, config)
+  const cantripCount = draft.spellSelections.cantripIds.length
+  if (cantripCount < requiredCantrips) parts.push(`戏法 ${cantripCount}/${requiredCantrips}`)
+  return parts.length > 0 ? parts : undefined
 }
 
 /** 降级时按新等级计算"数量减少、需复查"的资源清单。 */
@@ -119,6 +143,7 @@ export function getDependencyImpact(draft: CharacterDraft, change: DraftChange):
       review: ['生命值', '熟练加值', '等级相关资源', '法术位'],
       preserved: ['职业', '起源', '基础属性'],
       added: change.value > draft.targetLevel ? added : undefined,
+      spellUpdates: change.value > draft.targetLevel ? buildSpellUpdates(draft, change.value) : undefined,
       invalidatedDetails: invalidatedIds.length ? invalidatedDetails : undefined,
       reviews: change.value < draft.targetLevel ? buildLevelReductionReviews(draft, change.value) : undefined,
     }

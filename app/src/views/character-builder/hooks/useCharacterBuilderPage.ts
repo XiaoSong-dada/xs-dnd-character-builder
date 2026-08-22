@@ -225,11 +225,17 @@ export function useCharacterBuilderPage() {
   ): { tone: 'success' | 'warning'; message: string; step?: DraftStep } {
     if (direction === 'up') {
       const added = impact.added ?? []
-      if (added.length === 0) return { tone: 'success', message: `等级已提升至 ${targetLevel} 级，派生数值已更新。` }
+      const spellUpdates = impact.spellUpdates ?? []
+      if (added.length === 0 && spellUpdates.length === 0) {
+        return { tone: 'success', message: `等级已提升至 ${targetLevel} 级，派生数值已更新。` }
+      }
+      const message = added.length > 0
+        ? `等级提升至 ${targetLevel} 级，请完成新增检查点：${added.map((item) => item.title).join('、')}${spellUpdates.length ? `；${spellUpdates.join('、')}` : ''}`
+        : `等级提升至 ${targetLevel} 级，请完成：${spellUpdates.join('、')}`
       return {
         tone: 'success',
-        message: `等级提升至 ${targetLevel} 级，请完成新增检查点：${added.map((item) => item.title).join('、')}`,
-        step: 'timeline',
+        message,
+        step: added.length > 0 ? 'timeline' : 'spells',
       }
     }
     const invalidated = impact.invalidatedDetails ?? []
@@ -263,8 +269,12 @@ export function useCharacterBuilderPage() {
         store.invalidateSelections(impact.invalidated, `目标等级调整为${targetLevel}级`)
         store.updateDraft({ targetLevel })
         levelAdjustNotice.value = buildLevelAdjustNotice(direction, targetLevel, impact)
-        if (direction === 'up' && (impact.added?.length ?? 0) > 0) {
-          setStep('timeline')
+        if (direction === 'up') {
+          if ((impact.added?.length ?? 0) > 0) {
+            setStep('timeline')
+          } else if ((impact.spellUpdates?.length ?? 0) > 0) {
+            setStep('spells')
+          }
         }
       },
       [],

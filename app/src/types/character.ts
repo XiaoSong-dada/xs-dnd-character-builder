@@ -189,4 +189,6 @@ export interface DependencyImpact {
   readonly invalidatedDetails?: readonly DependencyCheckpointRef[]
   /** 降级时：按新等级列出数量减少、需玩家复查的资源说明。 */
   readonly reviews?: readonly string[]
+  /** 升级时：施法配置随新等级需补全的说明（已知/准备/法术书/戏法数量不足时）。 */
+  readonly spellUpdates?: readonly string[]
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { getDependencyImpact } from '@/rules/dependency'
+import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft } from '@/types/character'
 
 function makeFighterDraft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
@@ -45,6 +46,69 @@ const level5Selections = [
   { checkpointId: 'subclass-feature-fighter-battle-master-combat-superiority', optionIds: ['maneuver-precision', 'maneuver-trip', 'maneuver-rally'], confirmedAt: '' },
   { checkpointId: 'fighter-2014-asi-4', optionIds: ['asi-str-2'], confirmedAt: '' },
 ]
+
+/** 从规则库取某职业指定环级的法术 ID（测试使用真实注册表数据）。 */
+function spellIdsOfClass(classId: string, levels: readonly number[]): readonly string[] {
+  const config = rulesRepository.getSpellcastingConfig({ classId, subclassId: undefined })
+  return (config?.classSpellIds ?? [])
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell && levels.includes(spell.level)))
+    .map((spell) => spell.id)
+}
+
+/** 4 级术士已完成 1 级技能/子职与 4 级属性提升的全部检查点。 */
+const level4SorcererSelections = [
+  { checkpointId: 'sorcerer-2014-skills-1', optionIds: ['skill-arcana', 'skill-persuasion'], confirmedAt: '' },
+  { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
+  { checkpointId: 'sorcerer-2014-asi-4', optionIds: ['asi-cha-2'], confirmedAt: '' },
+]
+
+function makeSorcererDraft(
+  targetLevel: number,
+  spellSelections: CharacterDraft['spellSelections'],
+  selections: CharacterDraft['selections'] = level4SorcererSelections,
+): CharacterDraft {
+  return makeFighterDraft({
+    id: 'test-sorcerer',
+    classId: 'class-2014-sorcerer',
+    subclassId: undefined,
+    targetLevel,
+    baseAbilities: { str: 10, dex: 14, con: 13, int: 8, wis: 12, cha: 15 },
+    selections,
+    spellSelections,
+  })
+}
+
+const level1ClericSelections = [
+  { checkpointId: 'cleric-2014-skills-1', optionIds: ['skill-insight', 'skill-medicine'], confirmedAt: '' },
+  { checkpointId: 'cleric-2014-subclass-1', optionIds: ['subclass-2014-cleric-life'], confirmedAt: '' },
+]
+
+function makeClericDraft(spellSelections: CharacterDraft['spellSelections']): CharacterDraft {
+  return makeFighterDraft({
+    id: 'test-cleric',
+    classId: 'class-2014-cleric',
+    subclassId: undefined,
+    targetLevel: 1,
+    baseAbilities: { str: 10, dex: 10, con: 13, int: 8, wis: 15, cha: 12 },
+    selections: level1ClericSelections,
+    spellSelections,
+  })
+}
+
+function makeWizardDraft(spellSelections: CharacterDraft['spellSelections']): CharacterDraft {
+  return makeFighterDraft({
+    id: 'test-wizard',
+    classId: 'class-2014-wizard',
+    subclassId: undefined,
+    targetLevel: 1,
+    baseAbilities: { str: 10, dex: 10, con: 13, int: 15, wis: 12, cha: 8 },
+    selections: [
+      { checkpointId: 'wizard-2014-skills-1', optionIds: ['skill-arcana', 'skill-insight'], confirmedAt: '' },
+    ],
+    spellSelections,
+  })
+}
 
 const draft = {
   classId: 'class-2014-fighter',
@@ -99,6 +163,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
     expect(impact.added).not.toContainEqual(expect.objectContaining({ checkpointId: 'fighter-2014-asi-4' }))
     expect(impact.invalidatedDetails).toBeUndefined()
     expect(impact.reviews).toBeUndefined()
+    expect(impact.spellUpdates).toBeUndefined()
   })
 
   it('降级时作废超限选择并给出针对性复查项', () => {
@@ -116,6 +181,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
     expect(impact.invalidated).toEqual(['fighter-2014-asi-8', 'subclass-feature-fighter-battle-master-extra-maneuvers-10'])
     expect(impact.invalidatedDetails).toContainEqual({ checkpointId: 'fighter-2014-asi-8', title: '8级 · 属性提升或专长' })
     expect(impact.added).toBeUndefined()
+    expect(impact.spellUpdates).toBeUndefined()
     expect(impact.reviews).toContain('熟练加值由 +4 变为 +3')
     expect(impact.reviews).toContain('属性提升/专长次数由 3 次减少为 2 次，超出部分的选择将标记失效并需重新分配')
     expect(impact.reviews).toContain('战技数量由 3 项减少为 2 项，需移除多余战技')
@@ -129,6 +195,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
     expect(impact.added).toBeUndefined()
     expect(impact.invalidatedDetails).toBeUndefined()
     expect(impact.reviews).toBeUndefined()
+    expect(impact.spellUpdates).toBeUndefined()
   })
 
   it('1/20 级边界：升至 20 级列出全部待补属性提升', () => {
@@ -193,5 +260,80 @@ describe('getDependencyImpact target-level 升级与降级', () => {
     expect(impact.invalidated).toEqual(['fighter-2014-asi-8'])
     expect(impact.invalidated.every((id) => !id.includes('maneuver'))).toBe(true)
     expect(impact.reviews?.some((review) => review.includes('战技数量')) ?? false).toBe(false)
+  })
+
+  it('术士升级到无新增检查点等级：spellUpdates 列出已知法术与戏法缺口', () => {
+    const draft = makeSorcererDraft(4, {
+      cantripIds: spellIdsOfClass('class-2014-sorcerer', [0]).slice(0, 4),
+      knownSpellIds: spellIdsOfClass('class-2014-sorcerer', [1, 2]).slice(0, 5),
+      preparedSpellIds: [],
+      spellbookSpellIds: [],
+    })
+    const impact = getDependencyImpact(draft, { kind: 'target-level', value: 5 })
+    expect(impact.added).toEqual([])
+    expect(impact.spellUpdates).toEqual(['已知法术 5/6', '戏法 4/5'])
+  })
+
+  it('术士 5→6 级升级：无新增检查点，spellUpdates 仍提示法术缺口', () => {
+    const draft = makeSorcererDraft(5, {
+      cantripIds: spellIdsOfClass('class-2014-sorcerer', [0]).slice(0, 4),
+      knownSpellIds: spellIdsOfClass('class-2014-sorcerer', [1, 2]).slice(0, 5),
+      preparedSpellIds: [],
+      spellbookSpellIds: [],
+    })
+    const impact = getDependencyImpact(draft, { kind: 'target-level', value: 6 })
+    expect(impact.added).toEqual([])
+    expect(impact.spellUpdates).toEqual(['已知法术 5/7', '戏法 4/5'])
+  })
+
+  it('术士 3→4 级升级：属性提升检查点与 spellUpdates 并存', () => {
+    const draft = makeSorcererDraft(
+      3,
+      {
+        cantripIds: spellIdsOfClass('class-2014-sorcerer', [0]).slice(0, 4),
+        knownSpellIds: spellIdsOfClass('class-2014-sorcerer', [1, 2]).slice(0, 4),
+        preparedSpellIds: [],
+        spellbookSpellIds: [],
+      },
+      level4SorcererSelections.slice(0, 2),
+    )
+    const impact = getDependencyImpact(draft, { kind: 'target-level', value: 4 })
+    expect(impact.added).toContainEqual({ checkpointId: 'sorcerer-2014-asi-4', title: '4级 · 属性提升或专长' })
+    expect(impact.spellUpdates).toEqual(['已知法术 4/5', '戏法 4/5'])
+  })
+
+  it('牧师（准备施法）升级：spellUpdates 提示准备法术数量', () => {
+    const draft = makeClericDraft({
+      cantripIds: [],
+      knownSpellIds: [],
+      preparedSpellIds: spellIdsOfClass('class-2014-cleric', [1]).slice(0, 3),
+      spellbookSpellIds: [],
+    })
+    const impact = getDependencyImpact(draft, { kind: 'target-level', value: 2 })
+    expect(impact.added).toEqual([])
+    expect(impact.spellUpdates).toEqual(['准备法术 3/4'])
+  })
+
+  it('法师（法术书）升级：spellUpdates 同时提示准备与法术书缺口', () => {
+    const draft = makeWizardDraft({
+      cantripIds: spellIdsOfClass('class-2014-wizard', [0]).slice(0, 3),
+      knownSpellIds: [],
+      preparedSpellIds: spellIdsOfClass('class-2014-wizard', [1]).slice(0, 3),
+      spellbookSpellIds: spellIdsOfClass('class-2014-wizard', [1]).slice(0, 6),
+    })
+    const impact = getDependencyImpact(draft, { kind: 'target-level', value: 2 })
+    expect(impact.added).toContainEqual({ checkpointId: 'wizard-2014-subclass-2', title: '2级 · 选择奥术传统' })
+    expect(impact.spellUpdates).toEqual(['准备法术 3/4', '法术书 6/8'])
+  })
+
+  it('升级后法术数量已满足新等级需求时 spellUpdates 为空', () => {
+    const draft = makeSorcererDraft(4, {
+      cantripIds: spellIdsOfClass('class-2014-sorcerer', [0]).slice(0, 5),
+      knownSpellIds: spellIdsOfClass('class-2014-sorcerer', [1, 2]).slice(0, 6),
+      preparedSpellIds: [],
+      spellbookSpellIds: [],
+    })
+    const impact = getDependencyImpact(draft, { kind: 'target-level', value: 5 })
+    expect(impact.spellUpdates).toBeUndefined()
   })
 })

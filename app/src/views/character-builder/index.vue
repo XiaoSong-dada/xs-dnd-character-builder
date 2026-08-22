@@ -221,6 +221,12 @@ function updateMethod(value: AbilityMethod): void {
         <li v-for="item in pendingChange.impact.added" :key="item.checkpointId">{{ item.title }}</li>
       </ul>
     </section>
+    <section v-if="pendingChange?.impact?.spellUpdates?.length" class="builder-impact">
+      <h4>需补全（法术配置）</h4>
+      <ul>
+        <li v-for="item in pendingChange.impact.spellUpdates" :key="item">{{ item }}</li>
+      </ul>
+    </section>
     <section v-if="pendingChange?.impact?.invalidatedDetails?.length" class="builder-impact">
       <h4>将失效</h4>
       <p>以下已完成选择会保留原值，但被标记为失效，之后可逐项重新确认：</p>

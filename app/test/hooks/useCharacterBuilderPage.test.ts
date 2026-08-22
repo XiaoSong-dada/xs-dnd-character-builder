@@ -10,6 +10,7 @@ vi.mock('vue-router', () => ({
 }))
 
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
+import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft } from '@/types/character'
 import { useCharacterBuilderPage } from '@/views/character-builder/hooks/useCharacterBuilderPage'
 
@@ -66,6 +67,38 @@ const level10Selections = [
   { checkpointId: 'fighter-2014-asi-8', optionIds: ['asi-dex-2'], confirmedAt: '' },
   { checkpointId: 'subclass-feature-fighter-battle-master-extra-maneuvers-10', optionIds: ['maneuver-pushing', 'maneuver-disarming'], confirmedAt: '' },
 ]
+
+/** 从规则库取术士指定环级的法术 ID（测试使用真实注册表数据）。 */
+function sorcererSpellIds(levels: readonly number[]): readonly string[] {
+  const config = rulesRepository.getSpellcastingConfig({ classId: 'class-2014-sorcerer', subclassId: undefined })
+  return (config?.classSpellIds ?? [])
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell && levels.includes(spell.level)))
+    .map((spell) => spell.id)
+}
+
+/** 4 级术士：已完成 1 级技能/子职与 4 级属性提升，法术选择满足 4 级需求（4 戏法 + 5 已知）。 */
+function makeSorcererDraft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
+  return makeFighterDraft({
+    id: 'test-sorcerer',
+    classId: 'class-2014-sorcerer',
+    subclassId: undefined,
+    targetLevel: 4,
+    baseAbilities: { str: 10, dex: 14, con: 13, int: 8, wis: 12, cha: 15 },
+    selections: [
+      { checkpointId: 'sorcerer-2014-skills-1', optionIds: ['skill-arcana', 'skill-persuasion'], confirmedAt: '' },
+      { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
+      { checkpointId: 'sorcerer-2014-asi-4', optionIds: ['asi-cha-2'], confirmedAt: '' },
+    ],
+    spellSelections: {
+      cantripIds: sorcererSpellIds([0]).slice(0, 4),
+      knownSpellIds: sorcererSpellIds([1, 2]).slice(0, 5),
+      preparedSpellIds: [],
+      spellbookSpellIds: [],
+    },
+    ...overrides,
+  })
+}
 
 /** 通过真实组件挂载调用页面 hook，返回 page 引用与当前 store。 */
 async function setupPage(draft: CharacterDraft): Promise<{ page: Page; store: ReturnType<typeof useCharacterDraftsStore> }> {
@@ -172,5 +205,45 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     page.startReedit()
 
     expect(page.step.value).toBe('setup')
+  })
+
+  it('adjustLevel 升级到无新增检查点等级：确认后进入法术步骤补选', async () => {
+    const { page, store } = await setupPage(makeSorcererDraft())
+
+    page.adjustLevel(5)
+
+    expect(page.pendingChange.value?.title).toBe('升级至 5 级')
+    expect(page.pendingChange.value?.impact?.added).toEqual([])
+    expect(page.pendingChange.value?.impact?.spellUpdates).toEqual(['已知法术 5/6', '戏法 4/5'])
+
+    page.confirmPendingChange()
+
+    expect(store.activeDraft?.targetLevel).toBe(5)
+    expect(page.step.value).toBe('spells')
+    expect(page.levelAdjustNotice.value?.message).toContain('已知法术 5/6')
+    expect(page.levelAdjustNotice.value?.step).toBe('spells')
+  })
+
+  it('adjustLevel 升级到属性提升等级：新增检查点优先进入时间线', async () => {
+    const { page, store } = await setupPage(makeSorcererDraft({
+      targetLevel: 3,
+      selections: [
+        { checkpointId: 'sorcerer-2014-skills-1', optionIds: ['skill-arcana', 'skill-persuasion'], confirmedAt: '' },
+        { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
+      ],
+    }))
+
+    page.adjustLevel(4)
+
+    expect(page.pendingChange.value?.impact?.added).toContainEqual({
+      checkpointId: 'sorcerer-2014-asi-4',
+      title: '4级 · 属性提升或专长',
+    })
+
+    page.confirmPendingChange()
+
+    expect(store.activeDraft?.targetLevel).toBe(4)
+    expect(page.step.value).toBe('timeline')
+    expect(page.levelAdjustNotice.value?.step).toBe('timeline')
   })
 })
