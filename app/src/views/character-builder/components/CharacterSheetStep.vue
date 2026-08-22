@@ -14,7 +14,7 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
-import { getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
+import { getAvailableSpells, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { buildTimeline } from '@/rules/timeline'
@@ -135,6 +135,28 @@ const preparedCandidateGroups = computed(() => {
   return Array.from({ length: maximumLevel }, (_, index) => index + 1)
     .map((level) => ({ level, spells: preparedCandidates.value.filter((spell) => spell.level === level) }))
     .filter((group) => group.spells.length)
+})
+/** 第三块"全部职业法术"（prepared 模式只读参考）：已学戏法 + 全部可达 1+ 环职业法术。 */
+const allPreparedSpells = computed(() => {
+  const config = spellcastingConfig.value
+  if (!config || config.mode !== 'prepared') return []
+  const knownCantrips = props.draft.spellSelections.cantripIds
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is SpellRule => Boolean(spell))
+  const leveled = getAvailableSpells(props.draft, config).filter((spell) => spell.level > 0)
+  return [...knownCantrips, ...leveled]
+})
+/** 第三块法术按环级分组（戏法组为 0 环，置顶）。 */
+const allPreparedSpellGroups = computed(() => {
+  const byLevel = new Map<number, SpellRule[]>()
+  for (const spell of allPreparedSpells.value) {
+    const list = byLevel.get(spell.level) ?? []
+    list.push(spell)
+    byLevel.set(spell.level, list)
+  }
+  return [...byLevel.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map(([level, spells]) => ({ level, spells }))
 })
 const hasCandidates = computed(() => preparedCandidates.value.length > 0 || wizardPrepareFromBook.value.length > 0 || wizardWriteToBook.value.length > 0)
 const hasSpellContent = computed(() => hasSelectedSpells.value || hasCandidates.value)
@@ -553,29 +575,11 @@ function handleExportPdf(): void {
             </div>
           </ListShell>
         </section>
-        <section v-if="spellbookSpells.length" class="character-sheet__spell-section">
-          <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.length }} / {{ requiredSpellbookCount }}</h4>
-          <ListShell>
-            <ExpandableOptionCard
-              v-for="spell in spellbookSpells"
-              expanded-label="法术效果"
-              :key="spell.id"
-              :title="spell.name"
-              :description="`${spell.level}环 · ${spell.englishName}`"
-            >
-              <template #suffix>
-                <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
-                <em class="character-sheet__spell-badge">在书中</em>
-              </template>
-              <template v-if="spell.description" #expanded>{{ spell.description }}</template>
-            </ExpandableOptionCard>
-          </ListShell>
-        </section>
         <section v-if="preparedCandidates.length" class="character-sheet__spell-section">
-          <h4>可选法术 · {{ preparedCandidates.length }}</h4>
+          <h4>未准备法术 · {{ preparedCandidates.length }}</h4>
           <ListShell>
             <div v-for="group in preparedCandidateGroups" :key="group.level" class="character-sheet__spell-level">
-              <h5>{{ group.level }}环 · {{ group.spells.length }} 个可准备</h5>
+              <h5>{{ group.level }}环 · {{ group.spells.length }} 个未准备</h5>
               <ExpandableOptionCard
                 v-for="spell in group.spells"
                 expanded-label="法术效果"
@@ -593,8 +597,28 @@ function handleExportPdf(): void {
             </div>
           </ListShell>
         </section>
+        <section v-if="allPreparedSpells.length" class="character-sheet__spell-section">
+          <h4>全部职业法术 · {{ allPreparedSpells.length }}</h4>
+          <ListShell>
+            <div v-for="group in allPreparedSpellGroups" :key="group.level" class="character-sheet__spell-level">
+              <h5>{{ group.level === 0 ? '戏法' : `${group.level}环` }} · {{ group.spells.length }}</h5>
+              <ExpandableOptionCard
+                v-for="spell in group.spells"
+                expanded-label="法术效果"
+                :key="spell.id"
+                :title="spell.name"
+                :description="`${spell.level}环 · ${spell.englishName}`"
+              >
+                <template #suffix>
+                  <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
+                </template>
+                <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+              </ExpandableOptionCard>
+            </div>
+          </ListShell>
+        </section>
         <section v-if="wizardPrepareFromBook.length" class="character-sheet__spell-section">
-          <h4>候选准备 · {{ wizardPrepareFromBook.length }}（长休可从法术书换入）</h4>
+          <h4>未准备法术 · {{ wizardPrepareFromBook.length }}（法术书中未准备）</h4>
           <ListShell>
             <ExpandableOptionCard
               v-for="spell in wizardPrepareFromBook"
@@ -607,6 +631,24 @@ function handleExportPdf(): void {
                 <button type="button" class="character-sheet__spell-action" :disabled="!canPrepareMore" @click="togglePrepare(spell.id)">
                   {{ canPrepareMore ? '准备' : '已满' }}
                 </button>
+              </template>
+              <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+            </ExpandableOptionCard>
+          </ListShell>
+        </section>
+        <section v-if="spellbookSpells.length" class="character-sheet__spell-section">
+          <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.length }} / {{ requiredSpellbookCount }}</h4>
+          <ListShell>
+            <ExpandableOptionCard
+              v-for="spell in spellbookSpells"
+              expanded-label="法术效果"
+              :key="spell.id"
+              :title="spell.name"
+              :description="`${spell.level}环 · ${spell.englishName}`"
+            >
+              <template #suffix>
+                <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
+                <em class="character-sheet__spell-badge">在书中</em>
               </template>
               <template v-if="spell.description" #expanded>{{ spell.description }}</template>
             </ExpandableOptionCard>

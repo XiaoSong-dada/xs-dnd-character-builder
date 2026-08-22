@@ -35,7 +35,7 @@ describe('CharacterExportModel', () => {
 
   it.each([
     ['known', 'class-2014-bard', { cantripIds: ['spell-2014-mage-hand'], knownSpellIds: ['spell-2014-magic-missile'], preparedSpellIds: [], spellbookSpellIds: [] }],
-    ['prepared', 'class-2014-cleric', { cantripIds: [], knownSpellIds: [], preparedSpellIds: ['spell-2014-magic-missile'], spellbookSpellIds: [] }],
+    ['prepared', 'class-2014-cleric', { cantripIds: [], knownSpellIds: [], preparedSpellIds: ['spell-2014-bless'], spellbookSpellIds: [] }],
     ['pact', 'class-2014-warlock', { cantripIds: ['spell-2014-mage-hand'], knownSpellIds: ['spell-2014-magic-missile'], preparedSpellIds: [], spellbookSpellIds: [] }],
   ] as const)('%s 模式只输出规则指定的选择集合', (mode, classId, spellSelections) => {
     const draft = { ...fighterDraft, classId, subclassId: undefined, targetLevel: 3, spellSelections }
@@ -65,6 +65,30 @@ describe('CharacterExportModel', () => {
     const metamagicFeatures = model.features.filter((feature) => feature.id.startsWith('metamagic-'))
     expect(metamagicFeatures.map((feature) => feature.name)).toEqual(['谨慎法术', '迅捷法术'])
     expect(metamagicFeatures[0]?.summary).toContain('豁免自动视为成功')
+  })
+
+  it('prepared 模式导出全部可达职业法术并标记已准备', () => {
+    const cleric = {
+      ...fighterDraft,
+      classId: 'class-2014-cleric',
+      subclassId: undefined,
+      targetLevel: 3,
+      spellSelections: {
+        cantripIds: ['spell-2014-guidance'],
+        knownSpellIds: [],
+        preparedSpellIds: ['spell-2014-bless'],
+        spellbookSpellIds: [],
+      },
+    }
+    const model = buildCharacterExportModel(cleric, deriveCharacter(cleric))
+    const spells = model.spellcasting?.spells ?? []
+    // 已学戏法 + 全部可达 1 环职业法术
+    expect(spells.find((spell) => spell.id === 'spell-2014-guidance')?.prepared).toBe(false)
+    const prepared = spells.find((spell) => spell.id === 'spell-2014-bless')
+    expect(prepared?.prepared).toBe(true)
+    // 全列表远大于已准备数量（包含未准备的职业法术）
+    expect(spells.filter((spell) => spell.level > 0).length).toBeGreaterThan(2)
+    expect(spells.filter((spell) => spell.prepared)).toEqual([expect.objectContaining({ id: 'spell-2014-bless' })])
   })
 
   it('战斗大师战技与法术专精选项同样导出', () => {

@@ -2,7 +2,7 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { SUBCLASS_CHOICE_OPTION_IDS } from '@/rules/data/subclass-choice-options-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
-import { getMagicalSecretsSpellIds, getSpellSlots } from '@/rules/spellcasting'
+import { getAvailableSpells, getMagicalSecretsSpellIds, getSpellSlots } from '@/rules/spellcasting'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
 
@@ -195,7 +195,7 @@ function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): read
   const baseIds = config.mode === 'spellbook'
     ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.spellbookSpellIds]
     : config.mode === 'prepared'
-      ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.preparedSpellIds]
+      ? [...draft.spellSelections.cantripIds, ...getAvailableSpells(draft, config).filter((spell) => spell.level > 0).map((spell) => spell.id)]
       : [...draft.spellSelections.cantripIds, ...draft.spellSelections.knownSpellIds]
   const ids = [...new Set([...baseIds, ...getMagicalSecretsSpellIds(draft)])]
   const prepared = new Set(draft.spellSelections.preparedSpellIds)

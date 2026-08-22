@@ -290,9 +290,73 @@ describe('CharacterSheetStep 法术展示', () => {
     expect(wrapper.text()).toContain('祝福术')
     expect(wrapper.text()).toContain('治愈真言')
     expect(wrapper.text()).toContain('已准备')
+    expect(wrapper.text()).toContain('未准备法术')
+    expect(wrapper.text()).toContain('全部职业法术')
     expect(wrapper.text()).not.toContain('已掌握')
     expect(wrapper.text()).not.toContain('法术书')
     expect(wrapper.text()).not.toContain('在书中')
+  })
+
+  it('prepared 三块联动：取消准备移入未准备、准备移回已准备', async () => {
+    const preparedDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-cleric',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        cantripIds: ['spell-2014-guidance', 'spell-2014-sacred-flame'],
+        preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word'],
+      },
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: preparedDraft, derived: deriveCharacter(preparedDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    const sections = wrapper.findAll('.character-sheet__spell-section')
+    const preparedSection = sections.find((section) => section.find('h4').text().includes('已准备'))
+    const unPreparedSection = sections.find((section) => section.find('h4').text().includes('未准备法术'))
+
+    // 第一块：取消准备祝福术 → preparedSpellIds 移除
+    const blessCard = preparedSection!.findAll('.expandable-option-card').find((card) => card.text().includes('祝福术'))
+    const unprepareButton = blessCard!.findAll('button').find((button) => button.text().includes('取消准备'))
+    await unprepareButton!.trigger('click')
+    expect(wrapper.emitted('changeSpellSelections')?.[0]).toEqual([{
+      ...preparedDraft.spellSelections,
+      preparedSpellIds: ['spell-2014-healing-word'],
+    }])
+
+    // 第二块：未满时准备疗伤术 → preparedSpellIds 加入
+    const cureCard = unPreparedSection!.findAll('.expandable-option-card').find((card) => card.text().includes('疗伤术'))
+    const prepareButton = cureCard!.findAll('button').find((button) => button.text() === '准备')
+    await prepareButton!.trigger('click')
+    expect(wrapper.emitted('changeSpellSelections')?.[1]).toEqual([{
+      ...preparedDraft.spellSelections,
+      preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word', 'spell-2014-cure-wounds'],
+    }])
+  })
+
+  it('prepared 已满时第二块准备按钮禁用并显示已满', async () => {
+    const fullDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-cleric',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word', 'spell-2014-cure-wounds', 'spell-2014-command'],
+      },
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: fullDraft, derived: deriveCharacter(fullDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    const sections = wrapper.findAll('.character-sheet__spell-section')
+    const unPreparedSection = sections.find((section) => section.find('h4').text().includes('未准备法术'))
+    const prepareButtons = unPreparedSection!.findAll('button').filter((button) => button.text() === '准备' || button.text() === '已满')
+    expect(prepareButtons.length).toBeGreaterThan(0)
+    expect(prepareButtons[0]?.attributes('disabled')).toBeDefined()
+    expect(unPreparedSection!.text()).toContain('已满')
   })
 
   it('术士（known）展示戏法与已掌握法术', async () => {
@@ -552,20 +616,19 @@ describe('CharacterSheetStep 候选池与点击交互', () => {
     }
     const wrapper = await mountSheet(clericDraft)
 
-    expect(wrapper.text()).toContain('可选法术')
+    expect(wrapper.text()).toContain('未准备法术')
     expect(wrapper.text()).toContain('引导箭')
-    expect(wrapper.text()).toMatch(/1环 · \d+ 个可准备/)
-    // 已准备区块提供取消准备，候选区块提供准备
+    expect(wrapper.text()).toMatch(/1环 · \d+ 个未准备/)
+    // 已准备区块提供取消准备，未准备区块提供准备
     expect(wrapper.text()).toContain('取消准备')
     expect(wrapper.text()).toContain('准备')
   })
 
-  it('法师（spellbook）展示候选准备与未写入法术书区块', async () => {
+  it('法师（spellbook）展示未准备法术与未写入法术书区块', async () => {
     const wrapper = await mountSheet(spellbookDraft)
 
-    expect(wrapper.text()).toContain('候选准备')
+    expect(wrapper.text()).toContain('未准备法术')
     expect(wrapper.text()).toContain('未写入法术书')
-    expect(wrapper.text()).toContain('长休可从法术书换入')
   })
 
   it('点击候选项准备：emit changeSpellSelections 并加入 preparedSpellIds', async () => {
