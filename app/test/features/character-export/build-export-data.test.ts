@@ -91,6 +91,29 @@ describe('CharacterExportModel', () => {
     expect(spells.filter((spell) => spell.prepared)).toEqual([expect.objectContaining({ id: 'spell-2014-bless' })])
   })
 
+  it('prepared 模式导出排序：已准备法术全部排在未准备之前，组内按环级与名称', () => {
+    const cleric = {
+      ...fighterDraft,
+      classId: 'class-2014-cleric',
+      subclassId: undefined,
+      targetLevel: 5,
+      spellSelections: {
+        cantripIds: ['spell-2014-guidance'],
+        knownSpellIds: [],
+        preparedSpellIds: ['spell-2014-spiritual-weapon', 'spell-2014-bless'],
+        spellbookSpellIds: [],
+      },
+    }
+    const model = buildCharacterExportModel(cleric, deriveCharacter(cleric))
+    const spells = model.spellcasting?.spells ?? []
+    // 高环（2 环）已准备法术也应排在任何未准备法术（含 1 环）之前
+    const preparedIds = spells.filter((spell) => spell.prepared).map((spell) => spell.id)
+    expect(preparedIds).toEqual(['spell-2014-bless', 'spell-2014-spiritual-weapon'])
+    const firstUnpreparedIndex = spells.findIndex((spell) => !spell.prepared)
+    expect(spells.slice(0, firstUnpreparedIndex).every((spell) => spell.prepared)).toBe(true)
+    expect(spells.slice(firstUnpreparedIndex).every((spell) => !spell.prepared)).toBe(true)
+  })
+
   it('战斗大师战技与法术专精选项同样导出', () => {
     const battleMaster = {
       ...fighterDraft,

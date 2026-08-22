@@ -203,7 +203,10 @@ function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): read
     const spell = rulesRepository.getSpell(id)
     if (!spell) diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `spell.${id}`, message: `无法解析法术 ${id}。` })
     return spell ? { id, name: spell.name, level: spell.level, prepared: prepared.has(id) } : undefined
-  }).filter((spell): spell is ExportSpell => Boolean(spell)).sort((left, right) => left.level - right.level || left.name.localeCompare(right.name, 'zh-CN'))
+  }).filter((spell): spell is ExportSpell => Boolean(spell)).sort((left, right) =>
+    Number(right.prepared) - Number(left.prepared)
+    || left.level - right.level
+    || left.name.localeCompare(right.name, 'zh-CN'))
 }
 
 export function buildCharacterExportModel(draft: CharacterDraft, derived: DerivedCharacter): CharacterExportModel {
