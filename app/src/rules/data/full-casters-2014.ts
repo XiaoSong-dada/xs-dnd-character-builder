@@ -3,6 +3,7 @@ import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014
 import { FULL_CASTER_SPELL_SLOTS, fullCasterMaximumSpellLevels } from '@/rules/data/spell-slots-2014'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
+import { METAMAGIC_OPTION_IDS } from '@/rules/data/metamagic-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
@@ -53,6 +54,10 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
       { id: 'bard-2014-tool-1', level: 1, step: 'timeline', kind: 'class-choice', title: '选择一种乐器熟练', description: '选择一种乐器熟练。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['tool-musical-instrument'] },
       { id: 'bard-2014-expertise-3', level: 3, step: 'timeline', kind: 'expertise', title: '选择2项专精', description: '选择已熟练的技能或乐器。', required: true, minSelections: 2, maxSelections: 2, optionIds: allSkillIds },
       { id: 'bard-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择吟游学院', description: '学院在3级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: bardSubclassIds },
+      { id: 'bard-2014-expertise-10', level: 10, step: 'timeline', kind: 'expertise', title: '选择2项专精（强化）', description: '再选择 2 项已熟练的技能或乐器获得专精。', required: true, minSelections: 2, maxSelections: 2, optionIds: allSkillIds },
+      { id: 'bard-2014-magical-secrets-10', level: 10, step: 'timeline', kind: 'class-choice', title: '选择2个魔法奥秘法术', description: '从任意职业的法术列表中选择 2 个法术加入已知法术（环级不高于当前可用最高环）。', required: true, minSelections: 2, maxSelections: 2, optionIds: [], candidateKind: 'all-spells' },
+      { id: 'bard-2014-magical-secrets-14', level: 14, step: 'timeline', kind: 'class-choice', title: '再选2个魔法奥秘法术', description: '再次从任意职业的法术列表中选择 2 个法术加入已知法术。', required: true, minSelections: 2, maxSelections: 2, optionIds: [], candidateKind: 'all-spells' },
+      { id: 'bard-2014-magical-secrets-18', level: 18, step: 'timeline', kind: 'class-choice', title: '再选2个魔法奥秘法术', description: '第三次从任意职业的法术列表中选择 2 个法术加入已知法术。', required: true, minSelections: 2, maxSelections: 2, optionIds: [], candidateKind: 'all-spells' },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'bard')),
     ],
     spellcasting: { ruleset: '5e-2014', mode: 'known', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: bardCantrips, spellsKnownByLevel: bardSpellsKnown, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-bard') },
@@ -80,6 +85,9 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
     checkpoints: [
       { id: 'sorcerer-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项术士技能', description: '从术士技能列表中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-deception', 'skill-insight', 'skill-intimidation', 'skill-persuasion', 'skill-religion'] },
       { id: 'sorcerer-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择术法起源', description: '起源在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: sorcererSubclassIds },
+      { id: 'sorcerer-2014-metamagic-3', level: 3, step: 'timeline', kind: 'class-choice', title: '选择2项超魔法', description: '选择 2 项超魔法选项，施法时消耗术法点改变法术效果。', required: true, minSelections: 2, maxSelections: 2, optionIds: METAMAGIC_OPTION_IDS },
+      { id: 'sorcerer-2014-metamagic-10', level: 10, step: 'timeline', kind: 'class-choice', title: '再选1项超魔法', description: '再选择 1 项超魔法选项（共 3 项），不可与已选重复。', required: true, minSelections: 1, maxSelections: 1, optionIds: METAMAGIC_OPTION_IDS },
+      { id: 'sorcerer-2014-metamagic-17', level: 17, step: 'timeline', kind: 'class-choice', title: '再选1项超魔法', description: '再选择 1 项超魔法选项（共 4 项），不可与已选重复。', required: true, minSelections: 1, maxSelections: 1, optionIds: METAMAGIC_OPTION_IDS },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'sorcerer')),
     ],
     spellcasting: { ruleset: '5e-2014', mode: 'known', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: sorcererCantrips, spellsKnownByLevel: sorcererSpellsKnown, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-sorcerer') },

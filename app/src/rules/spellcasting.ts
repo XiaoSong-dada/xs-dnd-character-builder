@@ -1,7 +1,7 @@
 import { abilityModifier, getRaceAbilityBonuses } from '@/rules/derive'
 import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft } from '@/types/character'
-import type { SpellcastingConfig } from '@/types/rules'
+import type { ChoiceCheckpoint, SpellcastingConfig } from '@/types/rules'
 
 function abilityScoreAfterOrigin(draft: CharacterDraft, ability: SpellcastingConfig['ability']): number {
   return draft.baseAbilities[ability] + (getRaceAbilityBonuses(draft)[ability] ?? 0)
@@ -96,6 +96,40 @@ export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingCo
   return config.classSpellIds
     .map((id) => rulesRepository.getSpell(id))
     .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell && spell.level <= maximumLevel))
+}
+
+/**
+ * 动态候选池：解析检查点在当前草稿下的候选选项。
+ * 普通检查点返回静态 optionIds；法术级候选（candidateKind）按草稿状态生成：
+ * `all-spells` 为全部已登记 1 环及以上法术（环级不高于当前可用最高环，魔法奥秘用）；
+ * `spellbook-level-N` 为法术书中对应环级的法术（法师法术专精/招牌法术用）。
+ */
+export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: ChoiceCheckpoint): readonly string[] {
+  if (checkpoint.optionIds.length > 0) return checkpoint.optionIds
+  if (!checkpoint.candidateKind) return []
+  if (checkpoint.candidateKind === 'all-spells') {
+    const config = getSpellcastingConfig(draft)
+    if (!config || draft.targetLevel < config.startsAtLevel) return []
+    const maximumLevel = getMaximumSpellLevel(config, draft.targetLevel)
+    return rulesRepository.spells
+      .filter((spell) => spell.level >= 1 && spell.level <= maximumLevel)
+      .map((spell) => spell.id)
+  }
+  const targetLevel = checkpoint.candidateKind === 'spellbook-level-1' ? 1
+    : checkpoint.candidateKind === 'spellbook-level-2' ? 2
+      : 3
+  return draft.spellSelections.spellbookSpellIds
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell && spell.level === targetLevel))
+    .map((spell) => spell.id)
+}
+
+/** 吟游诗人魔法奥秘法术：从时间线检查点选择中提取（不计入已知法术上限，展示与导出用）。 */
+export function getMagicalSecretsSpellIds(draft: CharacterDraft): readonly string[] {
+  return draft.selections
+    .filter((item) => item.checkpointId.startsWith('bard-2014-magical-secrets-') && !item.invalidatedAt)
+    .flatMap((item) => item.optionIds)
+    .filter((id, index, all) => all.indexOf(id) === index)
 }
 
 /**

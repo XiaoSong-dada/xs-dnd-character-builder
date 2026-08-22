@@ -77,7 +77,7 @@ function sorcererSpellIds(levels: readonly number[]): readonly string[] {
     .map((spell) => spell.id)
 }
 
-/** 4 级术士：已完成 1 级技能/子职与 4 级属性提升，法术选择满足 4 级需求（4 戏法 + 5 已知）。 */
+/** 4 级术士：已完成 1 级技能/子职、3 级超魔与 4 级属性提升，法术选择满足 4 级需求（4 戏法 + 5 已知）。 */
 function makeSorcererDraft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
   return makeFighterDraft({
     id: 'test-sorcerer',
@@ -88,6 +88,7 @@ function makeSorcererDraft(overrides: Partial<CharacterDraft> = {}): CharacterDr
     selections: [
       { checkpointId: 'sorcerer-2014-skills-1', optionIds: ['skill-arcana', 'skill-persuasion'], confirmedAt: '' },
       { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
+      { checkpointId: 'sorcerer-2014-metamagic-3', optionIds: ['metamagic-careful', 'metamagic-quickened'], confirmedAt: '' },
       { checkpointId: 'sorcerer-2014-asi-4', optionIds: ['asi-cha-2'], confirmedAt: '' },
     ],
     spellSelections: {
@@ -245,5 +246,27 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     expect(store.activeDraft?.targetLevel).toBe(4)
     expect(page.step.value).toBe('timeline')
     expect(page.levelAdjustNotice.value?.step).toBe('timeline')
+  })
+
+  it('adjustLevel 升级到超魔等级：确认后进入时间线补选超魔', async () => {
+    const { page, store } = await setupPage(makeSorcererDraft({
+      targetLevel: 2,
+      selections: [
+        { checkpointId: 'sorcerer-2014-skills-1', optionIds: ['skill-arcana', 'skill-persuasion'], confirmedAt: '' },
+        { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
+      ],
+    }))
+
+    page.adjustLevel(3)
+
+    expect(page.pendingChange.value?.impact?.added).toContainEqual({
+      checkpointId: 'sorcerer-2014-metamagic-3',
+      title: '3级 · 选择2项超魔法',
+    })
+
+    page.confirmPendingChange()
+
+    expect(store.activeDraft?.targetLevel).toBe(3)
+    expect(page.step.value).toBe('timeline')
   })
 })

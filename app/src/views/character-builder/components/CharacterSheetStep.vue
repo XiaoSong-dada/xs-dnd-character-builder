@@ -14,12 +14,12 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
-import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
+import { getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { buildTimeline } from '@/rules/timeline'
 import type { AbilityKey, CharacterDraft, DerivedCharacter, InventoryEntry, SpellSelections } from '@/types/character'
-import type { SpellRule } from '@/types/rules'
+import type { ClassFeature, SpellRule } from '@/types/rules'
 
 const props = defineProps<{
   draft: CharacterDraft
@@ -154,7 +154,37 @@ function togglePrepare(id: string): void {
   if (next === current) return
   emit('changeSpellSelections', { ...props.draft.spellSelections, preparedSpellIds: next })
 }
-const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || preparedOrKnownSpells.value.length > 0 || spellbookSpells.value.length > 0)
+const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || preparedOrKnownSpells.value.length > 0 || spellbookSpells.value.length > 0 || magicalSecretsSpells.value.length > 0)
+
+/** 吟游诗人魔法奥秘法术（来自时间线检查点选择，不计入已知法术上限）。 */
+const magicalSecretsSpells = computed(() => getMagicalSecretsSpellIds(props.draft)
+  .map((id) => rulesRepository.getSpell(id))
+  .filter((spell): spell is SpellRule => Boolean(spell)))
+
+/** 选择类特性的完成度徽标：关联检查点已完成显示"已选择 N 项"，否则"需选择 N/M"。 */
+function featureChoiceLabel(feature: ClassFeature): string {
+  const checkpointIds = feature.checkpointIds ?? []
+  if (checkpointIds.length === 0) return '需选择'
+  const draft = props.draft
+  if (!draft.classId) return '需选择'
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const unlocked = checkpointIds
+    .map((checkpointId) => timeline.find((item) => item.id === checkpointId))
+    .filter((checkpoint): checkpoint is NonNullable<typeof checkpoint> => Boolean(checkpoint))
+  const total = unlocked.reduce((sum, checkpoint) => sum + checkpoint.minSelections, 0)
+  const done = unlocked.reduce((sum, checkpoint) => sum
+    + (draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds.length ?? 0), 0)
+  return total === 0 ? '需选择' : done >= total ? `已选择 ${total} 项` : `需选择 ${done}/${total}`
+}
+
+/** 选择类特性已选选项的中文名（超魔、法术专精、招牌法术等，只读展示）。 */
+function featureSelectedLabels(feature: ClassFeature): readonly string[] {
+  const draft = props.draft
+  return (feature.checkpointIds ?? [])
+    .flatMap((checkpointId) =>
+      draft.selections.find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)?.optionIds ?? [])
+    .map((optionId) => rulesRepository.getOption(optionId)?.name ?? rulesRepository.getSpell(optionId)?.name ?? optionId)
+}
 function isPreparedSpell(id: string): boolean {
   return props.draft.spellSelections.preparedSpellIds.includes(id)
 }
@@ -364,7 +394,10 @@ function handleExportPdf(): void {
               expanded-label="特性详情"
             >
               <template #suffix>
-                <em v-if="feature.requiresChoice" class="character-sheet__feature-choice">需选择</em>
+                <template v-if="feature.requiresChoice">
+                  <em class="character-sheet__feature-choice">{{ featureChoiceLabel(feature) }}</em>
+                  <span v-if="featureSelectedLabels(feature).length" class="character-sheet__feature-selected">{{ featureSelectedLabels(feature).join('、') }}</span>
+                </template>
               </template>
               <template #expanded>{{ feature.description }}</template>
             </ExpandableOptionCard>
@@ -450,6 +483,23 @@ function handleExportPdf(): void {
                 <template #suffix>
                   <button v-if="canTogglePrepared" type="button" class="character-sheet__spell-action" @click="togglePrepare(spell.id)">取消准备</button>
                 </template>
+                <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+              </ExpandableOptionCard>
+            </div>
+          </ListShell>
+        </section>
+        <section v-if="magicalSecretsSpells.length" class="character-sheet__spell-section">
+          <h4>魔法奥秘 · {{ magicalSecretsSpells.length }}</h4>
+          <ListShell>
+            <div class="character-sheet__spell-level">
+              <ExpandableOptionCard
+                v-for="spell in magicalSecretsSpells"
+                expanded-label="法术效果"
+                :key="spell.id"
+                :title="spell.name"
+                :description="`${spell.level}环 · ${spell.englishName}`"
+              >
+                <template #suffix><UiBadge tone="success">魔法奥秘</UiBadge></template>
                 <template v-if="spell.description" #expanded>{{ spell.description }}</template>
               </ExpandableOptionCard>
             </div>
@@ -872,6 +922,7 @@ function handleExportPdf(): void {
   &__feature strong { font-size: 0.8rem; }
   &__feature strong small { color: var(--color-text-muted); font-weight: 400; }
   &__feature-choice { margin-left: 0.3rem; padding: 0.05rem 0.4rem; border: 1px solid var(--color-primary); border-radius: 999px; color: var(--color-primary); font-size: 0.62rem; font-style: normal; vertical-align: 0.1em; }
+  &__feature-selected { margin-left: 0.3rem; color: var(--color-text-muted); font-size: 0.68rem; line-height: 1.5; }
   &__feature p { margin: 0; color: var(--color-text-muted); font-size: 0.72rem; line-height: 1.45; }
 }
 </style>

@@ -1,7 +1,7 @@
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
-import { getSpellSlots } from '@/rules/spellcasting'
+import { getMagicalSecretsSpellIds, getSpellSlots } from '@/rules/spellcasting'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
 
@@ -166,11 +166,12 @@ function buildInventory(draft: CharacterDraft, diagnostics: ExportDiagnostic[]) 
 function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): readonly ExportSpell[] {
   const config = rulesRepository.getSpellcastingConfig(draft)
   if (!config) return []
-  const ids = config.mode === 'spellbook'
+  const baseIds = config.mode === 'spellbook'
     ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.spellbookSpellIds]
     : config.mode === 'prepared'
       ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.preparedSpellIds]
       : [...draft.spellSelections.cantripIds, ...draft.spellSelections.knownSpellIds]
+  const ids = [...new Set([...baseIds, ...getMagicalSecretsSpellIds(draft)])]
   const prepared = new Set(draft.spellSelections.preparedSpellIds)
   return ids.map((id) => {
     const spell = rulesRepository.getSpell(id)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import ListShell from '@/components/ui/ListShell.vue'
 import OptionCard from '@/components/ui/OptionCard.vue'
@@ -8,10 +8,11 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
 import { rulesRepository } from '@/rules/repository'
 import { buildTimeline } from '@/rules/timeline'
+import { getCheckpointCandidates } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
-import type { SubclassFeature } from '@/types/rules'
+import type { ChoiceCheckpoint, SubclassFeature } from '@/types/rules'
 
 const props = defineProps<{
   classId: string
@@ -73,18 +74,22 @@ function toggleCheckpoint(checkpointId: string): void {
   expandedCheckpointId.value = currentCheckpointId.value === checkpointId ? undefined : checkpointId
 }
 
-/** 战技检查点：选项统一以 maneuver- 前缀命名（跨检查点不可重复选择同一战技）。 */
-function isManeuverCheckpoint(checkpoint: { readonly optionIds: readonly string[] }): boolean {
-  return checkpoint.optionIds.length > 0 && checkpoint.optionIds.every((optionId) => optionId.startsWith('maneuver-'))
+/** 前缀唯一选项：跨检查点不可重复选择的选项前缀（战技、超魔等）。 */
+const UNIQUE_OPTION_PREFIXES = ['maneuver-', 'metamagic-'] as const
+
+/** 该检查点的选项是否为"前缀唯一"类型（跨检查点不可重复选择同一选项），返回对应前缀。 */
+function uniqueOptionPrefix(checkpoint: { readonly optionIds: readonly string[] }): string | undefined {
+  if (checkpoint.optionIds.length === 0) return undefined
+  return UNIQUE_OPTION_PREFIXES.find((prefix) => checkpoint.optionIds.every((optionId) => optionId.startsWith(prefix)))
 }
 
 function isUniqueOptionUsedElsewhere(checkpointId: string, optionId: string): boolean {
   const checkpoint = checkpoints.value.find((item) => item.id === checkpointId)
-  const maneuverCheckpoint = Boolean(checkpoint && isManeuverCheckpoint(checkpoint))
+  const prefix = checkpoint ? uniqueOptionPrefix(checkpoint) : undefined
   const expertiseCheckpoint = checkpoint?.kind === 'expertise'
-  if (!maneuverCheckpoint && !expertiseCheckpoint) return false
+  if (!prefix && !expertiseCheckpoint) return false
   return checkpoints.value
-    .filter((item) => item.id !== checkpointId && (maneuverCheckpoint ? isManeuverCheckpoint(item) : item.kind === 'expertise'))
+    .filter((item) => item.id !== checkpointId && (prefix ? uniqueOptionPrefix(item) === prefix : item.kind === 'expertise'))
     .some((item) => selectedIds(item.id).includes(optionId))
 }
 
@@ -117,6 +122,39 @@ function toggle(checkpointId: string, optionId: string, max: number): void {
 
 function saveSpecialSelection(checkpointId: string, optionId?: string): void {
   emit('select', checkpointId, optionId ? [optionId] : [])
+}
+
+/** 法术级候选（candidateKind）的搜索关键词：切换检查点时重置。 */
+const spellCandidateSearch = ref('')
+watch(currentCheckpointId, () => {
+  spellCandidateSearch.value = ''
+})
+
+/** 当前检查点的候选选项：静态 optionIds 或动态候选池。 */
+function checkpointCandidates(checkpoint: ChoiceCheckpoint): readonly string[] {
+  return getCheckpointCandidates(props.draft, checkpoint)
+}
+
+/** 法术级候选按环级分组并应用搜索过滤（魔法奥秘、法术专精、招牌法术）。 */
+function spellCandidateGroups(checkpoint: ChoiceCheckpoint): ReadonlyArray<{
+  readonly level: number
+  readonly spells: readonly NonNullable<ReturnType<typeof rulesRepository.getSpell>>[]
+}> {
+  if (!checkpoint.candidateKind) return []
+  const query = spellCandidateSearch.value.trim().toLocaleLowerCase('zh-CN')
+  const spells = checkpointCandidates(checkpoint)
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell))
+    .filter((spell) => !query || spell.name.toLocaleLowerCase('zh-CN').includes(query))
+  const byLevel = new Map<number, NonNullable<ReturnType<typeof rulesRepository.getSpell>>[]>()
+  for (const spell of spells) {
+    const list = byLevel.get(spell.level) ?? []
+    list.push(spell)
+    byLevel.set(spell.level, list)
+  }
+  return [...byLevel.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map(([level, items]) => ({ level, spells: items }))
 }
 </script>
 
@@ -178,6 +216,29 @@ function saveSpecialSelection(checkpointId: string, optionId?: string): void {
             </template>
           </OptionCard>
         </ListShell>
+        <div v-else-if="checkpoint.candidateKind" class="timeline-step__spell-candidates">
+          <label class="timeline-step__spell-search">
+            <input v-model="spellCandidateSearch" type="search" placeholder="搜索法术名称" aria-label="搜索法术名称">
+          </label>
+          <section v-for="group in spellCandidateGroups(checkpoint)" :key="group.level" class="timeline-step__spell-group">
+            <h4>{{ group.level }} 环</h4>
+            <ListShell>
+              <OptionCard
+                v-for="spell in group.spells"
+                :key="spell.id"
+                :title="spell.name"
+                :description="spell.description"
+                :state="selectedIds(checkpoint.id).includes(spell.id) ? 'selected' : 'default'"
+                @select="toggle(checkpoint.id, spell.id, checkpoint.maxSelections)"
+              >
+                <template #suffix>
+                  <UiBadge v-if="selectedIds(checkpoint.id).includes(spell.id)" tone="success">已选</UiBadge>
+                </template>
+              </OptionCard>
+            </ListShell>
+          </section>
+          <p v-if="spellCandidateGroups(checkpoint).length === 0" class="timeline-step__spell-empty">没有匹配的法术{{ checkpoint.candidateKind.startsWith('spellbook') ? '（需先在法术步骤将法术写入法术书）' : '' }}。</p>
+        </div>
         <div v-if="checkpoint.kind === 'subclass' && subclassFeatures.length" class="timeline-step__subclass-features">
           <h4>子职特性 · {{ rulesRepository.getSubclass(selectedSubclassId ?? '')?.name ?? '' }}</h4>
           <ExpandableOptionCard
@@ -242,6 +303,21 @@ function saveSpecialSelection(checkpointId: string, optionId?: string): void {
   }
 
   &__options { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
+
+  &__spell-candidates { display: grid; gap: 0.75rem; }
+  &__spell-search input {
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    background: var(--color-surface);
+    font-size: 0.82rem;
+  }
+  &__spell-group { display: grid; gap: 0.5rem; }
+  &__spell-group h4 { margin: 0; font-size: 0.78rem; color: var(--color-text-muted); }
+  &__spell-empty { margin: 0; padding: 0.6rem 0.75rem; border-radius: var(--radius-md); color: var(--color-text-muted); background: var(--color-surface-muted, #f4efe6); font-size: 0.75rem; line-height: 1.5; }
 
   &__subclass-features { display: grid; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--color-border); }
   &__subclass-features h4 { margin: 0; font-size: 0.78rem; color: var(--color-text-muted); }

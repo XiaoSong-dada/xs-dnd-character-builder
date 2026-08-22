@@ -399,6 +399,66 @@ describe('CharacterSheetStep 法术展示', () => {
   })
 })
 
+describe('CharacterSheetStep 超魔与魔法奥秘展示', () => {
+  it('术士能力页签展示超魔完成度与已选超魔', async () => {
+    const sorcererDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-sorcerer',
+      targetLevel: 3,
+      selections: [
+        { checkpointId: 'sorcerer-2014-skills-1', optionIds: ['skill-arcana', 'skill-persuasion'], confirmedAt: '' },
+        { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
+        { checkpointId: 'sorcerer-2014-metamagic-3', optionIds: ['metamagic-careful', 'metamagic-quickened'], confirmedAt: '' },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: sorcererDraft, derived: deriveCharacter(sorcererDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('超魔法')
+    expect(wrapper.text()).toContain('已选择 2 项')
+    expect(wrapper.text()).toContain('谨慎法术、迅捷法术')
+  })
+
+  it('术士未完成超魔时能力页签提示需选择', async () => {
+    const incomplete: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-sorcerer',
+      targetLevel: 3,
+      selections: [
+        { checkpointId: 'sorcerer-2014-skills-1', optionIds: ['skill-arcana', 'skill-persuasion'], confirmedAt: '' },
+        { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: incomplete, derived: deriveCharacter(incomplete) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('需选择 0/2')
+  })
+
+  it('吟游诗人法术页签展示魔法奥秘法术并标记来源', async () => {
+    const bardDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-bard',
+      targetLevel: 10,
+      selections: [
+        { checkpointId: 'bard-2014-magical-secrets-10', optionIds: ['spell-2014-fireball', 'spell-2014-cure-wounds'], confirmedAt: '' },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: bardDraft, derived: deriveCharacter(bardDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    expect(wrapper.text()).toContain('魔法奥秘 · 2')
+    expect(wrapper.text()).toContain('火球术')
+    expect(wrapper.text()).toContain('疗伤术')
+  })
+})
+
 describe('CharacterSheetStep 候选池与点击交互', () => {
   const spellbookDraft: CharacterDraft = {
     ...draft,

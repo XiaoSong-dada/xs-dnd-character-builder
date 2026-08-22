@@ -27,6 +27,8 @@ export type PlayStyleTag =
 export interface RuleOption {
   readonly id: string
   readonly name: string
+  /** 英文名（可选：选项类条目如超魔、战技等需要时登记）。 */
+  readonly englishName?: string
   readonly description: string
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
@@ -59,8 +61,18 @@ export interface ChoiceCheckpoint {
   readonly required: boolean
   readonly minSelections: number
   readonly maxSelections: number
+  /** 静态选项：普通选择（技能、子职、超魔等）直接列候选。 */
   readonly optionIds: readonly string[]
+  /** 动态候选池类型：optionIds 为空时由规则层按草稿状态解析候选（法术级选项）。 */
+  readonly candidateKind?: CheckpointCandidateKind
 }
+
+/** 动态候选池：检查点选项随草稿状态（等级、法术书）由规则层生成。 */
+export type CheckpointCandidateKind =
+  | 'all-spells'
+  | 'spellbook-level-1'
+  | 'spellbook-level-2'
+  | 'spellbook-level-3'
 
 export interface SpellcastingConfig {
   readonly ruleset: RulesetId
@@ -169,6 +181,8 @@ export interface ClassFeature {
   readonly description: string
   readonly kind: SubclassFeatureKind
   readonly requiresChoice?: boolean
+  /** 关联的时间线检查点 id：用于角色卡展示选择完成度（如超魔 3/10/17 级检查点）。 */
+  readonly checkpointIds?: readonly string[]
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }

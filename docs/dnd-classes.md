@@ -198,6 +198,7 @@
 
 - 职业 ID：`sorcerer`
 - 职业基础与等级特性：[术士详细资料](classes/subclasses/sorcerer/sorcerer.md)
+- **2014 规则（当前车卡基线）**：[2014 术士](classes/subclasses/sorcerer/sorcerer-2014.md)（3 级获得超魔法，10/17 级强化；超魔选项 10 项登记于 `app/src/rules/data/metamagic-2014.ts`，选择链路与 2024 资料隔离）
 - 2024子职：[异怪术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)、[机关术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)、[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)、[狂野魔法术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md)
 - 旧版与扩展子职：[神圣之魂](classes/subclasses/sorcerer/sorcerer-divine-soul.md)、[幽影魔法](classes/subclasses/sorcerer/sorcerer-shadow-magic.md)、[风暴术法](classes/subclasses/sorcerer/sorcerer-storm-sorcery.md)、[月之术法](classes/subclasses/sorcerer/sorcerer-lunar-sorcery.md)
 - 选择与校验：已记录施法、天生术法、术法点、超魔法、法术位转换、常备法术和旧版首特性等级映射

@@ -8,9 +8,10 @@ import {
   THIRD_CASTER_SPELL_SLOTS,
 } from '@/rules/data/spell-slots-2014'
 import { rulesRepository } from '@/rules/repository'
-import { getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellCount, getSpellcastingConfig, getSpellSlots, validateSpellSelections } from '@/rules/spellcasting'
+import { getCheckpointCandidates, getMagicalSecretsSpellIds, getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellCount, getSpellcastingConfig, getSpellSlots, validateSpellSelections } from '@/rules/spellcasting'
 import { validateDraft } from '@/rules/validate'
 import type { CharacterDraft } from '@/types/character'
+import type { ChoiceCheckpoint } from '@/types/rules'
 
 function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
@@ -264,5 +265,71 @@ describe('三分之一施法者（奥法骑士 / 诡术师）', () => {
     expect(derived.spellAttackBonus?.value).toBe(5)
     expect(derived.spellSaveDc?.value).toBe(13)
     expect(derived.spellAttackBonus?.sources.some((source) => source.label.includes('INT'))).toBe(true)
+  })
+})
+
+describe('动态候选池与魔法奥秘', () => {
+  const baseCheckpoint = (candidateKind: ChoiceCheckpoint['candidateKind']): ChoiceCheckpoint => ({
+    id: 'test-checkpoint',
+    level: 10,
+    step: 'timeline',
+    kind: 'class-choice',
+    title: '',
+    description: '',
+    required: true,
+    minSelections: 2,
+    maxSelections: 2,
+    optionIds: [],
+    candidateKind,
+  })
+
+  it('all-spells 候选池：全部 1 环及以上法术，环级不高于当前最高环', () => {
+    const bard = draft({ classId: 'class-2014-bard', targetLevel: 5 })
+    const candidates = getCheckpointCandidates(bard, baseCheckpoint('all-spells'))
+    expect(candidates.length).toBeGreaterThan(0)
+    const spells = candidates.map((id) => rulesRepository.getSpell(id))
+    expect(spells.every((spell) => spell && spell.level >= 1 && spell.level <= 3)).toBe(true)
+    const config = getSpellcastingConfig(bard)
+    expect(config && getMaximumSpellLevel(config, 5)).toBe(3)
+  })
+
+  it('spellbook-level 候选池：仅法术书内对应环级的法术', () => {
+    const wizard = draft({ classId: 'class-2014-wizard', targetLevel: 18 })
+    const config = getSpellcastingConfig(wizard)
+    const pool = (config?.classSpellIds ?? [])
+      .map((id) => rulesRepository.getSpell(id))
+      .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell))
+    const level1 = pool.filter((spell) => spell.level === 1).slice(0, 2).map((spell) => spell.id)
+    const level3 = pool.filter((spell) => spell.level === 3).slice(0, 2).map((spell) => spell.id)
+    const withBook = { ...wizard, spellSelections: { ...wizard.spellSelections, spellbookSpellIds: [...level1, ...level3] } }
+    expect(getCheckpointCandidates(withBook, baseCheckpoint('spellbook-level-1'))).toEqual(level1)
+    expect(getCheckpointCandidates(withBook, baseCheckpoint('spellbook-level-3'))).toEqual(level3)
+    // 未写入法术书时候选为空
+    expect(getCheckpointCandidates(wizard, baseCheckpoint('spellbook-level-1'))).toEqual([])
+  })
+
+  it('静态 optionIds 检查点直接返回选项（不受候选池影响）', () => {
+    const fighter = draft({ classId: 'class-2014-fighter', targetLevel: 1 })
+    const checkpoint: ChoiceCheckpoint = { ...baseCheckpoint(undefined), optionIds: ['style-dueling'] }
+    expect(getCheckpointCandidates(fighter, checkpoint)).toEqual(['style-dueling'])
+  })
+
+  it('getMagicalSecretsSpellIds 从魔法奥秘检查点提取并去重、忽略失效选择', () => {
+    const [spellA, spellB, spellC] = rulesRepository.spells.filter((spell) => spell.level > 0).map((spell) => spell.id)
+    const bard = draft({
+      classId: 'class-2014-bard',
+      selections: [
+        { checkpointId: 'bard-2014-magical-secrets-10', optionIds: [spellA, spellB], confirmedAt: '' },
+        { checkpointId: 'bard-2014-magical-secrets-14', optionIds: [spellA, spellC], confirmedAt: '' },
+        {
+          checkpointId: 'bard-2014-magical-secrets-18',
+          optionIds: [spellC],
+          confirmedAt: '',
+          invalidatedAt: '2026-08-06T00:00:00.000Z',
+          invalidatedReason: '目标等级调整',
+        },
+      ],
+    })
+    expect(getMagicalSecretsSpellIds(bard)).toEqual([spellA, spellB, spellC])
   })
 })

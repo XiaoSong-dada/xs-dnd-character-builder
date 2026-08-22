@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { buildTimeline } from '@/rules/timeline'
 import { ABILITY_IMPROVEMENT_OPTION_IDS, FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
+import { METAMAGIC_OPTION_IDS } from '@/rules/data/metamagic-2014'
 
 describe('2014 timelines', () => {
   it('builds the level 10 fighter choices without weapon mastery or subclass feature checkpoints', () => {
@@ -68,5 +69,42 @@ describe('2014 timelines', () => {
   it('filters subclass feature checkpoints beyond the target level', () => {
     const timeline = buildTimeline('class-2014-barbarian', 2, { subclassId: 'subclass-2014-barbarian-totem-warrior' })
     expect(timeline.some((item) => item.id.startsWith('subclass-feature-'))).toBe(false)
+  })
+
+  it('includes sorcerer metamagic checkpoints at 3/10/17 with multi-select specs', () => {
+    const timeline = buildTimeline('class-2014-sorcerer', 17)
+    const metamagic = timeline.filter((item) => item.id.startsWith('sorcerer-2014-metamagic-'))
+    expect(metamagic.map((item) => [item.id, item.level, item.minSelections, item.maxSelections])).toEqual([
+      ['sorcerer-2014-metamagic-3', 3, 2, 2],
+      ['sorcerer-2014-metamagic-10', 10, 1, 1],
+      ['sorcerer-2014-metamagic-17', 17, 1, 1],
+    ])
+    expect(metamagic[0]?.optionIds).toEqual(METAMAGIC_OPTION_IDS)
+    expect(buildTimeline('class-2014-sorcerer', 2).some((item) => item.id.startsWith('sorcerer-2014-metamagic-'))).toBe(false)
+  })
+
+  it('includes bard expertise enhancement and magical secrets checkpoints at 10/14/18', () => {
+    const timeline = buildTimeline('class-2014-bard', 18)
+    const ids = timeline.map((item) => item.id)
+    expect(ids).toContain('bard-2014-expertise-10')
+    for (const id of ['bard-2014-magical-secrets-10', 'bard-2014-magical-secrets-14', 'bard-2014-magical-secrets-18']) {
+      const checkpoint = timeline.find((item) => item.id === id)
+      expect(checkpoint?.candidateKind).toBe('all-spells')
+      expect(checkpoint?.minSelections).toBe(2)
+      expect(checkpoint?.maxSelections).toBe(2)
+    }
+    const expertise = timeline.find((item) => item.id === 'bard-2014-expertise-10')
+    expect(expertise?.kind).toBe('expertise')
+    expect(expertise?.minSelections).toBe(2)
+  })
+
+  it('includes wizard spell mastery and signature spell checkpoints with spellbook candidate kinds', () => {
+    const timeline = buildTimeline('class-2014-wizard', 20)
+    expect(timeline.find((item) => item.id === 'wizard-2014-spell-mastery-1')?.candidateKind).toBe('spellbook-level-1')
+    expect(timeline.find((item) => item.id === 'wizard-2014-spell-mastery-2')?.candidateKind).toBe('spellbook-level-2')
+    const signature = timeline.find((item) => item.id === 'wizard-2014-signature-spells-20')
+    expect(signature?.candidateKind).toBe('spellbook-level-3')
+    expect(signature?.minSelections).toBe(2)
+    expect(buildTimeline('class-2014-wizard', 17).some((item) => item.id.startsWith('wizard-2014-spell-mastery-'))).toBe(false)
   })
 })

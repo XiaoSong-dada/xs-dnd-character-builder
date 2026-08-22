@@ -56,10 +56,11 @@ function spellIdsOfClass(classId: string, levels: readonly number[]): readonly s
     .map((spell) => spell.id)
 }
 
-/** 4 级术士已完成 1 级技能/子职与 4 级属性提升的全部检查点。 */
+/** 4 级术士已完成 1 级技能/子职、3 级超魔与 4 级属性提升的全部检查点。 */
 const level4SorcererSelections = [
   { checkpointId: 'sorcerer-2014-skills-1', optionIds: ['skill-arcana', 'skill-persuasion'], confirmedAt: '' },
   { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
+  { checkpointId: 'sorcerer-2014-metamagic-3', optionIds: ['metamagic-careful', 'metamagic-quickened'], confirmedAt: '' },
   { checkpointId: 'sorcerer-2014-asi-4', optionIds: ['asi-cha-2'], confirmedAt: '' },
 ]
 
@@ -96,16 +97,42 @@ function makeClericDraft(spellSelections: CharacterDraft['spellSelections']): Ch
   })
 }
 
-function makeWizardDraft(spellSelections: CharacterDraft['spellSelections']): CharacterDraft {
+function makeWizardDraft(
+  spellSelections: CharacterDraft['spellSelections'],
+  targetLevel = 1,
+  selections: CharacterDraft['selections'] = [
+    { checkpointId: 'wizard-2014-skills-1', optionIds: ['skill-arcana', 'skill-insight'], confirmedAt: '' },
+  ],
+): CharacterDraft {
   return makeFighterDraft({
     id: 'test-wizard',
     classId: 'class-2014-wizard',
     subclassId: undefined,
-    targetLevel: 1,
+    targetLevel,
     baseAbilities: { str: 10, dex: 10, con: 13, int: 15, wis: 12, cha: 8 },
-    selections: [
-      { checkpointId: 'wizard-2014-skills-1', optionIds: ['skill-arcana', 'skill-insight'], confirmedAt: '' },
-    ],
+    selections,
+    spellSelections,
+  })
+}
+
+/** 9 级吟游诗人已完成 1—9 级全部时间线检查点的选择。 */
+const level9BardSelections = [
+  { checkpointId: 'bard-2014-skills-1', optionIds: ['skill-acrobatics', 'skill-performance', 'skill-persuasion'], confirmedAt: '' },
+  { checkpointId: 'bard-2014-tool-1', optionIds: ['tool-musical-instrument'], confirmedAt: '' },
+  { checkpointId: 'bard-2014-expertise-3', optionIds: ['skill-performance', 'skill-persuasion'], confirmedAt: '' },
+  { checkpointId: 'bard-2014-subclass-3', optionIds: ['subclass-2014-bard-lore'], confirmedAt: '' },
+  { checkpointId: 'bard-2014-asi-4', optionIds: ['asi-cha-2'], confirmedAt: '' },
+  { checkpointId: 'bard-2014-asi-8', optionIds: ['asi-cha-2'], confirmedAt: '' },
+]
+
+function makeBardDraft(spellSelections: CharacterDraft['spellSelections']): CharacterDraft {
+  return makeFighterDraft({
+    id: 'test-bard',
+    classId: 'class-2014-bard',
+    subclassId: undefined,
+    targetLevel: 9,
+    baseAbilities: { str: 10, dex: 14, con: 13, int: 8, wis: 12, cha: 15 },
+    selections: level9BardSelections,
     spellSelections,
   })
 }
@@ -335,5 +362,59 @@ describe('getDependencyImpact target-level 升级与降级', () => {
     })
     const impact = getDependencyImpact(draft, { kind: 'target-level', value: 5 })
     expect(impact.spellUpdates).toBeUndefined()
+  })
+
+  it('术士 2→3 级升级：added 包含 3 级超魔检查点', () => {
+    const draft = makeSorcererDraft(
+      2,
+      {
+        cantripIds: spellIdsOfClass('class-2014-sorcerer', [0]).slice(0, 4),
+        knownSpellIds: spellIdsOfClass('class-2014-sorcerer', [1]).slice(0, 3),
+        preparedSpellIds: [],
+        spellbookSpellIds: [],
+      },
+      level4SorcererSelections.slice(0, 2),
+    )
+    const impact = getDependencyImpact(draft, { kind: 'target-level', value: 3 })
+    expect(impact.added).toEqual([{ checkpointId: 'sorcerer-2014-metamagic-3', title: '3级 · 选择2项超魔法' }])
+  })
+
+  it('吟游诗人 9→10 级升级：added 包含专精强化与魔法奥秘检查点', () => {
+    const draft = makeBardDraft({
+      cantripIds: spellIdsOfClass('class-2014-bard', [0]).slice(0, 3),
+      knownSpellIds: spellIdsOfClass('class-2014-bard', [1, 2, 3, 4, 5]).slice(0, 14),
+      preparedSpellIds: [],
+      spellbookSpellIds: [],
+    })
+    const impact = getDependencyImpact(draft, { kind: 'target-level', value: 10 })
+    expect(impact.added).toEqual([
+      { checkpointId: 'bard-2014-expertise-10', title: '10级 · 选择2项专精（强化）' },
+      { checkpointId: 'bard-2014-magical-secrets-10', title: '10级 · 选择2个魔法奥秘法术' },
+    ])
+  })
+
+  it('法师 17→18 级升级：added 包含两个法术专精检查点', () => {
+    const draft = makeWizardDraft(
+      {
+        cantripIds: spellIdsOfClass('class-2014-wizard', [0]).slice(0, 4),
+        knownSpellIds: [],
+        preparedSpellIds: spellIdsOfClass('class-2014-wizard', [1, 2]).slice(0, 3),
+        spellbookSpellIds: spellIdsOfClass('class-2014-wizard', [1, 2]).slice(0, 6),
+      },
+      17,
+      [
+        { checkpointId: 'wizard-2014-skills-1', optionIds: ['skill-arcana', 'skill-insight'], confirmedAt: '' },
+        { checkpointId: 'wizard-2014-subclass-2', optionIds: ['subclass-2014-wizard-abjuration'], confirmedAt: '' },
+        { checkpointId: 'wizard-2014-asi-4', optionIds: ['asi-int-2'], confirmedAt: '' },
+        { checkpointId: 'wizard-2014-asi-8', optionIds: ['asi-int-2'], confirmedAt: '' },
+        { checkpointId: 'wizard-2014-asi-12', optionIds: ['asi-wis-2'], confirmedAt: '' },
+        { checkpointId: 'wizard-2014-asi-16', optionIds: ['asi-dex-2'], confirmedAt: '' },
+      ],
+    )
+    const impact = getDependencyImpact(draft, { kind: 'target-level', value: 18 })
+    expect(impact.added).toEqual([
+      { checkpointId: 'wizard-2014-spell-mastery-1', title: '18级 · 选择1个1环法术专精' },
+      { checkpointId: 'wizard-2014-spell-mastery-2', title: '18级 · 选择1个2环法术专精' },
+    ])
   })
 })

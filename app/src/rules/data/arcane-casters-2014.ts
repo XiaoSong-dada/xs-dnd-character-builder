@@ -35,6 +35,9 @@ export const arcaneCasterClasses2014: readonly ClassRule[] = [
     checkpoints: [
       { id: 'wizard-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项法师技能', description: '选择职业技能。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-history', 'skill-insight', 'skill-investigation', 'skill-medicine', 'skill-religion'] },
       { id: 'wizard-2014-subclass-2', level: 2, step: 'timeline', kind: 'subclass', title: '选择奥术传统', description: '奥术传统在2级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: wizardSubclassIds },
+      { id: 'wizard-2014-spell-mastery-1', level: 18, step: 'timeline', kind: 'class-choice', title: '选择1个1环法术专精', description: '从法术书中选择 1 个 1 环法术：可随时以最低环级施放而无需消耗法术位。', required: true, minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'spellbook-level-1' },
+      { id: 'wizard-2014-spell-mastery-2', level: 18, step: 'timeline', kind: 'class-choice', title: '选择1个2环法术专精', description: '从法术书中选择 1 个 2 环法术：可随时以最低环级施放而无需消耗法术位。', required: true, minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'spellbook-level-2' },
+      { id: 'wizard-2014-signature-spells-20', level: 20, step: 'timeline', kind: 'class-choice', title: '选择2个招牌法术', description: '从法术书中选择 2 个 3 环法术作为招牌法术：长休后可各免费施放一次，且不计入准备数量。', required: true, minSelections: 2, maxSelections: 2, optionIds: [], candidateKind: 'spellbook-level-3' },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'wizard')),
     ],
     spellcasting: { ruleset: '5e-2014', mode: 'spellbook', ability: 'int', startsAtLevel: 1, preparedFormula: 'ability-plus-level', cantripsKnownByLevel: wizardCantrips, spellbookSpellsByLevel: wizardSpellbookCounts, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-wizard') },
