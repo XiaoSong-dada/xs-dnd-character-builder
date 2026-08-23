@@ -338,7 +338,8 @@ describe('getDependencyImpact target-level 升级与降级', () => {
     })
     const impact = getDependencyImpact(draft, { kind: 'target-level', value: 2 })
     expect(impact.added).toEqual([])
-    expect(impact.spellUpdates).toEqual(['准备法术 3/4'])
+    // 戏法缺口提示随牧师戏法配置修复生效（1 级需选 3 个职业戏法）。
+    expect(impact.spellUpdates).toEqual(['准备法术 3/4', '戏法 0/3'])
   })
 
   it('法师（法术书）升级：spellUpdates 同时提示准备与法术书缺口', () => {

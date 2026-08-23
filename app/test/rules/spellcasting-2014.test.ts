@@ -98,6 +98,61 @@ describe('2014 half-caster spellcasting', () => {
   })
 })
 
+describe('2014 牧师/德鲁伊戏法数量（缺陷回归：车卡页无戏法选择入口）', () => {
+  it('牧师戏法数量按 PHB 表推进：1/4/10/20 级为 3/4/5/5', () => {
+    const config = rulesRepository.getClass('class-2014-cleric')?.spellcasting
+    expect(config).toBeDefined()
+    for (const [level, expected] of [[1, 3], [4, 4], [10, 5], [20, 5]] as const) {
+      expect(config && getRequiredCantripCount(draft({ classId: 'class-2014-cleric', targetLevel: level }), config), `cleric L${level}`).toBe(expected)
+    }
+  })
+
+  it('德鲁伊戏法数量按 PHB 表推进：1/4/10/20 级为 2/3/4/4', () => {
+    const config = rulesRepository.getClass('class-2014-druid')?.spellcasting
+    expect(config).toBeDefined()
+    for (const [level, expected] of [[1, 2], [4, 3], [10, 4], [20, 4]] as const) {
+      expect(config && getRequiredCantripCount(draft({ classId: 'class-2014-druid', targetLevel: level }), config), `druid L${level}`).toBe(expected)
+    }
+  })
+
+  it('圣武士、游侠 2014 规则无戏法：数量恒为 0', () => {
+    const paladin = rulesRepository.getClass('class-2014-paladin')?.spellcasting
+    expect(paladin && getRequiredCantripCount(draft(), paladin)).toBe(0)
+    const ranger = rulesRepository.getClass('class-2014-ranger')?.spellcasting
+    expect(ranger && getRequiredCantripCount(draft({ classId: 'class-2014-ranger' }), ranger)).toBe(0)
+  })
+
+  it('牧师选满职业戏法与准备法术后校验通过；缺选戏法不通过', () => {
+    const complete = draft({
+      classId: 'class-2014-cleric',
+      targetLevel: 1,
+      spellSelections: {
+        cantripIds: ['spell-2014-sacred-flame', 'spell-2014-guidance', 'spell-2014-light'],
+        knownSpellIds: [],
+        preparedSpellIds: ['spell-2014-bless', 'spell-2014-cure-wounds'],
+        spellbookSpellIds: [],
+      },
+    })
+    expect(validateSpellSelections(complete)).toBe(true)
+    const missingOne = { ...complete, spellSelections: { ...complete.spellSelections, cantripIds: ['spell-2014-sacred-flame', 'spell-2014-guidance'] } }
+    expect(validateSpellSelections(missingOne)).toBe(false)
+  })
+
+  it('牧师选非本职业戏法（火焰箭）校验不通过', () => {
+    const invalid = draft({
+      classId: 'class-2014-cleric',
+      targetLevel: 1,
+      spellSelections: {
+        cantripIds: ['spell-2014-fire-bolt', 'spell-2014-guidance', 'spell-2014-light'],
+        knownSpellIds: [],
+        preparedSpellIds: ['spell-2014-bless', 'spell-2014-cure-wounds'],
+        spellbookSpellIds: [],
+      },
+    })
+    expect(validateSpellSelections(invalid)).toBe(false)
+  })
+})
+
 describe('2014 spell slots', () => {
   const fullCasterIds = ['class-2014-bard', 'class-2014-cleric', 'class-2014-druid', 'class-2014-sorcerer', 'class-2014-wizard']
   const halfCasterIds = ['class-2014-paladin', 'class-2014-ranger']
