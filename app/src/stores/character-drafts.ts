@@ -128,6 +128,16 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     drafts.value[index] = { ...current, ...patch, updatedAt: new Date().toISOString() }
   }
 
+  /** 按草稿 id 更新（不改变 activeDraftId）：跑团助手等非车卡流程使用。 */
+  function updateDraftById(id: string, patch: Partial<Omit<CharacterDraft, 'id' | 'schemaVersion' | 'ruleset' | 'createdAt'>>): boolean {
+    const index = drafts.value.findIndex((draft) => draft.id === id)
+    if (index < 0) return false
+    const current = drafts.value[index]
+    if (!current) return false
+    drafts.value[index] = { ...current, ...patch, updatedAt: new Date().toISOString() }
+    return true
+  }
+
   function setStep(step: DraftStep): void {
     updateDraft({ currentStep: step })
   }
@@ -189,6 +199,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     closeActiveDraft,
     deleteDraft,
     updateDraft,
+    updateDraftById,
     setStep,
     saveSelection,
     invalidateSelections,
