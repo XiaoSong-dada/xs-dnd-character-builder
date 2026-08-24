@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import AddItemModal from '@/views/character-builder/components/AddItemModal.vue'
+import AddItemModal from '@/components/AddItemModal.vue'
 
 /** 弹窗通过 UiModal Teleport 到 body，操作统一走 document.body。 */
 function cardMains(): HTMLElement[] {

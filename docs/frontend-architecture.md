@@ -126,15 +126,13 @@ src/views/dice/
 职责较多的页面：
 
 ```text
-src/views/classes/
+src/views/session-assistant/
   index.vue
   hooks/
-    useClassesPage.ts
-    useClassSearch.ts
-    useClassFilter.ts
+    useSessionAssistantPage.ts
+    useSessionPanel.ts
   components/
-    ClassCard.vue
-  dictionary.ts
+    SessionPanel.vue
 ```
 
 该约定参考了成熟业务页面按表格、搜索、弹窗、工具栏等职责拆分私有 hooks 的实践，但本项目进一步要求入口 `index.vue` 完全收束为装配层。
@@ -207,7 +205,7 @@ src/App.vue
 src/router/router.ts
   -> src/layout/MainLayout.vue
   -> src/views/character-builder/index.vue（懒加载）
-  -> src/views/classes/index.vue（懒加载）
+  -> src/views/session-assistant/index.vue（懒加载）
   -> src/views/dice/index.vue（懒加载）
   -> src/views/profile/index.vue（懒加载）
   -> src/views/not-found/index.vue（懒加载）
@@ -231,12 +229,39 @@ src/layout/hooks/useBottomNavigation.ts
 
 ### 8.3 页面层（车卡页之外）
 
-职业、个人中心与 404 页面仍为「入口 `index.vue` + 页面私有 hooks」，无页面私有 `components`：
+个人中心与 404 页面仍为「入口 `index.vue` + 页面私有 hooks」，无页面私有 `components`：
 
 ```text
-src/views/classes/index.vue    -> src/views/classes/hooks/useClassesPage.ts
 src/views/profile/index.vue    -> src/views/profile/hooks/useProfilePage.ts
 src/views/not-found/index.vue  -> src/views/not-found/hooks/useNotFoundPage.ts（-> vue-router useRouter）
+```
+
+跑团助手（`/assistant`）为页面内聚模块（列表视图 ⇄ 局内面板视图）：
+
+```text
+src/views/session-assistant/index.vue
+  -> src/views/session-assistant/hooks/useSessionAssistantPage.ts
+  -> src/views/session-assistant/components/SessionPanel.vue
+  -> src/rules/derive.ts（deriveCharacterSummary，列表卡片摘要）
+  -> src/stores/session-assistant.ts（选中角色/页签，本地视图状态）
+
+src/views/session-assistant/hooks/useSessionAssistantPage.ts
+  -> src/stores/{character-drafts,session-assistant}
+  -> src/services/character-json.ts（CharacterImportError）
+
+src/views/session-assistant/hooks/useSessionPanel.ts
+  -> src/rules/{derive,repository,spellcasting,session-state}
+  -> src/services/session-state-storage.ts
+  -> src/stores/character-drafts.ts（updateDraftById：金币/物品写回）
+  -> src/types/{character,session-state}
+
+src/views/session-assistant/components/SessionPanel.vue
+  -> src/views/session-assistant/hooks/useSessionPanel.ts
+  -> src/components/{AddItemModal,AdjustItemModal}
+  -> src/components/ui/{ExpandableOptionCard,ListShell,StatTile,UiBadge,UiModal,UiTabs}
+  -> src/rules/{data/class-features-2014,data/feats-2014,data/subclass-features-2014,feats,repository,session-state,spellcasting,starting-equipment,timeline}
+  -> src/stores/session-assistant.ts（activeTab 持久化）
+  -> src/types/{character,rules,session-state}
 ```
 
 赛博骰娘页面为独立的页面内聚模块：
@@ -271,8 +296,9 @@ src/views/dice/workers/dicePhysics.worker.ts
 src/views/character-builder/index.vue
   -> src/views/character-builder/hooks/useCharacterBuilderPage.ts
   -> src/views/character-builder/steps.ts（STEP_ORDER / STEP_META）
-  -> src/views/character-builder/components/*（13 个步骤组件；FeatChoicePanel 由内部引用）
+  -> src/views/character-builder/components/*（步骤组件；FeatChoicePanel 由内部引用）
   -> src/features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
+  -> src/components/{AddItemModal,AdjustItemModal}（CharacterSheetStep 物品页签）
   -> src/components/ui/{BaseButton,ExpandableOptionCard,UiModal,UiNotice}
   -> src/types/character
 
@@ -306,7 +332,15 @@ src/features/quick-build/components/StepHeader.vue        -> src/components/ui/U
 src/features/quick-build/components/StickyActionBar.vue   -> src/components/ui/BaseButton
 
 src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
-  -> 无项目内 import，仅依赖全局 CSS 变量主题
+  -> 无项目内 import，仅依赖全局 CSS 变量主题（UiTabs 自 v0.7.0 支持 wrap 模式：固定宽度 + 换行）
+
+src/components/AddItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
+  -> src/components/ui/{ExpandableOptionCard,ListShell,UiModal}
+  -> src/rules/repository.ts
+  -> src/types/rules
+
+src/components/AdjustItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
+  -> src/components/ui/UiModal
 ```
 
 ### 8.6 stores / services / config
@@ -316,6 +350,9 @@ src/stores/character-drafts.ts
   -> src/rules/{derive,timeline,validate,spellcasting,starting-equipment}
   -> src/services/{character-json,draft-storage}
   -> src/types/character
+
+src/stores/session-assistant.ts（跑团助手视图状态：选中角色 id + 当前页签，localStorage 持久化）
+  -> src/stores/character-drafts.ts（草稿存在性校验，回退列表）
 
 src/services/character-json.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
@@ -340,6 +377,12 @@ src/features/character-export/build-export-data.ts
 src/services/draft-storage.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
   -> src/types/character
+
+src/services/session-state-storage.ts（跑团助手局内状态，独立 localStorage key）
+  -> src/types/session-state
+
+src/types/session-state.ts
+  -> 无项目内依赖（SessionState、13 项预置状态与力竭常量）
 
 src/services/dice-random.ts
   -> Web Crypto（可靠 uint32 随机源与拒绝采样）

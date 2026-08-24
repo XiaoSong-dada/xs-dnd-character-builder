@@ -58,7 +58,7 @@ src/main.ts
 
 ```text
 /character-builder
-/classes
+/assistant
 /dice
 /profile
 ```
@@ -70,7 +70,7 @@ src/main.ts
 | 功能 | 路径 |
 | --- | --- |
 | 辅助车卡 | `/character-builder` |
-| 职业介绍 | `/classes` |
+| 跑团助手 | `/assistant` |
 | 赛博骰子 | `/dice` |
 | 个人中心 | `/profile` |
 
@@ -83,7 +83,7 @@ src/main.ts
 ├─ MainLayout
 │  ├─ / -> redirect /character-builder
 │  ├─ /character-builder
-│  ├─ /classes
+│  ├─ /assistant
 │  ├─ /dice
 │  └─ /profile
 └─ /:pathMatch(.*)* -> 404（MainLayout 外）
@@ -213,7 +213,7 @@ Layout 顶部是否需要统一的标题栏？
 
 ```text
 辅助车卡 | D&D车卡辅助
-职业介绍 | D&D车卡辅助
+跑团助手 | D&D车卡辅助
 赛博骰子 | D&D车卡辅助
 个人中心 | D&D车卡辅助
 页面不存在 | D&D车卡辅助
@@ -244,7 +244,7 @@ Layout 顶部是否需要统一的标题栏？
 | 功能 | 图标语义 |
 | --- | --- |
 | 辅助车卡 | 剪贴板或角色卡 |
-| 职业介绍 | 打开的书 |
+| 跑团助手 | 打开的书 |
 | 赛博骰子 | 骰子 |
 | 个人中心 | 用户头像 |
 
@@ -329,7 +329,7 @@ src/layout/components/BottomNavigation.vue
 
 ```text
 src/views/character-builder/index.vue
-src/views/classes/index.vue
+src/views/session-assistant/index.vue
 src/views/dice/index.vue
 src/views/profile/index.vue
 src/views/not-found/index.vue
@@ -373,7 +373,7 @@ src/views/not-found/index.vue
 
 ```text
 src/views/character-builder/hooks/useCharacterBuilderPage.ts
-src/views/classes/hooks/useClassesPage.ts
+src/views/session-assistant/hooks/useSessionAssistantPage.ts
 src/views/dice/hooks/useDicePage.ts
 src/views/profile/hooks/useProfilePage.ts
 src/views/not-found/hooks/useNotFoundPage.ts
@@ -475,7 +475,7 @@ src/assets/icons/navigation.svg
 
 ```text
 character-builder
-classes
+session-assistant
 dice
 profile
 not-found
@@ -508,7 +508,7 @@ not-found
 
 - Router 继续使用 `createWebHistory(import.meta.env.BASE_URL)`。
 - 部署说明必须标明 SPA History 回退要求。
-- 直接访问或刷新 `/character-builder`、`/classes`、`/dice`、`/profile` 和任意前端 404 地址时，服务器都应返回应用入口，由 Vue Router 完成匹配。
+- 直接访问或刷新 `/character-builder`、`/assistant`、`/dice`、`/profile` 和任意前端 404 地址时，服务器都应返回应用入口，由 Vue Router 完成匹配。
 
 ### 问题 2
 
@@ -552,8 +552,8 @@ app/src/assets/icons/navigation.svg
 app/src/views/character-builder/index.vue
 app/src/views/character-builder/hooks/useCharacterBuilderPage.ts
 
-app/src/views/classes/index.vue
-app/src/views/classes/hooks/useClassesPage.ts
+app/src/views/session-assistant/index.vue
+app/src/views/session-assistant/hooks/useSessionAssistantPage.ts
 
 app/src/views/dice/index.vue
 app/src/views/dice/hooks/useDicePage.ts

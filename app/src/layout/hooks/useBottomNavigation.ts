@@ -1,6 +1,6 @@
 import { useRoute } from 'vue-router'
 
-export type PrimaryRouteName = 'character-builder' | 'classes' | 'dice' | 'profile'
+export type PrimaryRouteName = 'character-builder' | 'session-assistant' | 'dice' | 'profile'
 
 export interface BottomNavigationItem {
   readonly routeName: PrimaryRouteName
@@ -15,8 +15,8 @@ const navigationItems = [
     iconId: 'navigation-character-card',
   },
   {
-    routeName: 'classes',
-    label: '职业介绍',
+    routeName: 'session-assistant',
+    label: '跑团助手',
     iconId: 'navigation-classes',
   },
   {

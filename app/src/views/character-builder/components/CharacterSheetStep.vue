@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-import AddItemModal from './AddItemModal.vue'
-import AdjustItemModal from './AdjustItemModal.vue'
+import AddItemModal from '@/components/AddItemModal.vue'
+import AdjustItemModal from '@/components/AdjustItemModal.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
