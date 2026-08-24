@@ -131,6 +131,22 @@ export function restoreLastRest(state: SessionState): SessionState {
   }
 }
 
+/**
+ * 可施法环位列表：≥ 法术原始环级且可用 > 0 的环级（升环施法）。
+ * 戏法（spellLevel = 0）不消耗环位，返回空数组。
+ */
+export function getAvailableSlotLevels(
+  state: SessionState,
+  spellLevel: number,
+  slotLevels: readonly { level: number; count: number }[],
+): readonly number[] {
+  if (spellLevel < 1) return []
+  return slotLevels
+    .filter((slot) => slot.level >= spellLevel)
+    .filter((slot) => slot.count - (state.usedSpellSlots[slot.level] ?? 0) > 0)
+    .map((slot) => slot.level)
+}
+
 /** 读取时按当前最大 HP 钳制当前 HP（升级/重新编辑后最大 HP 可能变小）。 */
 export function clampCurrentHp(state: SessionState, maxHp: number): SessionState {
   const currentHp = Math.min(state.currentHp, maxHp)

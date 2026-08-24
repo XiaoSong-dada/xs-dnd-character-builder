@@ -81,16 +81,23 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   }
 
   // ---- 法术位 ----
+  /** 各环可用数（可用 = 总量 − 已用；展示层语义，内部仍存已用）。 */
+  const availableSlots = computed(() =>
+    Object.fromEntries(
+      spellSlots.value.map((slot) => [slot.level, Math.max(0, slot.count - (sessionState.value?.usedSpellSlots[slot.level] ?? 0))]),
+    ),
+  )
+
   function changeSpellSlot(level: number, delta: number): void {
     const state = ensureState()
     const maxForLevel = spellSlots.value.find((slot) => slot.level === level)?.count ?? 0
     const next = (state.usedSpellSlots[level] ?? 0) + delta
     if (next < 0) {
-      operationError.value = `${level}环法术位不能少于 0`
+      operationError.value = `${level}环法术位已全部恢复`
       return
     }
     if (next > maxForLevel) {
-      operationError.value = `${level}环法术位不能超过 ${maxForLevel}`
+      operationError.value = `${level}环法术位已用尽`
       return
     }
     operationError.value = ''
@@ -170,6 +177,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     maxHp,
     spellSlots,
     sessionState,
+    availableSlots,
     totalGold,
     changeHp,
     changeSpellSlot,

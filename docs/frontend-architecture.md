@@ -243,9 +243,10 @@ src/views/session-assistant/index.vue
   -> src/views/session-assistant/hooks/useSessionAssistantPage.ts
   -> src/views/session-assistant/components/SessionPanel.vue
   -> src/rules/derive.ts（deriveCharacterSummary，列表卡片摘要）
+  -> src/stores/session-assistant.ts（选中角色/页签，本地视图状态）
 
 src/views/session-assistant/hooks/useSessionAssistantPage.ts
-  -> src/stores/character-drafts.ts
+  -> src/stores/{character-drafts,session-assistant}
   -> src/services/character-json.ts（CharacterImportError）
 
 src/views/session-assistant/hooks/useSessionPanel.ts
@@ -257,9 +258,10 @@ src/views/session-assistant/hooks/useSessionPanel.ts
 src/views/session-assistant/components/SessionPanel.vue
   -> src/views/session-assistant/hooks/useSessionPanel.ts
   -> src/components/{AddItemModal,AdjustItemModal}
-  -> src/components/ui/{ListShell,StatTile,UiBadge,UiModal,UiTabs}
-  -> src/rules/{data/feats-2014,repository,starting-equipment}
-  -> src/types/{character,session-state}
+  -> src/components/ui/{ExpandableOptionCard,ListShell,StatTile,UiBadge,UiModal,UiTabs}
+  -> src/rules/{data/class-features-2014,data/feats-2014,data/subclass-features-2014,feats,repository,session-state,spellcasting,starting-equipment,timeline}
+  -> src/stores/session-assistant.ts（activeTab 持久化）
+  -> src/types/{character,rules,session-state}
 ```
 
 赛博骰娘页面为独立的页面内聚模块：
@@ -330,7 +332,7 @@ src/features/quick-build/components/StepHeader.vue        -> src/components/ui/U
 src/features/quick-build/components/StickyActionBar.vue   -> src/components/ui/BaseButton
 
 src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
-  -> 无项目内 import，仅依赖全局 CSS 变量主题
+  -> 无项目内 import，仅依赖全局 CSS 变量主题（UiTabs 自 v0.7.0 支持 wrap 模式：固定宽度 + 换行）
 
 src/components/AddItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
   -> src/components/ui/{ExpandableOptionCard,ListShell,UiModal}
@@ -348,6 +350,9 @@ src/stores/character-drafts.ts
   -> src/rules/{derive,timeline,validate,spellcasting,starting-equipment}
   -> src/services/{character-json,draft-storage}
   -> src/types/character
+
+src/stores/session-assistant.ts（跑团助手视图状态：选中角色 id + 当前页签，localStorage 持久化）
+  -> src/stores/character-drafts.ts（草稿存在性校验，回退列表）
 
 src/services/character-json.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点

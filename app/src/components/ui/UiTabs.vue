@@ -1,10 +1,17 @@
 <script setup lang="ts">
-defineProps<{ items: readonly { id: string; label: string }[]; modelValue: string }>()
+withDefaults(defineProps<{
+  items: readonly { id: string; label: string }[]
+  modelValue: string
+  /** wrap 模式：tab 固定最小宽度、超宽换行（用于页签较多的页面）；默认横向滚动。 */
+  wrap?: boolean
+}>(), {
+  wrap: false,
+})
 defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>
 
 <template>
-  <div class="ui-tabs" role="tablist">
+  <div class="ui-tabs" :class="{ 'ui-tabs--wrap': wrap }" role="tablist">
     <button
       v-for="item in items"
       :key="item.id"
@@ -41,6 +48,19 @@ defineEmits<{ 'update:modelValue': [value: string] }>()
     border-bottom-color: var(--color-primary);
     color: var(--color-primary);
     font-weight: 700;
+  }
+
+  &--wrap {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding: 0.5rem 0.75rem 0;
+    gap: 0.25rem;
+
+    button {
+      flex: 0 0 auto;
+      min-width: 5.5rem;
+      padding: 0 0.75rem;
+    }
   }
 }
 </style>

@@ -10,10 +10,18 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
+import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
+import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
+import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
+import { getAvailableSlotLevels } from '@/rules/session-state'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
+import { getMaximumSpellLevel, getSelectedSpellIds } from '@/rules/spellcasting'
+import { buildTimeline } from '@/rules/timeline'
+import { useSessionAssistantStore } from '@/stores/session-assistant'
 import { DEBUFF_STATUSES, EXHAUSTION_DESCRIPTION } from '@/types/session-state'
-import type { CharacterDraft, InventoryEntry } from '@/types/character'
+import type { AbilityKey, CharacterDraft, InventoryEntry } from '@/types/character'
+import type { SpellRule } from '@/types/rules'
 import { useSessionPanel } from '../hooks/useSessionPanel'
 
 const props = defineProps<{ draft: CharacterDraft }>()
@@ -22,11 +30,18 @@ const panel = useSessionPanel(computed(() => props.draft))
 
 const tabs = [
   { id: 'overview', label: '总览' },
+  { id: 'features', label: '能力' },
   { id: 'combat', label: '战斗' },
+  { id: 'spells', label: '法术' },
   { id: 'items', label: '物品' },
   { id: 'status', label: '状态' },
 ] as const
-const activeTab = ref<string>('overview')
+// 页签状态持久化（切页/刷新保持，决策 19）
+const viewStore = useSessionAssistantStore()
+const activeTab = computed({
+  get: () => viewStore.activeTab,
+  set: (tab: string) => viewStore.setActiveTab(tab),
+})
 
 // ---- 输入量（空输入按 1）----
 const hpInput = ref('')
@@ -124,6 +139,96 @@ function inventorySourceLabel(entry: InventoryEntry): string {
 const abilityKeys = Object.keys(ABILITY_LABELS) as Array<keyof typeof ABILITY_LABELS>
 const equippedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity > 0))
 const carriedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity === 0))
+
+// ---- 能力页签（R5B，复用角色卡同套组件与规则函数）----
+function abilityLabel(key: string): string {
+  return ABILITY_LABELS[key as AbilityKey] ?? key
+}
+function skillLabel(skillId: string): string {
+  return rulesRepository.getOption(skillId)?.name ?? skillId
+}
+const className = computed(() => props.draft.classId ? (rulesRepository.getClass(props.draft.classId)?.name ?? '') : '')
+const classFeatures = computed(() =>
+  props.draft.classId
+    ? getClassFeatures2014(props.draft.classId).filter((feature) => feature.level <= props.draft.targetLevel)
+    : [],
+)
+const subclassName = computed(() => props.draft.subclassId ? (rulesRepository.getSubclass(props.draft.subclassId)?.name ?? '') : '')
+const subclassFeatures = computed(() =>
+  props.draft.subclassId
+    ? getSubclassFeatures2014(props.draft.subclassId).filter((feature) => feature.level <= props.draft.targetLevel)
+    : [],
+)
+const featAndAsiEntries = computed(() => {
+  const draft = props.draft
+  if (!draft.classId) return []
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const entries: { id: string; level: number; label: string; detail?: string }[] = []
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt) continue
+    const checkpoint = timeline.find((item) => item.id === selection.checkpointId)
+    for (const optionId of selection.optionIds) {
+      if (optionId.startsWith('feat-')) {
+        const feat = rulesRepository.feats.find((item) => item.id === optionId)
+        if (feat) entries.push({ id: feat.id, level: checkpoint?.level ?? 1, label: `${feat.name} · ${feat.englishName}`, detail: feat.detail })
+      } else if (optionId.startsWith('asi-')) {
+        const improvement = decodeAbilityImprovement(optionId)
+        if (!improvement) continue
+        const text = improvement.mode === 'single'
+          ? `属性提升（${ABILITY_LABELS[improvement.abilities[0]]}+2）`
+          : `属性提升（${improvement.abilities.map((ability) => `${ABILITY_LABELS[ability]}+1`).join('、')}）`
+        entries.push({ id: optionId, level: checkpoint?.level ?? 1, label: text })
+      }
+    }
+  }
+  return entries.sort((left, right) => left.level - right.level)
+})
+
+// ---- 法术页签（R5A）----
+const spellcastingConfig = computed(() => rulesRepository.getSpellcastingConfig(props.draft))
+const preparedOrKnownLabel = computed(() =>
+  spellcastingConfig.value?.mode === 'prepared' || spellcastingConfig.value?.mode === 'spellbook' ? '已准备' : '已掌握',
+)
+const selectedSpells = computed(() => {
+  const config = spellcastingConfig.value
+  if (!config) return []
+  return getSelectedSpellIds(props.draft, config)
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is SpellRule => Boolean(spell))
+})
+const cantripSpells = computed(() =>
+  props.draft.spellSelections.cantripIds
+    .map((id) => rulesRepository.getSpell(id))
+    .filter((spell): spell is SpellRule => Boolean(spell)),
+)
+const spellGroups = computed(() => {
+  const config = spellcastingConfig.value
+  if (!config) return []
+  const maximumLevel = getMaximumSpellLevel(config, props.draft.targetLevel)
+  return Array.from({ length: maximumLevel }, (_, index) => index + 1)
+    .map((level) => ({ level, spells: selectedSpells.value.filter((spell) => spell.level === level) }))
+    .filter((group) => group.spells.length)
+})
+function slotCount(level: number): number {
+  return panel.spellSlots.value.find((slot) => slot.level === level)?.count ?? 0
+}
+function castableLevels(spell: SpellRule): readonly number[] {
+  const state = panel.sessionState.value
+  if (!state) return []
+  return getAvailableSlotLevels(state, spell.level, panel.spellSlots.value)
+}
+const castSpell = ref<SpellRule>()
+const castNotice = ref('')
+function openCastModal(spell: SpellRule): void {
+  castSpell.value = spell
+}
+function confirmCast(level: number): void {
+  if (!castSpell.value) return
+  // 内部已用 +1 = 可用 −1（施法消耗）
+  panel.changeSpellSlot(level, 1)
+  castNotice.value = `已使用 ${level} 环法术位`
+  castSpell.value = undefined
+}
 </script>
 
 <template>
@@ -203,7 +308,7 @@ const carriedEntries = computed(() => props.draft.inventory.filter((entry) => en
       </div>
     </section>
 
-    <UiTabs v-model="activeTab" :items="tabs" />
+    <UiTabs v-model="activeTab" wrap :items="tabs" />
 
     <div v-if="activeTab === 'overview'" class="session-panel__tab">
       <div class="session-panel__stats">
@@ -213,6 +318,84 @@ const carriedEntries = computed(() => props.draft.inventory.filter((entry) => en
         <StatTile label="熟练加值" :value="`+${panel.derived.value.proficiencyBonus.value}`" :note="`${draft.targetLevel}级角色`" />
         <StatTile v-for="key in abilityKeys" :key="key" :label="ABILITY_LABELS[key]" :value="panel.derived.value.abilities[key]" :note="`${panel.derived.value.modifiers[key] >= 0 ? '+' : ''}${panel.derived.value.modifiers[key]}`" />
       </div>
+    </div>
+
+    <div v-else-if="activeTab === 'features'" class="session-panel__tab">
+      <section class="session-panel__section">
+        <h3>豁免</h3>
+        <div class="session-panel__stats">
+          <StatTile
+            v-for="(value, key) in panel.derived.value.savingThrows"
+            :key="key"
+            :label="abilityLabel(String(key))"
+            :value="value.value >= 0 ? `+${value.value}` : `${value.value}`"
+            :note="value.sources.map((source) => source.label).join(' + ')"
+          />
+        </div>
+      </section>
+      <section class="session-panel__section">
+        <h3>技能</h3>
+        <div class="session-panel__stats">
+          <StatTile
+            v-for="(value, key) in panel.derived.value.skills"
+            :key="key"
+            :label="skillLabel(String(key))"
+            :value="value.value >= 0 ? `+${value.value}` : `${value.value}`"
+            :note="value.sources.map((source) => source.detail).join(' · ')"
+          />
+        </div>
+      </section>
+      <section class="session-panel__section">
+        <h3>职业特性{{ className ? ` · ${className}` : '' }}</h3>
+        <ListShell v-if="classFeatures.length">
+          <ExpandableOptionCard
+            v-for="feature in classFeatures"
+            :key="feature.id"
+            :title="feature.name"
+            :description="`${feature.level}级 · ${feature.englishName}`"
+            expanded-label="特性详情"
+          >
+            <template #suffix>
+              <em v-if="feature.requiresChoice" class="session-panel__feature-choice">需选择</em>
+            </template>
+            <template #expanded>{{ feature.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+        <p v-else class="session-panel__empty">该职业在当前等级暂无已登记特性。</p>
+      </section>
+      <section class="session-panel__section">
+        <h3>子职特性{{ subclassName ? ` · ${subclassName}` : '' }}</h3>
+        <ListShell v-if="subclassFeatures.length">
+          <ExpandableOptionCard
+            v-for="feature in subclassFeatures"
+            :key="feature.id"
+            :title="feature.name"
+            :description="`${feature.level}级 · ${feature.englishName}`"
+            expanded-label="特性详情"
+          >
+            <template #suffix>
+              <em v-if="feature.requiresChoice" class="session-panel__feature-choice">需选择</em>
+            </template>
+            <template #expanded>{{ feature.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+        <p v-else-if="subclassName" class="session-panel__empty">该子职在当前等级暂无已登记特性。</p>
+        <p v-else class="session-panel__empty">尚未选择子职，完成时间线步骤后这里会展示子职特性。</p>
+      </section>
+      <section v-if="featAndAsiEntries.length" class="session-panel__section">
+        <h3>专长与属性提升</h3>
+        <ListShell>
+          <ExpandableOptionCard
+            v-for="entry in featAndAsiEntries"
+            :key="entry.id"
+            :title="entry.label"
+            :description="`${entry.level}级`"
+            expanded-label="效果"
+          >
+            <template v-if="entry.detail" #expanded>{{ entry.detail }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+      </section>
     </div>
 
     <div v-else-if="activeTab === 'combat'" class="session-panel__tab">
@@ -240,13 +423,61 @@ const carriedEntries = computed(() => props.draft.inventory.filter((entry) => en
         <h3>法术位</h3>
         <div v-if="panel.spellSlots.value.length" class="session-panel__slots">
           <div v-for="slot in panel.spellSlots.value" :key="slot.level" class="session-panel__slot-row">
-            <span>{{ slot.pact ? `契约位（${slot.level}环）` : `${slot.level}环` }}：{{ panel.sessionState.value?.usedSpellSlots[slot.level] ?? 0 }} / {{ slot.count }}</span>
-            <button type="button" class="session-panel__step" :aria-label="`减少${slot.level}环法术位`" @click="panel.changeSpellSlot(slot.level, -1)">−</button>
-            <button type="button" class="session-panel__step" :aria-label="`增加${slot.level}环法术位`" @click="panel.changeSpellSlot(slot.level, 1)">＋</button>
+            <span>{{ slot.pact ? `契约位（${slot.level}环）` : `${slot.level}环` }}：可用 {{ panel.availableSlots.value[slot.level] ?? slot.count }} / {{ slot.count }}</span>
+            <button type="button" class="session-panel__step" :aria-label="`使用${slot.level}环法术位`" @click="panel.changeSpellSlot(slot.level, 1)">−</button>
+            <button type="button" class="session-panel__step" :aria-label="`恢复${slot.level}环法术位`" @click="panel.changeSpellSlot(slot.level, -1)">＋</button>
           </div>
         </div>
         <p v-else class="session-panel__empty">该角色没有法术位</p>
       </section>
+    </div>
+
+    <div v-else-if="activeTab === 'spells'" class="session-panel__tab">
+      <p v-if="castNotice" class="session-panel__notice" role="status">{{ castNotice }}</p>
+      <section v-if="cantripSpells.length" class="session-panel__section">
+        <h3>戏法</h3>
+        <ListShell>
+          <ExpandableOptionCard
+            v-for="spell in cantripSpells"
+            :key="spell.id"
+            :title="spell.name"
+            :description="spell.englishName"
+            expanded-label="法术效果"
+          >
+            <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+      </section>
+      <section v-for="group in spellGroups" :key="group.level" class="session-panel__section">
+        <h3>{{ group.level }}环 · {{ preparedOrKnownLabel }} {{ group.spells.length }}</h3>
+        <div class="session-panel__slot-row">
+          <span>法术位 可用 {{ panel.availableSlots.value[group.level] ?? slotCount(group.level) }} / {{ slotCount(group.level) }}</span>
+          <button type="button" class="session-panel__step" :aria-label="`使用${group.level}环法术位`" @click="panel.changeSpellSlot(group.level, 1)">−</button>
+          <button type="button" class="session-panel__step" :aria-label="`恢复${group.level}环法术位`" @click="panel.changeSpellSlot(group.level, -1)">＋</button>
+        </div>
+        <ListShell>
+          <ExpandableOptionCard
+            v-for="spell in group.spells"
+            :key="spell.id"
+            :title="spell.name"
+            :description="`${spell.level}环 · ${spell.englishName}`"
+            expanded-label="法术效果"
+          >
+            <template #suffix>
+              <button
+                type="button"
+                class="session-panel__adjust"
+                :disabled="!castableLevels(spell).length"
+                @click="openCastModal(spell)"
+              >
+                施法
+              </button>
+            </template>
+            <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+      </section>
+      <p v-if="!cantripSpells.length && !spellGroups.length" class="session-panel__empty">暂无已准备法术</p>
     </div>
 
     <div v-else-if="activeTab === 'items'" class="session-panel__tab">
@@ -324,6 +555,22 @@ const carriedEntries = computed(() => props.draft.inventory.filter((entry) => en
       <p v-if="detailStatus">{{ detailStatus.description }}</p>
     </UiModal>
 
+    <UiModal :open="Boolean(castSpell)" :title="castSpell ? `施放 ${castSpell.name}` : ''" @close="castSpell = undefined">
+      <p class="session-panel__cast-hint">选择消耗的法术位（支持升环施法）：</p>
+      <div class="session-panel__cast-levels">
+        <button
+          v-for="level in castSpell ? castableLevels(castSpell) : []"
+          :key="level"
+          type="button"
+          class="session-panel__cast-level"
+          @click="confirmCast(level)"
+        >
+          消耗 {{ level }} 环法术位
+        </button>
+        <p v-if="castSpell && !castableLevels(castSpell).length" class="session-panel__empty">没有可用的法术位。</p>
+      </div>
+    </UiModal>
+
     <UiModal :open="showLongRestConfirm" title="长休息" @close="showLongRestConfirm = false">
       <p>将恢复全部生命值与法术位，清除所有状态并归零力竭层数。此操作可撤回。</p>
       <div class="session-panel__modal-actions">
@@ -357,13 +604,23 @@ const carriedEntries = computed(() => props.draft.inventory.filter((entry) => en
 
   &__back {
     align-self: flex-start;
-    min-height: 2.75rem;
-    padding: 0 0.75rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: -0.5rem;
+    padding: 0.5rem;
+    border: 0;
+    border-radius: var(--radius-sm);
     color: var(--color-primary);
+    background: transparent;
+    font-size: 0.8rem;
     font-weight: 700;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
   }
 
   &__identity {
@@ -549,6 +806,34 @@ const carriedEntries = computed(() => props.draft.inventory.filter((entry) => en
     font-weight: 700;
   }
 
+  &__notice {
+    margin: 0 0 0.5rem;
+    color: var(--color-primary);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  &__cast-hint {
+    margin: 0 0 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+  }
+
+  &__cast-levels {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  &__cast-level {
+    min-height: 2.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-primary);
+    font-weight: 700;
+  }
+
   &__adjust {
     align-self: center;
     min-height: 2.75rem;
@@ -559,6 +844,11 @@ const carriedEntries = computed(() => props.draft.inventory.filter((entry) => en
     color: var(--color-primary);
     font-size: 0.75rem;
     font-weight: 700;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
   }
 
   &__add-item {
@@ -576,6 +866,13 @@ const carriedEntries = computed(() => props.draft.inventory.filter((entry) => en
     margin: 0;
     color: var(--color-text-muted);
     font-size: 0.8rem;
+  }
+
+  &__feature-choice {
+    color: var(--color-primary);
+    font-style: normal;
+    font-size: 0.75rem;
+    font-weight: 700;
   }
 
   &__slot-row {

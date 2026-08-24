@@ -8,6 +8,7 @@ import {
   applySpellSlotChange,
   clampCurrentHp,
   createInitialSessionState,
+  getAvailableSlotLevels,
   restoreLastRest,
   toggleDebuff,
 } from '@/rules/session-state'
@@ -189,5 +190,42 @@ describe('session-state 升级钳制', () => {
     const state: SessionState = { ...baseState, currentHp: 50 }
     expect(clampCurrentHp(state, 40).currentHp).toBe(40)
     expect(clampCurrentHp(state, 60).currentHp).toBe(50)
+  })
+})
+
+describe('session-state 可施法环位（升环）', () => {
+  const slots = [
+    { level: 1, count: 4 },
+    { level: 2, count: 3 },
+    { level: 3, count: 3 },
+    { level: 4, count: 3 },
+  ]
+
+  it('返回 ≥ 法术原始环级且可用 > 0 的环位', () => {
+    const state: SessionState = { ...baseState, usedSpellSlots: { 2: 3, 4: 1 } }
+    // 3 环法术：可用 3 环 3 个、4 环 2 个（升环）
+    expect(getAvailableSlotLevels(state, 3, slots)).toEqual([3, 4])
+  })
+
+  it('原始环位用尽时仍可升环施放', () => {
+    const state: SessionState = { ...baseState, usedSpellSlots: { 3: 3 } }
+    expect(getAvailableSlotLevels(state, 3, slots)).toEqual([4])
+  })
+
+  it('无可用环位时返回空数组', () => {
+    const state: SessionState = { ...baseState, usedSpellSlots: { 3: 3, 4: 3 } }
+    expect(getAvailableSlotLevels(state, 3, slots)).toEqual([])
+  })
+
+  it('戏法（0 环）不消耗环位，返回空数组', () => {
+    expect(getAvailableSlotLevels(baseState, 0, slots)).toEqual([])
+  })
+
+  it('契约法术位并入对应环级参与施法', () => {
+    const pactSlots = [{ level: 5, count: 2 }]
+    const state: SessionState = { ...baseState, usedSpellSlots: { 5: 1 } }
+    expect(getAvailableSlotLevels(state, 3, pactSlots)).toEqual([5])
+    const exhausted: SessionState = { ...baseState, usedSpellSlots: { 5: 2 } }
+    expect(getAvailableSlotLevels(exhausted, 5, pactSlots)).toEqual([])
   })
 })
