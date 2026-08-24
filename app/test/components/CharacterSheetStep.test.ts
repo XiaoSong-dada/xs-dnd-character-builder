@@ -904,6 +904,81 @@ describe('CharacterSheetStep 物品添加与金币调整', () => {
     expect(wrapper.text()).toContain('请输入整数金币数')
     expect(wrapper.emitted('changeAdventureGold')).toHaveLength(3)
   })
+
+  it('金币面板「减少」按钮按输入值扣减，可减到 0', async () => {
+    const itemDraft: CharacterDraft = { ...draft, currency: { ...draft.currency, gp: 50 } }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: itemDraft, derived: deriveCharacter(itemDraft) },
+      attachTo: document.body,
+    })
+    await wrapper.get('[role="tab"]:nth-child(5)').trigger('click')
+    const input = wrapper.get('[aria-label="金币调整数值"]')
+    const addButton = () => wrapper.findAll('.character-sheet__coin-actions button').find((button) => button.text() === '添加')!
+    const decreaseButton = () => wrapper.findAll('.character-sheet__coin-actions button').find((button) => button.text() === '减少')!
+    // 模拟父组件把新冒险净增金币回写为 props（真实场景由 store.updateDraft 回传）。
+    const syncProps = async (adventureGold: number) => {
+      const next = { ...itemDraft, adventureGold }
+      await wrapper.setProps({ draft: next })
+    }
+
+    // 先添加净增 10（总额 60）。
+    await input.setValue('10')
+    await addButton().trigger('click')
+    expect(wrapper.emitted('changeAdventureGold')![0][0]).toBe(10)
+    await syncProps(10)
+
+    // 「减少」5：净增 10 → 5（总额 55）。
+    await input.setValue('5')
+    await decreaseButton().trigger('click')
+    expect(wrapper.emitted('changeAdventureGold')![1][0]).toBe(5)
+    await syncProps(5)
+
+    // 「减少」输入 0：不产生变化，正常完成不报错。
+    await input.setValue('0')
+    await decreaseButton().trigger('click')
+    expect(wrapper.emitted('changeAdventureGold')![2][0]).toBe(5)
+    await syncProps(5)
+
+    // 「减少」5：净增 5 → 0（总额 = 起始金币 50），不报错。
+    await input.setValue('5')
+    await decreaseButton().trigger('click')
+    expect(wrapper.emitted('changeAdventureGold')![3][0]).toBe(0)
+    expect(wrapper.text()).not.toContain('金币不能为负')
+  })
+
+  it('金币面板「减少」按钮拒绝负数总额、非整数与空输入', async () => {
+    const itemDraft: CharacterDraft = { ...draft, currency: { ...draft.currency, gp: 0 } }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: itemDraft, derived: deriveCharacter(itemDraft) },
+      attachTo: document.body,
+    })
+    await wrapper.get('[role="tab"]:nth-child(5)').trigger('click')
+    const input = wrapper.get('[aria-label="金币调整数值"]')
+    const decreaseButton = () => wrapper.findAll('.character-sheet__coin-actions button').find((button) => button.text() === '减少')!
+    const syncProps = async (adventureGold: number) => {
+      const next = { ...itemDraft, adventureGold }
+      await wrapper.setProps({ draft: next })
+    }
+    await syncProps(5) // 净增 5（总额 55）
+
+    // 扣减超过净增 → 总额为负被拒并提示。
+    await input.setValue('10')
+    await decreaseButton().trigger('click')
+    expect(wrapper.text()).toContain('金币不能为负')
+    expect(wrapper.emitted('changeAdventureGold')).toBeUndefined()
+
+    // 非整数被拒。
+    await input.setValue('1.5')
+    await decreaseButton().trigger('click')
+    expect(wrapper.text()).toContain('请输入整数金币数')
+    expect(wrapper.emitted('changeAdventureGold')).toBeUndefined()
+
+    // 空输入被拒。
+    await input.setValue('')
+    await decreaseButton().trigger('click')
+    expect(wrapper.text()).toContain('请输入整数金币数')
+    expect(wrapper.emitted('changeAdventureGold')).toBeUndefined()
+  })
 })
 
 describe('CharacterSheetStep 物品数量调整', () => {
@@ -936,6 +1011,12 @@ describe('CharacterSheetStep 物品数量调整', () => {
 
   function bodyButton(text: string): HTMLButtonElement | undefined {
     return Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.trim() === text)
+  }
+
+  /** 限定在弹层（.ui-modal）内查找按钮，避免与页面其他同名按钮（如金币面板「减少」）混淆。 */
+  function modalButton(text: string): HTMLButtonElement | undefined {
+    return Array.from(document.body.querySelectorAll<HTMLButtonElement>('.ui-modal button'))
       .find((button) => button.textContent?.trim() === text)
   }
 
@@ -974,7 +1055,7 @@ describe('CharacterSheetStep 物品数量调整', () => {
     await openAdjust(wrapper, '长剑')
     setCount('2')
     await vi.advanceTimersByTimeAsync(0)
-    bodyButton('减少')!.click()
+    modalButton('减少')!.click()
 
     const emitted = wrapper.emitted('changeInventory')
     expect(emitted).toHaveLength(1)
@@ -989,7 +1070,7 @@ describe('CharacterSheetStep 物品数量调整', () => {
     await openAdjust(wrapper, '长剑')
     setCount('2')
     await vi.advanceTimersByTimeAsync(0)
-    bodyButton('增加')!.click()
+    modalButton('增加')!.click()
 
     const inventory = wrapper.emitted('changeInventory')![0][0] as readonly { itemId: string; quantity: number; equippedQuantity: number }[]
     const longsword = inventory.find((entry) => entry.itemId === 'longsword')
@@ -1011,7 +1092,7 @@ describe('CharacterSheetStep 物品数量调整', () => {
     bodyButton('取消')!.click()
     await vi.advanceTimersByTimeAsync(0)
     expect(wrapper.emitted('changeInventory')).toBeUndefined()
-    expect(bodyButton('减少')).toBeTruthy()
+    expect(modalButton('减少')).toBeTruthy()
 
     bodyButton('删除全部')!.click()
     await vi.advanceTimersByTimeAsync(0)
@@ -1026,7 +1107,7 @@ describe('CharacterSheetStep 物品数量调整', () => {
     await openAdjust(wrapper, '长剑')
     setCount('3')
     await vi.advanceTimersByTimeAsync(0)
-    bodyButton('减少')!.click()
+    modalButton('减少')!.click()
     await vi.advanceTimersByTimeAsync(0)
 
     // 等价于删除整条：进入确认，不直接 emit。
@@ -1043,8 +1124,8 @@ describe('CharacterSheetStep 物品数量调整', () => {
     await openAdjust(wrapper, '长剑')
     setCount('0')
     await vi.advanceTimersByTimeAsync(0)
-    expect(bodyButton('减少')!.disabled).toBe(true)
-    expect(bodyButton('增加')!.disabled).toBe(true)
+    expect(modalButton('减少')!.disabled).toBe(true)
+    expect(modalButton('增加')!.disabled).toBe(true)
   })
 })
 

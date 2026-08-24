@@ -294,7 +294,7 @@ function inventorySourceLabel(entry: InventoryEntry): string {
 /** 金币调整：操作冒险净增金币（adventureGold），持有总额 = currency.gp + adventureGold。 */
 const currencyInput = ref('')
 const currencyError = ref('')
-function applyCurrency(mode: 'add' | 'set'): void {
+function applyCurrency(mode: 'add' | 'set' | 'decrease'): void {
   const raw = currencyInput.value.trim()
   if (!/^-?\d+$/.test(raw)) {
     currencyError.value = '请输入整数金币数'
@@ -302,7 +302,12 @@ function applyCurrency(mode: 'add' | 'set'): void {
   }
   const value = Number(raw)
   const startingGold = props.draft.currency.gp
-  const nextGold = mode === 'add' ? props.draft.adventureGold + value : value - startingGold
+  // decrease 对输入值取绝对值作为扣减量（手机端无需输入负号）；输入 0 不产生变化。
+  const nextGold = mode === 'add'
+    ? props.draft.adventureGold + value
+    : mode === 'set'
+      ? value - startingGold
+      : props.draft.adventureGold - Math.abs(value)
   if (startingGold + nextGold < 0) {
     currencyError.value = '金币不能为负'
     return
@@ -721,8 +726,9 @@ function handleExportPdf(): void {
           <strong>{{ draft.currency.gp + draft.adventureGold }} GP</strong>
         </header>
         <div class="character-sheet__coin-actions">
-          <input v-model="currencyInput" type="text" inputmode="numeric" placeholder="输入金币数（添加可为负）" aria-label="金币调整数值" />
+          <input v-model="currencyInput" type="text" inputmode="numeric" placeholder="输入金币数" aria-label="金币调整数值" />
           <button type="button" @click="applyCurrency('add')">添加</button>
+          <button type="button" @click="applyCurrency('decrease')">减少</button>
           <button type="button" @click="applyCurrency('set')">设置</button>
         </div>
         <p v-if="currencyError" class="character-sheet__coin-error">{{ currencyError }}</p>
@@ -913,7 +919,7 @@ function handleExportPdf(): void {
 
   &__coin-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     gap: 0.5rem;
 
     input {
