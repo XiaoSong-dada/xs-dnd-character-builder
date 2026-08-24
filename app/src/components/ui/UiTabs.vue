@@ -11,7 +11,7 @@ defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>
 
 <template>
-  <div class="ui-tabs flex-between" :class="{ 'ui-tabs--wrap': wrap }" role="tablist">
+  <div class="ui-tabs flex-around" :class="{ 'ui-tabs--wrap': wrap }" role="tablist">
     <button
       v-for="item in items"
       :key="item.id"
