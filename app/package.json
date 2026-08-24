@@ -1,7 +1,7 @@
 {
   "name": "xs-dnd-character-builder",
   "private": true,
-  "version": "0.5.2",
+  "version": "0.6.0",
   "license": "MIT",
   "type": "module",
   "scripts": {
