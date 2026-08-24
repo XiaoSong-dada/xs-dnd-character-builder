@@ -34,10 +34,12 @@ const tabs = [
   { id: 'combat', label: '战斗' },
   { id: 'spells', label: '法术' },
   { id: 'items', label: '物品' },
-  { id: 'status', label: '状态' },
 ] as const
-// 页签状态持久化（切页/刷新保持，决策 19）
+// 页签状态持久化（切页/刷新保持，决策 19）；旧数据中的已移除页签（如 status）回退总览。
 const viewStore = useSessionAssistantStore()
+if (!tabs.some((item) => item.id === viewStore.activeTab)) {
+  viewStore.setActiveTab('overview')
+}
 const activeTab = computed({
   get: () => viewStore.activeTab,
   set: (tab: string) => viewStore.setActiveTab(tab),
@@ -311,13 +313,38 @@ function confirmCast(level: number): void {
     <UiTabs v-model="activeTab" wrap :items="tabs" />
 
     <div v-if="activeTab === 'overview'" class="session-panel__tab">
-      <div class="session-panel__stats">
-        <StatTile label="护甲等级" :value="panel.derived.value.armorClass.value" :note="panel.derived.value.armorClass.sources.map((item) => item.label).join(' + ')" />
-        <StatTile label="先攻" :value="panel.derived.value.initiative.value >= 0 ? `+${panel.derived.value.initiative.value}` : `${panel.derived.value.initiative.value}`" note="敏捷调整值" />
-        <StatTile label="速度" :value="`${panel.derived.value.speed.value}尺`" :note="panel.derived.value.speed.sources[0]?.detail" />
-        <StatTile label="熟练加值" :value="`+${panel.derived.value.proficiencyBonus.value}`" :note="`${draft.targetLevel}级角色`" />
-        <StatTile v-for="key in abilityKeys" :key="key" :label="ABILITY_LABELS[key]" :value="panel.derived.value.abilities[key]" :note="`${panel.derived.value.modifiers[key] >= 0 ? '+' : ''}${panel.derived.value.modifiers[key]}`" />
-      </div>
+      <section class="session-panel__section">
+        <div class="session-panel__stats">
+          <StatTile label="护甲等级" :value="panel.derived.value.armorClass.value" :note="panel.derived.value.armorClass.sources.map((item) => item.label).join(' + ')" />
+          <StatTile label="先攻" :value="panel.derived.value.initiative.value >= 0 ? `+${panel.derived.value.initiative.value}` : `${panel.derived.value.initiative.value}`" note="敏捷调整值" />
+          <StatTile label="速度" :value="`${panel.derived.value.speed.value}尺`" :note="panel.derived.value.speed.sources[0]?.detail" />
+          <StatTile label="熟练加值" :value="`+${panel.derived.value.proficiencyBonus.value}`" :note="`${draft.targetLevel}级角色`" />
+          <StatTile v-for="key in abilityKeys" :key="key" :label="ABILITY_LABELS[key]" :value="panel.derived.value.abilities[key]" :note="`${panel.derived.value.modifiers[key] >= 0 ? '+' : ''}${panel.derived.value.modifiers[key]}`" />
+        </div>
+      </section>
+      <section class="session-panel__section">
+        <h3>力竭</h3>
+        <div class="session-panel__exhaustion">
+          <span>当前层数：{{ panel.sessionState.value?.exhaustionLevel ?? 0 }}</span>
+          <button type="button" class="session-panel__step" aria-label="减少力竭层数" @click="panel.changeExhaustion(-1)">−</button>
+          <button type="button" class="session-panel__step" aria-label="增加力竭层数" @click="panel.changeExhaustion(1)">＋</button>
+        </div>
+      </section>
+      <section class="session-panel__section">
+        <h3>状态</h3>
+        <div class="session-panel__status-grid">
+          <button
+            v-for="status in DEBUFF_STATUSES"
+            :key="status.id"
+            type="button"
+            class="session-panel__status-card"
+            :class="{ 'session-panel__status-card--active': panel.sessionState.value?.debuffs.includes(status.id) }"
+            @click="panel.toggleStatus(status.id)"
+          >
+            {{ status.name }}
+          </button>
+        </div>
+      </section>
     </div>
 
     <div v-else-if="activeTab === 'features'" class="session-panel__tab">
@@ -525,32 +552,6 @@ function confirmCast(level: number): void {
       </section>
     </div>
 
-    <div v-else class="session-panel__tab">
-      <section class="session-panel__section">
-        <h3>力竭</h3>
-        <div class="session-panel__exhaustion">
-          <span>当前层数：{{ panel.sessionState.value?.exhaustionLevel ?? 0 }}</span>
-          <button type="button" class="session-panel__step" aria-label="减少力竭层数" @click="panel.changeExhaustion(-1)">−</button>
-          <button type="button" class="session-panel__step" aria-label="增加力竭层数" @click="panel.changeExhaustion(1)">＋</button>
-        </div>
-      </section>
-      <section class="session-panel__section">
-        <h3>状态</h3>
-        <div class="session-panel__status-grid">
-          <button
-            v-for="status in DEBUFF_STATUSES"
-            :key="status.id"
-            type="button"
-            class="session-panel__status-card"
-            :class="{ 'session-panel__status-card--active': panel.sessionState.value?.debuffs.includes(status.id) }"
-            @click="panel.toggleStatus(status.id)"
-          >
-            {{ status.name }}
-          </button>
-        </div>
-      </section>
-    </div>
-
     <UiModal :open="Boolean(detailStatus)" :title="detailStatus?.name ?? ''" @close="detailStatus = undefined">
       <p v-if="detailStatus">{{ detailStatus.description }}</p>
     </UiModal>
@@ -598,7 +599,7 @@ function confirmCast(level: number): void {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding: 0.75rem;
+    padding: 1rem;
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -657,8 +658,8 @@ function confirmCast(level: number): void {
   &__base {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.75rem;
-    padding: 0.75rem;
+    gap: 0.9rem;
+    padding: 1rem;
     border-bottom: 1px solid var(--color-border);
 
     @media (min-width: 48rem) {
@@ -775,7 +776,7 @@ function confirmCast(level: number): void {
   }
 
   &__tab {
-    padding: 0.75rem;
+    padding: 1rem;
   }
 
   &__stats {

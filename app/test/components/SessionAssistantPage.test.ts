@@ -222,9 +222,8 @@ describe('跑团助手 · 局内面板操作', () => {
     expect(wrapper.text()).toContain('奥术回想')
   })
 
-  it('debuff 挂摘与顶部 tag 联动；tag 可点击查看详情', async () => {
+  it('debuff 挂摘与顶部 tag 联动（总览页签底部）；tag 可点击查看详情', async () => {
     const { wrapper } = await mountPanel()
-    await wrapper.get('[role="tab"]:nth-child(6)').trigger('click')
 
     const statusCard = (name: string) => wrapper.findAll('.session-panel__status-card').find((item) => item.text() === name)!
     await statusCard('中毒').trigger('click')
@@ -241,9 +240,8 @@ describe('跑团助手 · 局内面板操作', () => {
     expect(wrapper.get('[aria-label="已挂载状态"]').text()).not.toContain('中毒')
   })
 
-  it('力竭层数增减：tag 显示「力竭 ×N」，0 时消失，范围 0—6', async () => {
+  it('力竭层数增减：tag 显示「力竭 ×N」，0 时消失，范围 0—6（总览页签底部）', async () => {
     const { wrapper } = await mountPanel()
-    await wrapper.get('[role="tab"]:nth-child(6)').trigger('click')
 
     await wrapper.get('[aria-label="增加力竭层数"]').trigger('click')
     await wrapper.get('[aria-label="增加力竭层数"]').trigger('click')
@@ -288,7 +286,6 @@ describe('跑团助手 · 局内面板操作', () => {
     const input = wrapper.get('[aria-label="生命值调整数量"]')
     await input.setValue('15')
     await wrapper.get('[aria-label="减少生命值"]').trigger('click')
-    await wrapper.get('[role="tab"]:nth-child(6)').trigger('click')
     const statusCard = wrapper.findAll('.session-panel__status-card').find((item) => item.text() === '中毒')!
     await statusCard.trigger('click')
     await wrapper.get('[aria-label="增加力竭层数"]').trigger('click')
@@ -311,5 +308,26 @@ describe('跑团助手 · 局内面板操作', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(wrapper.text()).toContain(`${maxHp} / ${maxHp}`)
     expect(wrapper.get('[aria-label="已挂载状态"]').text()).toBe('')
+  })
+
+  it('页签共 5 个且无「状态」；状态管理位于总览页签', async () => {
+    const { wrapper } = await mountPanel()
+    const tabLabels = wrapper.findAll('[role="tab"]').map((tab) => tab.text())
+    expect(tabLabels).toEqual(['总览', '能力', '战斗', '法术', '物品'])
+    // 默认在总览页签，状态管理（力竭 + 状态网格）直接可见
+    expect(wrapper.get('[aria-label="增加力竭层数"]').exists()).toBe(true)
+    expect(wrapper.findAll('.session-panel__status-card').length).toBeGreaterThan(0)
+  })
+
+  it('持久化的已移除页签（status）回退总览', async () => {
+    localStorage.setItem('dnd-session-assistant:view:v1', JSON.stringify({ selectedDraftId: 'ghost-id', activeTab: 'status' }))
+    const store = useCharacterDraftsStore()
+    const draft = makeWizardDraft(store)
+    // 先让选中角色有效：写入持久化的角色 id
+    localStorage.setItem('dnd-session-assistant:view:v1', JSON.stringify({ selectedDraftId: draft.id, activeTab: 'status' }))
+    const wrapper = mount(SessionAssistantPage, { attachTo: document.body })
+    expect(wrapper.find('.session-panel').exists()).toBe(true)
+    expect(wrapper.find('[role="tab"][aria-selected="true"]').text()).toBe('总览')
+    wrapper.unmount()
   })
 })

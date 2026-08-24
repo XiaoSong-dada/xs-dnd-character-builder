@@ -11,7 +11,7 @@ defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>
 
 <template>
-  <div class="ui-tabs" :class="{ 'ui-tabs--wrap': wrap }" role="tablist">
+  <div class="ui-tabs flex-between" :class="{ 'ui-tabs--wrap': wrap }" role="tablist">
     <button
       v-for="item in items"
       :key="item.id"
@@ -53,12 +53,9 @@ defineEmits<{ 'update:modelValue': [value: string] }>()
   &--wrap {
     flex-wrap: wrap;
     overflow-x: visible;
-    padding: 0.5rem 0.75rem 0;
-    gap: 0.25rem;
 
     button {
       flex: 0 0 auto;
-      min-width: 5.5rem;
       padding: 0 0.75rem;
     }
   }

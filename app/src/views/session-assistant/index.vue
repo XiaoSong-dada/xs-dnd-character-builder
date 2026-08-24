@@ -102,7 +102,7 @@ const summaries = computed(() =>
   &__cards {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.9rem;
   }
 
   &__card {
