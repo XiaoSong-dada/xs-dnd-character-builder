@@ -6,7 +6,7 @@
 ## 1. 本阶段目标
 
 - 让主要页面在关闭 JavaScript 的情况下仍能被搜索引擎读取到关键内容（标题、描述、正文入口）。
-- 为全站建立完整的 meta 元数据、规范化 URL、robots 与 sitemap 体系；本期以当前主打功能（辅助车卡页）为优化重点，职业介绍、个人中心待功能开发完成后纳入（见 §7）。
+- 为全站建立完整的 meta 元数据、规范化 URL、robots 与 sitemap 体系；本期以当前主打功能（辅助车卡页）为优化重点，跑团助手、个人中心待功能开发完成后纳入（见 §7）。
 - 提升移动端与性能相关的基础 SEO 指标（LCP、可访问性、语义化）。
 - 建立可复验的 SEO 验收方式（Lighthouse、curl 抓取）。
 - 不在本期引入 SSR 改造、不购买外链、不做关键词堆砌。
@@ -27,11 +27,11 @@
 | `/` | 重定向到 `/character-builder` | — | 不单独收录 |
 | `/character-builder` | 辅助车卡（当前主打） | 辅助车卡 \| D&D车卡辅助 | 本期重点 |
 | `/dice` | 赛博骰娘 | 赛博骰娘 \| D&D车卡辅助 | 本期覆盖（已实现） |
-| `/classes` | 职业介绍（未开发） | 职业介绍 \| D&D车卡辅助 | TODO：功能完成后处理 |
+| `/assistant` | 跑团助手（v0.6.0 开发完成） | 跑团助手 \| D&D车卡辅助 | v0.6.0 落地（description/sitemap/预渲染） |
 | `/profile` | 个人中心（未开发） | 个人中心 \| D&D车卡辅助 | TODO：功能完成后处理 |
 | 任意未匹配 | 404 | 页面不存在 \| D&D车卡辅助 | 不收录 |
 
-> 说明：职业介绍（`/classes`）与个人中心（`/profile`）功能尚未开发，本期不做这两个页面的 SEO 优化；相关条目见 §7 TODO，待功能完成后再处理。
+> 说明：跑团助手（`/assistant`）随 v0.6.0 开发完成并同步 SEO 处理（description、sitemap、预渲染）；个人中心（`/profile`）功能尚未开发，不做 SEO 优化；相关条目见 §7 TODO，待功能完成后再处理。
 
 ### 2.3 部署与基础设施
 
@@ -43,7 +43,7 @@
 ### 2.4 内容与版权约束
 
 - SEO 文案（title/description/结构化数据）默认使用原创中文文案。
-- 未来 `/classes` 职业介绍上线后属商业资料衍生内容，受项目版权约定约束：SEO 描述与摘要必须使用项目内原创文案或许可来源，不得直接搬运规则书正文、职业表全文（见 §7 TODO）。
+- 跑团助手（`/assistant`）页展示角色派生数据与规则摘要：SEO 描述使用项目内原创文案；规则数据展示遵循版权约定（不搬运规则书正文，仅原创转述）。
 
 ## 3. 需求条目
 
@@ -66,7 +66,7 @@
 
 **要求：**
 
-- 路由 `meta` 增加 `description` 字段；本期范围为已实现页面：`/character-builder`（主打，重点打磨）与 `/dice`。`/classes`、`/profile` 待功能开发完成后补充（见 §7）。
+- 路由 `meta` 增加 `description` 字段；本期范围为已实现页面：`/character-builder`（主打，重点打磨）与 `/dice`。`/assistant` 随 v0.6.0 补充，`/profile` 待功能开发完成后补充（见 §7）。
 - 由路由守卫统一维护 `document.title` 与 `meta[name=description]`、`link[rel=canonical]`，SPA 内切换页面时同步更新；未配置 description 的页面不得输出空标签。
 - 优先使用轻量自实现（当前已有 `router.afterEach` 基础），不为此引入额外 head 管理依赖；如后续确需依赖，先与项目确认。
 - 每个页面保留唯一 `h1`，与 `title` 语义一致；`/dice` 骰娘页维持现有 `h1`。
@@ -81,7 +81,7 @@
 **要求：**
 
 - 新增 `public/robots.txt`：允许所有爬虫抓取；当前 `/profile` 占位页不收录（`Disallow`），声明 `Sitemap` 地址。
-- 新增 `public/sitemap.xml`：本期收录 `/character-builder`、`/dice`（不含 `/` 与 404），URL 使用 `VITE_SITE_URL` 前缀；`lastmod` 由构建期生成或按部署版本维护。`/classes`、`/profile` 开发完成后再加入（见 §7）。
+- 新增 `public/sitemap.xml`：本期收录 `/character-builder`、`/dice`（不含 `/` 与 404），URL 使用 `VITE_SITE_URL` 前缀；`lastmod` 由构建期生成或按部署版本维护。`/assistant` 随 v0.6.0 加入，`/profile` 开发完成后再加入（见 §7）。
 - 新增页面路由时必须同步更新 sitemap 与 robots（列入路由开发完成标准）。
 
 **验收：**
@@ -107,7 +107,7 @@
 **要求：**
 
 - 方案选型已确认：采用 vite-ssg（Vue 生态原生、支持路由 meta 与每页独立 HTML、无 puppeteer 下载负担，peer 依赖兼容当前 Vite 6 / Vue 3 / vue-router 4）。
-- 本期预渲染 `/character-builder`（主打）与 `/dice` 两个已实现页面为静态 HTML，正文内容（h1、正文文本）直接出现在 HTML 中；`/classes`、`/profile` 待功能完成后按同一方式纳入（见 §7）。
+- 本期预渲染 `/character-builder`（主打）与 `/dice` 两个已实现页面为静态 HTML，正文内容（h1、正文文本）直接出现在 HTML 中；`/assistant` 已随 v0.6.0 纳入预渲染，`/profile` 待功能完成后按同一方式纳入（见 §7）。
 - 预渲染产物中注入 P0-2 的每页 title/description/canonical。
 - 404 页可保持 CSR（或按选型方案一并预渲染，待确认）。
 - 预渲染不得破坏现有交互（骰娘 3D、车卡流程、localStorage 草稿、Umami 统计）；预渲染页面中不得残留无法水合的副作用代码。
@@ -143,7 +143,7 @@
 2. P0-4（nginx，随部署验证）。
 3. P1-1（vite-ssg 预渲染，独立提交并跑全量测试与构建）。
 4. P2-1（随 P0/P1 交付后执行）。
-5. 长期跟进；任何新路由（含后续 `/classes`、`/profile` 正式页）必须同步更新 sitemap 与路由 meta（见 §7）。
+5. 长期跟进；任何新路由（含后续 `/assistant`、`/profile` 正式页）必须同步更新 sitemap 与路由 meta（见 §7）。
 
 ## 5. 待确认事项
 
@@ -151,7 +151,7 @@
 
 1. `VITE_SITE_URL` 等环境变量的命名、默认值与 `.env.example` 同步方式；正式站点 URL 是否固定为 `https://your_url`。
 2. `/character-builder` 与 `/dice` 的 description 具体文案（本文档只约定长度与唯一性要求）。
-3. `/classes`、`/profile` 当前保持占位（路由存在但功能未开发），不做 SEO 处理；未来上线时再评估收录方式（见 §7）。
+3. `/assistant` 随 v0.6.0 完成功能与 SEO 处理（description、sitemap、预渲染）；`/profile` 保持占位（路由存在但功能未开发），不做 SEO 处理；未来上线时再评估收录方式（见 §7）。
 4. 是否追加 `Organization` 结构化数据，以及 `og:image` 图片素材（建议 1200×630）是否单独制作。
 5. JSON-LD 采用全站统一注入还是按页面差异化注入。
 
@@ -163,13 +163,12 @@
 - P1-1 预渲染后 `/character-builder` 与 `/dice` 在禁用 JS 情况下可读到正文与独立 meta；Lighthouse SEO ≥ 90。
 - `pnpm test:run` 与 `pnpm build` 通过；预渲染引入的依赖与模块拓扑已同步更新 `docs/frontend-architecture.md`。
 - 手机宽度下预渲染页面主要流程（车卡、骰娘）无回归，无浏览器控制台错误。
-- `/classes`、`/profile` 的 SEO 条目保持 §7 TODO 状态，未擅自开展。
+- `/assistant` 的 SEO 条目已随 v0.6.0 落地（独立 description、sitemap、预渲染）；`/profile` 保持 §7 TODO 状态，未擅自开展。
 
 ## 7. TODO：功能完成后补充的 SEO 条目
 
-以下条目依赖职业介绍、个人中心功能开发完成，当前不实施：
+以下条目依赖个人中心功能开发完成，当前不实施：
 
-1. `/classes` 职业介绍页：功能完成后补充独立 title/description、加入 sitemap、纳入预渲染；上线后评估为每个职业建立独立 URL（如 `/classes/<职业ID>`）承接长尾搜索（产品级变更，需另行确认）。
+1. `/assistant` 跑团助手页：**已随 v0.6.0 实施**——独立 description、加入 sitemap、纳入预渲染（见 §2.2 表格与 §3 P0-2/P0-3/P1-1）；后续如需补充结构化数据再评估。
 2. `/profile` 个人中心页：功能上线后评估收录策略（个人数据页面默认不收录）与 robots 处理。
-3. 职业介绍属商业资料衍生内容，届时相关 SEO 文案须遵守版权约定，使用原创转述。
-4. 以上页面加入路由 meta 体系与 sitemap 的时机，以对应功能开发完成并验收为准；在功能完成前，不得以 SEO 为由提前新建或改造这些页面。
+3. 以上页面加入路由 meta 体系与 sitemap 的时机，以对应功能开发完成并验收为准；在功能完成前，不得以 SEO 为由提前新建或改造这些页面。

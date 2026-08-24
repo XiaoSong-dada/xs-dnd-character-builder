@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useClassesPage } from '@/views/classes/hooks/useClassesPage'
+import { useSessionAssistantPage } from '@/views/session-assistant/hooks/useSessionAssistantPage'
 
-const { title, description } = useClassesPage()
+const { title, description } = useSessionAssistantPage()
 </script>
 
 <template>

@@ -22,11 +22,11 @@ export const routes: RouteRecordRaw[] = [
         },
       },
       {
-        path: 'classes',
-        name: 'classes',
-        component: () => import('@/views/classes/index.vue'),
+        path: 'assistant',
+        name: 'session-assistant',
+        component: () => import('@/views/session-assistant/index.vue'),
         meta: {
-          title: '职业介绍 | D&D车卡辅助',
+          title: '跑团助手 | D&D车卡辅助',
         },
       },
       {
