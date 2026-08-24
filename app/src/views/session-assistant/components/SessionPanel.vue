@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import AddItemModal from '@/components/AddItemModal.vue'
 import AdjustItemModal from '@/components/AdjustItemModal.vue'
+import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import StatTile from '@/components/ui/StatTile.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
@@ -102,13 +103,27 @@ function equipmentName(itemId: string): string {
 function equipmentDescription(itemId: string): string {
   return rulesRepository.getEquipment(itemId)?.description ?? ''
 }
+function equipmentSummary(itemId: string): string {
+  const equipment = rulesRepository.getEquipment(itemId)
+  if (!equipment) return ''
+  if (equipment.damageDice) return `${equipment.damageDice} ${equipment.damageType ?? ''}伤害`
+  if (equipment.armorBase) return `AC ${equipment.armorBase}${equipment.addsDexterityToArmor ? ' + 敏捷调整' : ''}`
+  return equipment.description
+}
+/** 武器条目：命中/伤害加值标签。 */
+function weaponBonusLabel(entry: InventoryEntry): string {
+  const equipment = rulesRepository.getEquipment(entry.itemId)
+  if (equipment?.category !== 'weapon') return ''
+  return `命中 +${panel.derived.value.attackBonus.value} · 伤害 +${panel.derived.value.attackDamageBonus.value}`
+}
 function inventorySourceLabel(entry: InventoryEntry): string {
   return entry.sourceKind === 'class' || entry.sourceKind === 'background' ? '起始装备' : '冒险获得'
 }
 
 // ---- 总览派生 ----
 const abilityKeys = Object.keys(ABILITY_LABELS) as Array<keyof typeof ABILITY_LABELS>
-const equippedWeapons = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity > 0))
+const equippedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity > 0))
+const carriedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity === 0))
 </script>
 
 <template>
@@ -203,16 +218,22 @@ const equippedWeapons = computed(() => props.draft.inventory.filter((entry) => e
     <div v-else-if="activeTab === 'combat'" class="session-panel__tab">
       <section class="session-panel__section">
         <h3>武器与护甲</h3>
-        <ListShell v-if="equippedWeapons.length" class="session-panel__items">
-          <div v-for="entry in equippedWeapons" :key="entry.id" class="session-panel__item-row">
-            <div class="session-panel__item-main">
-              <strong>{{ equipmentName(entry.itemId) }}</strong>
-              <small>{{ equipmentDescription(entry.itemId) }}</small>
-              <em v-if="rulesRepository.getEquipment(entry.itemId)?.category === 'weapon'">命中 +{{ panel.derived.value.attackBonus.value }} · 伤害 +{{ panel.derived.value.attackDamageBonus.value }}</em>
-            </div>
-          </div>
+        <ListShell v-if="equippedEntries.length">
+          <ExpandableOptionCard
+            v-for="entry in equippedEntries"
+            :key="entry.id"
+            :title="equipmentName(entry.itemId)"
+            :description="equipmentSummary(entry.itemId)"
+            expanded-label="装备详情"
+          >
+            <template #suffix>
+              <em v-if="weaponBonusLabel(entry)" class="session-panel__combat-bonus">{{ weaponBonusLabel(entry) }}</em>
+              <span class="session-panel__qty">×{{ entry.quantity }}</span>
+            </template>
+            <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>
+          </ExpandableOptionCard>
         </ListShell>
-        <p v-else>尚无已装备物品</p>
+        <p v-else class="session-panel__empty">尚无已装备物品</p>
       </section>
 
       <section class="session-panel__section">
@@ -224,41 +245,51 @@ const equippedWeapons = computed(() => props.draft.inventory.filter((entry) => e
             <button type="button" class="session-panel__step" :aria-label="`增加${slot.level}环法术位`" @click="panel.changeSpellSlot(slot.level, 1)">＋</button>
           </div>
         </div>
-        <p v-else>该角色没有法术位</p>
+        <p v-else class="session-panel__empty">该角色没有法术位</p>
       </section>
     </div>
 
     <div v-else-if="activeTab === 'items'" class="session-panel__tab">
       <section class="session-panel__section">
         <h3>已装备</h3>
-        <ListShell v-if="equippedWeapons.length" class="session-panel__items">
-          <div v-for="entry in equippedWeapons" :key="entry.id" class="session-panel__item-row">
-            <div class="session-panel__item-main">
-              <strong>{{ equipmentName(entry.itemId) }}</strong>
-              <small>{{ equipmentDescription(entry.itemId) }}</small>
+        <ListShell v-if="equippedEntries.length">
+          <ExpandableOptionCard
+            v-for="entry in equippedEntries"
+            :key="entry.id"
+            :title="equipmentName(entry.itemId)"
+            :description="equipmentSummary(entry.itemId)"
+            expanded-label="装备详情"
+          >
+            <template #suffix>
               <span class="session-panel__qty">×{{ entry.quantity }}</span>
-              <button v-if="entry.sourceKind === 'adventure'" type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
-              <UiBadge v-else>{{ inventorySourceLabel(entry) }}</UiBadge>
-            </div>
-          </div>
+              <UiBadge v-if="entry.sourceKind !== 'adventure'">{{ inventorySourceLabel(entry) }}</UiBadge>
+              <button v-else type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
+            </template>
+            <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>
+          </ExpandableOptionCard>
         </ListShell>
-        <p v-else>尚无已装备物品</p>
+        <p v-else class="session-panel__empty">尚无已装备物品</p>
       </section>
 
       <section class="session-panel__section">
         <h3>物品栏</h3>
-        <ListShell v-if="draft.inventory.some((entry) => entry.equippedQuantity === 0)" class="session-panel__items">
-          <div v-for="entry in draft.inventory.filter((item) => item.equippedQuantity === 0)" :key="entry.id" class="session-panel__item-row">
-            <div class="session-panel__item-main">
-              <strong>{{ equipmentName(entry.itemId) }}</strong>
-              <small>{{ equipmentDescription(entry.itemId) }}</small>
+        <ListShell v-if="carriedEntries.length">
+          <ExpandableOptionCard
+            v-for="entry in carriedEntries"
+            :key="entry.id"
+            :title="equipmentName(entry.itemId)"
+            :description="equipmentSummary(entry.itemId)"
+            expanded-label="装备详情"
+          >
+            <template #suffix>
               <span class="session-panel__qty">×{{ entry.quantity }}</span>
-              <button v-if="entry.sourceKind === 'adventure'" type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
-              <UiBadge v-else>{{ inventorySourceLabel(entry) }}</UiBadge>
-            </div>
-          </div>
+              <UiBadge v-if="entry.sourceKind !== 'adventure'">{{ inventorySourceLabel(entry) }}</UiBadge>
+              <button v-else type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
+            </template>
+            <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>
+          </ExpandableOptionCard>
         </ListShell>
-        <p v-else>物品栏为空</p>
+        <p v-else class="session-panel__empty">物品栏为空</p>
         <button type="button" class="session-panel__add-item" @click="showAddItemModal = true">添加物品</button>
       </section>
     </div>
@@ -505,39 +536,16 @@ const equippedWeapons = computed(() => props.draft.inventory.filter((entry) => e
     }
   }
 
-  &__item-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--color-border);
-
-    &:last-child {
-      border-bottom: none;
-    }
-  }
-
-  &__item-main {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    flex: 1;
-
-    small {
-      color: var(--color-text-muted);
-      font-size: 0.75rem;
-    }
-
-    em {
-      color: var(--color-primary);
-      font-style: normal;
-      font-size: 0.75rem;
-    }
-  }
-
   &__qty {
     color: var(--color-text-muted);
     font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  &__combat-bonus {
+    color: var(--color-primary);
+    font-style: normal;
+    font-size: 0.75rem;
     font-weight: 700;
   }
 
@@ -562,6 +570,12 @@ const equippedWeapons = computed(() => props.draft.inventory.filter((entry) => e
     background: var(--color-surface);
     color: var(--color-primary);
     font-weight: 700;
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
   }
 
   &__slot-row {
