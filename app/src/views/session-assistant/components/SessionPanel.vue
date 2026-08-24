@@ -266,47 +266,57 @@ function confirmCast(level: number): void {
     </header>
 
     <section class="session-panel__base" aria-label="基础信息">
+      <p v-if="panel.operationError.value" class="session-panel__base-error" role="alert">{{ panel.operationError.value }}</p>
       <div class="session-panel__hp">
         <h3>生命值</h3>
-        <div class="session-panel__hp-row">
-          <button type="button" class="session-panel__step" aria-label="减少生命值" @click="panel.changeHp(-hpAmount())">−</button>
-          <div class="session-panel__hp-meter">
-            <div class="session-panel__hp-fill" :style="{ width: `${(panel.sessionState.value?.currentHp ?? 0) / panel.maxHp.value * 100}%` }" />
-            <span>{{ panel.sessionState.value?.currentHp ?? 0 }} / {{ panel.maxHp.value }}</span>
+        <div class="session-panel__content">
+          <div class="session-panel__hp-row">
+            <button type="button" class="session-panel__step" aria-label="减少生命值" @click="panel.changeHp(-hpAmount())">−</button>
+            <div class="session-panel__hp-meter">
+              <div class="session-panel__hp-fill" :style="{ width: `${(panel.sessionState.value?.currentHp ?? 0) / panel.maxHp.value * 100}%` }" />
+              <span>{{ panel.sessionState.value?.currentHp ?? 0 }} / {{ panel.maxHp.value }}</span>
+            </div>
+            <button type="button" class="session-panel__step" aria-label="增加生命值" @click="panel.changeHp(hpAmount())">＋</button>
+            <input v-model="hpInput" type="text" inputmode="numeric" placeholder="数量（空按1）" aria-label="生命值调整数量" />
           </div>
-          <button type="button" class="session-panel__step" aria-label="增加生命值" @click="panel.changeHp(hpAmount())">＋</button>
-          <input v-model="hpInput" type="text" inputmode="numeric" placeholder="数量（空按1）" aria-label="生命值调整数量" />
         </div>
+        <div class="session-panel__footer" />
       </div>
 
       <div class="session-panel__gold">
         <h3>金币</h3>
-        <strong>{{ panel.totalGold.value }} GP</strong>
-        <div class="session-panel__gold-actions">
-          <input v-model="panel.currencyInput.value" type="text" inputmode="numeric" placeholder="输入金币数" aria-label="金币调整数值" />
-          <button type="button" @click="panel.applyCurrency('add')">添加</button>
-          <button type="button" @click="panel.applyCurrency('decrease')">减少</button>
-          <button type="button" @click="panel.applyCurrency('set')">设置</button>
+        <div class="session-panel__content">
+          <strong>{{ panel.totalGold.value }} GP</strong>
+          <div class="session-panel__gold-actions">
+            <input v-model="panel.currencyInput.value" type="text" inputmode="numeric" placeholder="输入金币数" aria-label="金币调整数值" />
+            <button type="button" @click="panel.applyCurrency('add')">添加</button>
+            <button type="button" @click="panel.applyCurrency('decrease')">减少</button>
+            <button type="button" @click="panel.applyCurrency('set')">设置</button>
+          </div>
         </div>
-        <p v-if="panel.currencyError.value" class="session-panel__error">{{ panel.currencyError.value }}</p>
-        <p v-if="panel.operationError.value" class="session-panel__error">{{ panel.operationError.value }}</p>
-        <small>起始金币 {{ draft.currency.gp }} GP，可随冒险增减</small>
+        <div class="session-panel__footer">
+          <p v-if="panel.currencyError.value" class="session-panel__error">{{ panel.currencyError.value }}</p>
+          <small>起始金币 {{ draft.currency.gp }} GP，可随冒险增减</small>
+        </div>
       </div>
 
       <div class="session-panel__rest">
         <h3>休息</h3>
-        <div class="session-panel__rest-actions">
-          <button type="button" class="session-panel__rest-button" @click="panel.shortRest()">短休息</button>
-          <button type="button" class="session-panel__rest-button" @click="showLongRestConfirm = true">长休息</button>
-          <button
-            v-if="panel.sessionState.value?.lastRestSnapshot"
-            type="button"
-            class="session-panel__rest-button session-panel__rest-button--undo"
-            @click="panel.undoRest()"
-          >
-            撤回上次休息
-          </button>
+        <div class="session-panel__content">
+          <div class="session-panel__rest-actions">
+            <button type="button" class="session-panel__rest-button" @click="panel.shortRest()">短休息</button>
+            <button type="button" class="session-panel__rest-button" @click="showLongRestConfirm = true">长休息</button>
+            <button
+              v-if="panel.sessionState.value?.lastRestSnapshot"
+              type="button"
+              class="session-panel__rest-button session-panel__rest-button--undo"
+              @click="panel.undoRest()"
+            >
+              撤回上次休息
+            </button>
+          </div>
         </div>
+        <div class="session-panel__footer" />
       </div>
     </section>
 
@@ -664,11 +674,61 @@ function confirmCast(level: number): void {
 
     @media (min-width: 48rem) {
       grid-template-columns: repeat(3, 1fr);
+
+      // 三块卡片式（与角色卡页 character-sheet__panel 观感一致）
+      .session-panel__hp,
+      .session-panel__gold,
+      .session-panel__rest {
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: var(--color-surface);
+      }
     }
 
     h3 {
       margin: 0 0 0.4rem;
       font-size: 0.85rem;
+    }
+  }
+
+  &__base-error {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--color-danger, #c0392b);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  &__hp,
+  &__gold,
+  &__rest {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+
+    // 宽屏占位：预留错误提示行 + 说明行高度，避免错误出现/消失引起三列高度跳动
+    @media (min-width: 48rem) {
+      min-height: 1.3rem;
+      justify-content: flex-end;
+    }
+
+    small {
+      color: var(--color-text-muted);
+      font-size: 0.72rem;
     }
   }
 
