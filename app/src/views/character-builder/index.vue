@@ -15,7 +15,7 @@ import EquipmentStep from '@/views/character-builder/components/EquipmentStep.vu
 import IdentityStep from '@/views/character-builder/components/IdentityStep.vue'
 import LevelAdjustModal from '@/views/character-builder/components/LevelAdjustModal.vue'
 import OriginStep from '@/views/character-builder/components/OriginStep.vue'
-import PreferencesStep from '@/views/character-builder/components/PreferencesStep.vue'
+import SourcesStep from '@/views/character-builder/components/SourcesStep.vue'
 import SetupStep from '@/views/character-builder/components/SetupStep.vue'
 import SpellcastingStep from '@/views/character-builder/components/SpellcastingStep.vue'
 import StartPanel from '@/views/character-builder/components/StartPanel.vue'
@@ -53,6 +53,7 @@ const {
   previousStep,
   setStep,
   updateSetup,
+  updateSources,
   selectClass,
   selectRace,
   selectSubrace,
@@ -61,6 +62,7 @@ const {
   saveTimelineSelection,
   updateEquipment,
   updateInventory,
+  updateInfusions,
   updateAdventureGold,
   updateSpells,
   updateIdentity,
@@ -140,11 +142,11 @@ function updateMethod(value: AbilityMethod): void {
       <UiNotice :tone="levelAdjustNotice.tone" :title="levelAdjustNotice.message">点击前往对应步骤处理。</UiNotice>
     </div>
     <SetupStep v-if="step === 'setup'" :target-level="activeDraft.targetLevel" :ability-method="activeDraft.abilityMethod" @level="updateLevel" @method="updateMethod" />
-    <PreferencesStep v-else-if="step === 'preferences'" :selected="activeDraft.preferences" @change="updateDraft({ preferences: $event })" />
+    <SourcesStep v-else-if="step === 'sources'" :selected="activeDraft.enabledSourceIds" @change="updateSources" />
     <ClassStep
       v-else-if="step === 'class'"
       :selected="activeDraft.classId"
-      :preferences="activeDraft.preferences"
+      :enabled-source-ids="activeDraft.enabledSourceIds"
       @select="selectClass"
     />
     <OriginStep
@@ -154,6 +156,7 @@ function updateMethod(value: AbilityMethod): void {
       :subrace-id="activeDraft.subraceId"
       :background-id="activeDraft.backgroundId"
       :background-variant-id="activeDraft.backgroundVariantId"
+      :enabled-source-ids="activeDraft.enabledSourceIds"
       :languages="activeDraft.languages"
       :race-skill-choices="activeDraft.raceSkillChoices ?? []"
       :race-tool-choice="activeDraft.raceToolChoice"
@@ -191,6 +194,7 @@ function updateMethod(value: AbilityMethod): void {
       v-else-if="step === 'equipment'"
       :draft="activeDraft"
       @change="updateEquipment"
+      @infusions="updateInfusions"
     />
     <SpellcastingStep v-else-if="step === 'spells'" :draft="activeDraft" @change="updateSpells" />
     <IdentityStep v-else-if="step === 'identity'" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" />

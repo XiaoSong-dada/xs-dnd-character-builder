@@ -6,6 +6,7 @@ import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import { rulesRepository } from '@/rules/repository'
+import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
 import {
   buildStartingEquipmentState,
   getAllowedPickItems,
@@ -17,6 +18,7 @@ import type {
   CurrencyWallet,
   InventoryEntry,
   StartingEquipmentSelection,
+  InfusionAssignment,
 } from '@/types/character'
 
 const props = defineProps<{ draft: CharacterDraft }>()
@@ -26,6 +28,7 @@ const emit = defineEmits<{
     inventory: readonly InventoryEntry[],
     currency: CurrencyWallet,
   ]
+  infusions: [assignments: readonly InfusionAssignment[]]
 }>()
 
 const classProfile = computed(() =>
@@ -36,6 +39,29 @@ const backgroundProfile = computed(() =>
     : undefined)
 const complete = computed(() => isStartingEquipmentComplete(props.draft))
 const backgroundEntries = computed(() => props.draft.inventory.filter((entry) => entry.sourceKind === 'background'))
+const knownInfusionIds = computed(() => props.draft.selections
+  .filter((selection) => selection.checkpointId.startsWith('artificer-2014-infusions-') && !selection.invalidatedAt)
+  .flatMap((selection) => selection.optionIds))
+const knownInfusions = computed(() => artificerInfusions2014.filter((infusion) => knownInfusionIds.value.includes(infusion.id)))
+const infusedItemLimit = computed(() => getArtificerInfusedItemLimit(props.draft.targetLevel))
+
+function infusionAssignment(infusionId: string): InfusionAssignment | undefined {
+  return props.draft.infusionAssignments.find((assignment) => assignment.infusionId === infusionId)
+}
+
+function legalInfusionEntries(infusionId: string): readonly InventoryEntry[] {
+  const infusion = artificerInfusions2014.find((item) => item.id === infusionId)
+  if (!infusion) return []
+  return props.draft.inventory.filter((entry) => {
+    const item = rulesRepository.getEquipment(entry.itemId)
+    return Boolean(item && infusion.eligibleCategories.includes(item.category as never))
+  })
+}
+
+function bindInfusion(infusionId: string, inventoryEntryId: string): void {
+  const withoutCurrent = props.draft.infusionAssignments.filter((assignment) => assignment.infusionId !== infusionId)
+  emit('infusions', inventoryEntryId ? [...withoutCurrent, { infusionId, inventoryEntryId }] : withoutCurrent)
+}
 
 function itemName(itemId: string): string {
   return rulesRepository.getEquipment(itemId)?.name ?? itemId
@@ -187,6 +213,34 @@ function sourceLabel(entry: InventoryEntry): string {
           </ListShell>
         </div>
       </article>
+    </section>
+
+    <section v-if="draft.classId === 'class-2014-artificer' && knownInfusions.length" class="equipment-step__section">
+      <header>
+        <div>
+          <p>工匠灌注</p>
+          <h2>将已知灌注绑定至物品</h2>
+        </div>
+        <UiBadge :tone="draft.infusionAssignments.length <= infusedItemLimit ? 'success' : 'warning'">
+          {{ draft.infusionAssignments.length }}/{{ infusedItemLimit }} 生效
+        </UiBadge>
+      </header>
+      <p class="equipment-step__help">同一物品只能承载一项灌注；降级、删除物品或关闭来源会保留绑定记录，但暂停应用。</p>
+      <ul class="equipment-step__infusions">
+        <li v-for="infusion in knownInfusions" :key="infusion.id">
+          <div><strong>{{ infusion.name }}</strong><small>{{ infusion.description }}</small></div>
+          <select
+            :value="infusionAssignment(infusion.id)?.inventoryEntryId ?? ''"
+            :aria-label="`为${infusion.name}选择物品`"
+            @change="bindInfusion(infusion.id, ($event.target as HTMLSelectElement).value)"
+          >
+            <option value="">不生效</option>
+            <option v-for="entry in legalInfusionEntries(infusion.id)" :key="entry.id" :value="entry.id">
+              {{ itemName(entry.itemId) }}
+            </option>
+          </select>
+        </li>
+      </ul>
     </section>
 
     <section class="equipment-step__section">
@@ -392,6 +446,20 @@ function sourceLabel(entry: InventoryEntry): string {
         border-bottom: 0;
       }
     }
+  }
+
+  &__infusions {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li { display: grid; gap: 0.45rem; padding: 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    div { display: grid; gap: 0.2rem; }
+    strong { font-size: 0.8rem; }
+    small { color: var(--color-text-muted); line-height: 1.45; }
+    select { min-height: 2.75rem; padding: 0.45rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); }
   }
 
   &__coins {

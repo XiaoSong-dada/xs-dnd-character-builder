@@ -6,6 +6,7 @@ import { deriveCharacter, getFlexibleBonusRule, getRaceAbilityBonuses } from '@/
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { rulesRepository } from '@/rules/repository'
+import { isSourceEnabled, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { buildTimeline } from '@/rules/timeline'
 import { validateSpellSelections } from '@/rules/spellcasting'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
@@ -24,6 +25,7 @@ import type {
   DependencyImpact,
   DraftStep,
   InventoryEntry,
+  InfusionAssignment,
   SpellSelections,
   StartingEquipmentSelection,
 } from '@/types/character'
@@ -79,7 +81,7 @@ export function useCharacterBuilderPage() {
     if (!draft?.classId) return false
     const classRule = rulesRepository.getClass(draft.classId)
     if (classRule?.status !== 'implemented') return true
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections })
     return timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       return (selection?.optionIds.length ?? 0) >= checkpoint.minSelections
@@ -89,7 +91,7 @@ export function useCharacterBuilderPage() {
     const draft = activeDraft.value
     if (!draft) return false
     if (step.value === 'class') return Boolean(draft.classId)
-    if (step.value === 'preferences') return draft.preferences.length > 0
+    if (step.value === 'sources') return true
     if (step.value === 'origin') {
       const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
       const background = draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
@@ -290,7 +292,7 @@ export function useCharacterBuilderPage() {
       setStep('setup')
       return
     }
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections })
     const hasInvalidated = draft.selections.some((selection) => Boolean(selection.invalidatedAt))
     const hasIncompleteCheckpoint = timeline.some((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
@@ -325,6 +327,49 @@ export function useCharacterBuilderPage() {
         equipmentNeedsReview: false,
       })
     }, draft.inventory.some((entry) => entry.sourceKind === 'class') ? ['职业起始装备'] : [])
+  }
+
+  function sourceChangeAffectedContent(draft: CharacterDraft, enabledSourceIds: readonly string[]): readonly string[] {
+    const affected: string[] = []
+    const add = (label: string, rule: { readonly sourceIds: readonly string[] } | undefined): void => {
+      if (rule && !isSourceEnabled(rule.sourceIds, enabledSourceIds)) affected.push(label)
+    }
+    add(`职业：${draft.classId ? rulesRepository.getClass(draft.classId)?.name ?? draft.classId : ''}`, draft.classId ? rulesRepository.getClass(draft.classId) : undefined)
+    add(`子职：${draft.subclassId ? rulesRepository.getSubclass(draft.subclassId)?.name ?? draft.subclassId : ''}`, draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined)
+    add(`种族：${draft.raceId ? rulesRepository.getRace(draft.raceId)?.name ?? draft.raceId : ''}`, draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined)
+    add(`子种族：${draft.subraceId ? rulesRepository.getRace(draft.subraceId)?.name ?? draft.subraceId : ''}`, draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined)
+    add(`背景：${draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId)?.name ?? draft.backgroundId : ''}`, draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined)
+    add(`背景变体：${draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId)?.name ?? draft.backgroundVariantId : ''}`, draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId) : undefined)
+    for (const selection of draft.selections.filter((item) => !item.invalidatedAt)) {
+      for (const optionId of selection.optionIds) {
+        const option = rulesRepository.getOption(optionId)
+        add(`选择：${option?.name ?? optionId}`, option)
+      }
+    }
+    const spellIds = Object.values(draft.spellSelections).flat()
+    for (const spellId of new Set(spellIds)) {
+      const spell = rulesRepository.getSpell(spellId)
+      add(`法术：${spell?.name ?? spellId}`, spell)
+    }
+    for (const entry of draft.inventory) {
+      const item = rulesRepository.getEquipment(entry.itemId)
+      add(`物品：${item?.name ?? entry.itemId}`, item)
+    }
+    return [...new Set(affected.filter((item) => !item.endsWith('：')))]
+  }
+
+  function updateSources(sourceIds: readonly string[]): void {
+    const draft = activeDraft.value
+    if (!draft) return
+    const normalized = normalizeEnabledSourceIds(sourceIds)
+    if (normalized.length === draft.enabledSourceIds.length && normalized.every((id) => draft.enabledSourceIds.includes(id))) return
+    const affected = sourceChangeAffectedContent(draft, normalized)
+    const apply = () => store.updateDraft({ enabledSourceIds: normalized })
+    if (!affected.length) {
+      apply()
+      return
+    }
+    pendingChange.value = { title: '调整扩展书', affected, apply }
   }
 
   function selectRace(id: string): void {
@@ -388,7 +433,7 @@ export function useCharacterBuilderPage() {
     store.saveSelection(checkpointId, optionIds)
     const draft = activeDraft.value
     if (!draft?.classId) return
-    const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+    const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections })
       .find((item) => item.id === checkpointId)
     if (checkpoint?.kind === 'subclass') {
       store.updateDraft({ subclassId: optionIds[0] })
@@ -410,6 +455,10 @@ export function useCharacterBuilderPage() {
 
   function updateInventory(inventory: readonly InventoryEntry[]): void {
     store.updateDraft({ inventory })
+  }
+
+  function updateInfusions(infusionAssignments: readonly InfusionAssignment[]): void {
+    store.updateDraft({ infusionAssignments })
   }
 
   function updateAdventureGold(adventureGold: number): void {
@@ -544,6 +593,7 @@ export function useCharacterBuilderPage() {
     previousStep,
     setStep,
     updateSetup,
+    updateSources,
     selectClass,
     selectRace,
     selectSubrace,
@@ -552,6 +602,7 @@ export function useCharacterBuilderPage() {
     saveTimelineSelection,
     updateEquipment,
     updateInventory,
+    updateInfusions,
     updateAdventureGold,
     updateSpells,
     updateIdentity,

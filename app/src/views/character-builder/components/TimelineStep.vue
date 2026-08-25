@@ -25,7 +25,7 @@ const props = defineProps<{
 const emit = defineEmits<{ select: [checkpointId: string, optionIds: readonly string[]] }>()
 const expandedCheckpointId = ref<string>()
 
-const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId }))
+const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId, enabledSourceIds: props.draft.enabledSourceIds, selections: props.draft.selections }))
 
 /** 当前已熟练的技能与盗贼工具：职业技能选择 + 背景技能。与 validate.ts 的专精校验口径一致。 */
 const proficientSkillIds = computed(() => {
@@ -74,22 +74,12 @@ function toggleCheckpoint(checkpointId: string): void {
   expandedCheckpointId.value = currentCheckpointId.value === checkpointId ? undefined : checkpointId
 }
 
-/** 前缀唯一选项：跨检查点不可重复选择的选项前缀（战技、超魔等）。 */
-const UNIQUE_OPTION_PREFIXES = ['maneuver-', 'metamagic-'] as const
-
-/** 该检查点的选项是否为"前缀唯一"类型（跨检查点不可重复选择同一选项），返回对应前缀。 */
-function uniqueOptionPrefix(checkpoint: { readonly optionIds: readonly string[] }): string | undefined {
-  if (checkpoint.optionIds.length === 0) return undefined
-  return UNIQUE_OPTION_PREFIXES.find((prefix) => checkpoint.optionIds.every((optionId) => optionId.startsWith(prefix)))
-}
-
 function isUniqueOptionUsedElsewhere(checkpointId: string, optionId: string): boolean {
   const checkpoint = checkpoints.value.find((item) => item.id === checkpointId)
-  const prefix = checkpoint ? uniqueOptionPrefix(checkpoint) : undefined
-  const expertiseCheckpoint = checkpoint?.kind === 'expertise'
-  if (!prefix && !expertiseCheckpoint) return false
+  const group = checkpoint?.uniqueGroup
+  if (!group) return false
   return checkpoints.value
-    .filter((item) => item.id !== checkpointId && (prefix ? uniqueOptionPrefix(item) === prefix : item.kind === 'expertise'))
+    .filter((item) => item.id !== checkpointId && item.uniqueGroup === group)
     .some((item) => selectedIds(item.id).includes(optionId))
 }
 
@@ -203,7 +193,7 @@ function spellCandidateGroups(checkpoint: ChoiceCheckpoint): ReadonlyArray<{
                   ? 'incompatible'
                   : 'default'"
             :disabled-reason="isUniqueOptionUsedElsewhere(checkpoint.id, optionId)
-              ? checkpoint.kind === 'expertise' ? '已在较低等级获得专精' : '已在较低等级掌握'
+              ? checkpoint.kind === 'expertise' ? '已在较低等级获得专精' : '已在同一选项组的其他等级掌握'
               : isBackgroundSkill(checkpoint.id, optionId)
                 ? '背景已提供此技能，请选择另一项职业技能'
                 : isExpertiseLocked(checkpoint.id, optionId)
@@ -213,6 +203,7 @@ function spellCandidateGroups(checkpoint: ChoiceCheckpoint): ReadonlyArray<{
           >
             <template #suffix>
               <UiBadge v-if="rulesRepository.getOption(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
+              <UiBadge v-else-if="rulesRepository.getOption(optionId)?.status === 'selectable'" tone="warning">可选择 · 部分效果需手动处理</UiBadge>
             </template>
           </OptionCard>
         </ListShell>
@@ -250,6 +241,7 @@ function spellCandidateGroups(checkpoint: ChoiceCheckpoint): ReadonlyArray<{
           >
             <template #suffix>
               <UiBadge v-if="feature.status === 'index-only'" tone="warning">仅索引</UiBadge>
+              <UiBadge v-else-if="feature.status === 'selectable'" tone="warning">可选择 · 情境效果</UiBadge>
             </template>
             <template #expanded>{{ feature.description }}</template>
           </ExpandableOptionCard>
@@ -265,6 +257,7 @@ function spellCandidateGroups(checkpoint: ChoiceCheckpoint): ReadonlyArray<{
           >
             <template #suffix>
               <UiBadge v-if="feature.status === 'index-only'" tone="warning">仅索引</UiBadge>
+              <UiBadge v-else-if="feature.status === 'selectable'" tone="warning">可选择 · 情境效果</UiBadge>
             </template>
             <template #expanded>{{ feature.description }}</template>
           </ExpandableOptionCard>

@@ -14,6 +14,8 @@ import {
   type AbilityImprovementMode,
 } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
+import { isSourceEnabled } from '@/rules/source-books'
+import { getSpellcastingConfig } from '@/rules/spellcasting'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
 
 const props = defineProps<{
@@ -41,7 +43,7 @@ const tagFilterOptions = tagFilters.map((id) => ({ id, label: id === 'all' ? 'å…
 
 const abilitiesBeforeCheckpoint = computed(() => deriveAbilities(props.draft, props.checkpointId))
 const canCastSpells = computed(() => {
-  const spellcasting = rulesRepository.getSpellcastingConfig(props.draft)
+  const spellcasting = getSpellcastingConfig(props.draft)
   return Boolean(spellcasting && props.checkpointLevel >= spellcasting.startsAtLevel)
 })
 const featEntries = computed(() => rulesRepository.feats.map((feat) => ({
@@ -50,11 +52,14 @@ const featEntries = computed(() => rulesRepository.feats.map((feat) => ({
     abilities: abilitiesBeforeCheckpoint.value,
     classId: props.draft.classId ?? '',
     canCastSpells: canCastSpells.value,
+    raceId: props.draft.raceId,
+    subraceId: props.draft.subraceId,
   }),
 })))
 const visibleFeats = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('zh-CN')
   return featEntries.value.filter(({ feat, eligibility }) => {
+    if (!isSourceEnabled(feat.sourceIds, props.draft.enabledSourceIds)) return false
     if (availableOnly.value && !eligibility.available) return false
     if (tagFilter.value !== 'all' && !feat.tags.includes(tagFilter.value)) return false
     if (!query) return true

@@ -16,6 +16,7 @@ const CLASS_IDS = [
   'class-2014-sorcerer',
   'class-2014-warlock',
   'class-2014-wizard',
+  'class-2014-artificer',
 ] as const
 
 describe('2014 class features catalog', () => {
@@ -31,7 +32,7 @@ describe('2014 class features catalog', () => {
       expect(feature.description.length).toBeGreaterThan(0)
       expect(feature.level).toBeGreaterThan(0)
       expect(feature.level).toBeLessThanOrEqual(20)
-      expect(['implemented', 'index-only']).toContain(feature.status)
+      expect(['implemented', 'selectable', 'index-only']).toContain(feature.status)
       expect(feature.sourceIds.length).toBeGreaterThan(0)
     }
   })
@@ -59,6 +60,7 @@ describe('2014 class features catalog', () => {
       'class-2014-sorcerer': 'sorcerer',
       'class-2014-warlock': 'warlock',
       'class-2014-wizard': 'wizard',
+      'class-2014-artificer': 'artificer',
     }
     for (const feature of classFeatures2014) {
       expect(feature.id.startsWith(`${slugByClassId[feature.classId]}-2014-class-`)).toBe(true)

@@ -17,13 +17,14 @@ const expectedCounts: Readonly<Record<string, number>> = {
   'class-2014-sorcerer': 8,
   'class-2014-warlock': 9,
   'class-2014-wizard': 13,
+  'class-2014-artificer': 4,
 }
 
 describe('2014 subclass catalog', () => {
-  it('registers 114 unique and complete subclass metadata records', () => {
-    expect(subclasses2014).toHaveLength(114)
-    expect(new Set(subclasses2014.map((subclass) => subclass.id)).size).toBe(114)
-    expect(subclassOptions2014).toHaveLength(114)
+  it('registers 118 unique and complete subclass metadata records', () => {
+    expect(subclasses2014).toHaveLength(118)
+    expect(new Set(subclasses2014.map((subclass) => subclass.id)).size).toBe(118)
+    expect(subclassOptions2014).toHaveLength(118)
     expect(subclasses2014.every((subclass) =>
       subclass.name.length > 0
       && subclass.englishName.length > 0
@@ -34,7 +35,7 @@ describe('2014 subclass catalog', () => {
   })
 
   it('keeps player and DM-only availability separate', () => {
-    expect(subclasses2014.filter((subclass) => subclass.availability === 'player')).toHaveLength(112)
+    expect(subclasses2014.filter((subclass) => subclass.availability === 'player')).toHaveLength(116)
     expect(subclasses2014.filter((subclass) => subclass.availability === 'dm-only').map((subclass) => subclass.id).sort())
       .toEqual(['subclass-2014-cleric-death', 'subclass-2014-paladin-oathbreaker'])
     expect(subclasses2014.some((subclass) => ['world-tree', 'dance', 'sea'].some((slug) => subclass.id.endsWith(slug)))).toBe(false)

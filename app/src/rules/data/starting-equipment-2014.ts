@@ -22,6 +22,19 @@ const martialMeleeKinds = ['martial-melee'] as const
 
 export const classStartingEquipment2014: readonly ClassStartingEquipmentRule[] = [
   {
+    classId: 'class-2014-artificer',
+    fixedGrants: [g('light-crossbow'), g('bolts', 20), g('thieves-tools'), g('dungeoneer-pack')],
+    groups: [
+      group('artificer-armor', '选择护甲', [
+        option('studded-leather', '镶钉皮甲', [g('studded-leather')]),
+        option('scale-mail', '鳞甲', [g('scale-mail')]),
+      ]),
+      group('artificer-weapons', '选择两件简易武器', [
+        option('simple-weapons', '任意两件简易武器', [], { count: 2, allowedWeaponKinds: simpleWeaponKinds }),
+      ]),
+    ],
+  },
+  {
     classId: 'class-2014-barbarian',
     fixedGrants: [g('explorer-pack'), g('javelin', 4)],
     groups: [

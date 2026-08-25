@@ -1,43 +1,30 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
-import PreferencesStep from '@/views/character-builder/components/PreferencesStep.vue'
-import { getClassRecommendation } from '@/rules/recommend'
-import { rulesRepository } from '@/rules/repository'
+import SourcesStep from '@/views/character-builder/components/SourcesStep.vue'
+import { getSelectableSources } from '@/rules/source-books'
 
-function topThreeNames(preferences: readonly string[]) {
-  return [...rulesRepository.classes]
-    .map((classRule) => ({ classRule, recommendation: getClassRecommendation(classRule, preferences) }))
-    .filter(({ recommendation }) => recommendation.score > 0)
-    .sort((a, b) => b.recommendation.score - a.recommendation.score)
-    .slice(0, 3)
-    .map(({ classRule }) => classRule.name)
-}
-
-describe('PreferencesStep 玩法偏好', () => {
-  it('偏好选项从规则层渲染，选中状态正确', () => {
-    const wrapper = mount(PreferencesStep, { props: { selected: ['melee'] } })
-    const chips = wrapper.findAll('.ui-chip')
-    expect(chips.map((chip) => chip.text())).toEqual(['近身作战', '远程攻击', '施放法术', '支援队友', '高生存', '战场控制'])
-    expect(chips[0].attributes('aria-pressed')).toBe('true')
-    expect(chips[1].attributes('aria-pressed')).toBe('false')
+describe('SourcesStep 扩展书选择', () => {
+  it('核心规则只读展示，扩展来源从规则层渲染', () => {
+    const wrapper = mount(SourcesStep, { props: { selected: [] } })
+    expect(wrapper.text()).toContain('核心规则始终启用')
+    expect(wrapper.text()).toContain('Basic Rules')
+    expect(wrapper.findAll('.ui-chip')).toHaveLength(getSelectableSources().length)
   })
 
-  it('无偏好时显示引导文案，不显示推荐方向', () => {
-    const wrapper = mount(PreferencesStep, { props: { selected: [] } })
-    expect(wrapper.text()).toContain('选择偏好后查看推荐方向')
+  it('支持零本扩展与单本切换', async () => {
+    const wrapper = mount(SourcesStep, { props: { selected: [] } })
+    expect(wrapper.text()).toContain('已启用 0 /')
+    await wrapper.findAll('.ui-chip')[0].trigger('click')
+    expect(wrapper.emitted('change')?.[0]?.[0]).toEqual([getSelectableSources()[0].id])
   })
 
-  it('推荐方向与规则层排序前 3 一致', () => {
-    const preferences = ['spellcasting', 'support'] as const
-    const wrapper = mount(PreferencesStep, { props: { selected: preferences } })
-    const direction = wrapper.find('aside span').text()
-    expect(direction).toBe(topThreeNames(preferences).join(' · '))
-  })
-
-  it('切换偏好触发 change 事件', async () => {
-    const wrapper = mount(PreferencesStep, { props: { selected: ['melee'] } })
-    await wrapper.findAll('.ui-chip')[1].trigger('click')
-    expect(wrapper.emitted('change')).toEqual([[['melee', 'ranged']]])
+  it('支持全部启用与只用核心规则', async () => {
+    const wrapper = mount(SourcesStep, { props: { selected: ['xgte-2017'] } })
+    const buttons = wrapper.findAll('button')
+    await buttons[0].trigger('click')
+    expect(wrapper.emitted('change')?.[0]?.[0]).toEqual(getSelectableSources().map((source) => source.id))
+    await buttons[1].trigger('click')
+    expect(wrapper.emitted('change')?.[1]?.[0]).toEqual([])
   })
 })

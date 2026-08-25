@@ -42,7 +42,7 @@ const BATTLE_MASTER_MANEUVER_LABELS: Readonly<Record<string, string>> = {
  * - 需要玩家选择的特性设置 `requiresChoice` 与 `optionIds`；
  * - 未核验的效果保持 `index-only` 并注明来源，不虚构数值。
  */
-export const subclassFeatures2014: readonly SubclassFeature[] = [
+const subclassFeatureSeeds2014: readonly SubclassFeature[] = [
   // ============ 战士 fighter（原有已实现子职） ============
   { id: 'fighter-battle-master-combat-superiority', subclassId: 'subclass-2014-fighter-battle-master', name: '战斗超驰', englishName: 'Combat Superiority', level: 3, summary: '获得优势骰与三项战技选择；战技具体效果保持 index-only。', description: '获得 4 枚 d8 优势骰（10 级 d10、18 级 d12）与三项战技；战技在命中后消耗优势骰触发，优势骰短休或长休后恢复。具体战技效果以 2014 PHB 为准，当前仅索引。', kind: 'choice', requiresChoice: true, optionIds: BATTLE_MASTER_MANEUVER_OPTION_IDS, optionLabels: BATTLE_MASTER_MANEUVER_LABELS, minSelections: 3, maxSelections: 3, status: 'implemented', sourceIds: ['phb-2014-index'] },
   { id: 'fighter-battle-master-student-of-war', subclassId: 'subclass-2014-fighter-battle-master', name: '学生战士', englishName: 'Student of War', level: 3, summary: '获得一种工匠工具熟练。', description: '获得一种工匠工具熟练；可用该工具进行观察与记忆检定。', kind: 'passive', status: 'implemented', sourceIds: ['phb-2014-index'] },
@@ -750,7 +750,43 @@ export const subclassFeatures2014: readonly SubclassFeature[] = [
   { id: 'wizard-order-of-scribes-manifest-mind', subclassId: 'subclass-2014-wizard-order-of-scribes', name: '显现心智', englishName: 'Manifest Mind', level: 6, summary: '法术书显现一个心智化身，可从中施放法术。', description: '法术书显现一个心智化身，可从中施放法术。', kind: 'bonus-action', status: 'index-only', sourceIds: ['tcoe-2020-index'] },
   { id: 'wizard-order-of-scribes-master-scrivener', subclassId: 'subclass-2014-wizard-order-of-scribes', name: '抄录大师', englishName: 'Master Scrivener', level: 10, summary: '可快速制作法术卷轴，成本减半。', description: '可快速制作法术卷轴，成本减半。', kind: 'action', status: 'index-only', sourceIds: ['tcoe-2020-index'] },
   { id: 'wizard-order-of-scribes-one-with-the-word', subclassId: 'subclass-2014-wizard-order-of-scribes', name: '与词合一', englishName: 'One with the Word', level: 14, summary: '以附赠动作使法术书融入自身，获得抗性与施法强化。', description: '以附赠动作使法术书融入自身，获得抗性与施法强化。', kind: 'bonus-action', status: 'index-only', sourceIds: ['tcoe-2020-index'] },
+
+  // 工匠专职（TCoE）：数值可派生项与战斗情境摘要分层表示。
+  { id: 'artificer-alchemist-tool-proficiency', subclassId: 'subclass-2014-artificer-alchemist', name: '工具熟练', englishName: 'Tool Proficiency', level: 3, summary: '获得炼金器材熟练。', description: '如果已熟练该工具，按通用重复熟练规则改选同类工具。', kind: 'passive', status: 'implemented', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-alchemist-experimental-elixir', subclassId: 'subclass-2014-artificer-alchemist', name: '实验灵药', englishName: 'Experimental Elixir', level: 3, summary: '长休后产生灵药，其随机结果与额外制作消耗以资源上限展示。', description: '灵药结果依随机表决定，不扩建战斗模拟器；页面展示每日数量与来源提示。', kind: 'resource', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-alchemist-alchemical-savant', subclassId: 'subclass-2014-artificer-alchemist', name: '炼金奇才', englishName: 'Alchemical Savant', level: 5, summary: '以炼金器材施放指定伤害或治疗法术时附加智力调整值。', description: '该加值取决于法术伤害类型与施法媒介，以情境效果展示。', kind: 'passive', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-alchemist-restorative-reagents', subclassId: 'subclass-2014-artificer-alchemist', name: '恢复性试剂', englishName: 'Restorative Reagents', level: 9, summary: '灵药赋予临时生命，并可有限施放次级复原。', description: '使用次数与智力调整值相关，长休恢复。', kind: 'resource', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-alchemist-chemical-mastery', subclassId: 'subclass-2014-artificer-alchemist', name: '化学精通', englishName: 'Chemical Mastery', level: 15, summary: '获得对指定伤害的抗性，并可有限施放高级恢复法术。', description: '长休恢复免材料施法的使用次数。', kind: 'resource', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+
+  { id: 'artificer-armorer-tools-of-the-trade', subclassId: 'subclass-2014-artificer-armorer', name: '行家工具', englishName: 'Tools of the Trade', level: 3, summary: '获得重甲与锻造工具熟练。', description: '穿戴重甲时可忽略力量需求。', kind: 'passive', status: 'implemented', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-armorer-arcane-armor', subclassId: 'subclass-2014-artificer-armorer', name: '奥术装甲', englishName: 'Arcane Armor', level: 3, summary: '将身着护甲改造为施法焦点，可替代缺失肢体且不可强行卸下。', description: '装甲作为工匠法术的施法焦点，并可分区灌注。', kind: 'passive', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-armorer-armor-model', subclassId: 'subclass-2014-artificer-armorer', name: '装甲模式', englishName: 'Armor Model', level: 3, summary: '在守护者与潜行者模式中选择，长休后可更换。', description: '守护者偏向前线与临时生命；潜行者偏向远程闪电攻击与移动。', kind: 'choice', requiresChoice: true, optionIds: ['artificer-armor-model-guardian', 'artificer-armor-model-infiltrator'], optionLabels: { 'artificer-armor-model-guardian': '守护者', 'artificer-armor-model-infiltrator': '潜行者' }, status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-armorer-extra-attack', subclassId: 'subclass-2014-artificer-armorer', name: '额外攻击', englishName: 'Extra Attack', level: 5, summary: '采取攻击动作时可攻击两次。', description: '只影响攻击次数，不直接改写单次命中派生值。', kind: 'passive', status: 'implemented', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-armorer-armor-modifications', subclassId: 'subclass-2014-artificer-armorer', name: '装甲改装', englishName: 'Armor Modifications', level: 9, summary: '奥术装甲分为多个可独立灌注的区域，同时灌注上限增加。', description: '绑定层将装甲区域视为独立合法目标，并依旧禁止同一条目重复灌注。', kind: 'resource', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-armorer-perfect-armor', subclassId: 'subclass-2014-artificer-armorer', name: '完美装甲', englishName: 'Perfected Armor', level: 15, summary: '守护者与潜行者模式的特殊攻击进一步强化。', description: '效果依当前装甲模式触发，以情境摘要展示。', kind: 'passive', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+
+  { id: 'artificer-artillerist-tool-proficiency', subclassId: 'subclass-2014-artificer-artillerist', name: '工具熟练', englishName: 'Tool Proficiency', level: 3, summary: '获得木雕工具熟练。', description: '已熟练时改选其他工匠工具。', kind: 'passive', status: 'implemented', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-artillerist-eldritch-cannon', subclassId: 'subclass-2014-artificer-artillerist', name: '魔法炮台', englishName: 'Eldritch Cannon', level: 3, summary: '创造一台火焰喷射器、力场弩或防护炮台。', description: '炮台使用次数、存续时间与同时数量结构化；其行动以摘要展示。', kind: 'choice', requiresChoice: true, optionIds: ['artificer-cannon-flamethrower', 'artificer-cannon-force-ballista', 'artificer-cannon-protector'], optionLabels: { 'artificer-cannon-flamethrower': '火焰喷射器', 'artificer-cannon-force-ballista': '力场弩', 'artificer-cannon-protector': '防护炮台' }, status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-artillerist-arcane-firearm', subclassId: 'subclass-2014-artificer-artillerist', name: '奥术火器', englishName: 'Arcane Firearm', level: 5, summary: '将法杖、长杖或魔杖改造为工匠法术的强化法器。', description: '符合条件的工匠法术一次伤害进行额外骰加值，不并入通用攻击加值。', kind: 'passive', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-artillerist-explosive-cannon', subclassId: 'subclass-2014-artificer-artillerist', name: '爆裂炮台', englishName: 'Explosive Cannon', level: 9, summary: '炮台伤害提升，且可主动引爆产生范围效果。', description: '引爆与范围伤害为战斗情境效果。', kind: 'action', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-artillerist-fortified-position', subclassId: 'subclass-2014-artificer-artillerist', name: '坚固阵地', englishName: 'Fortified Position', level: 15, summary: '炮台提供部分掩护，并可同时维持两台。', description: '同时炮台数量上限为 2，掩护以战斗情境摘要展示。', kind: 'resource', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+
+  { id: 'artificer-battle-smith-tool-proficiency', subclassId: 'subclass-2014-artificer-battle-smith', name: '工具熟练', englishName: 'Tool Proficiency', level: 3, summary: '获得锻造工具熟练。', description: '已熟练时改选其他工匠工具。', kind: 'passive', status: 'implemented', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-battle-smith-battle-ready', subclassId: 'subclass-2014-artificer-battle-smith', name: '战斗就绪', englishName: 'Battle Ready', level: 3, summary: '获得军用武器熟练；使用魔法武器时可以智力替代力量或敏捷。', description: '攻击派生层在装备魔法武器时使用智力调整值。', kind: 'passive', status: 'implemented', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-battle-smith-steel-defender', subclassId: 'subclass-2014-artificer-battle-smith', name: '钢铁守卫', englishName: 'Steel Defender', level: 3, summary: '创造一名受命令行动的构装伙伴。', description: '守卫的生命、防御与修复次数以结构化资源展示，不扩建独立战斗回合。', kind: 'resource', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-battle-smith-extra-attack', subclassId: 'subclass-2014-artificer-battle-smith', name: '额外攻击', englishName: 'Extra Attack', level: 5, summary: '采取攻击动作时可攻击两次。', description: '只影响攻击次数。', kind: 'passive', status: 'implemented', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-battle-smith-arcane-jolt', subclassId: 'subclass-2014-artificer-battle-smith', name: '奥术震击', englishName: 'Arcane Jolt', level: 9, summary: '魔法武器或钢铁守卫命中时，可额外造成力场伤害或治疗。', description: '每回合一次，每日次数与智力调整值相关。', kind: 'resource', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
+  { id: 'artificer-battle-smith-improved-defender', subclassId: 'subclass-2014-artificer-battle-smith', name: '改良守卫', englishName: 'Improved Defender', level: 15, summary: '奥术震击与钢铁守卫的防御效果提升。', description: '数值上限随等级展示，具体触发依战斗情境。', kind: 'passive', status: 'selectable', sourceIds: ['tcoe-2020-index'] },
 ]
+
+/**
+ * 已有原创摘要但效果依赖战斗情境的特性属于“可选择”，而不是缺少数据的索引。
+ * 真正缺少必选选项的情况由子职完成度聚合器降级为 index-only。
+ */
+export const subclassFeatures2014: readonly SubclassFeature[] = subclassFeatureSeeds2014.map((feature) => ({
+  ...feature,
+  status: feature.status === 'index-only' ? 'selectable' : feature.status,
+}))
 
 const featuresBySubclass = new Map<string, SubclassFeature[]>()
 for (const feature of subclassFeatures2014) {

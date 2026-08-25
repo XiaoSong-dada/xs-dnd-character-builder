@@ -3,6 +3,7 @@ import type { ClassRule } from '@/types/rules'
 type ClassPreview = Omit<ClassRule, 'checkpoints'>
 
 export const classPreviews2014: readonly ClassPreview[] = [
+  { id: 'class-2014-artificer', ruleset: '5e-2014', name: '工匠', englishName: 'Artificer', summary: '魔法工具、灌注与智力准备施法。', hitDie: 8, primaryAbilities: ['int'], playStyleTags: ['spellcaster', 'support', 'utility', 'durable'], savingThrowAbilities: ['con', 'int'], status: 'implemented', sourceIds: ['erftlw-2019-index', 'tcoe-2020-index'] },
   { id: 'class-2014-barbarian', ruleset: '5e-2014', name: '野蛮人', englishName: 'Barbarian', summary: '高生命值、狂暴与强力近战。', hitDie: 12, primaryAbilities: ['str'], playStyleTags: ['frontline', 'durable', 'striker'], savingThrowAbilities: ['str', 'con'], status: 'index-only', sourceIds: ['basic-rules-2014'] },
   { id: 'class-2014-bard', ruleset: '5e-2014', name: '吟游诗人', englishName: 'Bard', summary: '技能、支援与灵活施法。', hitDie: 8, primaryAbilities: ['cha'], playStyleTags: ['spellcaster', 'support', 'utility', 'control'], savingThrowAbilities: ['dex', 'cha'], status: 'implemented', sourceIds: ['phb-2014-index'] },
   { id: 'class-2014-cleric', ruleset: '5e-2014', name: '牧师', englishName: 'Cleric', summary: '神术、治疗与领域能力。', hitDie: 8, primaryAbilities: ['wis'], playStyleTags: ['spellcaster', 'support', 'durable'], savingThrowAbilities: ['wis', 'cha'], status: 'implemented', sourceIds: ['basic-rules-2014'] },

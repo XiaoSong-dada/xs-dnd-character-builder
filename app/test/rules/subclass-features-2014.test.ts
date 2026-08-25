@@ -50,7 +50,7 @@ describe('2014 subclass features catalog', () => {
       expect(feature.summary.length).toBeGreaterThan(0)
       expect(feature.description.length).toBeGreaterThan(0)
       expect(feature.level).toBeGreaterThan(0)
-      expect(['implemented', 'index-only']).toContain(feature.status)
+      expect(['implemented', 'selectable', 'index-only']).toContain(feature.status)
       expect(feature.sourceIds.length).toBeGreaterThan(0)
     }
   })
@@ -75,24 +75,24 @@ describe('2014 subclass features catalog', () => {
     expect(totemSpirit?.optionIds).toEqual(['totem-bear', 'totem-eagle', 'totem-wolf'])
   })
 
-  it('registers batch 2 core subclass features with implemented status', () => {
+  it('registers batch 2 core subclass features with selectable or implemented status', () => {
     const batchTwo = [
       'subclass-2014-bard-lore', 'subclass-2014-bard-valor', 'subclass-2014-cleric-life', 'subclass-2014-cleric-war',
       'subclass-2014-druid-land', 'subclass-2014-druid-moon', 'subclass-2014-sorcerer-draconic-bloodline', 'subclass-2014-sorcerer-wild-magic',
     ]
     for (const id of batchTwo) {
       expect(getSubclassFeatures2014(id).length).toBeGreaterThan(0)
-      expect(rulesRepository.getSubclass(id)?.status).toBe('implemented')
+      expect(['implemented', 'selectable']).toContain(rulesRepository.getSubclass(id)?.status)
     }
     expect(getSubclassFeatures2014('subclass-2014-cleric-life')).toHaveLength(7)
     expect(getSubclassFeatures2014('subclass-2014-sorcerer-wild-magic')).toHaveLength(5)
   })
 
-  it('registers batch 3 expanded subclass features and promotes all player subclasses to implemented', () => {
+  it('registers batch 3 expanded subclass features and computes status from child completeness', () => {
     const playerSubclasses = subclasses2014.filter((subclass) => subclass.availability === 'player')
-    const implemented = playerSubclasses.filter((subclass) => subclass.status === 'implemented')
-    expect(implemented.length).toBe(112)
-    for (const subclass of implemented) {
+    const selectable = playerSubclasses.filter((subclass) => ['implemented', 'selectable'].includes(subclass.status))
+    expect(selectable.length).toBe(playerSubclasses.length)
+    for (const subclass of selectable) {
       expect(getSubclassFeatures2014(subclass.id).length).toBeGreaterThan(0)
     }
     const spotChecks = [

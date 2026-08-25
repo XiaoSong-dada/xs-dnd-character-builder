@@ -19,6 +19,12 @@ const sourceTitles: Readonly<Record<string, string>> = {
 }
 
 const entriesByClass = {
+  artificer: [
+    ['alchemist', '炼金术士', 'Alchemist', 'tcoe-2020-index'],
+    ['armorer', '装甲师', 'Armorer', 'tcoe-2020-index'],
+    ['artillerist', '炮术师', 'Artillerist', 'tcoe-2020-index'],
+    ['battle-smith', '战斗铁匠', 'Battle Smith', 'tcoe-2020-index'],
+  ],
   barbarian: [
     ['berserker', '狂战士道途', 'Path of the Berserker', 'phb-2014-index'],
     ['totem-warrior', '图腾武者道途', 'Path of the Totem Warrior', 'phb-2014-index'],
@@ -160,6 +166,7 @@ const entriesByClass = {
 } as const satisfies Readonly<Record<string, readonly SubclassEntry[]>>
 
 const selectionLevels: Readonly<Record<string, number>> = {
+  artificer: 3,
   barbarian: 3, bard: 3, cleric: 1, druid: 2, fighter: 3, monk: 3,
   paladin: 3, ranger: 3, rogue: 3, sorcerer: 1, warlock: 1, wizard: 2,
 }
@@ -284,6 +291,34 @@ const wizardSpellIds: readonly string[] = spells2014
   .filter((spell) => spell.classIds.includes('class-2014-wizard'))
   .map((spell) => spell.id)
 
+const spellIds = (...englishNames: readonly string[]): readonly string[] => englishNames.flatMap((name) => {
+  const spell = spells2014.find((item) => item.englishName === name)
+  return spell ? [spell.id] : []
+})
+
+const artificerSubclassSpells: Readonly<Record<string, Readonly<Record<number, readonly string[]>>>> = {
+  'subclass-2014-artificer-alchemist': {
+    3: spellIds('Healing Word', 'Ray of Sickness'), 5: spellIds('Flaming Sphere', "Melf's Acid Arrow"),
+    9: spellIds('Gaseous Form', 'Mass Healing Word'), 13: spellIds('Blight', 'Death Ward'),
+    17: spellIds('Cloudkill', 'Raise Dead'),
+  },
+  'subclass-2014-artificer-armorer': {
+    3: spellIds('Magic Missile', 'Thunderwave'), 5: spellIds('Mirror Image', 'Shatter'),
+    9: spellIds('Hypnotic Pattern', 'Lightning Bolt'), 13: spellIds('Fire Shield', 'Greater Invisibility'),
+    17: spellIds('Passwall', 'Wall of Force'),
+  },
+  'subclass-2014-artificer-artillerist': {
+    3: spellIds('Shield', 'Thunderwave'), 5: spellIds('Scorching Ray', 'Shatter'),
+    9: spellIds('Fireball', 'Wind Wall'), 13: spellIds('Ice Storm', 'Wall of Fire'),
+    17: spellIds('Cone of Cold', 'Wall of Force'),
+  },
+  'subclass-2014-artificer-battle-smith': {
+    3: spellIds('Heroism', 'Shield'), 5: spellIds('Branding Smite', 'Warding Bond'),
+    9: spellIds('Aura of Vitality', 'Conjure Barrage'), 13: spellIds('Aura of Purity', 'Fire Shield'),
+    17: spellIds('Banishing Smite', 'Mass Cure Wounds'),
+  },
+}
+
 /** 三分之一施法者（奥法骑士、诡术师）戏法数量：3 级 2 个、10 级 3 个。 */
 const THIRD_CASTER_CANTRIPS = [0, 0, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3] as const
 /** 三分之一施法者已知法术数量：3 级 3 个，4/7/8/10/11/14/16/19 级各 +1（共 11 个）。 */
@@ -329,11 +364,19 @@ export const subclasses2014: readonly SubclassRule[] = Object.entries(entriesByC
       summary: dmOnly
         ? `${name}是仅供地下城主批准使用的子职业，本项目登记其索引但不开放普通车卡选择。`
         : `${name}提供围绕其主题的职业发展路线；当前仅登记选择所需的原创摘要与来源。`,
-      status: dmOnly ? 'dm-only' as const : implementedIds.has(id) ? 'implemented' as const : 'index-only' as const,
+      status: (() => {
+        if (dmOnly) return 'dm-only' as const
+        const features = getSubclassFeatures2014(id)
+        const missingRequiredChoice = features.some((feature) => feature.requiresChoice && (feature.optionIds?.length ?? 0) === 0)
+        if (features.length === 0 || missingRequiredChoice || features.some((feature) => feature.status === 'index-only')) return 'index-only' as const
+        if (implementedIds.has(id) && features.every((feature) => feature.status === 'implemented')) return 'implemented' as const
+        return 'selectable' as const
+      })(),
       availability: dmOnly ? 'dm-only' as const : 'player' as const,
       sourceIds: [sourceId],
       features: getSubclassFeatures2014(id),
       spellcasting: subclassSpellcasting[id],
+      alwaysPreparedSpellIdsByLevel: artificerSubclassSpells[id],
     }
   }),
 )

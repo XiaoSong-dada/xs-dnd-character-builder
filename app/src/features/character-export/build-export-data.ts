@@ -2,7 +2,8 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { SUBCLASS_CHOICE_OPTION_IDS } from '@/rules/data/subclass-choice-options-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
-import { getAvailableSpells, getMagicalSecretsSpellIds, getSpellSlots } from '@/rules/spellcasting'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getMagicalSecretsSpellIds, getSpellcastingConfig, getSpellSlots } from '@/rules/spellcasting'
+import { isSourceEnabled } from '@/rules/source-books'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
 
@@ -13,6 +14,7 @@ export type ExportDiagnosticCode =
   | 'invalid-template-target'
   | 'content-truncated'
   | 'formula-not-recalculated'
+  | 'source-disabled'
 
 export interface ExportDiagnostic {
   readonly code: ExportDiagnosticCode
@@ -133,9 +135,10 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
       }
       // 已选选择类选项（超魔、战技与其余子职选项、法术专精/招牌法术）进入导出
       const isMetamagic = optionId.startsWith('metamagic-')
+      const isInfusion = optionId.startsWith('infusion-2014-')
       const isSpellMasterySelection = selection.checkpointId.startsWith('wizard-2014-spell-mastery-')
         || selection.checkpointId.startsWith('wizard-2014-signature-spells-')
-      if (isMetamagic || isSpellMasterySelection || SUBCLASS_CHOICE_OPTION_IDS.includes(optionId)) {
+      if (isMetamagic || isInfusion || isSpellMasterySelection || SUBCLASS_CHOICE_OPTION_IDS.includes(optionId)) {
         const spell = rulesRepository.getSpell(optionId)
         if (spell) {
           features.push({ id: spell.id, category: 'class', name: spell.name, summary: spell.description, priority: 10 })
@@ -143,11 +146,16 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
         }
         const option = rulesRepository.getOption(optionId)
         if (option) {
+          const assignment = isInfusion ? (draft.infusionAssignments ?? []).find((item) => item.infusionId === optionId) : undefined
+          const entry = assignment ? draft.inventory.find((item) => item.id === assignment.inventoryEntryId) : undefined
+          const boundItem = entry ? rulesRepository.getEquipment(entry.itemId) : undefined
           features.push({
             id: option.id,
-            category: isMetamagic ? 'class' : 'subclass',
+            category: isMetamagic || isInfusion ? 'class' : 'subclass',
             name: option.name,
-            summary: option.description,
+            summary: isInfusion
+              ? `${option.description}${assignment ? ` 当前绑定：${boundItem?.name ?? assignment.inventoryEntryId}。` : ' 当前未生效。'}`
+              : option.description,
             priority: 10,
           })
         }
@@ -190,15 +198,16 @@ function buildInventory(draft: CharacterDraft, diagnostics: ExportDiagnostic[]) 
 }
 
 function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): readonly ExportSpell[] {
-  const config = rulesRepository.getSpellcastingConfig(draft)
+  const config = getSpellcastingConfig(draft)
   if (!config) return []
   const baseIds = config.mode === 'spellbook'
     ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.spellbookSpellIds]
     : config.mode === 'prepared'
       ? [...draft.spellSelections.cantripIds, ...getAvailableSpells(draft, config).filter((spell) => spell.level > 0).map((spell) => spell.id)]
       : [...draft.spellSelections.cantripIds, ...draft.spellSelections.knownSpellIds]
-  const ids = [...new Set([...baseIds, ...getMagicalSecretsSpellIds(draft)])]
-  const prepared = new Set(draft.spellSelections.preparedSpellIds)
+  const alwaysPrepared = getAlwaysPreparedSpellIds(draft)
+  const ids = [...new Set([...baseIds, ...alwaysPrepared, ...getMagicalSecretsSpellIds(draft)])]
+  const prepared = new Set([...draft.spellSelections.preparedSpellIds, ...alwaysPrepared])
   return ids.map((id) => {
     const spell = rulesRepository.getSpell(id)
     if (!spell) diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `spell.${id}`, message: `无法解析法术 ${id}。` })
@@ -218,6 +227,8 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
   const background = draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
   const backgroundVariant = draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId) : undefined
   if (draft.classId && !classRule) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.class', message: '无法解析角色职业。' })
+  if (classRule && !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.class', message: `职业“${classRule.name}”的来源已关闭，导出已阻止。` })
+  if (subclass && !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.subclass', message: `子职“${subclass.name}”的来源已关闭，导出已阻止。` })
   if (draft.raceId && !race) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.race', message: '无法解析角色种族。' })
 
   const inventory = buildInventory(draft, diagnostics)
@@ -247,7 +258,7 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
     return { id, name: optionName(id), value: value.value, proficiency: labels.includes('专精') ? 'expertise' as const : labels.includes('技能熟练') ? 'proficient' as const : 'none' as const }
   })
   const languages = draft.languages.map(optionName)
-  const spellcastingConfig = rulesRepository.getSpellcastingConfig(draft)
+  const spellcastingConfig = getSpellcastingConfig(draft)
 
   return {
     identity: {
