@@ -34,9 +34,12 @@ describe('CharacterExportModel', () => {
   })
 
   it.each([
-    ['known', 'class-2014-bard', { cantripIds: ['spell-2014-mage-hand'], knownSpellIds: ['spell-2014-magic-missile'], preparedSpellIds: [], spellbookSpellIds: [] }],
-    ['prepared', 'class-2014-cleric', { cantripIds: [], knownSpellIds: [], preparedSpellIds: ['spell-2014-bless'], spellbookSpellIds: [] }],
-    ['pact', 'class-2014-warlock', { cantripIds: ['spell-2014-mage-hand'], knownSpellIds: ['spell-2014-magic-missile'], preparedSpellIds: [], spellbookSpellIds: [] }],
+    ['known', 'class-2014-bard', { cantripIds: ['spell-2014-mage-hand'], knownSpellIds: ['spell-2014-magic-missile'], preparedSpellIds: [], spellbookSpellIds: [],
+        transcribedSpellIds: [] }],
+    ['prepared', 'class-2014-cleric', { cantripIds: [], knownSpellIds: [], preparedSpellIds: ['spell-2014-bless'], spellbookSpellIds: [],
+        transcribedSpellIds: [] }],
+    ['pact', 'class-2014-warlock', { cantripIds: ['spell-2014-mage-hand'], knownSpellIds: ['spell-2014-magic-missile'], preparedSpellIds: [], spellbookSpellIds: [],
+        transcribedSpellIds: [] }],
   ] as const)('%s 模式只输出规则指定的选择集合', (mode, classId, spellSelections) => {
     const draft = { ...fighterDraft, classId, subclassId: undefined, targetLevel: 3, spellSelections }
     const model = buildCharacterExportModel(draft, deriveCharacter(draft))
@@ -78,6 +81,7 @@ describe('CharacterExportModel', () => {
         knownSpellIds: [],
         preparedSpellIds: ['spell-2014-bless'],
         spellbookSpellIds: [],
+        transcribedSpellIds: [],
       },
     }
     const model = buildCharacterExportModel(cleric, deriveCharacter(cleric))
@@ -102,6 +106,7 @@ describe('CharacterExportModel', () => {
         knownSpellIds: [],
         preparedSpellIds: ['spell-2014-spiritual-weapon', 'spell-2014-bless'],
         spellbookSpellIds: [],
+        transcribedSpellIds: [],
       },
     }
     const model = buildCharacterExportModel(cleric, deriveCharacter(cleric))
@@ -132,7 +137,7 @@ describe('CharacterExportModel', () => {
       classId: 'class-2014-wizard',
       subclassId: undefined,
       targetLevel: 18,
-      spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: ['spell-2014-magic-missile'] },
+      spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: ['spell-2014-magic-missile'], transcribedSpellIds: [] },
       selections: [
         { checkpointId: 'wizard-2014-spell-mastery-1', optionIds: ['spell-2014-magic-missile'], confirmedAt: '' },
       ],

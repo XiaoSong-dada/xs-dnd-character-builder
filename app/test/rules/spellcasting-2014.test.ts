@@ -15,7 +15,7 @@ import type { ChoiceCheckpoint } from '@/types/rules'
 
 function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: 'spell-test',
     ruleset: '5e-2014',
     createdAt: '',
@@ -41,7 +41,7 @@ function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     adventureGold: 0,
     equipmentNeedsReview: false,
-    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
     name: '施法测试',
     alignment: '',
     notes: '',
@@ -80,6 +80,7 @@ describe('2014 half-caster spellcasting', () => {
         knownSpellIds: [],
         preparedSpellIds: ['spell-2014-bless', 'spell-2014-aid'],
         spellbookSpellIds: [],
+        transcribedSpellIds: [],
       },
     })
     expect(validateSpellSelections(invalid)).toBe(false)
@@ -131,6 +132,7 @@ describe('2014 牧师/德鲁伊戏法数量（缺陷回归：车卡页无戏法�
         knownSpellIds: [],
         preparedSpellIds: ['spell-2014-bless', 'spell-2014-cure-wounds'],
         spellbookSpellIds: [],
+        transcribedSpellIds: [],
       },
     })
     expect(validateSpellSelections(complete)).toBe(true)
@@ -147,6 +149,7 @@ describe('2014 牧师/德鲁伊戏法数量（缺陷回归：车卡页无戏法�
         knownSpellIds: [],
         preparedSpellIds: ['spell-2014-bless', 'spell-2014-cure-wounds'],
         spellbookSpellIds: [],
+        transcribedSpellIds: [],
       },
     })
     expect(validateSpellSelections(invalid)).toBe(false)
@@ -299,6 +302,7 @@ describe('三分之一施法者（奥法骑士 / 诡术师）', () => {
         knownSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands'],
         preparedSpellIds: [],
         spellbookSpellIds: [],
+        transcribedSpellIds: [],
       },
     })
     expect(validateSpellSelections(complete)).toBe(true)
@@ -308,6 +312,7 @@ describe('三分之一施法者（奥法骑士 / 诡术师）', () => {
         knownSpellIds: ['spell-2014-magic-missile'],
         preparedSpellIds: [],
         spellbookSpellIds: [],
+        transcribedSpellIds: [],
       },
     })
     expect(validateSpellSelections(missing)).toBe(false)

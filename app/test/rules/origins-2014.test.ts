@@ -6,7 +6,7 @@ import type { CharacterDraft } from '@/types/character'
 
 function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: 'origin-test',
     ruleset: '5e-2014',
     createdAt: '',

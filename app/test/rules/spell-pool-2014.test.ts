@@ -37,7 +37,7 @@ function draft(classId: string, targetLevel: number): CharacterDraft {
   const ability = CASTING_ABILITY[classId as keyof typeof CASTING_ABILITY] ?? 'cha'
   const baseAbilities = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, [ability]: 20 }
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: `pool-${classId}`,
     ruleset: '5e-2014',
     createdAt: '',
@@ -60,7 +60,7 @@ function draft(classId: string, targetLevel: number): CharacterDraft {
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     adventureGold: 0,
     equipmentNeedsReview: false,
-    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
     name: '法术池回归',
     alignment: '',
     notes: '',

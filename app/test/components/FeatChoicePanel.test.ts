@@ -5,7 +5,7 @@ import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePane
 import type { CharacterDraft } from '@/types/character'
 
 const draft: CharacterDraft = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   id: 'feat-panel',
   ruleset: '5e-2014',
   createdAt: '',
@@ -26,7 +26,7 @@ const draft: CharacterDraft = {
   currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
   adventureGold: 0,
   equipmentNeedsReview: false,
-  spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+  spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
   name: '',
   alignment: '',
   notes: '',

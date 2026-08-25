@@ -10,7 +10,7 @@ const mockConfig = vi.hoisted(() => ({
 vi.mock('@/config/site', () => mockConfig)
 
 const draft: CharacterDraft = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   id: 'draft-delete-test',
   ruleset: '5e-2014',
   createdAt: '',
@@ -30,7 +30,7 @@ const draft: CharacterDraft = {
   currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
   adventureGold: 0,
   equipmentNeedsReview: false,
-  spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+  spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
   name: '阿尔文',
   alignment: '',
   notes: '',

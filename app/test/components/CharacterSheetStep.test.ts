@@ -1,15 +1,17 @@
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineComponent, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
+import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
 import CharacterSheetStep from '@/views/character-builder/components/CharacterSheetStep.vue'
 
 const draft: CharacterDraft = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   id: 'character-sheet-labels',
   ruleset: '5e-2014',
   createdAt: '',
@@ -32,7 +34,7 @@ const draft: CharacterDraft = {
   currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
   adventureGold: 0,
   equipmentNeedsReview: false,
-  spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+  spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
   name: '测试角色',
   alignment: '',
   notes: '',
@@ -40,6 +42,10 @@ const draft: CharacterDraft = {
 }
 
 describe('CharacterSheetStep', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
   it('uses Chinese labels for abilities, saving throws, and skills', async () => {
     const wrapper = mount(CharacterSheetStep, {
       props: { draft, derived: deriveCharacter(draft) },
@@ -246,6 +252,7 @@ describe('CharacterSheetStep 法术展示', () => {
       knownSpellIds: [],
       preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield'],
       spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands'],
+      transcribedSpellIds: [],
     },
   }
 
@@ -587,6 +594,7 @@ describe('CharacterSheetStep 候选池与点击交互', () => {
       knownSpellIds: [],
       preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield'],
       spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands'],
+      transcribedSpellIds: [],
     },
   }
 
@@ -1210,3 +1218,135 @@ describe('CharacterSheetStep 导出入口', () => {
   })
 })
 
+
+describe('角色卡抄录法术书', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  function makeWizardDraft(store: ReturnType<typeof useCharacterDraftsStore>): CharacterDraft {
+    store.createDraft()
+    store.updateDraft({
+      name: '抄录法师',
+      classId: 'class-2014-wizard',
+      targetLevel: 3,
+      adventureGold: 500,
+      spellSelections: {
+        cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],
+        knownSpellIds: [],
+        preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield'],
+        spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands'],
+        transcribedSpellIds: [],
+      },
+    })
+    return store.activeDraft as CharacterDraft
+  }
+
+  it('spellbook 模式显示「抄录法术」入口；prepared 模式不显示', async () => {
+    const store = useCharacterDraftsStore()
+    const wizard = makeWizardDraft(store)
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: wizard, derived: deriveCharacter(wizard) },
+      attachTo: document.body,
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+    expect(wrapper.text()).toContain('抄录法术')
+    wrapper.unmount()
+
+    const cleric = {
+      ...wizard,
+      id: 'cleric-no-transcribe',
+      classId: 'class-2014-cleric',
+      spellSelections: { ...wizard.spellSelections, spellbookSpellIds: [], transcribedSpellIds: [] },
+    }
+    const wrapper2 = mount(CharacterSheetStep, {
+      props: { draft: cleric, derived: deriveCharacter(cleric) },
+      attachTo: document.body,
+    })
+    await wrapper2.get('[role="tab"]:nth-child(4)').trigger('click')
+    expect(wrapper2.text()).not.toContain('抄录法术')
+    wrapper2.unmount()
+  })
+
+  it('打开抄录弹层：候选按环级分组、费用与余额预览正确', async () => {
+    const store = useCharacterDraftsStore()
+    const wizard = makeWizardDraft(store)
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: wizard, derived: deriveCharacter(wizard) },
+      attachTo: document.body,
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+    await wrapper.get('[aria-label="抄录法术书"]').trigger('click')
+
+    expect(document.body.textContent).toContain('抄录法术书')
+    expect(document.body.textContent).toContain('1环法术')
+    expect(document.body.textContent).toContain('2环法术')
+    expect(document.body.textContent).toContain('抄录 100 GP')
+    expect(document.body.textContent).toContain('当前持有')
+    expect(document.body.textContent).toContain('500 GP')
+    wrapper.unmount()
+  })
+
+  it('确认抄录后法术入书、带「抄录」徽标并扣减金币', async () => {
+    const store = useCharacterDraftsStore()
+    const wizard = makeWizardDraft(store)
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: wizard, derived: deriveCharacter(wizard) },
+      attachTo: document.body,
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+    await wrapper.get('[aria-label="抄录法术书"]').trigger('click')
+
+    // 选中 2 环法术灼热射线（费用 100 GP）；卡片主按钮带 250ms 双击判定，需等待
+    const scorchingCard = Array.from(document.body.querySelectorAll('.spellbook-transcription .expandable-option-card'))
+      .find((card) => card.textContent?.includes('灼热射线'))
+    expect(scorchingCard).toBeTruthy()
+    ;(scorchingCard!.querySelector('button[aria-pressed]') as HTMLButtonElement).click()
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(document.body.textContent).toContain('抄录（100 GP）')
+
+    const confirm = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.includes('抄录（100 GP）'))
+    confirm!.click()
+    await nextTick()
+
+    const updated = store.activeDraft as CharacterDraft
+    expect(updated.spellSelections.spellbookSpellIds).toContain('spell-2014-scorching-ray')
+    expect(updated.spellSelections.transcribedSpellIds).toEqual(['spell-2014-scorching-ray'])
+    expect(updated.adventureGold).toBe(400)
+    // 弹层关闭；同步最新草稿后法术书区出现「抄录」徽标
+    expect(document.body.textContent).not.toContain('抄录法术书')
+    await wrapper.setProps({ draft: store.activeDraft as CharacterDraft, derived: deriveCharacter(store.activeDraft as CharacterDraft) })
+    await nextTick()
+    const badges = wrapper.findAll('.character-sheet__spell-badge')
+    expect(badges.some((badge) => badge.text() === '抄录')).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('金币不足时拒绝抄录并展示中文原因，不写入', async () => {
+    const store = useCharacterDraftsStore()
+    const wizard = makeWizardDraft(store)
+    store.updateDraft({ adventureGold: 10 })
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: store.activeDraft as CharacterDraft, derived: deriveCharacter(store.activeDraft as CharacterDraft) },
+      attachTo: document.body,
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+    await wrapper.get('[aria-label="抄录法术书"]').trigger('click')
+
+    const scorchingCard = Array.from(document.body.querySelectorAll('.spellbook-transcription .expandable-option-card'))
+      .find((card) => card.textContent?.includes('灼热射线'))
+    ;(scorchingCard!.querySelector('button[aria-pressed]') as HTMLButtonElement).click()
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    const confirm = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.includes('抄录（100 GP）'))
+    confirm!.click()
+    await nextTick()
+
+    expect(document.body.textContent).toContain('金币不足')
+    const updated = store.activeDraft as CharacterDraft
+    expect(updated.spellSelections.spellbookSpellIds).not.toContain('spell-2014-scorching-ray')
+    expect(updated.adventureGold).toBe(10)
+    wrapper.unmount()
+  })
+})

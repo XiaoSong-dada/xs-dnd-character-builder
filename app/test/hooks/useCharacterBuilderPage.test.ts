@@ -18,7 +18,7 @@ type Page = ReturnType<typeof useCharacterBuilderPage>
 
 function makeFighterDraft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: 'test-fighter',
     ruleset: '5e-2014',
     createdAt: '2026-08-06T00:00:00.000Z',
@@ -41,7 +41,7 @@ function makeFighterDraft(overrides: Partial<CharacterDraft> = {}): CharacterDra
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     adventureGold: 0,
     equipmentNeedsReview: false,
-    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
     name: '测试战士',
     alignment: '',
     notes: '',
@@ -96,6 +96,7 @@ function makeSorcererDraft(overrides: Partial<CharacterDraft> = {}): CharacterDr
       knownSpellIds: sorcererSpellIds([1, 2]).slice(0, 5),
       preparedSpellIds: [],
       spellbookSpellIds: [],
+      transcribedSpellIds: [],
     },
     ...overrides,
   })

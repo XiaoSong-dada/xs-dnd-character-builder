@@ -7,7 +7,7 @@ import EquipmentStep from '@/views/character-builder/components/EquipmentStep.vu
 
 function createWizardDraft(): CharacterDraft {
   const draft: CharacterDraft = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: 'equipment-component',
     ruleset: '5e-2014',
     createdAt: '',
@@ -29,7 +29,7 @@ function createWizardDraft(): CharacterDraft {
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     adventureGold: 0,
     equipmentNeedsReview: false,
-    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
     name: '',
     alignment: '',
     notes: '',

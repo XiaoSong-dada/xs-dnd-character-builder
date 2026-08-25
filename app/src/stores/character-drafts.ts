@@ -25,7 +25,7 @@ function newId(): string {
 function createCharacterDraft(): CharacterDraft {
   const now = new Date().toISOString()
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: newId(),
     ruleset: '5e-2014',
     createdAt: now,
@@ -50,6 +50,7 @@ function createCharacterDraft(): CharacterDraft {
       knownSpellIds: [],
       preparedSpellIds: [],
       spellbookSpellIds: [],
+      transcribedSpellIds: [],
     },
     name: '',
     alignment: '',

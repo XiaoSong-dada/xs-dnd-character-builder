@@ -14,7 +14,7 @@ import type { CharacterDraft } from '@/types/character'
 
 function draft(patch: Partial<CharacterDraft>): CharacterDraft {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: 'arcane-test',
     ruleset: '5e-2014',
     createdAt: '',
@@ -37,7 +37,7 @@ function draft(patch: Partial<CharacterDraft>): CharacterDraft {
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     adventureGold: 0,
     equipmentNeedsReview: false,
-    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
     name: '奥术测试',
     alignment: '',
     notes: '',
@@ -63,7 +63,7 @@ describe('2014 wizard and warlock spellcasting', () => {
     const available = getAvailableSpells(base, config)
     const cantrips = available.filter((spell) => spell.level === 0).slice(0, 4).map((spell) => spell.id)
     const book = available.filter((spell) => spell.level > 0).slice(0, 20).map((spell) => spell.id)
-    const valid = draft({ spellSelections: { cantripIds: cantrips, spellbookSpellIds: book, preparedSpellIds: book.slice(0, 11), knownSpellIds: [] } })
+    const valid = draft({ spellSelections: { cantripIds: cantrips, spellbookSpellIds: book, preparedSpellIds: book.slice(0, 11), knownSpellIds: [], transcribedSpellIds: [] } })
     expect(validateSpellSelections(valid)).toBe(true)
     expect(validateSpellSelections(draft({
       spellSelections: {

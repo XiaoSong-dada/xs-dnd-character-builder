@@ -14,7 +14,7 @@ import type { CharacterDraft, InventoryEntry } from '@/types/character'
 
 function wizardDraft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: 'wizard-equipment',
     ruleset: '5e-2014',
     createdAt: '',
@@ -40,7 +40,7 @@ function wizardDraft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     adventureGold: 0,
     equipmentNeedsReview: false,
-    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
     name: '伊莱恩',
     alignment: '',
     notes: '',

@@ -3,7 +3,7 @@ import type { Ref } from 'vue'
 
 import { deriveCharacter } from '@/rules/derive'
 import { rulesRepository } from '@/rules/repository'
-import { getSpellSlots } from '@/rules/spellcasting'
+import { getRequiredSpellCount, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
 import {
   applyExhaustionChange,
   applyHpChange,
@@ -33,6 +33,36 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     spellcastingConfig.value ? getSpellSlots(spellcastingConfig.value, draft.value.targetLevel) : [],
   )
   const pactSlotLevels = computed(() => spellSlots.value.filter((slot) => slot.pact).map((slot) => slot.level))
+
+  // ---- 法术书（spellbook 模式）：未准备法术与准备切换 ----
+  const requiredSpellCount = computed(() =>
+    spellcastingConfig.value ? getRequiredSpellCount(draft.value, spellcastingConfig.value) : 0,
+  )
+  /** 法术书中未准备的法术（长休可换入准备）；仅 spellbook 模式有值。 */
+  const unpreparedFromBook = computed(() => {
+    const config = spellcastingConfig.value
+    if (!config) return []
+    return getSpellCandidates(draft.value, config).prepareFromBook
+      .map((id) => rulesRepository.getSpell(id))
+      .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell))
+  })
+  const canPrepareMore = computed(() =>
+    draft.value.spellSelections.preparedSpellIds.length < requiredSpellCount.value,
+  )
+
+  /** 准备/取消准备法术书中未准备的法术（与角色卡 togglePrepare 同一语义）。 */
+  function togglePrepareSpell(spellId: string): void {
+    const current = draft.value.spellSelections.preparedSpellIds
+    const next = current.includes(spellId)
+      ? current.filter((id) => id !== spellId)
+      : canPrepareMore.value
+        ? [...current, spellId]
+        : current
+    if (next === current) return
+    store.updateDraftById(draft.value.id, {
+      spellSelections: { ...draft.value.spellSelections, preparedSpellIds: next },
+    })
+  }
 
   // ---- 局内状态（首次进入初始化；按草稿 id 独立存储）----
   const sessionState = ref<SessionState>()
@@ -179,6 +209,9 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     sessionState,
     availableSlots,
     totalGold,
+    unpreparedFromBook,
+    canPrepareMore,
+    togglePrepareSpell,
     changeHp,
     changeSpellSlot,
     changeExhaustion,

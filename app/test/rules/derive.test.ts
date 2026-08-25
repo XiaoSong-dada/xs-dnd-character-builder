@@ -4,7 +4,7 @@ import { abilityModifier, deriveCharacter, proficiencyBonus } from '@/rules/deri
 import type { CharacterDraft } from '@/types/character'
 
 const draft: CharacterDraft = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   id: 'test',
   ruleset: '5e-2014',
   createdAt: '2026-07-30T00:00:00.000Z',

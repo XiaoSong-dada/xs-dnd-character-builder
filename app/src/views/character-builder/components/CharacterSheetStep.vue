@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import AddItemModal from '@/components/AddItemModal.vue'
 import AdjustItemModal from '@/components/AdjustItemModal.vue'
+import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
@@ -175,6 +176,17 @@ function togglePrepare(id: string): void {
       : current
   if (next === current) return
   emit('changeSpellSelections', { ...props.draft.spellSelections, preparedSpellIds: next })
+}
+/** 抄录法术书（仅 spellbook 模式）：弹层开关与可选预选法术。 */
+const showTranscribeModal = ref(false)
+const transcribePreselectId = ref<string>()
+function openTranscribe(spellId?: string): void {
+  transcribePreselectId.value = spellId
+  showTranscribeModal.value = true
+}
+/** 法术是否通过抄录获得（展示"抄录"徽标与来源）。 */
+function isTranscribedSpell(id: string): boolean {
+  return props.draft.spellSelections.transcribedSpellIds.includes(id)
 }
 const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || preparedOrKnownSpells.value.length > 0 || spellbookSpells.value.length > 0 || magicalSecretsSpells.value.length > 0)
 
@@ -642,7 +654,10 @@ function handleExportPdf(): void {
           </ListShell>
         </section>
         <section v-if="spellbookSpells.length" class="character-sheet__spell-section">
-          <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.length }} / {{ requiredSpellbookCount }}</h4>
+          <div class="character-sheet__spell-section-header">
+            <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.length }} / {{ requiredSpellbookCount }}</h4>
+            <button v-if="spellcastingConfig?.mode === 'spellbook'" type="button" class="character-sheet__spell-action" aria-label="抄录法术书" @click="openTranscribe()">抄录法术</button>
+          </div>
           <ListShell>
             <ExpandableOptionCard
               v-for="spell in spellbookSpells"
@@ -653,14 +668,20 @@ function handleExportPdf(): void {
             >
               <template #suffix>
                 <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
+                <em v-if="isTranscribedSpell(spell.id)" class="character-sheet__spell-badge">抄录</em>
                 <em class="character-sheet__spell-badge">在书中</em>
               </template>
-              <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+              <template v-if="spell.description" #expanded>
+                <p>{{ spell.description }}</p>
+                <p v-if="isTranscribedSpell(spell.id)" class="character-sheet__spell-source">
+                  通过抄录获得：费用 {{ spell.level * 50 }} GP（每环级 50 GP）。
+                </p>
+              </template>
             </ExpandableOptionCard>
           </ListShell>
         </section>
         <section v-if="wizardWriteToBook.length" class="character-sheet__spell-section">
-          <h4>未写入法术书 · {{ wizardWriteToBook.length }}（升级时可扩充）</h4>
+          <h4>未写入法术书 · {{ wizardWriteToBook.length }}（可抄录扩充）</h4>
           <ListShell>
             <ExpandableOptionCard
               v-for="spell in wizardWriteToBook"
@@ -669,6 +690,9 @@ function handleExportPdf(): void {
               :title="spell.name"
               :description="`${spell.level}环 · ${spell.englishName}`"
             >
+              <template #suffix>
+                <button type="button" class="character-sheet__spell-action" :aria-label="`抄录${spell.name}`" @click="openTranscribe(spell.id)">抄录</button>
+              </template>
               <template v-if="spell.description" #expanded>{{ spell.description }}</template>
             </ExpandableOptionCard>
           </ListShell>
@@ -736,6 +760,12 @@ function handleExportPdf(): void {
       </section>
     </div>
     <div v-else class="character-sheet__panel"><h3>{{ tabs.find((tab) => tab.id === activeTab)?.label }}</h3><p>该部分将在对应职业与施法批次继续扩展。</p></div>
+    <SpellbookTranscriptionModal
+      :open="showTranscribeModal"
+      :draft="draft"
+      :preselect-spell-id="transcribePreselectId"
+      @close="showTranscribeModal = false"
+    />
     <AddItemModal :open="showAddItemModal" @close="showAddItemModal = false" @add="handleAddItem" />
     <AdjustItemModal
       v-if="adjustEntry"
@@ -829,6 +859,13 @@ function handleExportPdf(): void {
     h4 { margin: 0; }
   }
 
+  &__spell-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
   &__spell-level {
     display: grid;
     gap: 0.6rem;
@@ -864,6 +901,12 @@ function handleExportPdf(): void {
     font-size: 0.62rem;
     font-style: normal;
     white-space: nowrap;
+  }
+
+  &__spell-source {
+    margin: 0.4rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.68rem;
   }
 
   &__items-header {

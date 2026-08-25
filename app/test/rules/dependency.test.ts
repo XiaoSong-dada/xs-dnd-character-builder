@@ -6,7 +6,7 @@ import type { CharacterDraft } from '@/types/character'
 
 function makeFighterDraft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: 'test-fighter',
     ruleset: '5e-2014',
     createdAt: '2026-08-06T00:00:00.000Z',
@@ -29,7 +29,7 @@ function makeFighterDraft(overrides: Partial<CharacterDraft> = {}): CharacterDra
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     adventureGold: 0,
     equipmentNeedsReview: false,
-    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
     name: '',
     alignment: '',
     notes: '',
@@ -295,6 +295,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
       knownSpellIds: spellIdsOfClass('class-2014-sorcerer', [1, 2]).slice(0, 5),
       preparedSpellIds: [],
       spellbookSpellIds: [],
+      transcribedSpellIds: [],
     })
     const impact = getDependencyImpact(draft, { kind: 'target-level', value: 5 })
     expect(impact.added).toEqual([])
@@ -307,6 +308,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
       knownSpellIds: spellIdsOfClass('class-2014-sorcerer', [1, 2]).slice(0, 5),
       preparedSpellIds: [],
       spellbookSpellIds: [],
+      transcribedSpellIds: [],
     })
     const impact = getDependencyImpact(draft, { kind: 'target-level', value: 6 })
     expect(impact.added).toEqual([])
@@ -321,6 +323,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
         knownSpellIds: spellIdsOfClass('class-2014-sorcerer', [1, 2]).slice(0, 4),
         preparedSpellIds: [],
         spellbookSpellIds: [],
+        transcribedSpellIds: [],
       },
       level4SorcererSelections.slice(0, 2),
     )
@@ -335,6 +338,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
       knownSpellIds: [],
       preparedSpellIds: spellIdsOfClass('class-2014-cleric', [1]).slice(0, 3),
       spellbookSpellIds: [],
+      transcribedSpellIds: [],
     })
     const impact = getDependencyImpact(draft, { kind: 'target-level', value: 2 })
     expect(impact.added).toEqual([])
@@ -348,6 +352,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
       knownSpellIds: [],
       preparedSpellIds: spellIdsOfClass('class-2014-wizard', [1]).slice(0, 3),
       spellbookSpellIds: spellIdsOfClass('class-2014-wizard', [1]).slice(0, 6),
+      transcribedSpellIds: [],
     })
     const impact = getDependencyImpact(draft, { kind: 'target-level', value: 2 })
     expect(impact.added).toContainEqual({ checkpointId: 'wizard-2014-subclass-2', title: '2级 · 选择奥术传统' })
@@ -360,6 +365,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
       knownSpellIds: spellIdsOfClass('class-2014-sorcerer', [1, 2]).slice(0, 6),
       preparedSpellIds: [],
       spellbookSpellIds: [],
+      transcribedSpellIds: [],
     })
     const impact = getDependencyImpact(draft, { kind: 'target-level', value: 5 })
     expect(impact.spellUpdates).toBeUndefined()
@@ -373,6 +379,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
         knownSpellIds: spellIdsOfClass('class-2014-sorcerer', [1]).slice(0, 3),
         preparedSpellIds: [],
         spellbookSpellIds: [],
+        transcribedSpellIds: [],
       },
       level4SorcererSelections.slice(0, 2),
     )
@@ -386,6 +393,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
       knownSpellIds: spellIdsOfClass('class-2014-bard', [1, 2, 3, 4, 5]).slice(0, 14),
       preparedSpellIds: [],
       spellbookSpellIds: [],
+      transcribedSpellIds: [],
     })
     const impact = getDependencyImpact(draft, { kind: 'target-level', value: 10 })
     expect(impact.added).toEqual([
@@ -401,6 +409,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
         knownSpellIds: [],
         preparedSpellIds: spellIdsOfClass('class-2014-wizard', [1, 2]).slice(0, 3),
         spellbookSpellIds: spellIdsOfClass('class-2014-wizard', [1, 2]).slice(0, 6),
+        transcribedSpellIds: [],
       },
       17,
       [

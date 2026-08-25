@@ -6,7 +6,7 @@ import type { CharacterDraft } from '@/types/character'
 
 function createDraft(): CharacterDraft {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: 'test',
     ruleset: '5e-2014',
     createdAt: '',
@@ -145,7 +145,7 @@ describe('validateDraft', () => {
       backgroundId: 'background-2014-sage',
       raceId: 'race-2014-human',
       name: '诗人',
-      spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+      spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
       selections: [
         { checkpointId: 'bard-2014-skills-1', optionIds: ['skill-insight', 'skill-history', 'skill-persuasion'], confirmedAt: '' },
         { checkpointId: 'bard-2014-expertise-3', optionIds: ['skill-insight', 'skill-history'], confirmedAt: '' },
@@ -165,7 +165,7 @@ describe('validateDraft', () => {
       backgroundId: 'background-2014-sage',
       raceId: 'race-2014-human',
       name: '诗人',
-      spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+      spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
       selections: [
         { checkpointId: 'bard-2014-skills-1', optionIds: ['skill-insight', 'skill-history', 'skill-persuasion'], confirmedAt: '' },
         { checkpointId: 'bard-2014-expertise-3', optionIds: ['skill-deception', 'skill-history'], confirmedAt: '' },
@@ -379,5 +379,87 @@ describe('validateRaceSkillChoices 种族自选熟练校验', () => {
 
     const legacy = raceDraft('race-2014-human')
     expect(ids(legacy).some((id) => id.startsWith('race-skill-choice-'))).toBe(false)
+  })
+
+  it('法师法术书数量超过升级名额（含抄录所得）时不报 spellbook-count', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      classId: 'class-2014-wizard',
+      backgroundId: 'background-2014-sage',
+      raceId: 'race-2014-human',
+      name: '抄录法师',
+      targetLevel: 1,
+      spellSelections: {
+        cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],
+        knownSpellIds: [],
+        preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands'],
+        spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands', 'spell-2014-mage-armor', 'spell-2014-thunderwave', 'spell-2014-find-familiar', 'spell-2014-detect-magic'],
+        transcribedSpellIds: ['spell-2014-detect-magic'],
+      },
+    }
+    const issues = validateDraft(draft)
+    expect(issues.some((issue) => issue.id === 'spellbook-count')).toBe(false)
+    expect(issues.some((issue) => issue.id === 'spellbook-transcription-invalid')).toBe(false)
+  })
+
+  it('法师法术书少于升级名额仍报 spellbook-count', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      classId: 'class-2014-wizard',
+      backgroundId: 'background-2014-sage',
+      raceId: 'race-2014-human',
+      name: '缺书法师',
+      targetLevel: 1,
+      spellSelections: {
+        cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],
+        knownSpellIds: [],
+        preparedSpellIds: ['spell-2014-magic-missile'],
+        spellbookSpellIds: ['spell-2014-magic-missile'],
+        transcribedSpellIds: [],
+      },
+    }
+    const issues = validateDraft(draft)
+    expect(issues.some((issue) => issue.id === 'spellbook-count')).toBe(true)
+  })
+
+  it('转录记录包含不在法术书中或职业池外的法术时报 spellbook-transcription-invalid', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      classId: 'class-2014-wizard',
+      backgroundId: 'background-2014-sage',
+      raceId: 'race-2014-human',
+      name: '异常转录',
+      targetLevel: 1,
+      spellSelections: {
+        cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],
+        knownSpellIds: [],
+        preparedSpellIds: ['spell-2014-magic-missile'],
+        spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands', 'spell-2014-mage-armor', 'spell-2014-thunderwave', 'spell-2014-find-familiar'],
+        transcribedSpellIds: ['spell-2014-cure-wounds'],
+      },
+    }
+    const issues = validateDraft(draft)
+    expect(issues.some((issue) => issue.id === 'spellbook-transcription-invalid')).toBe(true)
+  })
+
+  it('转录记录合法（书中且可用）且数量达标时不报错', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      classId: 'class-2014-wizard',
+      backgroundId: 'background-2014-sage',
+      raceId: 'race-2014-human',
+      name: '合法转录',
+      targetLevel: 1,
+      spellSelections: {
+        cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],
+        knownSpellIds: [],
+        preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands'],
+        spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands', 'spell-2014-mage-armor', 'spell-2014-thunderwave', 'spell-2014-find-familiar', 'spell-2014-detect-magic'],
+        transcribedSpellIds: ['spell-2014-detect-magic'],
+      },
+    }
+    const issues = validateDraft(draft)
+    expect(issues.some((issue) => issue.id === 'spellbook-count')).toBe(false)
+    expect(issues.some((issue) => issue.id === 'spellbook-transcription-invalid')).toBe(false)
   })
 })

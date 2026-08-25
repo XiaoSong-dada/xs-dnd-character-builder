@@ -1,4 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 
@@ -328,6 +329,117 @@ describe('跑团助手 · 局内面板操作', () => {
     const wrapper = mount(SessionAssistantPage, { attachTo: document.body })
     expect(wrapper.find('.session-panel').exists()).toBe(true)
     expect(wrapper.find('[role="tab"][aria-selected="true"]').text()).toBe('总览')
+    wrapper.unmount()
+  })
+})
+
+describe('跑团助手 · 法术书抄录与未准备法术', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  async function mountWizardPanel(spellSelections: CharacterDraft['spellSelections']): Promise<{
+    wrapper: ReturnType<typeof mount>
+    store: ReturnType<typeof useCharacterDraftsStore>
+  }> {
+    const store = useCharacterDraftsStore()
+    makeWizardDraft(store)
+    store.updateDraft({ adventureGold: 500, spellSelections })
+    const wrapper = mount(SessionAssistantPage, { attachTo: document.body })
+    await wrapper.get('.session-assistant__card').trigger('click')
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+    return { wrapper, store }
+  }
+
+  it('法术页签下方展示未准备法术（法术书中未准备），准备后进入已准备分组', async () => {
+    const { wrapper, store } = await mountWizardPanel({
+      cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],
+      knownSpellIds: [],
+      preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield'],
+      spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands', 'spell-2014-scorching-ray'],
+      transcribedSpellIds: [],
+    })
+
+    expect(wrapper.text()).toContain('未准备法术 · 2（法术书中未准备）')
+    expect(wrapper.text()).toContain('燃烧之手')
+    expect(wrapper.text()).toContain('灼热射线')
+
+    // 准备燃烧之手 → 进入已准备分组
+    const prepareButton = wrapper.findAll('.session-panel__adjust')
+      .find((button) => button.text() === '准备')
+    expect(prepareButton).toBeTruthy()
+    await prepareButton!.trigger('click')
+    await nextTick()
+
+    const updated = store.activeDraft as CharacterDraft
+    expect(updated.spellSelections.preparedSpellIds).toContain('spell-2014-burning-hands')
+    expect(wrapper.text()).toContain('未准备法术 · 1（法术书中未准备）')
+    expect(wrapper.text()).toContain('1环 · 已准备 3')
+  })
+
+  it('准备数量满员时按钮显示「已满」并禁用', async () => {
+    const { wrapper } = await mountWizardPanel({
+      cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],
+      knownSpellIds: [],
+      // 5 级法师准备上限 7（智力 15 → +2 + 5）
+      preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands', 'spell-2014-mage-armor', 'spell-2014-thunderwave', 'spell-2014-find-familiar', 'spell-2014-detect-magic'],
+      spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands', 'spell-2014-mage-armor', 'spell-2014-thunderwave', 'spell-2014-find-familiar', 'spell-2014-detect-magic', 'spell-2014-scorching-ray'],
+      transcribedSpellIds: [],
+    })
+
+    const fullButton = wrapper.findAll('.session-panel__adjust')
+      .find((button) => button.text() === '已满')
+    expect(fullButton).toBeTruthy()
+    expect(fullButton!.attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('未准备法术 · 1（法术书中未准备）')
+  })
+
+  it('抄录入口仅 spellbook 模式显示；抄录后未准备法术区同步（同一草稿）', async () => {
+    const { wrapper, store } = await mountWizardPanel({
+      cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],
+      knownSpellIds: [],
+      preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield'],
+      spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield', 'spell-2014-burning-hands'],
+      transcribedSpellIds: [],
+    })
+
+    // spellbook 模式显示抄录入口
+    const transcribeEntry = wrapper.get('[aria-label="抄录法术书"]')
+    await transcribeEntry.trigger('click')
+    expect(document.body.textContent).toContain('抄录法术书')
+
+    // 选中灼热射线（2 环 100 GP）并确认
+    const scorchingCard = Array.from(document.body.querySelectorAll('.spellbook-transcription .expandable-option-card'))
+      .find((card) => card.textContent?.includes('灼热射线'))
+    expect(scorchingCard).toBeTruthy()
+    ;(scorchingCard!.querySelector('button[aria-pressed]') as HTMLButtonElement).click()
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    const confirm = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.includes('抄录（100 GP）'))
+    confirm!.click()
+    await nextTick()
+
+    const updated = store.activeDraft as CharacterDraft
+    expect(updated.spellSelections.spellbookSpellIds).toContain('spell-2014-scorching-ray')
+    expect(updated.spellSelections.transcribedSpellIds).toEqual(['spell-2014-scorching-ray'])
+    expect(updated.adventureGold).toBe(400)
+
+    // 抄录后未准备法术区出现灼热射线（同一草稿响应式刷新）
+    expect(wrapper.text()).toContain('未准备法术 · 2（法术书中未准备）')
+    expect(wrapper.text()).toContain('灼热射线')
+  })
+
+  it('非 spellbook 职业（牧师）不显示抄录入口', async () => {
+    const store = useCharacterDraftsStore()
+    store.createDraft()
+    store.updateDraft({ name: '测试牧师', classId: 'class-2014-cleric', targetLevel: 3 })
+    const wrapper = mount(SessionAssistantPage, { attachTo: document.body })
+    await wrapper.get('.session-assistant__card').trigger('click')
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    expect(wrapper.find('[aria-label="抄录法术书"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('未准备法术 ·')
     wrapper.unmount()
   })
 })

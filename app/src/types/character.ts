@@ -53,6 +53,8 @@ export interface SpellSelections {
   readonly knownSpellIds: readonly string[]
   readonly preparedSpellIds: readonly string[]
   readonly spellbookSpellIds: readonly string[]
+  /** 通过抄录写入法术书的法术 ID（spellbookSpellIds 的子集）；升级自动获得的不在此列。 */
+  readonly transcribedSpellIds: readonly string[]
 }
 
 export interface StartingEquipmentSelection {
@@ -81,7 +83,7 @@ export interface CurrencyWallet {
 }
 
 export interface CharacterDraft {
-  readonly schemaVersion: 3
+  readonly schemaVersion: 4
   readonly id: string
   readonly ruleset: '5e-2014'
   readonly createdAt: string

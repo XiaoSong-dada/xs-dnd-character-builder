@@ -257,6 +257,7 @@ src/views/session-assistant/hooks/useSessionPanel.ts
 
 src/views/session-assistant/components/SessionPanel.vue
   -> src/views/session-assistant/hooks/useSessionPanel.ts
+  -> src/features/spellbook-transcription（抄录弹层：同一草稿的 spellSelections 与 adventureGold）
   -> src/components/{AddItemModal,AdjustItemModal}
   -> src/components/ui/{ExpandableOptionCard,ListShell,StatTile,UiBadge,UiModal,UiTabs}
   -> src/rules/{data/class-features-2014,data/feats-2014,data/subclass-features-2014,feats,repository,session-state,spellcasting,starting-equipment,timeline}
@@ -314,6 +315,7 @@ src/views/character-builder/hooks/useCharacterBuilderPage.ts
 
 src/views/character-builder/components/*
   -> src/views/character-builder/components/{FeatChoicePanel}（页面内复用）
+  -> src/features/spellbook-transcription（CharacterSheetStep 抄录弹层：同一草稿的 spellSelections 与 adventureGold）
   -> src/components/ui/*
   -> src/rules/* 与 src/rules/data/*（推荐、时间线、法术、装备、子职特性等只读消费）
   -> src/config/site.ts（仅 StartPanel）
@@ -323,6 +325,17 @@ src/views/character-builder/components/*
 ### 8.5 features / components/ui
 
 ```text
+src/features/spellbook-transcription（法师抄录法术书共享能力：角色卡与跑团助手双调用方）
+  index.ts                          （装配导出：Modal + hook）
+  components/SpellbookTranscriptionModal.vue
+    -> src/components/ui/{ExpandableOptionCard,ListShell,UiModal,UiNotice}
+    -> src/features/spellbook-transcription/hooks/useSpellbookTranscription
+    -> src/types/character
+  hooks/useSpellbookTranscription.ts
+    -> src/rules/{repository,spellbook,spellcasting}
+    -> src/stores/character-drafts.ts（updateDraftById：spellSelections + adventureGold 一次 patch 原子写回）
+    -> src/types/{character,rules}
+
 src/features/quick-build/components/CharacterDrawer.vue
   -> src/components/ui/{StatTile,UiDrawer}
   -> src/types/character
@@ -407,6 +420,7 @@ src/rules/validate.ts            -> src/rules/{repository,derive,feats,abilities
 src/rules/dependency.ts          -> src/rules/{derive,repository,timeline} + src/rules/data/subclass-features-2014
 src/rules/timeline.ts            -> src/rules/repository + src/rules/data/{feats-2014,subclasses-2014,subclass-features-2014}
 src/rules/spellcasting.ts        -> src/rules/{derive,repository}
+src/rules/spellbook.ts           -> src/rules/{repository,spellcasting}（抄录候选池、费用、金币校验与抄录应用纯函数）
 src/rules/starting-equipment.ts  -> src/rules/repository
 src/rules/feats.ts               -> src/rules/data/feats-2014
 src/rules/recommend.ts           -> src/rules/data/{feats-2014,preferences-2014}

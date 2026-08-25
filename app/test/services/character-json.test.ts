@@ -23,7 +23,7 @@ describe('CharacterJsonService', () => {
       equippedItemIds: ['dagger'],
     }))
 
-    expect(imported.schemaVersion).toBe(3)
+    expect(imported.schemaVersion).toBe(4)
     expect(imported.equipmentNeedsReview).toBe(true)
     expect(imported.adventureGold).toBe(0)
     expect(imported.inventory.find((entry) => entry.itemId === 'dagger')).toMatchObject({
@@ -33,7 +33,7 @@ describe('CharacterJsonService', () => {
     })
   })
 
-  it('v3 导入保留 adventureGold，缺省时兜底为 0', () => {
+  it('v3 导入保留 adventureGold，缺省时兜底为 0，并升级为 v4 补全转录字段', () => {
     const withGold = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 3,
       id: 'v3-with-gold',
@@ -43,6 +43,8 @@ describe('CharacterJsonService', () => {
       adventureGold: 42,
     }))
     expect(withGold.adventureGold).toBe(42)
+    expect(withGold.schemaVersion).toBe(4)
+    expect(withGold.spellSelections.transcribedSpellIds).toEqual([])
 
     const withoutGold = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 3,
@@ -52,5 +54,26 @@ describe('CharacterJsonService', () => {
       selections: [],
     }))
     expect(withoutGold.adventureGold).toBe(0)
+  })
+
+  it('v4 导入导出往返保留 transcribedSpellIds', () => {
+    const imported = CharacterJsonService.importDraft(JSON.stringify({
+      schemaVersion: 4,
+      id: 'v4-with-transcribed',
+      ruleset: '5e-2014',
+      baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
+      selections: [],
+      spellSelections: {
+        cantripIds: [],
+        knownSpellIds: [],
+        preparedSpellIds: [],
+        spellbookSpellIds: ['spell-2014-magic-missile'],
+        transcribedSpellIds: ['spell-2014-magic-missile'],
+      },
+    }))
+    expect(imported.schemaVersion).toBe(4)
+    expect(imported.spellSelections.transcribedSpellIds).toEqual(['spell-2014-magic-missile'])
+    const roundTrip = CharacterJsonService.importDraft(CharacterJsonService.exportDraft(imported))
+    expect(roundTrip.spellSelections.transcribedSpellIds).toEqual(['spell-2014-magic-missile'])
   })
 })

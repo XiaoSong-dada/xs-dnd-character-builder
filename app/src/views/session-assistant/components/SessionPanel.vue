@@ -9,6 +9,7 @@ import StatTile from '@/components/ui/StatTile.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
+import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
@@ -230,6 +231,14 @@ function confirmCast(level: number): void {
   panel.changeSpellSlot(level, 1)
   castNotice.value = `已使用 ${level} 环法术位`
   castSpell.value = undefined
+}
+
+// ---- 抄录法术书（仅 spellbook 模式，与角色卡共享同一草稿数据）----
+const showTranscribeModal = ref(false)
+const transcribePreselectId = ref<string>()
+function openTranscribe(spellId?: string): void {
+  transcribePreselectId.value = spellId
+  showTranscribeModal.value = true
 }
 </script>
 
@@ -471,6 +480,9 @@ function confirmCast(level: number): void {
 
     <div v-else-if="activeTab === 'spells'" class="session-panel__tab">
       <p v-if="castNotice" class="session-panel__notice" role="status">{{ castNotice }}</p>
+      <div v-if="spellcastingConfig?.mode === 'spellbook'" class="session-panel__tab-header">
+        <button type="button" class="session-panel__transcribe" aria-label="抄录法术书" @click="openTranscribe()">抄录法术</button>
+      </div>
       <section v-if="cantripSpells.length" class="session-panel__section">
         <h3>戏法</h3>
         <ListShell>
@@ -508,6 +520,30 @@ function confirmCast(level: number): void {
                 @click="openCastModal(spell)"
               >
                 施法
+              </button>
+            </template>
+            <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+      </section>
+      <section v-if="panel.unpreparedFromBook.value.length" class="session-panel__section">
+        <h3>未准备法术 · {{ panel.unpreparedFromBook.value.length }}（法术书中未准备）</h3>
+        <ListShell>
+          <ExpandableOptionCard
+            v-for="spell in panel.unpreparedFromBook.value"
+            :key="spell.id"
+            :title="spell.name"
+            :description="`${spell.level}环 · ${spell.englishName}`"
+            expanded-label="法术效果"
+          >
+            <template #suffix>
+              <button
+                type="button"
+                class="session-panel__adjust"
+                :disabled="!panel.canPrepareMore.value"
+                @click="panel.togglePrepareSpell(spell.id)"
+              >
+                {{ panel.canPrepareMore.value ? '准备' : '已满' }}
               </button>
             </template>
             <template v-if="spell.description" #expanded>{{ spell.description }}</template>
@@ -590,6 +626,12 @@ function confirmCast(level: number): void {
       </div>
     </UiModal>
 
+    <SpellbookTranscriptionModal
+      :open="showTranscribeModal"
+      :draft="draft"
+      :preselect-spell-id="transcribePreselectId"
+      @close="showTranscribeModal = false"
+    />
     <AddItemModal :open="showAddItemModal" @close="showAddItemModal = false" @add="handleAddItem" />
     <AdjustItemModal
       v-if="adjustEntry"
@@ -837,6 +879,23 @@ function confirmCast(level: number): void {
 
   &__tab {
     padding: 1rem;
+  }
+
+  &__tab-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.6rem;
+  }
+
+  &__transcribe {
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-md);
+    color: var(--color-surface);
+    background: var(--color-primary);
+    font-size: 0.78rem;
+    font-weight: 700;
   }
 
   &__stats {

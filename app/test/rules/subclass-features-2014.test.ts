@@ -11,7 +11,7 @@ import type { CharacterDraft } from '@/types/character'
 
 function createDraft(): CharacterDraft {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: 'test',
     ruleset: '5e-2014',
     createdAt: '',

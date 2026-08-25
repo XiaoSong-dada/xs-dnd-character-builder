@@ -3,7 +3,7 @@ import { deriveCharacter } from '@/rules/derive'
 import type { CharacterDraft } from '@/types/character'
 
 export const fighterDraft: CharacterDraft = {
-  schemaVersion: 3, id: 'export-data-fixture', ruleset: '5e-2014', createdAt: '', updatedAt: '', targetLevel: 4,
+  schemaVersion: 4, id: 'export-data-fixture', ruleset: '5e-2014', createdAt: '', updatedAt: '', targetLevel: 4,
   abilityMethod: 'standard-array', preferences: [], classId: 'class-2014-fighter', backgroundId: 'background-2014-soldier',
   raceId: 'race-2014-half-orc', raceAbilityChoices: [], backgroundSkillIds: ['skill-athletics', 'skill-intimidation'],
   backgroundToolIds: [], languages: ['兽人语', '精灵语'], proficiencyReplacements: [],
@@ -14,7 +14,7 @@ export const fighterDraft: CharacterDraft = {
     { id: 'entry-potion', itemId: 'potion-of-healing', quantity: 2, sourceKind: 'adventure', sourceId: 'draft', equippedQuantity: 0 },
   ],
   currency: { cp: 5, sp: 4, ep: 3, gp: 10, pp: 2 }, adventureGold: 7, equipmentNeedsReview: false,
-  spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+  spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
   name: '测试角色', alignment: '守序善良', notes: '来自测试夹具的背景故事。', currentStep: 'sheet',
 }
 
@@ -24,6 +24,7 @@ export const wizardDraft: CharacterDraft = {
   spellSelections: {
     cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand'], knownSpellIds: [], preparedSpellIds: ['spell-2014-magic-missile'],
     spellbookSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield'],
+    transcribedSpellIds: [],
   },
 }
 
@@ -46,6 +47,7 @@ export const levelSixWizardDraft: CharacterDraft = {
       'spell-2014-scorching-ray', 'spell-2014-counterspell', 'spell-2014-fireball', 'spell-2014-lightning-bolt',
       'spell-2014-misty-step', 'spell-2014-chromatic-orb', 'spell-2014-detect-thoughts', 'spell-2014-rime-s-binding-ice',
     ],
+    transcribedSpellIds: [],
   },
 }
 

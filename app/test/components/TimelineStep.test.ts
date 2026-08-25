@@ -6,7 +6,7 @@ import type { CharacterDraft } from '@/types/character'
 
 function bardDraft(): CharacterDraft {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: 'timeline-test',
     ruleset: '5e-2014',
     createdAt: '',
@@ -23,7 +23,7 @@ function bardDraft(): CharacterDraft {
     languages: [],
     proficiencyReplacements: [],
     baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
-    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+    spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
     selections: [
       { checkpointId: 'bard-2014-skills-1', optionIds: ['skill-insight', 'skill-history', 'skill-persuasion'], confirmedAt: '' },
       { checkpointId: 'bard-2014-tool-1', optionIds: ['tool-musical-instrument'], confirmedAt: '' },

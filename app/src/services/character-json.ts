@@ -28,7 +28,7 @@ export const CharacterJsonService = {
     }
     const schemaVersion = (value as { schemaVersion?: unknown }).schemaVersion
     const draft = value as Partial<CharacterDraft>
-    if (schemaVersion !== 3 && schemaVersion !== 2) {
+    if (schemaVersion !== 4 && schemaVersion !== 3 && schemaVersion !== 2) {
       throw new CharacterImportError('unsupported-schema', '角色文件版本不受支持。')
     }
     if (draft.ruleset !== '5e-2014') {
@@ -45,7 +45,7 @@ export const CharacterJsonService = {
       const equipped = new Set(legacy.equippedItemIds ?? [])
       return {
         ...draft,
-        schemaVersion: 3,
+        schemaVersion: 4,
         startingEquipmentSelections: [],
         inventory: [...new Set(legacy.inventoryItemIds ?? [])].map((itemId) => ({
           id: `legacy:${draft.id}:${itemId}`,
@@ -63,16 +63,20 @@ export const CharacterJsonService = {
         backgroundToolIds: draft.backgroundToolIds ?? [],
         languages: draft.languages ?? [],
         proficiencyReplacements: draft.proficiencyReplacements ?? [],
-        spellSelections: draft.spellSelections ?? {
-          cantripIds: [],
-          knownSpellIds: [],
-          preparedSpellIds: [],
-          spellbookSpellIds: [],
-        },
+        spellSelections: draft.spellSelections
+          ? { ...draft.spellSelections, transcribedSpellIds: draft.spellSelections.transcribedSpellIds ?? [] }
+          : {
+            cantripIds: [],
+            knownSpellIds: [],
+            preparedSpellIds: [],
+            spellbookSpellIds: [],
+            transcribedSpellIds: [],
+          },
       } as CharacterDraft
     }
     return {
       ...draft,
+      schemaVersion: 4,
       raceAbilityChoices: draft.raceAbilityChoices ?? [],
       backgroundSkillIds: draft.backgroundSkillIds ?? [],
       backgroundToolIds: draft.backgroundToolIds ?? [],
@@ -83,12 +87,15 @@ export const CharacterJsonService = {
       currency: draft.currency ?? EMPTY_CURRENCY,
       adventureGold: draft.adventureGold ?? 0,
       equipmentNeedsReview: draft.equipmentNeedsReview ?? false,
-      spellSelections: draft.spellSelections ?? {
-        cantripIds: [],
-        knownSpellIds: [],
-        preparedSpellIds: [],
-        spellbookSpellIds: [],
-      },
+      spellSelections: draft.spellSelections
+        ? { ...draft.spellSelections, transcribedSpellIds: draft.spellSelections.transcribedSpellIds ?? [] }
+        : {
+          cantripIds: [],
+          knownSpellIds: [],
+          preparedSpellIds: [],
+          spellbookSpellIds: [],
+          transcribedSpellIds: [],
+        },
     } as CharacterDraft
   },
   downloadDraft(draft: CharacterDraft): void {

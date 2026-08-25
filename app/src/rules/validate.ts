@@ -186,12 +186,20 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       if (
         spellcasting.mode === 'spellbook'
         && (
-          draft.spellSelections.spellbookSpellIds.length !== requiredSpellbook
+          draft.spellSelections.spellbookSpellIds.length < requiredSpellbook
           || draft.spellSelections.spellbookSpellIds.some((id) => !availableIds.has(id))
           || selectedSpellIds.some((id) => !draft.spellSelections.spellbookSpellIds.includes(id))
         )
       ) {
-        issues.push({ id: 'spellbook-count', step: 'spells', severity: 'error', message: '法术书内容尚未完成，或准备了不在书中的法术。', resolution: `法术书需要包含${requiredSpellbook}个当前可用法师法术。` })
+        issues.push({ id: 'spellbook-count', step: 'spells', severity: 'error', message: '法术书内容尚未完成，或准备了不在书中的法术。', resolution: `法术书需要包含至少${requiredSpellbook}个当前可用法师法术。` })
+      }
+      if (
+        spellcasting.mode === 'spellbook'
+        && draft.spellSelections.transcribedSpellIds.some((id) =>
+          !draft.spellSelections.spellbookSpellIds.includes(id) || !availableIds.has(id),
+        )
+      ) {
+        issues.push({ id: 'spellbook-transcription-invalid', step: 'spells', severity: 'error', message: '抄录记录包含不在法术书中或当前不可用的法术。', resolution: '返回角色卡法术页签检查抄录记录。' })
       }
     }
     const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
