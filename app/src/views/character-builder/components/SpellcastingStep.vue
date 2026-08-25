@@ -84,10 +84,15 @@ function toggleCantrip(id: string): void {
 
 function toggleSpellbook(id: string): void {
   const current = props.draft.spellSelections.spellbookSpellIds
+  const transcribed = props.draft.spellSelections.transcribedSpellIds
   const removing = current.includes(id)
+  // 抄录所得的法术不可移除（不可撤销约定）；升级名额按非抄录法术数计算。
+  if (removing && transcribed.includes(id)) return
   const nextBook = removing
     ? current.filter((spellId) => spellId !== id)
-    : current.length < requiredSpellbookCount.value ? [...current, id] : current
+    : current.filter((spellId) => !transcribed.includes(spellId)).length < requiredSpellbookCount.value
+      ? [...current, id]
+      : current
   emit('change', {
     ...props.draft.spellSelections,
     spellbookSpellIds: nextBook,
@@ -152,7 +157,7 @@ function toggleSpellbook(id: string): void {
       <ListShell
         v-if="config.mode === 'spellbook'"
         title="法术书"
-        :count="`${draft.spellSelections.spellbookSpellIds.length} / ${requiredSpellbookCount}`"
+        :count="`${draft.spellSelections.spellbookSpellIds.filter((id) => !draft.spellSelections.transcribedSpellIds.includes(id)).length} / ${requiredSpellbookCount}${draft.spellSelections.transcribedSpellIds.length ? `（抄录 ${draft.spellSelections.transcribedSpellIds.length}）` : ''}`"
       >
         <ExpandableOptionCard
           v-for="spell in groupedSpells.flatMap((group) => group.spells)"
@@ -164,7 +169,10 @@ function toggleSpellbook(id: string): void {
           @select="toggleSpellbook(spell.id)"
         >
           <template #suffix>
-            {{ draft.spellSelections.spellbookSpellIds.includes(spell.id) ? '在书中' : draft.spellSelections.spellbookSpellIds.length >= requiredSpellbookCount ? '已满' : '写入' }}
+            <span v-if="draft.spellSelections.transcribedSpellIds.includes(spell.id)">在书中（抄录）</span>
+            <span v-else-if="draft.spellSelections.spellbookSpellIds.includes(spell.id)">在书中</span>
+            <span v-else-if="draft.spellSelections.spellbookSpellIds.filter((id) => !draft.spellSelections.transcribedSpellIds.includes(id)).length >= requiredSpellbookCount">已满</span>
+            <span v-else>写入</span>
           </template>
           <template v-if="spell.description" #expanded>{{ spell.description }}</template>
         </ExpandableOptionCard>

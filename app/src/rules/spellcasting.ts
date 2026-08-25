@@ -151,11 +151,15 @@ export function validateSpellSelections(draft: CharacterDraft): boolean {
     || (draft.spellSelections.cantripIds.length === requiredCantrips
       && draft.spellSelections.cantripIds.length === new Set(draft.spellSelections.cantripIds).size
       && draft.spellSelections.cantripIds.every((id) => cantripIds.has(id)))
+  // 法术书校验：抄录所得的法术（transcribedSpellIds）不计入升级名额，
+  // 升级名额（非抄录法术）至少达到 requiredSpellbookCount（抄录可超出总数）。
+  const spellbookSpells = draft.spellSelections.spellbookSpellIds
+  const transcribed = draft.spellSelections.transcribedSpellIds
   const spellbookValid = config.mode !== 'spellbook'
-    || (draft.spellSelections.spellbookSpellIds.length === getRequiredSpellbookCount(draft, config)
-      && draft.spellSelections.spellbookSpellIds.length === new Set(draft.spellSelections.spellbookSpellIds).size
-      && draft.spellSelections.spellbookSpellIds.every((id) => availableIds.has(id))
-      && selected.every((id) => draft.spellSelections.spellbookSpellIds.includes(id)))
+    || (spellbookSpells.filter((id) => !transcribed.includes(id)).length >= getRequiredSpellbookCount(draft, config)
+      && spellbookSpells.length === new Set(spellbookSpells).size
+      && spellbookSpells.every((id) => availableIds.has(id))
+      && selected.every((id) => spellbookSpells.includes(id)))
   return cantripsValid
     && spellbookValid
     && selected.length === getRequiredSpellCount(draft, config)

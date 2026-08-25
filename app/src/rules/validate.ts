@@ -183,15 +183,18 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       ) {
         issues.push({ id: 'cantrip-count', step: 'spells', severity: 'error', message: '戏法选择尚未完成或包含不可用项。', resolution: `需要选择${requiredCantrips}个当前职业戏法。` })
       }
+      // 抄录所得的法术不计入升级名额：非抄录法术至少达到 requiredSpellbook。
+      const nonTranscribedBookCount = draft.spellSelections.spellbookSpellIds
+        .filter((id) => !draft.spellSelections.transcribedSpellIds.includes(id)).length
       if (
         spellcasting.mode === 'spellbook'
         && (
-          draft.spellSelections.spellbookSpellIds.length < requiredSpellbook
+          nonTranscribedBookCount < requiredSpellbook
           || draft.spellSelections.spellbookSpellIds.some((id) => !availableIds.has(id))
           || selectedSpellIds.some((id) => !draft.spellSelections.spellbookSpellIds.includes(id))
         )
       ) {
-        issues.push({ id: 'spellbook-count', step: 'spells', severity: 'error', message: '法术书内容尚未完成，或准备了不在书中的法术。', resolution: `法术书需要包含至少${requiredSpellbook}个当前可用法师法术。` })
+        issues.push({ id: 'spellbook-count', step: 'spells', severity: 'error', message: '法术书内容尚未完成，或准备了不在书中的法术。', resolution: `法术书需要包含至少${requiredSpellbook}个当前可用法师法术（抄录所得不计入）。` })
       }
       if (
         spellcasting.mode === 'spellbook'

@@ -393,3 +393,52 @@ describe('动态候选池与魔法奥秘', () => {
     expect(getMagicalSecretsSpellIds(bard)).toEqual([spellA, spellB, spellC])
   })
 })
+
+describe('2014 法师抄录法术书与升级名额校验（缺陷回归：重新编辑后无法继续）', () => {
+  /** 5 级法师：升级名额 14（6 + 4×2），最高 3 环，准备 8（人类 +1 智力 → 智力 16 → +3 + 5），戏法 4。 */
+  function wizardDraft(bookCount: number, transcribedCount: number): CharacterDraft {
+    const pool = rulesRepository.spells
+      .filter((spell) => spell.classIds.includes('class-2014-wizard') && spell.level >= 1 && spell.level <= 3)
+      .map((spell) => spell.id)
+    const cantrips = rulesRepository.spells
+      .filter((spell) => spell.classIds.includes('class-2014-wizard') && spell.level === 0)
+      .slice(0, 4)
+      .map((spell) => spell.id)
+    const book = pool.slice(0, bookCount)
+    const transcribed = pool.slice(bookCount, bookCount + transcribedCount)
+    return draft({
+      classId: 'class-2014-wizard',
+      targetLevel: 5,
+      baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
+      spellSelections: {
+        cantripIds: cantrips,
+        knownSpellIds: [],
+        preparedSpellIds: book.slice(0, 8),
+        spellbookSpellIds: [...book, ...transcribed],
+        transcribedSpellIds: transcribed,
+      },
+    })
+  }
+
+  it('书 = 14 升级名额 + 2 抄录（总数 16）时校验通过，不再卡住「继续」', () => {
+    const w = wizardDraft(14, 2)
+    expect(w.spellSelections.spellbookSpellIds.length).toBeGreaterThan(14)
+    expect(validateSpellSelections(w)).toBe(true)
+    expect(validateDraft(w).some((issue) => issue.id === 'spellbook-count')).toBe(false)
+  })
+
+  it('升级名额（非抄录）不足时校验失败，即使总数因抄录达标', () => {
+    // 6 升级 + 2 抄录 = 8，非抄录 6 < 14
+    expect(validateSpellSelections(wizardDraft(6, 2))).toBe(false)
+  })
+
+  it('抄录法术不顶替升级名额：13 升级 + 1 抄录 = 14 总数仍校验失败', () => {
+    expect(validateSpellSelections(wizardDraft(13, 1))).toBe(false)
+  })
+
+  it('无抄录且恰好名额数量时校验通过（回归：既有严格等于语义保持）', () => {
+    const w = wizardDraft(14, 0)
+    expect(validateSpellSelections(w)).toBe(true)
+    expect(validateDraft(w).some((issue) => issue.id === 'spellbook-count')).toBe(false)
+  })
+})
