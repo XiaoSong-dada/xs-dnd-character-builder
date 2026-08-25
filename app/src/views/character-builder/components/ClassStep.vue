@@ -4,39 +4,36 @@ import { computed } from 'vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
-import { getClassGrowthSummary, getClassRecommendation } from '@/rules/recommend'
+import { getClassGrowthSummary } from '@/rules/recommend'
 import { rulesRepository } from '@/rules/repository'
+import { isSourceEnabled } from '@/rules/source-books'
 
-const props = defineProps<{ selected?: string; preferences: readonly string[] }>()
+const props = defineProps<{ selected?: string; enabledSourceIds?: readonly string[] }>()
 defineEmits<{ select: [id: string] }>()
 
-const orderLabels = ['①', '②', '③'] as const
-
-const rankedClasses = computed(() => [...rulesRepository.classes]
+const visibleClasses = computed(() => rulesRepository.classes
+  .filter((classRule) => isSourceEnabled(classRule.sourceIds, props.enabledSourceIds))
   .map((classRule) => ({
     classRule,
-    recommendation: getClassRecommendation(classRule, props.preferences),
     growth: getClassGrowthSummary(classRule, rulesRepository),
-  }))
-  .sort((a, b) => b.recommendation.score - a.recommendation.score))
+  })))
 </script>
 
 <template>
   <section class="class-step">
-    <p class="class-step__match">推荐只用于排序，不限制职业选择。</p>
+    <p class="class-step__match">当前仅显示核心规则与第 2 步已启用来源中的职业。</p>
     <ListShell>
       <ExpandableOptionCard
-        v-for="({ classRule, recommendation, growth }, index) in rankedClasses"
+        v-for="({ classRule, growth }) in visibleClasses"
         :key="classRule.id"
         :title="classRule.name"
         :description="classRule.summary"
-        :state="selected === classRule.id ? 'selected' : recommendation.score > 0 && index < 3 ? 'recommended' : 'default'"
+        :state="selected === classRule.id ? 'selected' : 'default'"
         expanded-label="职业成长"
         @select="$emit('select', classRule.id)"
       >
         <template #suffix>
-          <UiBadge v-if="recommendation.score > 0 && index < 3" tone="primary">{{ orderLabels[index] }} 推荐 · 匹配{{ recommendation.matchedPreferenceLabels.length }}项偏好</UiBadge>
-          <UiBadge v-if="classRule.status !== 'implemented'" tone="warning">资料索引</UiBadge>
+          <UiBadge v-if="classRule.status !== 'implemented'" tone="warning">{{ classRule.status === 'selectable' ? '可选择 · 部分效果需手动处理' : '资料索引' }}</UiBadge>
         </template>
         <template #expanded>
           <ul class="class-step__growth-list">

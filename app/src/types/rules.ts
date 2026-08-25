@@ -8,6 +8,8 @@ export type CheckpointKind =
   | 'ability-improvement'
   | 'expertise'
   | 'class-choice'
+  | 'feat-feature'
+  | 'infusion'
 
 /**
  * 玩法标签：描述职业/子职的常见玩法定位，供推荐引擎做偏好匹配。
@@ -32,6 +34,10 @@ export interface RuleOption {
   readonly description: string
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
+  /** 同一内容被重印时，当前规则实现采用的出版来源。 */
+  readonly adoptedSourceId?: string
+  /** 同一内容的首发来源；未重印时可省略。 */
+  readonly originalSourceId?: string
 }
 
 export interface FeatPrerequisite {
@@ -40,6 +46,20 @@ export interface FeatPrerequisite {
     readonly score: number
   }
   readonly requiredCapability?: 'armor-light' | 'armor-medium' | 'armor-heavy' | 'spellcasting'
+  readonly requiredRaceIds?: readonly string[]
+  readonly requiredSubraceIds?: readonly string[]
+}
+
+export interface FeatChoiceSpec {
+  readonly id: string
+  readonly title: string
+  readonly description: string
+  readonly minSelections: number
+  readonly maxSelections: number
+  readonly optionIds: readonly string[]
+  readonly candidateKind?: CheckpointCandidateKind
+  readonly abilityBonus?: number
+  readonly uniqueGroup?: string
 }
 
 export interface FeatRule extends RuleOption {
@@ -49,6 +69,8 @@ export interface FeatRule extends RuleOption {
   readonly prerequisite?: FeatPrerequisite
   /** 原创中文详细效果（展开区展示）：触发时机、资源与恢复、数值/范围、前置条件重申。 */
   readonly detail: string
+  readonly choices?: readonly FeatChoiceSpec[]
+  readonly repeatable?: boolean
 }
 
 export interface ChoiceCheckpoint {
@@ -65,6 +87,13 @@ export interface ChoiceCheckpoint {
   readonly optionIds: readonly string[]
   /** 动态候选池类型：optionIds 为空时由规则层按草稿状态解析候选（法术级选项）。 */
   readonly candidateKind?: CheckpointCandidateKind
+  /** 同一唯一组内的选项不得跨检查点重复。 */
+  readonly uniqueGroup?: string
+  /** 动态派生检查点的父检查点；父选择失效时本项同步失效。 */
+  readonly parentCheckpointId?: string
+  readonly parentOptionId?: string
+  /** 子选择向对应属性提供的固定加值（半专长等）。 */
+  readonly abilityBonus?: number
 }
 
 /** 动态候选池：检查点选项随草稿状态（等级、法术书）由规则层生成。 */
@@ -73,6 +102,9 @@ export type CheckpointCandidateKind =
   | 'spellbook-level-1'
   | 'spellbook-level-2'
   | 'spellbook-level-3'
+  | 'all-skills'
+  | 'proficient-skills'
+  | 'artificer-infusions'
 
 export interface SpellcastingConfig {
   readonly ruleset: RulesetId
@@ -80,7 +112,7 @@ export interface SpellcastingConfig {
   readonly ability: AbilityKey
   readonly startsAtLevel: number
   readonly spellsKnownByLevel?: readonly number[]
-  readonly preparedFormula?: 'ability-plus-half-level' | 'ability-plus-level'
+  readonly preparedFormula?: 'ability-plus-half-level' | 'ability-plus-half-level-ceil' | 'ability-plus-level'
   readonly cantripsKnownByLevel?: readonly number[]
   readonly maxSpellLevelByClassLevel: readonly number[]
   /** 标准法术位表（1—20 级各一项，每项元素下标 = 环级 − 1，值为该环法术位数量）；非 pact 模式使用。 */
@@ -89,6 +121,8 @@ export interface SpellcastingConfig {
   readonly pactSlotsByClassLevel?: readonly (readonly [number, number])[]
   readonly classSpellIds: readonly string[]
   readonly spellbookSpellsByLevel?: readonly number[]
+  /** 达到对应等级后始终准备，且不计入准备上限的法术。 */
+  readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
 }
 
 export interface SpellRule {
@@ -138,6 +172,8 @@ export interface SubclassRule {
   readonly features: readonly SubclassFeature[]
   /** 子职级施法配置（如奥法骑士、诡术师）；解析时优先于职业配置。 */
   readonly spellcasting?: SpellcastingConfig
+  /** 子职在特定职业等级授予的始终准备法术，不占准备上限。 */
+  readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
 }
 
 export type SubclassFeatureKind =

@@ -17,7 +17,7 @@ import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { getAvailableSlotLevels } from '@/rules/session-state'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
-import { getMaximumSpellLevel, getSelectedSpellIds } from '@/rules/spellcasting'
+import { getMaximumSpellLevel, getSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
 import { useSessionAssistantStore } from '@/stores/session-assistant'
 import { DEBUFF_STATUSES, EXHAUSTION_DESCRIPTION } from '@/types/session-state'
@@ -188,7 +188,7 @@ const featAndAsiEntries = computed(() => {
 })
 
 // ---- 法术页签（R5A）----
-const spellcastingConfig = computed(() => rulesRepository.getSpellcastingConfig(props.draft))
+const spellcastingConfig = computed(() => getSpellcastingConfig(props.draft))
 const preparedOrKnownLabel = computed(() =>
   spellcastingConfig.value?.mode === 'prepared' || spellcastingConfig.value?.mode === 'spellbook' ? '已准备' : '已掌握',
 )

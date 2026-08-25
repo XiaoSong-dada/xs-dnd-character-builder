@@ -1,5 +1,5 @@
 import type { CharacterDraft } from '@/types/character'
-import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
+import { migrateDraftToV5 } from '@/services/draft-storage'
 
 export type ImportErrorCode = 'invalid-json' | 'unsupported-schema' | 'ruleset-mismatch' | 'incomplete-data'
 
@@ -28,7 +28,7 @@ export const CharacterJsonService = {
     }
     const schemaVersion = (value as { schemaVersion?: unknown }).schemaVersion
     const draft = value as Partial<CharacterDraft>
-    if (schemaVersion !== 4 && schemaVersion !== 3 && schemaVersion !== 2) {
+    if (![2, 3, 4, 5].includes(Number(schemaVersion))) {
       throw new CharacterImportError('unsupported-schema', '角色文件版本不受支持。')
     }
     if (draft.ruleset !== '5e-2014') {
@@ -37,66 +37,9 @@ export const CharacterJsonService = {
     if (!draft.id || !draft.baseAbilities || !Array.isArray(draft.selections)) {
       throw new CharacterImportError('incomplete-data', '角色文件缺少必要字段。')
     }
-    if (schemaVersion === 2) {
-      const legacy = draft as unknown as {
-        inventoryItemIds?: readonly string[]
-        equippedItemIds?: readonly string[]
-      }
-      const equipped = new Set(legacy.equippedItemIds ?? [])
-      return {
-        ...draft,
-        schemaVersion: 4,
-        startingEquipmentSelections: [],
-        inventory: [...new Set(legacy.inventoryItemIds ?? [])].map((itemId) => ({
-          id: `legacy:${draft.id}:${itemId}`,
-          itemId,
-          quantity: legacy.inventoryItemIds?.filter((id) => id === itemId).length ?? 1,
-          sourceKind: 'legacy' as const,
-          sourceId: draft.id as string,
-          equippedQuantity: equipped.has(itemId) ? 1 : 0,
-        })),
-        currency: EMPTY_CURRENCY,
-        adventureGold: 0,
-        equipmentNeedsReview: true,
-        raceAbilityChoices: draft.raceAbilityChoices ?? [],
-        backgroundSkillIds: draft.backgroundSkillIds ?? [],
-        backgroundToolIds: draft.backgroundToolIds ?? [],
-        languages: draft.languages ?? [],
-        proficiencyReplacements: draft.proficiencyReplacements ?? [],
-        spellSelections: draft.spellSelections
-          ? { ...draft.spellSelections, transcribedSpellIds: draft.spellSelections.transcribedSpellIds ?? [] }
-          : {
-            cantripIds: [],
-            knownSpellIds: [],
-            preparedSpellIds: [],
-            spellbookSpellIds: [],
-            transcribedSpellIds: [],
-          },
-      } as CharacterDraft
-    }
-    return {
-      ...draft,
-      schemaVersion: 4,
-      raceAbilityChoices: draft.raceAbilityChoices ?? [],
-      backgroundSkillIds: draft.backgroundSkillIds ?? [],
-      backgroundToolIds: draft.backgroundToolIds ?? [],
-      languages: draft.languages ?? [],
-      proficiencyReplacements: draft.proficiencyReplacements ?? [],
-      startingEquipmentSelections: draft.startingEquipmentSelections ?? [],
-      inventory: draft.inventory ?? [],
-      currency: draft.currency ?? EMPTY_CURRENCY,
-      adventureGold: draft.adventureGold ?? 0,
-      equipmentNeedsReview: draft.equipmentNeedsReview ?? false,
-      spellSelections: draft.spellSelections
-        ? { ...draft.spellSelections, transcribedSpellIds: draft.spellSelections.transcribedSpellIds ?? [] }
-        : {
-          cantripIds: [],
-          knownSpellIds: [],
-          preparedSpellIds: [],
-          spellbookSpellIds: [],
-          transcribedSpellIds: [],
-        },
-    } as CharacterDraft
+    const migrated = migrateDraftToV5(value)
+    if (!migrated) throw new CharacterImportError('incomplete-data', '角色文件无法迁移到当前版本。')
+    return migrated
   },
   downloadDraft(draft: CharacterDraft): void {
     this.downloadRaw(this.exportDraft(draft), `${draft.name.trim() || 'dnd-character'}-${draft.id}.json`)

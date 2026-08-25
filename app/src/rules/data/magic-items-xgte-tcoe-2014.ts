@@ -20,6 +20,7 @@ const allClassIds = [
   'class-2014-sorcerer',
   'class-2014-warlock',
   'class-2014-wizard',
+  'class-2014-artificer',
 ] as const
 
 type MagicSeed = Omit<EquipmentRule, 'classIds' | 'sourceIds'>
@@ -30,6 +31,16 @@ function xg(seed: MagicSeed): EquipmentRule {
 
 function tc(seed: MagicSeed): EquipmentRule {
   return { ...seed, classIds: allClassIds, sourceIds: tcoeSourceIds }
+}
+
+function tcAttuned(id: string, name: string, description: string, rarity: NonNullable<EquipmentRule['rarity']>, extra: Partial<MagicSeed> = {}): EquipmentRule {
+  return tc({ id, name, description, category: 'magic', equippable: true, rarity, requiresAttunement: true, ...extra })
+}
+
+function tcFocus(id: string, name: string, description: string): readonly EquipmentRule[] {
+  return ([['uncommon', 1], ['rare', 2], ['very-rare', 3]] as const).map(([rarity, bonus]) =>
+    tcAttuned(`${id}-${bonus}`, `${name} +${bonus}`, `${description}法术攻击与法术豁免 DC 获得 +${bonus}。`, rarity, { magicBonus: bonus }),
+  )
 }
 
 /** 常见（common）随身物品：不可装备。 */
@@ -71,7 +82,7 @@ export const magicItemsXgteTcoe2014: readonly EquipmentRule[] = [
   xgCommon('pole-of-collapsing', '折叠杆', '一个动作在 1.5 米与 3 米之间伸缩。'),
   xgCommon('potion-of-comprehension', '通晓药水', '饮用后 1 小时内可读懂并理解听到的所有语言（阅读通晓）。', 'potion'),
   xgCommon('pot-of-awakening', '觉醒花盆', '种入种子后 24 小时长出可移动的活体植物。'),
-  xgCommon('prosthetic-limb', '义肢', '替换失去的肢体（手臂或腿），可正常使用。', 'magic', true),
+  { ...xgCommon('prosthetic-limb', '义肢', '替换失去的肢体（手臂或腿），可正常使用。', 'magic', true), sourceIds: ['xgte-2017-index', 'tcoe-2020-index'] },
   xgCommon('rope-of-mending', '缝补绳', '被剪断的绳段可用动作接回，恢复如初。'),
   xgCommon('ruby-of-the-war-mage', '战斗法师红宝石', '可附着于武器：使其成为施法法器（施法时无需空手）。'),
   xgCommon('shield-of-expression', '表情盾', '盾面可显示简单的表情或符号（动作切换）。', 'shield', true),
@@ -95,14 +106,49 @@ export const magicItemsXgteTcoe2014: readonly EquipmentRule[] = [
   tc({ id: 'barrier-tattoo-rare', name: '屏障刺青（AC 15）', description: '身体刺青：你裸露皮肤时 AC 变为 15 + 敏捷调整值（最多 +2，不与其他护甲叠加）。', category: 'magic', equippable: false, rarity: 'rare' }),
   tc({ id: 'coiling-grasp-tattoo', name: '缠绕掌握刺青', description: '身体刺青：可用附赠动作发动刺青触手攻击（3 米触及，命中造成 1d6 力场伤害并束缚）。', category: 'magic', equippable: false, rarity: 'uncommon' }),
   tc({ id: 'eldritch-claw-tattoo', name: '怪异魔爪刺青', description: '身体刺青：徒手攻击视为魔法武器，伤害检定 +1（每日限时强化）。', category: 'magic', equippable: false, rarity: 'uncommon' }),
-  tc({ id: 'unbreakable-tattoo', name: '不破刺青', description: '身体刺青：每日一次，受到伤害时可掷 1d12 减免该数值。', category: 'magic', equippable: false, rarity: 'uncommon' }),
   tc({ id: 'spellwrought-tattoo-1st', name: '法术刺青（1 环）', description: '身体刺青：内含一个 1 环法术，可施放一次，施放后刺青消散。', category: 'magic', equippable: false, rarity: 'common' }),
   tc({ id: 'spellwrought-tattoo-2nd-3rd', name: '法术刺青（2–3 环）', description: '身体刺青：内含一个 2–3 环法术，可施放一次，施放后刺青消散。', category: 'magic', equippable: false, rarity: 'uncommon' }),
   tc({ id: 'spellwrought-tattoo-4th-5th', name: '法术刺青（4–5 环）', description: '身体刺青：内含一个 4–5 环法术，可施放一次，施放后刺青消散。', category: 'magic', equippable: false, rarity: 'rare' }),
   tc({ id: 'ghost-step-tattoo', name: '鬼步刺青', description: '身体刺青：每日数次，可虚体化移动（穿过生物与物体）。', category: 'magic', equippable: false, rarity: 'rare' }),
-  tc({ id: 'phantom-steed-tattoo', name: '幻马刺青', description: '身体刺青：可召唤一匹幻马坐骑（持续 1 小时，每日一次）。', category: 'magic', equippable: false, rarity: 'rare' }),
-  tc({ id: 'shadowfell-brand-tattoo', name: '影界烙印刺青', description: '身体刺青：每日数次，可在阴影间传送（60 米内可见阴影）。', category: 'magic', equippable: false, rarity: 'rare' }),
-  tc({ id: 'lifewell-tattoo', name: '生命之井刺青', description: '身体刺青：死亡时自动恢复 4d6 生命值（每日一次），避免倒地。', category: 'magic', equippable: false, rarity: 'very-rare' }),
+  tc({ id: 'shadowfell-brand-tattoo', name: '影界烙印刺青', description: '身体刺青：获得死灵伤害抗性，并可以反应减半一次所受伤害。', category: 'magic', equippable: false, rarity: 'rare', requiresAttunement: true }),
+  tc({ id: 'lifewell-tattoo', name: '生命之井刺青', description: '身体刺青：获得死灵伤害抗性；每日一次，生命值降至 0 时改为 1。', category: 'magic', equippable: false, rarity: 'very-rare', requiresAttunement: true }),
   tc({ id: 'absorbing-tattoo', name: '吸收刺青', description: '身体刺青：每日一次，以反应吸收一次指定类型伤害，转化为自身生命值。', category: 'magic', equippable: false, rarity: 'legendary' }),
   tc({ id: 'blood-fury-tattoo', name: '血怒刺青', description: '身体刺青：近战武器攻击可造成额外伤害并反伤攻击者（每日次数有限）。', category: 'magic', equippable: false, rarity: 'legendary' }),
+
+  // 职业法器与常规玩家物品。加值只在可靠表达时进入派生，其余效果保留原创摘要。
+  ...tcFocus('all-purpose-tool', '全能工具', '工匠同调的变形工具；可化为任意工匠工具并暂时获得一项职业戏法。'),
+  ...tcFocus('amulet-of-the-devout', '虔诚护符', '牧师或圣武士的圣徽；可额外使用一次引导神力。'),
+  ...tcFocus('arcane-grimoire', '奥术魔典', '法师可将其作为法术书与施法焦点，并强化奥术回复。'),
+  ...tcFocus('bloodwell-vial', '血脉小瓶', '术士施法焦点；花费生命骰时可恢复术法点。'),
+  ...tcFocus('moon-sickle', '月镰', '德鲁伊或游侠的武器与施法焦点，同时强化治疗法术。'),
+  ...tcFocus('rhythm-makers-drum', '节奏创造者之鼓', '吟游诗人乐器；可恢复一次吟游激励。'),
+  tcAttuned('astral-shard', '星界碎片', '术士使用超魔时可短距离传送自己或目标。', 'rare'),
+  tcAttuned('far-realm-shard', '远域碎片', '术士使用超魔时可促使附近生物承受精神伤害与恐惧。', 'rare'),
+  tcAttuned('feywild-shard', '妖精荒野碎片', '术士使用超魔时可引发较轻微的狂野魔法现象。', 'uncommon'),
+  tcAttuned('outer-essence-shard-lawful', '外层精华碎片（守序）', '超魔触发时可减免伤害或消除不利状态。', 'rare'),
+  tcAttuned('outer-essence-shard-chaotic', '外层精华碎片（混乱）', '超魔触发时产生随机能量效果。', 'rare'),
+  tcAttuned('outer-essence-shard-good', '外层精华碎片（善良）', '超魔触发时为自己或盟友恢复生命。', 'rare'),
+  tcAttuned('outer-essence-shard-evil', '外层精华碎片（邪恶）', '超魔触发时令目标承受死灵伤害。', 'rare'),
+  tcAttuned('bell-branch', '铃铛树枝', '德鲁伊或术士法器；可消耗充能消除恐惧。', 'rare'),
+  tcAttuned('cauldron-of-rebirth', '再生釜', '德鲁伊法器；可制作恢复药剂并在特定条件下复生尸体。', 'very-rare'),
+  tcAttuned('guardian-emblem', '守护徽记', '将徽记附着于盾牌或护甲，可以反应将暴击改为普通命中。', 'uncommon'),
+  tcAttuned('natures-mantle', '自然斗篷', '德鲁伊或游侠斗篷与施法焦点；可在轻度遮蔽时躲藏。', 'uncommon'),
+  tcAttuned('devotees-censer', '虔信者香炉', '牧师或圣武士使用的链枷与圣徽；可释放治疗香雾。', 'rare', { category: 'weapon', equippable: true }),
+  tcAttuned('revelers-concertina', '狂欢者六角手风琴', '吟游诗人乐器；提高法术豁免 DC，并可施放一次舞动法术。', 'rare'),
+  tcAttuned('lyre-of-building', '建造者里拉琴', '吟游诗人乐器；可强化构造物、保护建筑并施展建造相关魔法。', 'rare'),
+  tcAttuned('alchemical-compendium', '炼金纲要', '魔法法术书，提供变化物质与强酸相关的充能法术。', 'rare'),
+  tcAttuned('astromancy-archive', '星相术档案', '魔法法术书，提供占卜与星相类充能法术。', 'rare'),
+  tcAttuned('atlas-of-endless-horizons', '无尽地平线图册', '魔法法术书，聚焦于传送、位面与空间移动。', 'rare'),
+  tcAttuned('duplicitous-manuscript', '欺诈手稿', '魔法法术书，聚焦于幻术与心灵误导。', 'rare'),
+  tcAttuned('fulminating-treatise', '震爆论文', '魔法法术书，聚焦于火焰、闪电与爆炸类法术。', 'rare'),
+  tcAttuned('heart-weavers-primer', '编心者入门', '魔法法术书，聚焦于魅惑、情绪与交流。', 'rare'),
+  tcAttuned('libram-of-souls-and-flesh', '灵魂与血肉大全', '魔法法术书，聚焦于死灵、不死与生命能量。', 'rare'),
+  tcAttuned('planecallers-codex', '位面召唤师密典', '魔法法术书，聚焦于召唤与异界生物。', 'rare'),
+  tcAttuned('protective-verses', '防护韵文', '魔法法术书，聚焦于防护、结界与减伤。', 'rare'),
+  tc({ id: 'baba-yagas-mortar-and-pestle', name: '芭芭雅嘎的研钵与研棒', description: '神器工具：可研磨魔法材料、召唤研钵移动，并在满足材料条件时远行。', category: 'magic', equippable: true, rarity: 'artifact', requiresAttunement: true }),
+  tc({ id: 'lubas-tarokka-of-souls', name: '露芭的灵魂塔罗卡', description: '神器牌组：可操纵命运、囚禁灵魂，并伴随需要 DM 裁定的风险。', category: 'magic', equippable: false, rarity: 'artifact', requiresAttunement: true }),
+  tc({ id: 'mighty-servant-of-leuk-o', name: '鲁科的强大仆从', description: '神器级构装载具：需要两名同调操作者共同控制，战斗统计以来源摘要处理。', category: 'magic', equippable: false, rarity: 'artifact', requiresAttunement: true }),
+  tc({ id: 'crook-of-rao', name: '拉奥牧钩', description: '神器：具有强大的驱逐异界生物与封锁能力，具体使用由 DM 控制。', category: 'magic', equippable: true, rarity: 'artifact', requiresAttunement: true }),
+  tc({ id: 'demonomicon-of-iggwilv', name: '伊格威尔伏魔记', description: '神器魔典：记录恶魔真名与束缚法门，并能封印邪魔。', category: 'magic', equippable: true, rarity: 'artifact', requiresAttunement: true }),
+  tc({ id: 'teeth-of-dahlver-nar', name: '达尔弗·纳尔之牙', description: '神器遗物：每颗牙齿都能埋植出不同的故事化效果，结果由表格与 DM 决定。', category: 'magic', equippable: false, rarity: 'artifact', requiresAttunement: true }),
 ]

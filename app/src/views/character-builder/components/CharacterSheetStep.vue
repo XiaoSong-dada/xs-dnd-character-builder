@@ -15,7 +15,7 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
-import { getAvailableSpells, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
+import { getAvailableSpells, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots, getSpellcastingConfig } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { buildTimeline } from '@/rules/timeline'
@@ -64,7 +64,7 @@ const identityLine = computed(() => {
   ].filter(Boolean)
   return `${draft.targetLevel}级 · ${names.join(' · ')}`
 })
-const spellcastingConfig = computed(() => rulesRepository.getSpellcastingConfig(props.draft))
+const spellcastingConfig = computed(() => getSpellcastingConfig(props.draft))
 const spellSlots = computed(() => spellcastingConfig.value ? getSpellSlots(spellcastingConfig.value, props.draft.targetLevel) : [])
 const spellSlotsLabel = computed(() => {
   if (!spellSlots.value.length) return ''
@@ -456,6 +456,7 @@ function handleExportPdf(): void {
           <header class="character-sheet__subclass-features-header">
             <h3>职业特性 · {{ classInfo.classRule.name }}</h3>
             <span v-if="classInfo.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
+            <span v-else-if="classInfo.features.some((feature) => feature.status === 'selectable')" class="character-sheet__subclass-features-note">可选择 · 情境效果按摘要处理</span>
           </header>
           <ListShell>
             <ExpandableOptionCard
@@ -481,6 +482,7 @@ function handleExportPdf(): void {
           <header class="character-sheet__subclass-features-header">
             <h3>子职特性 · {{ subclassInfo.subclass.name }}</h3>
             <span v-if="subclassInfo.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
+            <span v-else-if="subclassInfo.features.some((feature) => feature.status === 'selectable')" class="character-sheet__subclass-features-note">可选择 · 情境效果按摘要处理</span>
           </header>
           <ListShell>
             <ExpandableOptionCard
@@ -766,7 +768,7 @@ function handleExportPdf(): void {
       :preselect-spell-id="transcribePreselectId"
       @close="showTranscribeModal = false"
     />
-    <AddItemModal :open="showAddItemModal" @close="showAddItemModal = false" @add="handleAddItem" />
+    <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" @close="showAddItemModal = false" @add="handleAddItem" />
     <AdjustItemModal
       v-if="adjustEntry"
       :open="showAdjustItemModal"

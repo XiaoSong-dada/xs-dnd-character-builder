@@ -28,6 +28,8 @@ views / features
   -> styles
 ```
 
+0.7.0 来源与工匠更新未改变上述依赖方向。新的规则拓扑为：`views/components → rules/source-books | rules/timeline | rules/spellcasting → rules/repository → types`；`services/draft-storage` 在迁移边界读取纯规则仓库，不反向引用 store 或 UI。
+
 箭头表示“允许依赖”。下层不得反向导入上层。例如 `rules` 不得导入 `features`，`components` 不得导入 `views`，`stores` 不得导入 `router`。
 
 ## 3. 目录权限矩阵
@@ -423,7 +425,8 @@ src/rules/spellcasting.ts        -> src/rules/{derive,repository}
 src/rules/spellbook.ts           -> src/rules/{repository,spellcasting}（抄录候选池、费用、金币校验与抄录应用纯函数）
 src/rules/starting-equipment.ts  -> src/rules/repository
 src/rules/feats.ts               -> src/rules/data/feats-2014
-src/rules/recommend.ts           -> src/rules/data/{feats-2014,preferences-2014}
+src/rules/recommend.ts           -> src/rules/data/feats-2014（仅保留成长速览与起源提示）
+src/rules/source-books.ts        -> src/rules/data/sources-2014 + src/rules/repository（迁移推导入口）
 src/rules/abilities.ts           （无 rules 内部依赖，最纯）
 src/rules/subclass-effects.ts    （无依赖，纯函数）
 src/rules/dice.ts                -> src/types/dice（骰池、d100、总和与投掷准备纯函数）
@@ -450,7 +453,7 @@ src/styles/index.scss  -> @use src/styles/flex.scss
 ### 8.9 已知偏差与注意事项
 
 - ⚠️ `services -> rules`：`character-json.ts` 与 `draft-storage.ts` 导入 `rules/starting-equipment` 的 `EMPTY_CURRENCY`，而权限矩阵中 services 允许依赖 `api、config、types、纯 utils`（未含 rules）。建议后续把该常量上提到 `types` 或 `constants`，或修订矩阵授权。
-- 页面组件直接消费 `rules/data/*`（`TimelineStep`、`CharacterSheetStep`、`FeatChoicePanel`、`PreferencesStep`），符合「views -> rules」权限；如需收紧可改经 `repository` 聚合。
+- 页面组件直接消费 `rules/data/*`（`TimelineStep`、`CharacterSheetStep`、`FeatChoicePanel`、`SourcesStep`），符合「views -> rules」权限；如需收紧可改经 `repository` 聚合。
 - `config/setting.ts` 为空占位文件；`assets/icons/DND.png` 无任何 import 引用。
 - `src/api`、`src/constants`、`src/utils`、顶层 `src/hooks`、非 ui 的 `src/components` 当前不存在，只有出现对应真实职责时才创建。
 
@@ -479,11 +482,11 @@ src/styles/index.scss  -> @use src/styles/flex.scss
 views/character-builder/index.vue
   -> views/character-builder/hooks/useCharacterBuilderPage.ts
   -> views/character-builder/steps.ts（STEP_META/STEP_ORDER 步骤顺序与友好文案公共常量，被 hook 与 StartPanel 共用）
-  -> views/character-builder/components/*（16 个：AbilitiesStep、AddItemModal、AdjustItemModal、CharacterSheetStep、ClassStep、EquipmentStep、FeatChoicePanel、IdentityStep、LevelAdjustModal、OriginStep、PreferencesStep、SetupStep、SpellcastingStep、StartPanel、TimelineStep、ValidationStep）
+  -> views/character-builder/components/*（16 个：AbilitiesStep、AddItemModal、AdjustItemModal、CharacterSheetStep、ClassStep、EquipmentStep、FeatChoicePanel、IdentityStep、LevelAdjustModal、OriginStep、SourcesStep、SetupStep、SpellcastingStep、StartPanel、TimelineStep、ValidationStep）
   -> features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
   -> stores/character-drafts.ts
       -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}
-          -> rules/data/{subclasses-2014,subclass-features-2014,class-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,starting-equipment-2014,feats-2014,spells-2014,preferences-2014}
+          -> rules/data/{sources-2014,artificer-2014,subclasses-2014,subclass-features-2014,class-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,magic-items-xgte-tcoe-2014,starting-equipment-2014,feats-2014,spells-2014}
       -> services/{draft-storage,character-json}
           -> rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点，见 8.9
   -> components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
@@ -492,11 +495,11 @@ views/character-builder/index.vue
 规则层仍保持框架无关，不读取 DOM、路由或存储。Store 只保存原始选择；文件和
 localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层依赖见 8.9 越权点说明）；路由查询同步和步骤编排只存在于页面 hook。
 
-`rules/data/class-features-2014.ts` 登记 12 个 2014 基础职业的全部等级特性（升级增强项每个等级各登记一条，`requiresChoice` 标记需玩家选择的特性；每条含原创中文详细效果 `description`），`repository` 的 classes 装配处经 `getClassFeatures2014` 挂载到 `ClassRule.features`，角色卡“能力”页签展示职业特性区块、时间线首个职业检查点展示自动获得特性（只读，`ExpandableOptionCard` 展开详情）。`rules/data/subclass-features-2014.ts` 登记各子职等级特性（纵向切片，571 条全部含 `description` 详情；未核验效果保持 `index-only`，详情与状态分离），`rules/subclass-effects.ts` 提供子职派生效果钩子（按可核验条目返回效果，首批含龙族血脉的 AC 基础公式与每级生命加成）。`repository` 负责登记完整目录，`timeline` 接收 `subclassId` 上下文，按所选子职追加 `kind: 'subclass-feature'` 的特性选择检查点（`requiresChoice` 特性），并只装配玩家可用检查点；DM 专用条目可被仓库查询，但不进入普通时间线。页面层 `TimelineStep` 选中子职后展示其特性列表并提供特性选择检查点交互，`CharacterSheetStep` 能力页签展示子职特性区块与“专长与属性提升”区块（专长可展开 `FeatRule.detail`，属性提升经 `rules/feats` 的 `decodeAbilityImprovement` 显示提升内容）；两者都只从注册表读取数据，不硬编码规则。各职业旧数据文件中已有的子职常量暂保留供局部实现引用，不再作为仓库目录来源。
+`rules/data/class-features-2014.ts` 登记 13 个 2014 职业（含工匠）的等级特性；`rules/data/artificer-2014.ts` 提供工匠施法、灌注目录与数量曲线。子职状态由子特性与必选结构聚合，`selectable` 用于可选但仍需桌面裁定的情境效果，`index-only` 不进入有效选择。
 
 `rules/data/spells-2014.ts` 是 2014 全量法术元数据（稳定 ID、中英文名、环级、8 主施法职业归属、来源索引与**原创中文效果摘要** `description`）的唯一聚合入口，收录 PHB/XGtE/EGtW（非 dunamancy）/TCoE/FTD/SCC 法术；`repository.spells` 直接引用该表。三个旧施法者文件（`half-casters-2014`、`arcane-casters-2014`、`full-casters-2014`）不再持有法术 seed，仅保留职业等级表与子职配置，其 `classSpellIds` 均从 `spells-2014` 按职业过滤派生；跨职业共享法术只登记一次并合并归属，历史 `spell-2014-<slug>` ID 规则保持不变以保证草稿兼容。
 
-`rules/data/preferences-2014.ts` 是玩法偏好的唯一数据源（6 项偏好的中文名、说明、关联属性与关联玩法标签），`rules/recommend.ts` 消费它生成可解释的职业推荐（`getClassRecommendation` 返回 `{ score, reasons, matchedPreferenceLabels }`，`score` 只排序不表达百分比；`status` 不参与评分）、职业成长速览（`getClassGrowthSummary`）与种族/背景推荐理由（从 `fixedAbilityBonuses`/技能检查点推导，无职业特判）；`ClassRule.playStyleTags` 玩法标签记录在各职业数据文件中，只服务推荐。页面组件 `PreferencesStep`、`ClassStep`、`OriginStep` 直接调用 `rules/recommend` 与 `rulesRepository` 做展示级排序与渲染，不实现推荐公式，符合权限矩阵。
+`rules/data/sources-2014.ts` 是 2014 来源注册表；`rules/source-books.ts` 提供核心永久启用、可选来源归一化、草稿迁移推导与统一可用性判断。`SourcesStep` 只写入草稿来源 ID，页面内搜索/筛选不持久化。`rules/recommend.ts` 仅保留职业成长速览和种族/背景提示，不再提供职业评分。
 
 `rules/dependency.ts` 的 `target-level` 变更支持升级与降级影响计算：升级时返回 `added`（新等级新增且未完成的检查点清单，含等级与标题，供 UI 引导补全），降级时返回 `invalidatedDetails`（将失效选择的等级与标题）与 `reviews`（按新等级列出数量减少的资源：熟练加值、属性提升/专长次数、战技数量、已知法术上限、子职特性、生命值上限），并沿用"旧选择保留并标记失效、不静默删除"的约定。页面层 `CharacterSheetStep` 提供"调整等级 / 重新编辑"入口与"待补全"徽标，`LevelAdjustModal.vue`（页面私有组件）提供 1—20 级数字网格与影响摘要预览；升级/降级确认复用 `useCharacterBuilderPage` 的 `pendingChange` 依赖影响弹窗（按新增待补 / 将失效 / 需复查 / 保留分节展示），升级后引导条可一键跳转 `timeline` 补全新检查点，`startReedit` 智能定位到需处理步骤（否则进入属性步骤）。草稿首页角色条仅保留打开与删除操作，编辑、等级调整与导出均从角色卡页发起。
 

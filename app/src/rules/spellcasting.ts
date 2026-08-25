@@ -1,5 +1,6 @@
 import { abilityModifier, getRaceAbilityBonuses } from '@/rules/derive'
 import { rulesRepository } from '@/rules/repository'
+import { isSourceEnabled } from '@/rules/source-books'
 import type { CharacterDraft } from '@/types/character'
 import type { ChoiceCheckpoint, SpellcastingConfig } from '@/types/rules'
 
@@ -38,6 +39,9 @@ export function getRequiredSpellCount(draft: CharacterDraft, config: Spellcastin
   if (config.mode === 'known' || config.mode === 'pact') return config.spellsKnownByLevel?.[draft.targetLevel - 1] ?? 0
   if (config.preparedFormula === 'ability-plus-half-level') {
     return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + Math.floor(draft.targetLevel / 2))
+  }
+  if (config.preparedFormula === 'ability-plus-half-level-ceil') {
+    return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + Math.ceil(draft.targetLevel / 2))
   }
   if (config.preparedFormula === 'ability-plus-level') {
     return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + draft.targetLevel)
@@ -95,7 +99,11 @@ export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingCo
   const maximumLevel = getMaximumSpellLevel(config, draft.targetLevel)
   return config.classSpellIds
     .map((id) => rulesRepository.getSpell(id))
-    .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell && spell.level <= maximumLevel))
+    .filter((spell): spell is NonNullable<typeof spell> => Boolean(
+      spell
+      && spell.level <= maximumLevel
+      && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds),
+    ))
 }
 
 /**
@@ -112,7 +120,7 @@ export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: Choic
     if (!config || draft.targetLevel < config.startsAtLevel) return []
     const maximumLevel = getMaximumSpellLevel(config, draft.targetLevel)
     return rulesRepository.spells
-      .filter((spell) => spell.level >= 1 && spell.level <= maximumLevel)
+      .filter((spell) => spell.level >= 1 && spell.level <= maximumLevel && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds))
       .map((spell) => spell.id)
   }
   const targetLevel = checkpoint.candidateKind === 'spellbook-level-1' ? 1
@@ -135,8 +143,24 @@ export function getMagicalSecretsSpellIds(draft: CharacterDraft): readonly strin
 /**
  * 解析角色当前施法配置：子职级施法（奥法骑士、诡术师）优先，否则回退职业级。
  */
-export function getSpellcastingConfig(draft: Pick<CharacterDraft, 'classId' | 'subclassId'>): SpellcastingConfig | undefined {
+export function getSpellcastingConfig(draft: Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds'>): SpellcastingConfig | undefined {
+  const subclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
+  if (subclass && !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds)) return undefined
+  const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
+  if (classRule && !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds)) return undefined
   return rulesRepository.getSpellcastingConfig(draft)
+}
+
+export function getAlwaysPreparedSpellIds(draft: CharacterDraft): readonly string[] {
+  const subclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
+  if (!subclass || !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds)) return []
+  return [...new Set(Object.entries(subclass.alwaysPreparedSpellIdsByLevel ?? {})
+    .filter(([level]) => Number(level) <= draft.targetLevel)
+    .flatMap(([, ids]) => ids)
+    .filter((id) => {
+      const spell = rulesRepository.getSpell(id)
+      return Boolean(spell && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds))
+    }))]
 }
 
 export function validateSpellSelections(draft: CharacterDraft): boolean {

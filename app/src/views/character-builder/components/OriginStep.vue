@@ -6,32 +6,34 @@ import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import { getBackgroundRecommendationReason, getRaceRecommendationReason } from '@/rules/recommend'
 import { rulesRepository } from '@/rules/repository'
+import { isSourceEnabled } from '@/rules/source-books'
 import { SKILL_IDS } from '@/rules/derive'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   classId?: string
   raceId?: string
   subraceId?: string
   backgroundId?: string
   backgroundVariantId?: string
   languages: readonly string[]
-  raceSkillChoices: readonly string[]
+  raceSkillChoices?: readonly string[]
   raceToolChoice?: string
-}>()
+  enabledSourceIds?: readonly string[]
+}>(), { raceSkillChoices: () => [] })
 const raceSearch = ref('')
 const backgroundSearch = ref('')
 const classRule = computed(() => props.classId ? rulesRepository.getClass(props.classId) : undefined)
 const baseRaces = computed(() => rulesRepository.races
-  .filter((item) => !item.parentRaceId && `${item.name}${item.englishName}`.toLowerCase().includes(raceSearch.value.trim().toLowerCase()))
+  .filter((item) => !item.parentRaceId && isSourceEnabled(item.sourceIds, props.enabledSourceIds) && `${item.name}${item.englishName}`.toLowerCase().includes(raceSearch.value.trim().toLowerCase()))
   .sort((a, b) => Number(b.recommendedClassIds.includes(props.classId ?? '')) - Number(a.recommendedClassIds.includes(props.classId ?? ''))))
 const subraces = computed(() => props.raceId
-  ? rulesRepository.races.filter((item) => item.parentRaceId === props.raceId)
+  ? rulesRepository.races.filter((item) => item.parentRaceId === props.raceId && isSourceEnabled(item.sourceIds, props.enabledSourceIds))
   : [])
 const baseBackgrounds = computed(() => rulesRepository.backgrounds
-  .filter((item) => !item.parentBackgroundId && `${item.name}${item.englishName}`.toLowerCase().includes(backgroundSearch.value.trim().toLowerCase()))
+  .filter((item) => !item.parentBackgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds) && `${item.name}${item.englishName}`.toLowerCase().includes(backgroundSearch.value.trim().toLowerCase()))
   .sort((a, b) => Number(b.recommendedClassIds.includes(props.classId ?? '')) - Number(a.recommendedClassIds.includes(props.classId ?? ''))))
 const variants = computed(() => props.backgroundId
-  ? rulesRepository.backgrounds.filter((item) => item.parentBackgroundId === props.backgroundId)
+  ? rulesRepository.backgrounds.filter((item) => item.parentBackgroundId === props.backgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds))
   : [])
 const languageChoiceCount = computed(() => props.backgroundId ? rulesRepository.getBackground(props.backgroundId)?.languageChoices ?? 0 : 0)
 const languageOptions = ['矮人语', '精灵语', '巨人语', '侏儒语', '地精语', '半身人语', '兽人语', '龙语', '炼狱语', '天界语'] as const

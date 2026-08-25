@@ -154,7 +154,7 @@ describe('TimelineStep 超魔选择', () => {
 
     const careful = optionCard(wrapper, '谨慎法术')
     expect(careful?.attributes('disabled')).toBeDefined()
-    expect(careful?.text()).toContain('已在较低等级掌握')
+    expect(careful?.text()).toContain('已在同一选项组的其他等级掌握')
 
     const subtle = optionCard(wrapper, '隐蔽法术')
     await subtle?.trigger('click')

@@ -17,10 +17,13 @@ export interface FeatEligibilityContext {
   readonly abilities: AbilityScores
   readonly classId: string
   readonly canCastSpells: boolean
+  readonly raceId?: string
+  readonly subraceId?: string
 }
 
 const classCapabilities: Readonly<Record<string, readonly string[]>> = {
   'class-2014-barbarian': ['armor-light', 'armor-medium'],
+  'class-2014-artificer': ['armor-light', 'armor-medium'],
   'class-2014-bard': ['armor-light'],
   'class-2014-cleric': ['armor-light', 'armor-medium'],
   'class-2014-druid': ['armor-light', 'armor-medium'],
@@ -87,6 +90,10 @@ export function getFeatEligibility(
     reasons.push(`${minimum.anyOf.map((ability) => ABILITY_LABELS[ability]).join('或')}需要达到${minimum.score}`)
   }
   const requiredCapability = selectedFeat.prerequisite?.requiredCapability
+  const requiredRaces = selectedFeat.prerequisite?.requiredRaceIds
+  if (requiredRaces && !requiredRaces.includes(context.raceId ?? '')) reasons.push('种族前置不满足')
+  const requiredSubraces = selectedFeat.prerequisite?.requiredSubraceIds
+  if (requiredSubraces && !requiredSubraces.includes(context.subraceId ?? '')) reasons.push('子种族前置不满足')
   if (requiredCapability === 'spellcasting' && !context.canCastSpells) reasons.push('需要能够施放至少一个法术')
   if (
     requiredCapability

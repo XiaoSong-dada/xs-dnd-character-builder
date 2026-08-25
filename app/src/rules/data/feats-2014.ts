@@ -61,7 +61,7 @@ const feat = (
   sourceIds: featSourceIds,
 })
 
-export const feats2014: readonly FeatRule[] = [
+const coreFeats2014: readonly FeatRule[] = [
   feat('feat-alert', '警觉', 'Alert', '强化先攻与对突袭的应对能力。', '你的先攻检定获得 +5 加值；处于警觉状态时，只要未昏迷，突袭回合中也能正常行动，不会被突袭打出劣势。', ['战斗', '先攻']),
   feat('feat-athlete', '运动健将', 'Athlete', '提高力量或敏捷，并改善攀爬、起身与跳跃。', '力量或敏捷 +1（上限 20）。攀爬不额外消耗移动力，且攀爬时攻击者对你无优势；倒地后以 5 尺移动起身而非一半移动；助跑跳远与跳高距离各 +1 尺（规则单位按项目实现换算）。', ['属性', '移动']),
   feat('feat-actor', '演员', 'Actor', '提高魅力，并强化模仿与伪装表现。', '魅力 +1（上限 20）。进行欺骗或表演检定模仿他人声音时获得优势；可伪造声音并模仿他人说话，识破需与你的表演/欺骗对抗；施放只含语言成分的法术时，可用拟声掩盖你的说话内容。', ['属性', '社交'], { abilityMinimum: { anyOf: ['cha'], score: 13 } }),
@@ -105,6 +105,63 @@ export const feats2014: readonly FeatRule[] = [
   feat('feat-war-caster', '战地施法者', 'War Caster', '强化战斗施法、专注与借机法术。', '前置：能施放至少一个法术。因受伤进行体质豁免以维持专注时获得优势；可空出一只手执行法术材料成分；敌人离开你的触及范围时，可用反应对其施放一个施法时间为 1 动作的法术（替代借机攻击）。', ['施法', '专注'], { requiredCapability: 'spellcasting' }),
   feat('feat-weapon-master', '武器大师', 'Weapon Master', '提高力量或敏捷，并获得更多武器熟练。', '力量或敏捷 +1（上限 20）。获得四种自选武器熟练。', ['属性', '武器']),
 ]
+
+const abilityChoice = (id: string, abilities: readonly AbilityKey[]) => ({
+  id: `${id}-ability`, title: '选择属性加值', description: '选择一项由专长提高 1 点的属性。',
+  minSelections: 1, maxSelections: 1, optionIds: abilities.map((ability) => `feat-bonus-${ability}-1`), abilityBonus: 1,
+})
+
+const supplementFeat = (
+  id: string,
+  name: string,
+  englishName: string,
+  sourceId: 'xgte-2017-index' | 'tcoe-2020-index',
+  detail: string,
+  tags: readonly string[],
+  extra: Pick<FeatRule, 'prerequisite' | 'choices' | 'repeatable'> = {},
+): FeatRule => ({ id, ruleset: '5e-2014', name, englishName, description: detail.split('。')[0] ?? detail, detail, tags, status: 'selectable', sourceIds: [sourceId], ...extra })
+
+const xgteFeats2014: readonly FeatRule[] = [
+  supplementFeat('feat-bountiful-luck', '慧心好运', 'Bountiful Luck', 'xgte-2017-index', '前置：半身人。附近盟友检定掷出 1 时，可用反应让其重掷。', ['种族', '支援'], { prerequisite: { requiredRaceIds: ['race-2014-halfling'] } }),
+  supplementFeat('feat-dragon-fear', '龙之恐惧', 'Dragon Fear', 'xgte-2017-index', '前置：龙裔。力量、体质或魅力 +1；可用吐息次数发出恐惧咖哮。', ['种族', '属性'], { prerequisite: { requiredRaceIds: ['race-2014-dragonborn'] }, choices: [abilityChoice('dragon-fear', ['str', 'con', 'cha'])] }),
+  supplementFeat('feat-dragon-hide', '龙之皮', 'Dragon Hide', 'xgte-2017-index', '前置：龙裔。力量、体质或魅力 +1；获得天然鳞甲与龙爪。', ['种族', '防御'], { prerequisite: { requiredRaceIds: ['race-2014-dragonborn'] }, choices: [abilityChoice('dragon-hide', ['str', 'con', 'cha'])] }),
+  supplementFeat('feat-drow-high-magic', '卓尔高等魔法', 'Drow High Magic', 'xgte-2017-index', '前置：卓尔精灵。获得侦测魔法与有限次数的驱散魔法、悬浮术。', ['种族', '施法'], { prerequisite: { requiredSubraceIds: ['race-2014-elf-drow'] } }),
+  supplementFeat('feat-dwarven-fortitude', '矮人刚毅', 'Dwarven Fortitude', 'xgte-2017-index', '前置：矮人。体质 +1；执行闪避时可花费生命骰恢复生命。', ['种族', '属性'], { prerequisite: { requiredRaceIds: ['race-2014-dwarf'] }, choices: [abilityChoice('dwarven-fortitude', ['con'])] }),
+  supplementFeat('feat-elven-accuracy', '精灵准确', 'Elven Accuracy', 'xgte-2017-index', '前置：精灵或半精灵。敏捷、智力、感知或魅力 +1；使用这些属性获得优势时可重掷一颗。', ['种族', '属性'], { prerequisite: { requiredRaceIds: ['race-2014-elf', 'race-2014-half-elf'] }, choices: [abilityChoice('elven-accuracy', ['dex', 'int', 'wis', 'cha'])] }),
+  supplementFeat('feat-fade-away', '隐没', 'Fade Away', 'xgte-2017-index', '前置：侏儒。敏捷或智力 +1；受到伤害后可用反应短暂隐形。', ['种族', '属性'], { prerequisite: { requiredRaceIds: ['race-2014-gnome'] }, choices: [abilityChoice('fade-away', ['dex', 'int'])] }),
+  supplementFeat('feat-fey-teleportation', '妖精传送', 'Fey Teleportation', 'xgte-2017-index', '前置：高等精灵。智力或魅力 +1；习得雾步并可每短休使用一次。', ['种族', '施法'], { prerequisite: { requiredSubraceIds: ['race-2014-elf-high'] }, choices: [abilityChoice('fey-teleportation', ['int', 'cha'])] }),
+  supplementFeat('feat-flames-of-phlegethos', '弗洛格斯之火', 'Flames of Phlegethos', 'xgte-2017-index', '前置：提夫林。智力或魅力 +1；火焰法术的伤害骰更稳定，并可以烈焰包围自身。', ['种族', '施法'], { prerequisite: { requiredRaceIds: ['race-2014-tiefling'] }, choices: [abilityChoice('flames-of-phlegethos', ['int', 'cha'])] }),
+  supplementFeat('feat-infernal-constitution', '炼狱体魄', 'Infernal Constitution', 'xgte-2017-index', '前置：提夫林。体质 +1；获得冷冻与毒素抗性，对中毒豁免有优势。', ['种族', '防御'], { prerequisite: { requiredRaceIds: ['race-2014-tiefling'] }, choices: [abilityChoice('infernal-constitution', ['con'])] }),
+  supplementFeat('feat-orcish-fury', '半兽人之怒', 'Orcish Fury', 'xgte-2017-index', '前置：半兽人。力量或体质 +1；可强化武器伤害，也可在不屈倒下后立即反击。', ['种族', '战斗'], { prerequisite: { requiredRaceIds: ['race-2014-half-orc'] }, choices: [abilityChoice('orcish-fury', ['str', 'con'])] }),
+  supplementFeat('feat-prodigy', '奇才', 'Prodigy', 'xgte-2017-index', '前置：人类、半精灵或半兽人。获得技能、工具、语言并为一项已熟练技能获得专精。', ['种族', '技能'], { prerequisite: { requiredRaceIds: ['race-2014-human', 'race-2014-half-elf', 'race-2014-half-orc'] }, choices: [{ id: 'prodigy-skill', title: '选择技能', description: '获得一项技能熟练。', minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'all-skills' }, { id: 'prodigy-expertise', title: '选择专精', description: '从已熟练技能中选择。', minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'proficient-skills', uniqueGroup: 'expertise' }] }),
+  supplementFeat('feat-second-chance', '第二次机会', 'Second Chance', 'xgte-2017-index', '前置：半身人。敏捷、体质或魅力 +1；被命中时可用反应迫使攻击者重掷。', ['种族', '防御'], { prerequisite: { requiredRaceIds: ['race-2014-halfling'] }, choices: [abilityChoice('second-chance', ['dex', 'con', 'cha'])] }),
+  supplementFeat('feat-squat-nimbleness', '矮小灵活', 'Squat Nimbleness', 'xgte-2017-index', '前置：矮人或小型种族。力量或敏捷 +1；速度提升并获得运动或杂技熟练。', ['种族', '移动'], { choices: [abilityChoice('squat-nimbleness', ['str', 'dex'])] }),
+  supplementFeat('feat-wood-elf-magic', '木精灵魔法', 'Wood Elf Magic', 'xgte-2017-index', '前置：木精灵。习得一项德鲁伊戏法，并可有限施放长行术与无踪可寻。', ['种族', '施法'], { prerequisite: { requiredSubraceIds: ['race-2014-elf-wood'] } }),
+]
+
+const tcoeFeats2014: readonly FeatRule[] = [
+  supplementFeat('feat-artificer-initiate', '工匠学徒', 'Artificer Initiate', 'tcoe-2020-index', '习得一项工匠戏法、一项 1 环工匠法术与一套工匠工具熟练。', ['施法', '工具']),
+  supplementFeat('feat-chef', '厨师', 'Chef', 'tcoe-2020-index', '体质或感知 +1；获得烹饪用具熟练，可在休息时准备恢复食物。', ['属性', '支援'], { choices: [abilityChoice('chef', ['con', 'wis'])] }),
+  supplementFeat('feat-crusher', '碎击者', 'Crusher', 'tcoe-2020-index', '力量或体质 +1；铝击命中可移动目标，暴击后盟友攻击获得优势。', ['属性', '战斗'], { choices: [abilityChoice('crusher', ['str', 'con'])] }),
+  supplementFeat('feat-eldritch-adept', '魔能学徒', 'Eldritch Adept', 'tcoe-2020-index', '前置：施法或契约魔法。习得一项没有不满足前置的魔能祈唤。', ['施法', '选项'], { prerequisite: { requiredCapability: 'spellcasting' } }),
+  supplementFeat('feat-fey-touched', '妖精之触', 'Fey Touched', 'tcoe-2020-index', '智力、感知或魅力 +1；习得雾步和一项 1 环占卜或惑控法术。', ['属性', '施法'], { choices: [abilityChoice('fey-touched', ['int', 'wis', 'cha'])] }),
+  supplementFeat('feat-fighting-initiate', '战斗学徒', 'Fighting Initiate', 'tcoe-2020-index', '前置：一项军用武器熟练。习得一种当前尚未掌握的战斗风格。', ['战斗', '选项']),
+  supplementFeat('feat-gunner', '枪手', 'Gunner', 'tcoe-2020-index', '敏捷 +1；获得火器熟练，忽略装弹，近距离远程攻击不再劣势。', ['属性', '远程'], { choices: [abilityChoice('gunner', ['dex'])] }),
+  supplementFeat('feat-metamagic-adept', '超魔学徒', 'Metamagic Adept', 'tcoe-2020-index', '前置：能施法。习得两项超魔并获得 2 点术法点。', ['施法', '超魔'], { prerequisite: { requiredCapability: 'spellcasting' } }),
+  supplementFeat('feat-piercer', '穿刺者', 'Piercer', 'tcoe-2020-index', '力量或敏捷 +1；穿刺伤害骰可重掷，暴击额外增加伤害骰。', ['属性', '战斗'], { choices: [abilityChoice('piercer', ['str', 'dex'])] }),
+  supplementFeat('feat-poisoner', '用毒者', 'Poisoner', 'tcoe-2020-index', '获得毒师工具熟练，可快速涂毒并制作特殊毒剂。', ['工具', '伤害']),
+  supplementFeat('feat-shadow-touched', '阴影之触', 'Shadow Touched', 'tcoe-2020-index', '智力、感知或魅力 +1；习得隐形术和一项 1 环死灵或幻术。', ['属性', '施法'], { choices: [abilityChoice('shadow-touched', ['int', 'wis', 'cha'])] }),
+  supplementFeat('feat-skill-expert', '技能专家', 'Skill Expert', 'tcoe-2020-index', '任意属性 +1；获得一项技能熟练，并为一项已熟练技能获得专精。', ['属性', '技能'], { choices: [abilityChoice('skill-expert', ABILITY_KEYS), { id: 'skill-expert-skill', title: '选择技能', description: '获得一项技能熟练。', minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'all-skills' }, { id: 'skill-expert-expertise', title: '选择专精', description: '从已熟练技能中选择。', minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'proficient-skills', uniqueGroup: 'expertise' }] }),
+  supplementFeat('feat-slasher', '斩击者', 'Slasher', 'tcoe-2020-index', '力量或敏捷 +1；挥砍命中可降低速度，暴击后目标攻击检定劣势。', ['属性', '战斗'], { choices: [abilityChoice('slasher', ['str', 'dex'])] }),
+  supplementFeat('feat-telekinetic', '念动力', 'Telekinetic', 'tcoe-2020-index', '智力、感知或魅力 +1；习得或强化法师之手，并可用附赠动作推拉生物。', ['属性', '控制'], { choices: [abilityChoice('telekinetic', ['int', 'wis', 'cha'])] }),
+  supplementFeat('feat-telepathic', '心灵感应', 'Telepathic', 'tcoe-2020-index', '智力、感知或魅力 +1；获得心灵传讯并可有限施放侦测思想。', ['属性', '社交'], { choices: [abilityChoice('telepathic', ['int', 'wis', 'cha'])] }),
+]
+
+export const featChoiceOptions2014: readonly RuleOption[] = ABILITY_KEYS.map((ability) => ({
+  id: `feat-bonus-${ability}-1`, name: `${ABILITY_LABELS[ability]} +1`, description: `由父专长将${ABILITY_LABELS[ability]}提高 1，上限 20。`, status: 'implemented', sourceIds: ['xgte-2017-index', 'tcoe-2020-index'],
+}))
+
+export const feats2014: readonly FeatRule[] = [...coreFeats2014, ...xgteFeats2014, ...tcoeFeats2014]
 
 export const FEAT_OPTION_IDS = feats2014.map((item) => item.id)
 export const ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS = [

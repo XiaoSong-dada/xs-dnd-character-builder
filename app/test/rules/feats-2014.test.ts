@@ -14,8 +14,8 @@ import {
 } from '@/rules/feats'
 
 describe('2014 feats and ability improvements', () => {
-  it('registers the complete 2014 PHB feat index with unique metadata', () => {
-    expect(feats2014).toHaveLength(42)
+  it('registers PHB、XGtE 与 TCoE 专长并保持稳定 ID 唯一', () => {
+    expect(feats2014).toHaveLength(72)
     expect(new Set(FEAT_OPTION_IDS).size).toBe(feats2014.length)
     expect(feats2014.every((feat) =>
       feat.ruleset === '5e-2014'
@@ -26,12 +26,14 @@ describe('2014 feats and ability improvements', () => {
     )).toBe(true)
   })
 
-  it('registers detailed effect text and promotes every feat to implemented', () => {
+  it('核心专长完整实现，扩展专长可选择并提供结构化子选择', () => {
     expect(feats2014.every((feat) =>
       feat.detail.length > 0
       && feat.detail !== feat.description
-      && feat.status === 'implemented',
+      && ['implemented', 'selectable'].includes(feat.status),
     )).toBe(true)
+    expect(feats2014.filter((feat) => feat.sourceIds.includes('phb-2014-index')).every((feat) => feat.status === 'implemented')).toBe(true)
+    expect(feats2014.find((feat) => feat.id === 'feat-skill-expert')?.choices?.length).toBeGreaterThan(0)
     const lucky = feats2014.find((feat) => feat.id === 'feat-lucky')
     expect(lucky?.detail).toContain('幸运点')
     const sharpshooter = feats2014.find((feat) => feat.id === 'feat-sharpshooter')

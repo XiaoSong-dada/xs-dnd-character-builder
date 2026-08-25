@@ -5,9 +5,10 @@ import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiScrollModal from '@/components/ui/UiScrollModal.vue'
 import { rulesRepository } from '@/rules/repository'
+import { isSourceEnabled } from '@/rules/source-books'
 import type { EquipmentRule } from '@/types/rules'
 
-const props = defineProps<{ open: boolean }>()
+const props = defineProps<{ open: boolean; enabledSourceIds?: readonly string[] }>()
 const emit = defineEmits<{
   close: []
   add: [payload: { itemId: string; quantity: number; equip: boolean }]
@@ -31,6 +32,11 @@ const mode = ref<'library' | 'custom'>('library')
 const selectedItemId = ref<string>()
 const customName = ref('')
 const quantity = ref(1)
+const sourceFilter = ref('all')
+const sourceOptions = computed(() => [
+  { id: 'all', label: '全部来源' },
+  ...rulesRepository.sources.filter((source) => source.category === 'core' || props.enabledSourceIds?.includes(source.id)).map((source) => ({ id: source.id, label: source.shortTitle })),
+])
 
 watch(() => props.open, (open) => {
   if (!open) return
@@ -40,11 +46,14 @@ watch(() => props.open, (open) => {
   selectedItemId.value = undefined
   customName.value = ''
   quantity.value = 1
+  sourceFilter.value = 'all'
 })
 
 const filteredItems = computed(() => {
   const keyword = search.value.trim().toLowerCase()
   return rulesRepository.equipment.filter((item) => {
+    if (!isSourceEnabled(item.sourceIds, props.enabledSourceIds)) return false
+    if (sourceFilter.value !== 'all' && !item.sourceIds.includes(sourceFilter.value)) return false
     if (category.value !== 'all' && item.category !== category.value) return false
     if (!keyword) return true
     return item.name.toLowerCase().includes(keyword) || item.id.toLowerCase().includes(keyword)
@@ -129,6 +138,14 @@ function addItem(equip: boolean): void {
         :empty="!filteredItems.length"
         empty-text="没有匹配的物品，可改用下方自定义添加。"
       >
+        <template #header>
+          <label class="add-item-modal__source-filter">
+            <span>来源</span>
+            <select v-model="sourceFilter">
+              <option v-for="source in sourceOptions" :key="source.id" :value="source.id">{{ source.label }}</option>
+            </select>
+          </label>
+        </template>
         <ExpandableOptionCard
           v-for="item in filteredItems"
           :key="item.id"
@@ -182,6 +199,9 @@ function addItem(equip: boolean): void {
   &__item-detail {
     margin: 0;
   }
+
+  &__source-filter { display: flex; min-height: 2.75rem; align-items: center; gap: 0.5rem; color: var(--color-text-muted); font-size: 0.75rem; }
+  &__source-filter select { min-height: 2.4rem; padding: 0 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); }
 
   &__item-meta {
     display: flex;

@@ -1,6 +1,9 @@
 import { rulesRepository } from '@/rules/repository'
 import { applyAbilityImprovement, decodeAbilityImprovement } from '@/rules/feats'
 import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
+import { isSourceEnabled } from '@/rules/source-books'
+import { artificerInfusions2014 } from '@/rules/data/artificer-2014'
+import { getSpellcastingConfig } from '@/rules/spellcasting'
 import type { RaceRule } from '@/types/rules'
 import type {
   AbilityKey,
@@ -23,14 +26,14 @@ export function proficiencyBonus(level: number): number {
 /**
  * 收集种族固定技能熟练与自选结果（沿 parentRaceId 链叠加，子种族不替换父种族）。
  */
-export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subraceId' | 'raceSkillChoices'>): readonly string[] {
+export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subraceId' | 'raceSkillChoices' | 'enabledSourceIds'>): readonly string[] {
   const ids: string[] = [...(draft.raceSkillChoices ?? [])]
   const visited = new Set<string>()
   const visit = (raceId: string | undefined): void => {
     if (!raceId || visited.has(raceId)) return
     visited.add(raceId)
     const race = rulesRepository.getRace(raceId)
-    if (!race) return
+    if (!race || !isSourceEnabled(race.sourceIds, draft.enabledSourceIds)) return
     if (race.parentRaceId) visit(race.parentRaceId)
     ids.push(...(race.skillProficiencies ?? []))
   }
@@ -78,8 +81,10 @@ export function getFlexibleBonusRule(race: RaceRule | undefined, subrace: RaceRu
 }
 
 export function getRaceAbilityBonuses(draft: CharacterDraft): Partial<AbilityScores> {
-  const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+  const selectedRace = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
+  const selectedSubrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+  const race = selectedRace && isSourceEnabled(selectedRace.sourceIds, draft.enabledSourceIds) ? selectedRace : undefined
+  const subrace = selectedSubrace && isSourceEnabled(selectedSubrace.sourceIds, draft.enabledSourceIds) ? selectedSubrace : undefined
   const baseBonuses = subrace?.replacesParentBonuses ? {} : race?.fixedAbilityBonuses ?? {}
   const fixedBonuses: Partial<Record<AbilityKey, number>> = { ...baseBonuses, ...subrace?.fixedAbilityBonuses }
   const flexibleRule = getFlexibleBonusRule(race, subrace)
@@ -110,7 +115,23 @@ function applyAbilityImprovements(
 
   for (const selection of draft.selections) {
     if (selection.invalidatedAt || selection.checkpointId === ignoredCheckpointId) continue
-    const improvementOptionId = selection.optionIds.find((optionId) => decodeAbilityImprovement(optionId))
+    if (selection.checkpointId.startsWith('feat-child:')) {
+      const [, parentCheckpointId, featId] = selection.checkpointId.split(':')
+      const parentActive = draft.selections.some((item) => item.checkpointId === parentCheckpointId && !item.invalidatedAt && item.optionIds.includes(featId ?? ''))
+      const feat = featId ? rulesRepository.getFeat(featId) : undefined
+      if (!parentActive || !feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds)) continue
+      for (const optionId of selection.optionIds) {
+        const match = /^feat-bonus-(str|dex|con|int|wis|cha)-1$/.exec(optionId)
+        const ability = match?.[1] as AbilityKey | undefined
+        if (ability) improved = { ...improved, [ability]: Math.min(20, improved[ability] + 1) }
+      }
+      continue
+    }
+    const improvementOptionId = selection.optionIds.find((optionId) => {
+      if (!decodeAbilityImprovement(optionId)) return false
+      const option = rulesRepository.getOption(optionId) ?? rulesRepository.getFeat(optionId)
+      return !option || isSourceEnabled(option.sourceIds, draft.enabledSourceIds)
+    })
     if (improvementOptionId) improved = applyAbilityImprovement(improved, improvementOptionId)
   }
 
@@ -131,10 +152,15 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const abilityKeys: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
   const modifiers = Object.fromEntries(abilityKeys.map((key) => [key, abilityModifier(abilities[key])])) as Record<AbilityKey, number>
   const proficiency = proficiencyBonus(draft.targetLevel)
-  const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
-  const subclassEffects = getSubclassDerivedEffects(draft.subclassId, draft.targetLevel)
-  const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+  const selectedClass = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
+  const classRule = selectedClass && isSourceEnabled(selectedClass.sourceIds, draft.enabledSourceIds) ? selectedClass : undefined
+  const selectedSubclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
+  const subclassId = selectedSubclass && isSourceEnabled(selectedSubclass.sourceIds, draft.enabledSourceIds) ? selectedSubclass.id : undefined
+  const subclassEffects = getSubclassDerivedEffects(subclassId, draft.targetLevel)
+  const selectedRace = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
+  const selectedSubrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+  const race = selectedRace && isSourceEnabled(selectedRace.sourceIds, draft.enabledSourceIds) ? selectedRace : undefined
+  const subrace = selectedSubrace && isSourceEnabled(selectedSubrace.sourceIds, draft.enabledSourceIds) ? selectedSubrace : undefined
   const hitDie = classRule?.hitDie ?? 8
   const hp = hitDie + modifiers.con
     + Math.max(0, draft.targetLevel - 1) * Math.max(1, Math.floor(hitDie / 2) + 1 + modifiers.con)
@@ -142,10 +168,32 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const equippedItems = draft.inventory
     .filter((entry) => entry.equippedQuantity > 0)
     .map((entry) => rulesRepository.getEquipment(entry.itemId))
+    .filter((item) => Boolean(item && isSourceEnabled(item.sourceIds, draft.enabledSourceIds)))
   const equippedArmor = equippedItems
     .find((item) => item?.category === 'armor')
   const equippedShield = equippedItems
     .find((item) => item?.category === 'shield')
+  const equippedWeapon = equippedItems.find((item) => item?.category === 'weapon')
+  const activeInfusions = draft.classId === 'class-2014-artificer'
+    ? (draft.infusionAssignments ?? []).flatMap((assignment) => {
+      const entry = draft.inventory.find((item) => item.id === assignment.inventoryEntryId && item.equippedQuantity > 0)
+      const item = entry ? rulesRepository.getEquipment(entry.itemId) : undefined
+      const infusion = artificerInfusions2014.find((candidate) => candidate.id === assignment.infusionId)
+      const known = draft.selections.some((selection) => !selection.invalidatedAt && selection.optionIds.includes(assignment.infusionId))
+      return entry && item && infusion && known && infusion.minimumLevel <= draft.targetLevel
+        && isSourceEnabled(infusion.sourceIds, draft.enabledSourceIds)
+        && infusion.eligibleCategories.some((category) => category === item.category)
+        ? [{ assignment, entry, item, infusion }]
+        : []
+    })
+    : []
+  const infusionBonusFor = (itemId: string | undefined): number => {
+    const active = activeInfusions.find((record) => record.item?.id === itemId)
+    if (!active?.infusion.magicBonus) return 0
+    return draft.targetLevel >= 10 && ['infusion-2014-enhanced-defense', 'infusion-2014-enhanced-weapon', 'infusion-2014-enhanced-arcane-focus'].includes(active.infusion.id)
+      ? 2
+      : active.infusion.magicBonus
+  }
   const hasHeavyArmor = equippedArmor?.id === 'chain-mail'
   const hasShield = Boolean(equippedShield)
   const barbarianUnarmored = draft.classId === 'class-2014-barbarian' && !equippedArmor
@@ -161,15 +209,22 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
         : subclassEffects.armorClassBase
           ? subclassEffects.armorClassBase + modifiers.dex
           : 10 + modifiers.dex
-  const defenseStyle = draft.selections.some((item) => item.optionIds.includes('style-defense'))
+  const defenseStyle = draft.selections.some((item) => !item.invalidatedAt && item.optionIds.some((id) => {
+    if (id !== 'style-defense') return false
+    const option = rulesRepository.getOption(id)
+    return !option || isSourceEnabled(option.sourceIds, draft.enabledSourceIds)
+  }))
   const shieldBonus = equippedShield?.armorClassBonus ?? 0
-  const armorClass = baseArmor + shieldBonus + (defenseStyle && Boolean(equippedArmor) ? 1 : 0) + subclassEffects.armorClassBonus
+  const armorInfusionBonus = infusionBonusFor(equippedArmor?.id) + infusionBonusFor(equippedShield?.id)
+  const armorClass = baseArmor + shieldBonus + armorInfusionBonus + (defenseStyle && Boolean(equippedArmor) ? 1 : 0) + subclassEffects.armorClassBonus
   const selectedClassSkillIds = (classRule?.checkpoints ?? [])
     .filter((checkpoint) => checkpoint.kind === 'skills')
     .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? [])
   // 种族熟练：沿父链收集固定项 + 自选结果（子种族不替换父种族熟练）。
   const raceSkillIds = collectRaceSkillIds(draft)
-  const proficientSkillIds = new Set([...draft.backgroundSkillIds, ...selectedClassSkillIds, ...raceSkillIds])
+  const background = draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
+  const backgroundSkillIds = background && isSourceEnabled(background.sourceIds, draft.enabledSourceIds) ? draft.backgroundSkillIds : []
+  const proficientSkillIds = new Set([...backgroundSkillIds, ...selectedClassSkillIds, ...raceSkillIds])
   const expertiseIds = new Set((classRule?.checkpoints ?? [])
     .filter((checkpoint) => checkpoint.kind === 'expertise')
     .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? []))
@@ -209,7 +264,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
         id: `${skillId}-proficiency`,
         label: '技能熟练',
         value: proficiency,
-        detail: draft.backgroundSkillIds.includes(skillId) ? '来自背景' : raceSkillIds.includes(skillId) ? '来自种族' : '来自职业',
+        detail: backgroundSkillIds.includes(skillId) ? '来自背景' : raceSkillIds.includes(skillId) ? '来自种族' : '来自职业',
       }] : []),
       ...(expertise ? [{
         id: `${skillId}-expertise`,
@@ -226,8 +281,13 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
       ? draft.targetLevel >= 18 ? 30 : draft.targetLevel >= 14 ? 25 : draft.targetLevel >= 10 ? 20 : draft.targetLevel >= 6 ? 15 : draft.targetLevel >= 2 ? 10 : 0
       : 0
   const speed = raceSpeed + classSpeedBonus + subclassEffects.speedBonus
-  const attackAbility: AbilityKey = ['class-2014-rogue', 'class-2014-monk', 'class-2014-ranger'].includes(draft.classId ?? '') ? 'dex' : 'str'
-  const spellcasting = rulesRepository.getSpellcastingConfig(draft)
+  const battleSmithMagicWeapon = subclassId === 'subclass-2014-artificer-battle-smith'
+    && Boolean(equippedWeapon && ((equippedWeapon.magicBonus ?? 0) > 0 || infusionBonusFor(equippedWeapon.id) > 0))
+  const attackAbility: AbilityKey = battleSmithMagicWeapon
+    ? 'int'
+    : ['class-2014-rogue', 'class-2014-monk', 'class-2014-ranger'].includes(draft.classId ?? '') ? 'dex' : 'str'
+  const weaponMagicBonus = (equippedWeapon?.magicBonus ?? 0) + infusionBonusFor(equippedWeapon?.id)
+  const spellcasting = getSpellcastingConfig(draft)
   const spellAbilityModifier = spellcasting ? modifiers[spellcasting.ability] : undefined
 
   return {
@@ -256,20 +316,22 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
       },
       ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: '已装备' }] : []),
       ...(defenseStyle && equippedArmor ? [{ id: 'defense-style', label: '防御战斗风格', value: 1, detail: '穿着护甲时生效' }] : []),
+      ...(armorInfusionBonus ? [{ id: 'artificer-enhanced-defense', label: '工匠灌注', value: armorInfusionBonus, detail: '已绑定并装备的强化防御物品' }] : []),
       ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${rulesRepository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
     ]),
     initiative: derived(modifiers.dex, [{ id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` }]),
-    attackBonus: derived(proficiency + modifiers[attackAbility] + subclassEffects.attackBonus, [
+    attackBonus: derived(proficiency + modifiers[attackAbility] + weaponMagicBonus + subclassEffects.attackBonus, [
       { id: 'attack-proficiency', label: '熟练加值', value: proficiency, detail: '熟练武器' },
       { id: `attack-${attackAbility}`, label: `${attackAbility.toUpperCase()}调整值`, value: modifiers[attackAbility], detail: `属性 ${abilities[attackAbility]}` },
+      ...(weaponMagicBonus ? [{ id: 'magic-weapon-attack', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []),
       ...(subclassEffects.attackBonus !== 0 ? [{ id: 'subclass-attack', label: '子职攻击加成', value: subclassEffects.attackBonus, detail: '来自子职特性' }] : []),
     ]),
-    attackDamageBonus: derived(modifiers[attackAbility] + subclassEffects.damageBonus, [{
+    attackDamageBonus: derived(modifiers[attackAbility] + weaponMagicBonus + subclassEffects.damageBonus, [{
       id: `damage-${attackAbility}`,
       label: `${attackAbility.toUpperCase()}调整值`,
       value: modifiers[attackAbility],
       detail: `属性 ${abilities[attackAbility]}`,
-    }, ...(subclassEffects.damageBonus !== 0 ? [{ id: 'subclass-damage', label: '子职伤害加成', value: subclassEffects.damageBonus, detail: '来自子职特性' }] : [])]),
+    }, ...(weaponMagicBonus ? [{ id: 'magic-weapon-damage', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []), ...(subclassEffects.damageBonus !== 0 ? [{ id: 'subclass-damage', label: '子职伤害加成', value: subclassEffects.damageBonus, detail: '来自子职特性' }] : [])]),
     ...(spellcasting && spellAbilityModifier !== undefined && draft.targetLevel >= spellcasting.startsAtLevel ? {
       spellAttackBonus: derived(proficiency + spellAbilityModifier + subclassEffects.spellAttackBonus, [
         { id: 'spell-attack-proficiency', label: '熟练加值', value: proficiency, detail: `${draft.targetLevel}级角色` },

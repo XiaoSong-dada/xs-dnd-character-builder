@@ -1,12 +1,12 @@
 export type RulesetId = '5e-2014'
-export type CompatibilityStatus = 'implemented' | 'index-only' | 'dm-only' | 'unavailable'
+export type CompatibilityStatus = 'implemented' | 'selectable' | 'index-only' | 'dm-only' | 'unavailable'
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 export type AbilityMethod = 'standard-array' | 'point-buy' | 'custom'
 export type SpellcastingMode = 'prepared' | 'known' | 'spellbook' | 'pact'
 
 export type DraftStep =
   | 'setup'
-  | 'preferences'
+  | 'sources'
   | 'class'
   | 'origin'
   | 'abilities'
@@ -20,7 +20,10 @@ export type DraftStep =
 export interface RuleSource {
   readonly id: string
   readonly title: string
+  readonly shortTitle: string
   readonly ruleset: RulesetId
+  readonly category: 'core' | 'supplement'
+  readonly selectable: boolean
   readonly url?: string
 }
 
@@ -74,6 +77,12 @@ export interface InventoryEntry {
   readonly equippedQuantity: number
 }
 
+/** Artificer 灌注与物品栏条目的生效绑定；已知灌注仍保存在时间线 selections。 */
+export interface InfusionAssignment {
+  readonly infusionId: string
+  readonly inventoryEntryId: string
+}
+
 export interface CurrencyWallet {
   readonly cp: number
   readonly sp: number
@@ -83,14 +92,15 @@ export interface CurrencyWallet {
 }
 
 export interface CharacterDraft {
-  readonly schemaVersion: 4
+  readonly schemaVersion: 5
   readonly id: string
   readonly ruleset: '5e-2014'
   readonly createdAt: string
   readonly updatedAt: string
   readonly targetLevel: number
   readonly abilityMethod: AbilityMethod
-  readonly preferences: readonly string[]
+  /** 当前角色允许使用的可选 2014 来源；Basic Rules 与 PHB 始终启用，不写入此数组。 */
+  readonly enabledSourceIds: readonly string[]
   readonly classId?: string
   readonly subclassId?: string
   readonly raceId?: string
@@ -110,6 +120,7 @@ export interface CharacterDraft {
   readonly selections: readonly ChoiceSelection[]
   readonly startingEquipmentSelections: readonly StartingEquipmentSelection[]
   readonly inventory: readonly InventoryEntry[]
+  readonly infusionAssignments: readonly InfusionAssignment[]
   readonly currency: CurrencyWallet
   /** 冒险净增金币（GP，可为负）；持有总额 = currency.gp + adventureGold。 */
   readonly adventureGold: number

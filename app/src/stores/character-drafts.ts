@@ -6,6 +6,7 @@ import { buildTimeline } from '@/rules/timeline'
 import { validateDraft } from '@/rules/validate'
 import { validateSpellSelections } from '@/rules/spellcasting'
 import { EMPTY_CURRENCY, isStartingEquipmentComplete } from '@/rules/starting-equipment'
+import { getDefaultEnabledSourceIds } from '@/rules/source-books'
 import { CharacterJsonService } from '@/services/character-json'
 import { DraftStorageService } from '@/services/draft-storage'
 import type {
@@ -25,14 +26,14 @@ function newId(): string {
 function createCharacterDraft(): CharacterDraft {
   const now = new Date().toISOString()
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     id: newId(),
     ruleset: '5e-2014',
     createdAt: now,
     updatedAt: now,
     targetLevel: 10,
     abilityMethod: 'standard-array',
-    preferences: [],
+    enabledSourceIds: getDefaultEnabledSourceIds(),
     raceAbilityChoices: [],
     backgroundSkillIds: [],
     backgroundToolIds: [],
@@ -42,6 +43,7 @@ function createCharacterDraft(): CharacterDraft {
     selections: [],
     startingEquipmentSelections: [],
     inventory: [],
+    infusionAssignments: [],
     currency: EMPTY_CURRENCY,
     adventureGold: 0,
     equipmentNeedsReview: false,
@@ -69,7 +71,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
   const completion = computed(() => {
     const draft = activeDraft.value
     if (!draft) return 0
-    const timeline = draft.classId ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId }) : []
+    const timeline = draft.classId ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections }) : []
     const timelineComplete = timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const count = selection?.optionIds.length ?? 0
@@ -80,7 +82,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     const hasWarnings = validationIssues.value.some((item) => item.severity === 'warning')
     const checks = [
       draft.targetLevel >= 1 && draft.targetLevel <= 20,
-      draft.preferences.length > 0,
+      true,
       Boolean(draft.classId),
       Boolean(draft.backgroundId && draft.raceId),
       abilitiesValid,

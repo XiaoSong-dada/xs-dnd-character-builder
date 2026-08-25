@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import { magicItems2014 } from '@/rules/data/magic-items-2014'
-import { magicItems2024 } from '@/rules/data/magic-items-2024'
 import { magicItemsXgteTcoe2014 } from '@/rules/data/magic-items-xgte-tcoe-2014'
 import { rulesRepository } from '@/rules/repository'
 import type { EquipmentRule } from '@/types/rules'
 
 describe('magic-items-2014 数据完整性', () => {
   it('全部魔法物品已合并进 rulesRepository.equipment', () => {
-    for (const item of [...magicItems2014, ...magicItemsXgteTcoe2014, ...magicItems2024]) {
+    for (const item of [...magicItems2014, ...magicItemsXgteTcoe2014]) {
       expect(rulesRepository.getEquipment(item.id)).toBeDefined()
     }
   })
@@ -38,9 +37,9 @@ describe('magic-items-2014 数据完整性', () => {
 
   it('XGtE 常见魔法物品全量收录且 TCoE 刺青不可装备', () => {
     const xgte = magicItemsXgteTcoe2014.filter((item) => item.sourceIds.includes('xgte-2017-index'))
-    const tattoos = magicItemsXgteTcoe2014.filter((item) => item.sourceIds.includes('tcoe-2020-index'))
+    const tattoos = magicItemsXgteTcoe2014.filter((item) => item.id.includes('tattoo'))
     expect(xgte.length).toBeGreaterThanOrEqual(47)
-    expect(tattoos.length).toBeGreaterThanOrEqual(16)
+    expect(tattoos).toHaveLength(15)
     for (const tattoo of tattoos) {
       expect(tattoo.equippable).toBe(false)
       expect(tattoo.category).toBe('magic')
@@ -76,20 +75,18 @@ describe('magic-items-2014 数据完整性', () => {
 
   it('稀有度字段仅魔法物品使用；普通装备不携带 rarity', () => {
     const plain = rulesRepository.equipment.filter((item) => item.rarity !== undefined)
-    const magicIds = new Set([...magicItems2014, ...magicItemsXgteTcoe2014, ...magicItems2024].map((item) => item.id))
+    const magicIds = new Set([...magicItems2014, ...magicItemsXgteTcoe2014].map((item) => item.id))
     for (const item of plain) {
       expect(magicIds.has(item.id), item.id).toBe(true)
     }
   })
 
-  it('2024 批次已登记且来源标注正确', () => {
+  it('2024 批次与 2014 可编辑仓库严格隔离', async () => {
+    const { magicItems2024 } = await import('@/rules/data/magic-items-2024')
     expect(magicItems2024.length).toBeGreaterThanOrEqual(6)
-    for (const item of magicItems2024) {
-      expect(item.sourceIds).toEqual(expect.arrayContaining(['dmg-2024-index']))
-      expect(rulesRepository.getEquipment(item.id)).toBeDefined()
-    }
+    for (const item of magicItems2024) expect(rulesRepository.getEquipment(item.id)).toBeUndefined()
     for (const id of ['enspelled-staff', 'enspelled-weapon', 'enspelled-amulet', 'wraps-of-unarmed-power-+1']) {
-      expect(rulesRepository.getEquipment(id), id).toBeDefined()
+      expect(rulesRepository.getEquipment(id), id).toBeUndefined()
     }
   })
 

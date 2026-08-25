@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
@@ -12,13 +12,26 @@ import {
   getRequiredSpellCount,
   getSelectedSpellIds,
   getSpellSlots,
+  getSpellcastingConfig,
+  getAlwaysPreparedSpellIds,
 } from '@/rules/spellcasting'
 import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
 
 const props = defineProps<{ draft: CharacterDraft }>()
 const emit = defineEmits<{ change: [value: SpellSelections] }>()
-const config = computed(() => rulesRepository.getSpellcastingConfig(props.draft))
+const config = computed(() => getSpellcastingConfig(props.draft))
+const search = ref('')
+const sourceFilter = ref('all')
+const sourceOptions = computed(() => [
+  { id: 'all', label: '全部来源' },
+  ...rulesRepository.sources.filter((source) => source.category === 'core' || (props.draft.enabledSourceIds ?? []).includes(source.id)).map((source) => ({ id: source.id, label: source.shortTitle })),
+])
+const matchesView = (spell: NonNullable<ReturnType<typeof rulesRepository.getSpell>>): boolean => {
+  const keyword = search.value.trim().toLocaleLowerCase('zh-CN')
+  return (sourceFilter.value === 'all' || spell.sourceIds.includes(sourceFilter.value))
+    && (!keyword || `${spell.name}${spell.englishName}`.toLocaleLowerCase('zh-CN').includes(keyword))
+}
 /** 施法来源名称（子职施法优先，如奥法骑士/诡术师；否则职业）。 */
 const castingSourceName = computed(() => {
   if (props.draft.subclassId) {
@@ -31,7 +44,8 @@ const requiredCount = computed(() => config.value ? getRequiredSpellCount(props.
 const requiredCantripCount = computed(() => config.value ? getRequiredCantripCount(props.draft, config.value) : 0)
 const requiredSpellbookCount = computed(() => config.value ? getRequiredSpellbookCount(props.draft, config.value) : 0)
 const selectedIds = computed(() => config.value ? getSelectedSpellIds(props.draft, config.value) : [])
-const cantrips = computed(() => config.value ? getAvailableSpells(props.draft, config.value).filter((spell) => spell.level === 0) : [])
+const alwaysPreparedSpells = computed(() => getAlwaysPreparedSpellIds(props.draft).map((id) => rulesRepository.getSpell(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell)))
+const cantrips = computed(() => config.value ? getAvailableSpells(props.draft, config.value).filter((spell) => spell.level === 0 && matchesView(spell)) : [])
 const maximumLevel = computed(() => config.value ? getMaximumSpellLevel(config.value, props.draft.targetLevel) : 0)
 const spellSlots = computed(() => config.value ? getSpellSlots(config.value, props.draft.targetLevel) : [])
 const spellSlotsLabel = computed(() => {
@@ -55,7 +69,7 @@ const groupedSpells = computed(() => {
   const available = getAvailableSpells(props.draft, config.value)
   return Array.from({ length: maximumLevel.value }, (_, index) => ({
     level: index + 1,
-    spells: available.filter((spell) => spell.level === index + 1),
+    spells: available.filter((spell) => spell.level === index + 1 && matchesView(spell)),
   })).filter((group) => group.spells.length)
 })
 const modeLabel = computed(() => config.value?.mode === 'prepared' ? '准备' : config.value?.mode === 'spellbook' ? '法术书与准备' : config.value?.mode === 'pact' ? '契约法术' : '掌握')
@@ -112,6 +126,12 @@ function toggleSpellbook(id: string): void {
       {{ castingSourceName }}从{{ config.startsAtLevel }}级开始施法；当前等级无需选择法术。
     </UiNotice>
     <template v-else>
+      <div class="spellcasting-step__filters">
+        <input v-model="search" type="search" placeholder="搜索中英文法术名" aria-label="搜索法术">
+        <select v-model="sourceFilter" aria-label="按法术来源筛选">
+          <option v-for="source in sourceOptions" :key="source.id" :value="source.id">{{ source.label }}</option>
+        </select>
+      </div>
       <header>
         <div>
           <span>{{ config.ability.toUpperCase() }}施法 · 最高{{ maximumLevel }}环</span>
@@ -130,6 +150,9 @@ function toggleSpellbook(id: string): void {
           : config.mode === 'pact'
             ? '契约法术位按短休恢复；本页负责戏法与已知法术，秘法奥秘在后续职业资源批次接入。'
             : '掌握数量来自2014职业表，所选法术必须在当前可用环级内。' }}
+      </UiNotice>
+      <UiNotice v-if="alwaysPreparedSpells.length" tone="success" title="子职始终准备法术">
+        {{ alwaysPreparedSpells.map((spell) => spell.name).join('、') }}（不占准备上限）
       </UiNotice>
       <UiNotice v-if="invalidSelectedCount" tone="warning" title="保留了需要重新确认的旧选择">
         有{{ invalidSelectedCount }}个法术来自之前的职业、等级或法术书状态；它们没有被静默删除，但不会计入合法完成。
@@ -207,6 +230,12 @@ function toggleSpellbook(id: string): void {
 .spellcasting-step {
   display: grid;
   gap: 0.85rem;
+
+  &__filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(8rem, auto); gap: 0.5rem; }
+  &__filters input,
+  &__filters select { min-height: 2.75rem; padding: 0 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+
+  @media (max-width: 430px) { &__filters { grid-template-columns: 1fr; } }
 
   > header {
     display: flex;

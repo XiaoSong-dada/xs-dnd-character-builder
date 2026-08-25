@@ -1,8 +1,7 @@
 import { deriveCharacter, proficiencyBonus } from '@/rules/derive'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
-import { rulesRepository } from '@/rules/repository'
 import { buildTimeline } from '@/rules/timeline'
-import { getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds } from '@/rules/spellcasting'
+import { getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
 import type { CharacterDraft, DependencyCheckpointRef, DependencyImpact } from '@/types/character'
 import type { CheckpointKind } from '@/types/rules'
 
@@ -40,7 +39,7 @@ function countManeuverCheckpoints(draft: CharacterDraft, level: number): number 
 
 /** 升级时：按新等级统计施法配置需补全的说明（已知/准备/法术书/戏法数量不足时）。 */
 function buildSpellUpdates(draft: CharacterDraft, newLevel: number): readonly string[] | undefined {
-  const config = rulesRepository.getSpellcastingConfig(draft)
+  const config = getSpellcastingConfig(draft)
   if (!config || newLevel < config.startsAtLevel) return undefined
   const next = { ...draft, targetLevel: newLevel }
   const parts: string[] = []
@@ -82,7 +81,7 @@ function buildLevelReductionReviews(draft: CharacterDraft, newLevel: number): re
     const newFeatures = featureCount(newLevel)
     if (newFeatures < oldFeatures) reviews.push(`子职特性由 ${oldFeatures} 项减少为 ${newFeatures} 项（更高等级的特性不再生效）`)
   }
-  const spellcasting = rulesRepository.getSpellcastingConfig(draft)
+  const spellcasting = getSpellcastingConfig(draft)
   const knownByLevel = spellcasting?.mode === 'known' ? spellcasting.spellsKnownByLevel : undefined
   if (knownByLevel) {
     const oldMax = knownByLevel[oldLevel - 1] ?? 0

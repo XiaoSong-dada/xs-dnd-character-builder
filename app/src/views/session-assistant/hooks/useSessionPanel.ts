@@ -3,7 +3,7 @@ import type { Ref } from 'vue'
 
 import { deriveCharacter } from '@/rules/derive'
 import { rulesRepository } from '@/rules/repository'
-import { getRequiredSpellCount, getSpellCandidates, getSpellSlots } from '@/rules/spellcasting'
+import { getRequiredSpellCount, getSpellCandidates, getSpellSlots, getSpellcastingConfig } from '@/rules/spellcasting'
 import {
   applyExhaustionChange,
   applyHpChange,
@@ -28,7 +28,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   const derived = computed(() => deriveCharacter(draft.value))
   const maxHp = computed(() => derived.value.hitPoints.value)
   const className = computed(() => draft.value.classId ? (rulesRepository.getClass(draft.value.classId)?.name ?? '') : '')
-  const spellcastingConfig = computed(() => rulesRepository.getSpellcastingConfig(draft.value))
+  const spellcastingConfig = computed(() => getSpellcastingConfig(draft.value))
   const spellSlots = computed(() =>
     spellcastingConfig.value ? getSpellSlots(spellcastingConfig.value, draft.value.targetLevel) : [],
   )
