@@ -1,0 +1,5 @@
+// 禁用双击缩放与触摸点击延迟；保留页面纵向滚动与双指捏合缩放。
+// 应用：跑团助手（session-assistant）、赛博骰娘（dice）等需要快速连点按钮的页面。
+.touch-manipulation {
+  touch-action: manipulation;
+}

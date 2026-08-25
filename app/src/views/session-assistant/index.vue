@@ -13,7 +13,7 @@ const summaries = computed(() =>
 </script>
 
 <template>
-  <main class="session-assistant">
+  <main class="session-assistant touch-manipulation">
     <SessionPanel v-if="selectedDraft" :draft="selectedDraft" @back="backToList" />
 
     <div v-else class="session-assistant__list">

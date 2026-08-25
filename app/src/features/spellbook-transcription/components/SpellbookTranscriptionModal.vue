@@ -3,8 +3,8 @@ import { watch } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
-import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
+import UiScrollModal from '@/components/ui/UiScrollModal.vue'
 import { useSpellbookTranscription } from '@/features/spellbook-transcription/hooks/useSpellbookTranscription'
 import type { CharacterDraft } from '@/types/character'
 
@@ -26,7 +26,7 @@ function confirm(): void {
 </script>
 
 <template>
-  <UiModal :open="open" title="抄录法术书" @close="$emit('close')">
+  <UiScrollModal :open="open" title="抄录法术书" @close="$emit('close')">
     <div class="spellbook-transcription">
       <UiNotice tone="info" title="抄录规则">
         每个环级消耗 50 GP 与 2 小时。抄录完成后不可撤销，金币立即扣除。
@@ -39,7 +39,6 @@ function confirm(): void {
         :key="group.level"
         :title="`${group.level}环法术`"
         :count="`抄录 ${transcription.getTranscribeCost(group.level)} GP`"
-        max-height="12rem"
       >
         <ExpandableOptionCard
           v-for="spell in group.spells"
@@ -91,7 +90,7 @@ function confirm(): void {
         </button>
       </div>
     </template>
-  </UiModal>
+  </UiScrollModal>
 </template>
 
 <style scoped lang="scss">

@@ -111,15 +111,15 @@ onBeforeUnmount(() => {
     <div v-if="showHint" class="dice-tray__hint" role="status">双指拖动移动视图 · 双指捏合缩放</div>
     <div class="dice-tray__controls" aria-label="骰盘视图控制">
       <button
-        class="dice-tray__control" type="button" aria-label="放大骰盘视图"
+        class="dice-tray__control touch-manipulation" type="button" aria-label="放大骰盘视图"
         :disabled="!viewControlsEnabled" @click="renderer?.zoomIn()"
       >放大</button>
       <button
-        class="dice-tray__control" type="button" aria-label="缩小骰盘视图"
+        class="dice-tray__control touch-manipulation" type="button" aria-label="缩小骰盘视图"
         :disabled="!viewControlsEnabled" @click="renderer?.zoomOut()"
       >缩小</button>
       <button
-        class="dice-tray__control" type="button" aria-label="复位骰盘视图"
+        class="dice-tray__control touch-manipulation" type="button" aria-label="复位骰盘视图"
         :disabled="!viewControlsEnabled" @click="renderer?.resetView()"
       >复位</button>
     </div>
@@ -208,7 +208,6 @@ onBeforeUnmount(() => {
     font-size: 0.75rem;
     font-weight: 800;
     cursor: pointer;
-    touch-action: manipulation;
 
     &:focus-visible { outline: 3px solid var(--color-primary-soft); outline-offset: 2px; }
     &:disabled { color: #9d968b; background: #e5ddd1; cursor: not-allowed; }

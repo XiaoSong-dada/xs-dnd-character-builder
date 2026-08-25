@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
-import UiModal from '@/components/ui/UiModal.vue'
+import UiScrollModal from '@/components/ui/UiScrollModal.vue'
 import { rulesRepository } from '@/rules/repository'
 import type { EquipmentRule } from '@/types/rules'
 
@@ -115,7 +115,7 @@ function addItem(equip: boolean): void {
 </script>
 
 <template>
-  <UiModal :open="open" title="添加物品" @close="$emit('close')">
+  <UiScrollModal :open="open" title="添加物品" @close="$emit('close')">
     <div class="add-item-modal">
       <ListShell
         searchable
@@ -128,7 +128,6 @@ function addItem(equip: boolean): void {
         @update:filter="category = $event as CategoryId"
         :empty="!filteredItems.length"
         empty-text="没有匹配的物品，可改用下方自定义添加。"
-        max-height="15rem"
       >
         <ExpandableOptionCard
           v-for="item in filteredItems"
@@ -172,7 +171,7 @@ function addItem(equip: boolean): void {
         <p v-if="equipDisabledReason" class="add-item-modal__hint">{{ equipDisabledReason }}</p>
       </div>
     </template>
-  </UiModal>
+  </UiScrollModal>
 </template>
 
 <style scoped lang="scss">

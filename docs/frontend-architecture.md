@@ -196,7 +196,7 @@ import type { CharacterDraft } from '../../types/character'
 src/main.ts
   -> src/App.vue
   -> src/router/router.ts
-  -> src/styles/index.scss
+  -> src/styles/index.scss（含通用工具类：flex.scss 布局工具、touch.scss 的 .touch-manipulation 禁双击缩放——跑团助手与骰娘页面复用）
   -> Pinia（createPinia）
 
 src/App.vue
@@ -328,7 +328,7 @@ src/views/character-builder/components/*
 src/features/spellbook-transcription（法师抄录法术书共享能力：角色卡与跑团助手双调用方）
   index.ts                          （装配导出：Modal + hook）
   components/SpellbookTranscriptionModal.vue
-    -> src/components/ui/{ExpandableOptionCard,ListShell,UiModal,UiNotice}
+    -> src/components/ui/{ExpandableOptionCard,ListShell,UiNotice,UiScrollModal}
     -> src/features/spellbook-transcription/hooks/useSpellbookTranscription
     -> src/types/character
   hooks/useSpellbookTranscription.ts
@@ -344,11 +344,11 @@ src/features/quick-build/components/QuickBuildShell.vue   （无 import，纯插
 src/features/quick-build/components/StepHeader.vue        -> src/components/ui/UiProgress
 src/features/quick-build/components/StickyActionBar.vue   -> src/components/ui/BaseButton
 
-src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）
-  -> 无项目内 import，仅依赖全局 CSS 变量主题（UiTabs 自 v0.7.0 支持 wrap 模式：固定宽度 + 换行）
+src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiScrollModal、UiNotice、UiProgress、UiTabs）
+  -> 无项目内 import，仅依赖全局 CSS 变量主题（UiTabs 自 v0.7.0 支持 wrap 模式：固定宽度 + 换行；UiScrollModal 为“标题/页脚固定、仅内容区滚动”弹窗封装，用于抄录法术书与新增物品弹窗）
 
 src/components/AddItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
-  -> src/components/ui/{ExpandableOptionCard,ListShell,UiModal}
+  -> src/components/ui/{ExpandableOptionCard,ListShell,UiScrollModal}
   -> src/rules/repository.ts
   -> src/types/rules
 

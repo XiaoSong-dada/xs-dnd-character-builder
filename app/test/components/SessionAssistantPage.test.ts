@@ -119,7 +119,7 @@ describe('跑团助手 · 局内面板操作', () => {
     return { wrapper, store, draft }
   }
 
-  it('HP 增减：输入数量生效，空输入按 1，越界提示中文原因', async () => {
+  it('HP 增减：输入数量生效，空输入按 1，加血超上限自动满血、减血低于 0 自动归零', async () => {
     const { wrapper, draft } = await mountPanel()
     const maxHp = deriveCharacter(draft).hitPoints.value
     const input = wrapper.get('[aria-label="生命值调整数量"]')
@@ -133,11 +133,17 @@ describe('跑团助手 · 局内面板操作', () => {
     await wrapper.get('[aria-label="减少生命值"]').trigger('click')
     expect(wrapper.text()).toContain(`${maxHp - 6} / ${maxHp}`)
 
-    // 输入 100 点 ＋ → 超过最大值被拒并提示
+    // 输入 100 点 ＋ → 超过最大值自动满血，不弹错误
     await input.setValue('100')
     await wrapper.get('[aria-label="增加生命值"]').trigger('click')
-    expect(wrapper.text()).toContain('生命值不能超过最大生命值')
-    expect(wrapper.text()).toContain(`${maxHp - 6} / ${maxHp}`)
+    expect(wrapper.text()).not.toContain('生命值不能超过最大生命值')
+    expect(wrapper.text()).toContain(`${maxHp} / ${maxHp}`)
+
+    // 输入超大值 − → 低于 0 自动归零，不弹错误
+    await input.setValue('999')
+    await wrapper.get('[aria-label="减少生命值"]').trigger('click')
+    expect(wrapper.text()).not.toContain('生命值不能低于 0')
+    expect(wrapper.text()).toContain(`0 / ${maxHp}`)
   })
 
   it('金币添加/减少/设置写回 adventureGold（与角色卡页共享事实源）', async () => {

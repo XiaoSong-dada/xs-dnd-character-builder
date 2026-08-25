@@ -97,17 +97,10 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   // ---- 血量 ----
   function changeHp(delta: number): void {
     const state = ensureState()
-    const next = state.currentHp + delta
-    if (next > maxHp.value) {
-      operationError.value = `生命值不能超过最大生命值（${maxHp.value}）`
-      return
-    }
-    if (next < 0) {
-      operationError.value = '生命值不能低于 0'
-      return
-    }
+    // 双向钳制：加血超过最大生命值自动满血，减血低于 0 自动归零，均不弹错误。
+    const next = Math.min(maxHp.value, Math.max(0, state.currentHp + delta))
     operationError.value = ''
-    persist(applyHpChange(state, delta, maxHp.value))
+    persist(applyHpChange(state, next - state.currentHp, maxHp.value))
   }
 
   // ---- 法术位 ----
