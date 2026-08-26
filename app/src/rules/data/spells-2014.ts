@@ -513,6 +513,45 @@ const spellSeeds: readonly [
   ['Blade of Disaster', '灾祸之刃', 9, ['sorcerer', 'warlock', 'wizard'], ['tcoe-2020-index']],
 ]
 
+/** 2014 法术池中带有仪式标签的法术英文名。 */
+export const ritualSpellNames2014 = [
+  'Alarm',
+  'Animal Messenger',
+  'Augury',
+  'Beast Sense',
+  'Ceremony',
+  'Commune',
+  'Commune with Nature',
+  'Comprehend Languages',
+  'Contact Other Plane',
+  'Detect Magic',
+  'Detect Poison and Disease',
+  'Divination',
+  'Drawmij\'s Instant Summons',
+  'Feign Death',
+  'Find Familiar',
+  'Forbiddance',
+  'Gentle Repose',
+  'Identify',
+  'Illusory Script',
+  'Leomund\'s Tiny Hut',
+  'Locate Animals or Plants',
+  'Magic Mouth',
+  'Meld into Stone',
+  'Phantom Steed',
+  'Purify Food and Drink',
+  'Rary\'s Telepathic Bond',
+  'Silence',
+  'Skywrite',
+  'Speak with Animals',
+  'Tenser\'s Floating Disk',
+  'Unseen Servant',
+  'Water Breathing',
+  'Water Walk',
+] as const
+
+const ritualSpellNameSet2014 = new Set<string>(ritualSpellNames2014)
+
 function spellId(englishName: string): string {
   return `spell-2014-${englishName.toLowerCase().replace(/\u2019/g, '').replace(/[^a-z0-9]+/g, '-')}`
 }
@@ -1037,6 +1076,7 @@ export const spells2014: readonly SpellRule[] = spellSeeds.map(([englishName, na
   name,
   englishName,
   level,
+  ritual: ritualSpellNameSet2014.has(englishName),
   classIds: classIds.map((className) => `class-2014-${className}`),
   summary: `${level === 0 ? '戏法' : `${level}环法术`}；元数据条目，效果以规则来源为准。`,
   description: spellDescriptions[spellId(englishName)] ?? '',

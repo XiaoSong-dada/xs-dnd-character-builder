@@ -23,6 +23,7 @@ import { useSessionAssistantStore } from '@/stores/session-assistant'
 import { DEBUFF_STATUSES, EXHAUSTION_DESCRIPTION } from '@/types/session-state'
 import type { AbilityKey, CharacterDraft, InventoryEntry } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
+import { formatSpellLabel } from '@/utils/format-spell-label'
 import { useSessionPanel } from '../hooks/useSessionPanel'
 
 const props = defineProps<{ draft: CharacterDraft }>()
@@ -509,7 +510,7 @@ function openTranscribe(spellId?: string): void {
             v-for="spell in group.spells"
             :key="spell.id"
             :title="spell.name"
-            :description="`${spell.level}环 · ${spell.englishName}`"
+            :description="formatSpellLabel(spell)"
             expanded-label="法术效果"
           >
             <template #suffix>
@@ -533,7 +534,7 @@ function openTranscribe(spellId?: string): void {
             v-for="spell in panel.unpreparedFromBook.value"
             :key="spell.id"
             :title="spell.name"
-            :description="`${spell.level}环 · ${spell.englishName}`"
+            :description="formatSpellLabel(spell)"
             expanded-label="法术效果"
           >
             <template #suffix>

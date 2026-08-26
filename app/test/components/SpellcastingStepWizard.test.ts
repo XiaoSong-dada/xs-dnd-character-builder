@@ -54,6 +54,9 @@ describe('法师法术步骤（缺陷回归：抄录法术不可移除、计数�
   it('法术书计数按非抄录法术数 / 升级名额显示，抄录数量另计', () => {
     const wrapper = mount(SpellcastingStep, { props: { draft: wizardDraft() } })
     expect(wrapper.text()).toContain('6 / 14（抄录 2）')
+    expect(wrapper.text()).toContain('1环 · Find Familiar · 仪式')
+    expect(wrapper.text()).toContain('1环 · Magic Missile')
+    expect(wrapper.text()).not.toContain('Magic Missile · 仪式')
   })
 
   it('抄录法术显示「在书中（抄录）」，点击不触发移除', async () => {

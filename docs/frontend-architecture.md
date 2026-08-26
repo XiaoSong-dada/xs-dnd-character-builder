@@ -265,6 +265,7 @@ src/views/session-assistant/components/SessionPanel.vue
   -> src/rules/{data/class-features-2014,data/feats-2014,data/subclass-features-2014,feats,repository,session-state,spellcasting,starting-equipment,timeline}
   -> src/stores/session-assistant.ts（activeTab 持久化）
   -> src/types/{character,rules,session-state}
+  -> src/utils/format-spell-label.ts（法术环位、英文名与仪式标签）
 ```
 
 赛博骰娘页面为独立的页面内聚模块：
@@ -322,6 +323,7 @@ src/views/character-builder/components/*
   -> src/rules/* 与 src/rules/data/*（推荐、时间线、法术、装备、子职特性等只读消费）
   -> src/config/site.ts（仅 StartPanel）
   -> src/types/*
+  -> src/utils/format-spell-label.ts（法术环位、英文名与仪式标签）
 ```
 
 ### 8.5 features / components/ui
@@ -333,6 +335,7 @@ src/features/spellbook-transcription（法师抄录法术书共享能力：角�
     -> src/components/ui/{ExpandableOptionCard,ListShell,UiNotice,UiScrollModal}
     -> src/features/spellbook-transcription/hooks/useSpellbookTranscription
     -> src/types/character
+    -> src/utils/format-spell-label.ts
   hooks/useSpellbookTranscription.ts
     -> src/rules/{repository,spellbook,spellcasting}
     -> src/stores/character-drafts.ts（updateDraftById：spellSelections + adventureGold 一次 patch 原子写回）
@@ -356,6 +359,9 @@ src/components/AddItemModal.vue（自 views/character-builder/components 抽象�
 
 src/components/AdjustItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
   -> src/components/ui/UiModal
+
+src/utils/format-spell-label.ts（无状态法术列表副标题格式化）
+  -> src/types/rules（type-only）
 ```
 
 ### 8.6 stores / services / config
@@ -455,7 +461,7 @@ src/styles/index.scss  -> @use src/styles/flex.scss
 - ⚠️ `services -> rules`：`character-json.ts` 与 `draft-storage.ts` 导入 `rules/starting-equipment` 的 `EMPTY_CURRENCY`，而权限矩阵中 services 允许依赖 `api、config、types、纯 utils`（未含 rules）。建议后续把该常量上提到 `types` 或 `constants`，或修订矩阵授权。
 - 页面组件直接消费 `rules/data/*`（`TimelineStep`、`CharacterSheetStep`、`FeatChoicePanel`、`SourcesStep`），符合「views -> rules」权限；如需收紧可改经 `repository` 聚合。
 - `config/setting.ts` 为空占位文件；`assets/icons/DND.png` 无任何 import 引用。
-- `src/api`、`src/constants`、`src/utils`、顶层 `src/hooks`、非 ui 的 `src/components` 当前不存在，只有出现对应真实职责时才创建。
+- `src/utils` 当前仅包含无状态的 `format-spell-label.ts`；`src/api`、`src/constants`、顶层 `src/hooks` 当前不存在，只有出现对应真实职责时才创建。
 
 ## 9. 变更复核
 

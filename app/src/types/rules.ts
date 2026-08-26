@@ -131,6 +131,8 @@ export interface SpellRule {
   readonly name: string
   readonly englishName: string
   readonly level: number
+  /** 是否带有仪式标签，可由具备对应能力的角色进行仪式施法。 */
+  readonly ritual: boolean
   readonly classIds: readonly string[]
   /** 环级等元数据说明（占位性质，不承载效果）。 */
   readonly summary: string

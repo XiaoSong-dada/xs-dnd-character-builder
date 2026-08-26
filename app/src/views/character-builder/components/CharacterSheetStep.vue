@@ -21,6 +21,7 @@ import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { buildTimeline } from '@/rules/timeline'
 import type { AbilityKey, CharacterDraft, DerivedCharacter, InventoryEntry, SpellSelections } from '@/types/character'
 import type { ClassFeature, SpellRule } from '@/types/rules'
+import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{
   draft: CharacterDraft
@@ -219,7 +220,7 @@ const selectedOptionEntries = computed(() => {
     for (const optionId of selection?.optionIds ?? []) {
       const spell = rulesRepository.getSpell(optionId)
       if (spell) {
-        entries.push({ id: optionId, name: spell.name, caption: `${spell.level}环 · ${spell.englishName}`, detail: spell.description, expandedLabel: '法术效果' })
+        entries.push({ id: optionId, name: spell.name, caption: formatSpellLabel(spell), detail: spell.description, expandedLabel: '法术效果' })
         continue
       }
       const option = rulesRepository.getOption(optionId)
@@ -567,7 +568,7 @@ function handleExportPdf(): void {
                 expanded-label="法术效果"
                 :key="spell.id"
                 :title="spell.name"
-                :description="`${spell.level}环 · ${spell.englishName}`"
+                :description="formatSpellLabel(spell)"
               >
                 <template #suffix>
                   <button v-if="canTogglePrepared" type="button" class="character-sheet__spell-action" @click="togglePrepare(spell.id)">取消准备</button>
@@ -586,7 +587,7 @@ function handleExportPdf(): void {
                 expanded-label="法术效果"
                 :key="spell.id"
                 :title="spell.name"
-                :description="`${spell.level}环 · ${spell.englishName}`"
+                :description="formatSpellLabel(spell)"
               >
                 <template #suffix><UiBadge tone="success">魔法奥秘</UiBadge></template>
                 <template v-if="spell.description" #expanded>{{ spell.description }}</template>
@@ -604,7 +605,7 @@ function handleExportPdf(): void {
                 expanded-label="法术效果"
                 :key="spell.id"
                 :title="spell.name"
-                :description="spell.englishName"
+                :description="formatSpellLabel(spell)"
               >
                 <template #suffix>
                   <button type="button" class="character-sheet__spell-action" :disabled="!canPrepareMore" @click="togglePrepare(spell.id)">
@@ -626,7 +627,7 @@ function handleExportPdf(): void {
                 expanded-label="法术效果"
                 :key="spell.id"
                 :title="spell.name"
-                :description="`${spell.level}环 · ${spell.englishName}`"
+                :description="formatSpellLabel(spell)"
               >
                 <template #suffix>
                   <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
@@ -644,7 +645,7 @@ function handleExportPdf(): void {
               expanded-label="法术效果"
               :key="spell.id"
               :title="spell.name"
-              :description="`${spell.level}环 · ${spell.englishName}`"
+              :description="formatSpellLabel(spell)"
             >
               <template #suffix>
                 <button type="button" class="character-sheet__spell-action" :disabled="!canPrepareMore" @click="togglePrepare(spell.id)">
@@ -666,7 +667,7 @@ function handleExportPdf(): void {
               expanded-label="法术效果"
               :key="spell.id"
               :title="spell.name"
-              :description="`${spell.level}环 · ${spell.englishName}`"
+              :description="formatSpellLabel(spell)"
             >
               <template #suffix>
                 <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
@@ -690,7 +691,7 @@ function handleExportPdf(): void {
               expanded-label="法术效果"
               :key="spell.id"
               :title="spell.name"
-              :description="`${spell.level}环 · ${spell.englishName}`"
+              :description="formatSpellLabel(spell)"
             >
               <template #suffix>
                 <button type="button" class="character-sheet__spell-action" :aria-label="`抄录${spell.name}`" @click="openTranscribe(spell.id)">抄录</button>

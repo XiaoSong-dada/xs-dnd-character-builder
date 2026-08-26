@@ -12,7 +12,8 @@ import { getCheckpointCandidates } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
-import type { ChoiceCheckpoint, SubclassFeature } from '@/types/rules'
+import type { ChoiceCheckpoint, SpellRule, SubclassFeature } from '@/types/rules'
+import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{
   classId: string
@@ -146,6 +147,10 @@ function spellCandidateGroups(checkpoint: ChoiceCheckpoint): ReadonlyArray<{
     .sort((left, right) => left[0] - right[0])
     .map(([level, items]) => ({ level, spells: items }))
 }
+
+function spellCandidateDescription(spell: SpellRule): string {
+  return [formatSpellLabel(spell), spell.description].filter(Boolean).join(' · ')
+}
 </script>
 
 <template>
@@ -218,7 +223,7 @@ function spellCandidateGroups(checkpoint: ChoiceCheckpoint): ReadonlyArray<{
                 v-for="spell in group.spells"
                 :key="spell.id"
                 :title="spell.name"
-                :description="spell.description"
+                :description="spellCandidateDescription(spell)"
                 :state="selectedIds(checkpoint.id).includes(spell.id) ? 'selected' : 'default'"
                 @select="toggle(checkpoint.id, spell.id, checkpoint.maxSelections)"
               >

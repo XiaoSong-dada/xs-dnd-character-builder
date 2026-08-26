@@ -17,6 +17,7 @@ import {
 } from '@/rules/spellcasting'
 import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
+import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{ draft: CharacterDraft }>()
 const emit = defineEmits<{ change: [value: SpellSelections] }>()
@@ -187,7 +188,7 @@ function toggleSpellbook(id: string): void {
           expanded-label="法术效果"
           :key="`book-${spell.id}`"
           :title="spell.name"
-          :description="`${spell.level}环 · ${spell.englishName}`"
+          :description="formatSpellLabel(spell)"
           :state="draft.spellSelections.spellbookSpellIds.includes(spell.id) ? 'complete' : 'default'"
           @select="toggleSpellbook(spell.id)"
         >
@@ -210,7 +211,7 @@ function toggleSpellbook(id: string): void {
           expanded-label="法术效果"
           :key="spell.id"
           :title="spell.name"
-          :description="`${spell.englishName} · ${spell.summary}`"
+          :description="`${formatSpellLabel(spell)} · ${spell.summary}`"
           :state="selectedIds.includes(spell.id) ? 'selected' : 'default'"
           @select="toggleSpell(spell.id)"
         >

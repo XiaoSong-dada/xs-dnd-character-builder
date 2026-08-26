@@ -7,6 +7,7 @@ import UiNotice from '@/components/ui/UiNotice.vue'
 import UiScrollModal from '@/components/ui/UiScrollModal.vue'
 import { useSpellbookTranscription } from '@/features/spellbook-transcription/hooks/useSpellbookTranscription'
 import type { CharacterDraft } from '@/types/character'
+import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{ open: boolean; draft: CharacterDraft; preselectSpellId?: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -44,7 +45,7 @@ function confirm(): void {
           v-for="spell in group.spells"
           :key="spell.id"
           :title="spell.name"
-          :description="`${spell.level}环 · ${spell.englishName}`"
+          :description="formatSpellLabel(spell)"
           :state="transcription.selectedIds.value.includes(spell.id) ? 'selected' : 'default'"
           expanded-label="法术效果"
           expand-on-select

@@ -276,6 +276,24 @@ describe('CharacterSheetStep 法术展示', () => {
     expect(badges.filter((badge) => badge.text() === '在书中')).toHaveLength(3)
   })
 
+  it('法术副标题仅为仪式法术追加仪式标签，并保持英文名', async () => {
+    const ritualDraft: CharacterDraft = {
+      ...spellbookDraft,
+      spellSelections: {
+        ...spellbookDraft.spellSelections,
+        spellbookSpellIds: [...spellbookDraft.spellSelections.spellbookSpellIds, 'spell-2014-find-familiar'],
+      },
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: ritualDraft, derived: deriveCharacter(ritualDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    expect(wrapper.text()).toContain('1环 · Find Familiar · 仪式')
+    expect(wrapper.text()).toContain('1环 · Magic Missile')
+    expect(wrapper.text()).not.toContain('Magic Missile · 仪式')
+  })
+
   it('牧师（prepared）展示戏法与已准备法术，不出现法术书与已掌握', async () => {
     const preparedDraft: CharacterDraft = {
       ...draft,
