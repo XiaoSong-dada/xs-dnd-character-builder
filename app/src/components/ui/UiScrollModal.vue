@@ -1,6 +1,13 @@
 <script setup lang="ts">
-withDefaults(defineProps<{ open: boolean; title: string; bodyScroll?: boolean }>(), {
+withDefaults(defineProps<{
+  open: boolean
+  title: string
+  bodyScroll?: boolean
+  /** 弹窗内容区最大高度（CSS max-height 值）；默认 min(80dvh, 42rem)。 */
+  maxHeight?: string
+}>(), {
   bodyScroll: true,
+  maxHeight: 'min(80dvh, 42rem)',
 })
 defineEmits<{ close: [] }>()
 </script>
@@ -8,7 +15,7 @@ defineEmits<{ close: [] }>()
 <template>
   <Teleport to="body">
     <div v-if="open" class="ui-scroll-modal" role="presentation" @click.self="$emit('close')">
-      <section role="dialog" aria-modal="true" :aria-label="title">
+      <section role="dialog" aria-modal="true" :aria-label="title" :style="{ maxHeight }">
         <header><h2>{{ title }}</h2><button type="button" aria-label="关闭" @click="$emit('close')">×</button></header>
         <div class="ui-scroll-modal__body" :class="{ 'ui-scroll-modal__body--contained': !bodyScroll }"><slot /></div>
         <footer v-if="$slots.footer"><slot name="footer" /></footer>
@@ -32,7 +39,6 @@ defineEmits<{ close: [] }>()
   section {
     display: flex;
     width: min(100%, 30rem);
-    max-height: min(80dvh, 42rem);
     flex-direction: column;
     overflow: hidden;
     border-radius: var(--radius-xl);

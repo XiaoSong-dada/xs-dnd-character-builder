@@ -235,7 +235,7 @@ function addItem(equip: boolean): void {
 </script>
 
 <template>
-  <UiScrollModal :open="open" title="添加物品" :body-scroll="false" @close="$emit('close')">
+  <UiScrollModal :open="open" title="添加物品" :body-scroll="false" max-height="min(96dvh, 60rem)" @close="$emit('close')">
     <div class="add-item-modal">
       <label class="add-item-modal__search">
         <span class="add-item-modal__search-label">搜索物品</span>

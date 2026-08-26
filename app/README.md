@@ -4,12 +4,10 @@
 
 > 当前运行时仅支持 `5e-2014`。仓库中的 2024 资料用于未来规则集建设，不会混入当前可编辑草稿。
 
-## 最新版本：v0.9.1
+## 最新版本：v0.9.2
 
-- “添加物品”弹窗布局固定：标题、搜索框、筛选按钮与展开面板、底部数量与添加按钮固定，只有物品结果列表滚动。
-- 筛选改为按钮展开式：来源、同调、类别、稀有度四组按固定顺序排列，同屏只展开一组，切换面板保留已选条件，按钮显示限制状态与已选数量；每次打开弹窗恢复默认全选。
-- 物品目录改为构建期生成 + 按需加载：进入主界面不再请求或解析 Markdown 目录，第一次点击“添加物品”才加载完整目录分块；同一次会话使用内存缓存，刷新后命中浏览器 HTTP 缓存，加载失败可重试。
-- 保留角色物品显示、校验、属性派生与导出所需的最小运行时索引，草稿与既有数据不受影响；Markdown 仅作为开发维护、核对与审计文档。
+- 调高“添加物品”弹窗高度：移动端接近占满屏幕，桌面内容区上限提高至 960px；搜索、筛选与底部操作区保持固定，仅结果列表滚动。
+- 物品目录保持构建期生成与按需加载：进入主界面不加载 Markdown，第一次点击“添加物品”才加载完整目录，会话内缓存、失败可重试。
 
 ## 当前能力
 
@@ -159,7 +157,7 @@ docker run --rm -p 8080:80 dnd-character-builder
 docker build \
   --build-arg VITE_AUTHOR_NAME="小宋哒哒" \
   --build-arg VITE_GITHUB_URL="https://github.com/XiaoSong-dada" \
-  --build-arg VITE_APP_VERSION="0.9.1" \
+  --build-arg VITE_APP_VERSION="0.9.2" \
   --build-arg VITE_TIP_WECHAT_QR_URL="/local-assets/tips/wechat.jpg" \
   --build-arg VITE_TIP_ALIPAY_QR_URL="/local-assets/tips/alipay.jpg" \
   --build-arg VITE_UMAMI_SCRIPT_URL="https://your_url/script.js" \
