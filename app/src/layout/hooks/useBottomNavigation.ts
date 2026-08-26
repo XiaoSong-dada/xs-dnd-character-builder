@@ -1,6 +1,6 @@
 import { useRoute } from 'vue-router'
 
-export type PrimaryRouteName = 'character-builder' | 'session-assistant' | 'dice' | 'profile'
+export type PrimaryRouteName = 'character-builder' | 'session-assistant' | 'dice' | 'about'
 
 export interface BottomNavigationItem {
   readonly routeName: PrimaryRouteName
@@ -8,7 +8,7 @@ export interface BottomNavigationItem {
   readonly iconId: string
 }
 
-const navigationItems = [
+export const navigationItems = [
   {
     routeName: 'character-builder',
     label: '辅助车卡',
@@ -25,9 +25,9 @@ const navigationItems = [
     iconId: 'navigation-dice',
   },
   {
-    routeName: 'profile',
-    label: '个人中心',
-    iconId: 'navigation-profile',
+    routeName: 'about',
+    label: '关于本站',
+    iconId: 'navigation-about',
   },
 ] as const satisfies readonly BottomNavigationItem[]
 

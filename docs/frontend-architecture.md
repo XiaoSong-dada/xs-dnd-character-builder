@@ -209,7 +209,7 @@ src/router/router.ts
   -> src/views/character-builder/index.vue（懒加载）
   -> src/views/session-assistant/index.vue（懒加载）
   -> src/views/dice/index.vue（懒加载）
-  -> src/views/profile/index.vue（懒加载）
+  -> src/views/about/index.vue（懒加载）
   -> src/views/not-found/index.vue（懒加载）
   -> import.meta.env.BASE_URL（vue-router 标准用法）
 ```
@@ -231,10 +231,16 @@ src/layout/hooks/useBottomNavigation.ts
 
 ### 8.3 页面层（车卡页之外）
 
-个人中心与 404 页面仍为「入口 `index.vue` + 页面私有 hooks」，无页面私有 `components`：
+关于本站页面采用「入口 `index.vue` + 页面私有 hooks/components」；404 页面仍为「入口 + 页面私有 hook」：
 
 ```text
-src/views/profile/index.vue    -> src/views/profile/hooks/useProfilePage.ts
+src/views/about/index.vue
+  -> src/views/about/hooks/useAboutPage.ts
+      -> src/config/site.ts（可选收款码 URL）
+  -> src/views/about/components/AboutIntroSection.vue
+  -> src/views/about/components/AboutLinksSection.vue
+  -> src/views/about/components/TipQrSection.vue
+      -> src/components/ui/UiModal.vue
 src/views/not-found/index.vue  -> src/views/not-found/hooks/useNotFoundPage.ts（-> vue-router useRouter）
 ```
 

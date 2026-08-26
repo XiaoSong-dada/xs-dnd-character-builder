@@ -16,8 +16,17 @@ export interface SiteConfig {
   readonly siteUrl?: string
   /** 站点分享/OG 图片绝对 URL（可选，建议 1200×630） */
   readonly siteImage?: string
+  /** “请杯咖啡”收款码；图片由本地部署环境提供，不进入仓库 */
+  readonly tipQrCodes: TipQrCodeConfig
   /** Umami 访问统计配置 */
   readonly umami: UmamiConfig
+}
+
+export interface TipQrCodeConfig {
+  /** 微信支付收款码公开访问地址 */
+  readonly wechatUrl?: string
+  /** 支付宝收款码公开访问地址 */
+  readonly alipayUrl?: string
 }
 
 export interface UmamiConfig {
@@ -57,6 +66,10 @@ export const siteConfig: SiteConfig = {
   version: defined(import.meta.env.VITE_APP_VERSION),
   siteUrl: normalizeSiteUrl(import.meta.env.VITE_SITE_URL),
   siteImage: defined(import.meta.env.VITE_SITE_IMAGE),
+  tipQrCodes: {
+    wechatUrl: defined(import.meta.env.VITE_TIP_WECHAT_QR_URL),
+    alipayUrl: defined(import.meta.env.VITE_TIP_ALIPAY_QR_URL),
+  },
   umami: {
     scriptUrl: defined(import.meta.env.VITE_UMAMI_SCRIPT_URL),
     websiteId: defined(import.meta.env.VITE_UMAMI_WEBSITE_ID),

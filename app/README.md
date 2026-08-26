@@ -4,6 +4,12 @@
 
 > 当前运行时仅支持 `5e-2014`。仓库中的 2024 资料用于未来规则集建设，不会混入当前可编辑草稿。
 
+## 最新版本：v0.8.0
+
+- “个人中心”替换为“关于本站”，导航与正式地址改为“关于”和 `/about`。
+- 新增项目简介、永久免费声明、B站、GitHub、QQ 群问题反馈及可选“请杯咖啡”入口。
+- 微信、支付宝收款码通过本地配置加载且不进入 GitHub；缺少本地素材时自动隐藏打赏区。
+
 ## 当前能力
 
 - 创建 1—20 级单职业角色，按时间线完成职业技能、子职、专长或属性提升等选择。
@@ -17,8 +23,9 @@
 - 导出角色卡：PDF 角色卡使用版本化三页区域映射，XLSX 自动计算卡使用 v4 字段映射与公式缓存并在打开时完整重算，JSON 数据文件保持 schema v3。PDF/XLSX 统一消费同一导出模型，阻断错误不下载、容量警告会在角色卡页显示中文摘要。
 - 隔离旧版 2024 草稿，保留原始数据导出能力。
 - 使用赛博骰娘投掷 d4、d6、d8、d10、d12、d20 与 d100，支持混合骰池、3D 物理动画、逐颗结果和自动合计。
+- “关于本站”提供项目说明、永久免费声明、B站、GitHub、QQ 群反馈入口和可选的本地收款码展示。
 
-当前未包含多职业、2024 规则编辑、云同步和 DM 房规编辑器。“跑团助手”和“个人中心”目前为开发中占位页。
+当前未包含多职业、2024 规则编辑、云同步和 DM 房规编辑器。
 
 更完整的规则与实现范围请阅读[规则约定](../docs/rules.md)和[快速车卡实现说明](../docs/quick-build-implementation.md)。
 
@@ -80,12 +87,16 @@ cp .env.example .env.local
 | `VITE_GITHUB_URL` | 主页 GitHub 图标的跳转地址 |
 | `VITE_AUTHOR_TAGLINE` | 预留的作者标语，当前尚未展示 |
 | `VITE_APP_VERSION` | 主页显示的版本号 |
+| `VITE_TIP_WECHAT_QR_URL` | “请杯咖啡”微信收款码 URL；真实图片不进入仓库 |
+| `VITE_TIP_ALIPAY_QR_URL` | “请杯咖啡”支付宝收款码 URL；真实图片不进入仓库 |
 | `VITE_UMAMI_SCRIPT_URL` | Umami 统计脚本地址 |
 | `VITE_UMAMI_WEBSITE_ID` | Umami 后台生成的网站标识 |
 | `VITE_UMAMI_DOMAINS` | 允许统计的域名，多个域名使用英文逗号分隔 |
 
 Vite 环境变量会在构建时写入前端资源，不要在这些变量中保存密钥或其他敏感信息。
 Umami 的脚本地址和 Website ID 会公开在浏览器中，不属于密钥。当前配置只在 `your_url` 加载脚本，因此 localhost、IP 地址和未登记的预览域名不会产生生产统计。
+
+收款码原图放在 `app/public/local-assets/tips/`，该目录已被 Git 忽略；本地开发可在 `.env.local` 中把 URL 配置为 `/local-assets/tips/wechat.jpg` 与 `/local-assets/tips/alipay.jpg`。收款码会在公开页面展示，因此访问者仍可查看或保存图片；忽略目录只用于防止原图进入 GitHub 仓库。远程构建未注入图片时，“请杯咖啡”区自动隐藏。
 
 Umami 会自动监听 History API，Vue Router 的前端路由切换无需额外埋点。“实时”统计表示近期仍活跃的访客，并非严格的 WebSocket 同时在线连接数。
 
@@ -124,9 +135,9 @@ app/
 
 ```text
 /character-builder
-/classes
+/assistant
 /dice
-/profile
+/about
 /:pathMatch(.*)*
 ```
 
@@ -147,7 +158,9 @@ docker run --rm -p 8080:80 dnd-character-builder
 docker build \
   --build-arg VITE_AUTHOR_NAME="小宋哒哒" \
   --build-arg VITE_GITHUB_URL="https://github.com/XiaoSong-dada" \
-  --build-arg VITE_APP_VERSION="0.1.0" \
+  --build-arg VITE_APP_VERSION="0.8.0" \
+  --build-arg VITE_TIP_WECHAT_QR_URL="/local-assets/tips/wechat.jpg" \
+  --build-arg VITE_TIP_ALIPAY_QR_URL="/local-assets/tips/alipay.jpg" \
   --build-arg VITE_UMAMI_SCRIPT_URL="https://your_url/script.js" \
   --build-arg VITE_UMAMI_WEBSITE_ID="your website id" \
   --build-arg VITE_UMAMI_DOMAINS="your_url" \

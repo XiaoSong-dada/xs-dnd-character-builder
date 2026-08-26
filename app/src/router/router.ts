@@ -39,11 +39,12 @@ export const routes: RouteRecordRaw[] = [
         },
       },
       {
-        path: 'profile',
-        name: 'profile',
-        component: () => import('@/views/profile/index.vue'),
+        path: 'about',
+        name: 'about',
+        component: () => import('@/views/about/index.vue'),
         meta: {
-          title: '个人中心 | D&D车卡辅助',
+          title: '关于本站 | D&D车卡辅助',
+          description: '了解免费的 D&D 5e 2014 车卡与跑团辅助工具，获取 B站、GitHub 与 QQ 交流群入口。',
         },
       },
     ],

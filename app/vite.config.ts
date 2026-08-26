@@ -8,7 +8,7 @@ import type { ViteSSGContext } from 'vite-ssg'
 
 // 本期预渲染清单（docs/seo-requirements.md §P1-1）：
 // 根路径（重定向后渲染车卡页）+ 辅助车卡 + 赛博骰娘 + 404（命中 catch-all 路由）
-const INCLUDED_ROUTES = ['/', '/character-builder', '/assistant', '/dice', '/404']
+const INCLUDED_ROUTES = ['/', '/character-builder', '/assistant', '/dice', '/about', '/404']
 const DEFAULT_TITLE = 'D&D车卡辅助'
 
 function escapeHtml(value: string): string {

@@ -15,6 +15,10 @@ interface ImportMetaEnv {
   readonly VITE_UMAMI_WEBSITE_ID?: string
   /** 允许追踪的域名，多个域名使用英文逗号分隔 */
   readonly VITE_UMAMI_DOMAINS?: string
+  /** 微信支付收款码公开访问地址（图片不进入仓库） */
+  readonly VITE_TIP_WECHAT_QR_URL?: string
+  /** 支付宝收款码公开访问地址（图片不进入仓库） */
+  readonly VITE_TIP_ALIPAY_QR_URL?: string
 }
 
 interface ImportMeta {

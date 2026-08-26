@@ -57,23 +57,23 @@ describe('applySeoMeta', () => {
     vi.stubEnv('VITE_SITE_URL', 'https://dnd.example.com')
     const { applySeoMeta } = await loadSeo()
     applySeoMeta(routeContext({ title: '有描述页' }, '/dice'))
-    applySeoMeta(routeContext({ title: '无描述页' }, '/profile'))
+    applySeoMeta(routeContext({ title: '无描述页' }, '/about'))
 
     expect(document.head.querySelector('meta[name="description"]')).toBeNull()
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href'))
-      .toBe('https://dnd.example.com/profile')
+      .toBe('https://dnd.example.com/about')
 
     vi.unstubAllEnvs()
     vi.resetModules()
     vi.stubEnv('VITE_SITE_URL', '')
     const seoReloaded = await loadSeo()
-    seoReloaded.applySeoMeta(routeContext({ title: '无站点配置页' }, '/profile'))
+    seoReloaded.applySeoMeta(routeContext({ title: '无站点配置页' }, '/about'))
     expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
   })
 
   it('缺少 title 时使用默认标题', async () => {
     const { applySeoMeta, DEFAULT_TITLE } = await loadSeo()
-    applySeoMeta(routeContext({}, '/profile'))
+    applySeoMeta(routeContext({}, '/about'))
     expect(document.title).toBe(DEFAULT_TITLE)
   })
 
