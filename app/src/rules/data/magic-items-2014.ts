@@ -1,5 +1,6 @@
 import type { EquipmentRule } from '@/types/rules'
-import { dmgAttunementByEnglishName, magicItemsDmgCatalog2014 } from '@/rules/data/magic-items-dmg-catalog-2014'
+import { dmgAttunementByEnglishName } from '@/rules/data/magic-items-dmg-catalog-2014'
+import { magicItemsDmgCatalogIndex2014 } from '@/rules/data/generated/magic-items-catalog-index-2014'
 import { equipmentAttunementCondition, equipmentEnglishName, inferMagicItemCategory } from '@/rules/data/equipment-metadata'
 
 /**
@@ -30,7 +31,7 @@ type MagicSeed = Omit<EquipmentRule, 'classIds' | 'sourceIds' | 'englishName' | 
 function m(seed: MagicSeed): EquipmentRule {
   const { attunement: seedAttunement = 'none', attunementCondition, ...item } = seed
   const englishName = seed.englishName
-    ?? magicItemsDmgCatalog2014.find((candidate) => candidate.id === seed.id || candidate.name === seed.name)?.englishName
+    ?? magicItemsDmgCatalogIndex2014.find((candidate) => candidate.id === seed.id || candidate.name === seed.name)?.englishName
     ?? equipmentEnglishName(seed.id)
   const explicitCondition = attunementCondition ?? equipmentAttunementCondition(seed.id)
   const catalogAttunement = dmgAttunementByEnglishName[englishName.toLocaleLowerCase()]

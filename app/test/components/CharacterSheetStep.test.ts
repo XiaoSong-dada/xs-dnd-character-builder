@@ -10,6 +10,16 @@ import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
 import CharacterSheetStep from '@/views/character-builder/components/CharacterSheetStep.vue'
 
+// 与 AddItemModal.test.ts 相同原因：fake timers 拦截动态 import()，
+// 组件测试直接提供完整目录数据；加载器真实行为由 item-catalog-loader.test.ts 覆盖。
+vi.mock('@/rules/item-catalog-loader', async () => {
+  const { magicItemsCatalog2014 } = await import('@/rules/data/generated/magic-items-catalog-2014')
+  return {
+    loadItemCatalog: vi.fn(() => Promise.resolve(magicItemsCatalog2014)),
+    resetItemCatalogCache: vi.fn(),
+  }
+})
+
 const draft: CharacterDraft = {
   schemaVersion: 4,
   id: 'character-sheet-labels',
@@ -805,11 +815,17 @@ describe('CharacterSheetStep 物品添加与金币调整', () => {
   }
 
   async function pickLibraryItem(name: string): Promise<void> {
-    const search = document.body.querySelector<HTMLInputElement>('.ui-scroll-modal .list-shell__search input')
-    search!.value = name
-    search!.dispatchEvent(new Event('input'))
+    // 等待完整目录分块按需加载完成（动态 import 需多轮微任务；加载完成前不渲染列表）。
     await vi.advanceTimersByTimeAsync(0)
-    const main = document.body.querySelector<HTMLElement>('.ui-scroll-modal .list-shell .expandable-option-card__main')
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(0)
+    const search = document.body.querySelector<HTMLInputElement>('.ui-scroll-modal .add-item-modal__search input')
+    if (!search) throw new Error('未找到添加物品弹窗搜索框')
+    search.value = name
+    search.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    const main = document.body.querySelector<HTMLElement>('.ui-scroll-modal .add-item-modal__result-area .expandable-option-card__main')
+    if (!main) throw new Error(`未找到物品条目：${name}`)
     main!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await vi.advanceTimersByTimeAsync(300)
   }

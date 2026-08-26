@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{ open: boolean; title: string }>()
+withDefaults(defineProps<{ open: boolean; title: string; bodyScroll?: boolean }>(), {
+  bodyScroll: true,
+})
 defineEmits<{ close: [] }>()
 </script>
 
@@ -8,7 +10,7 @@ defineEmits<{ close: [] }>()
     <div v-if="open" class="ui-scroll-modal" role="presentation" @click.self="$emit('close')">
       <section role="dialog" aria-modal="true" :aria-label="title">
         <header><h2>{{ title }}</h2><button type="button" aria-label="关闭" @click="$emit('close')">×</button></header>
-        <div class="ui-scroll-modal__body"><slot /></div>
+        <div class="ui-scroll-modal__body" :class="{ 'ui-scroll-modal__body--contained': !bodyScroll }"><slot /></div>
         <footer v-if="$slots.footer"><slot name="footer" /></footer>
       </section>
     </div>
@@ -52,10 +54,17 @@ defineEmits<{ close: [] }>()
   header button { min-width: 2.75rem; min-height: 2.75rem; border: 0; background: transparent; font-size: 1.5rem; }
 
   &__body {
+    display: flex;
+    box-sizing: border-box;
     flex: 1;
     min-height: 0;
+    flex-direction: column;
     padding: 1rem;
     overflow-y: auto;
+
+    &--contained {
+      overflow: hidden;
+    }
   }
 }
 </style>

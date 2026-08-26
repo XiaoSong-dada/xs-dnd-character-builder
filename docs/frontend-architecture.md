@@ -356,11 +356,12 @@ src/features/quick-build/components/StepHeader.vue        -> src/components/ui/U
 src/features/quick-build/components/StickyActionBar.vue   -> src/components/ui/BaseButton
 
 src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiScrollModal、UiNotice、UiProgress、UiTabs）
-  -> 无项目内 import，仅依赖全局 CSS 变量主题（UiTabs 自 v0.7.0 支持 wrap 模式：固定宽度 + 换行；UiScrollModal 为“标题/页脚固定、仅内容区滚动”弹窗封装，用于抄录法术书与新增物品弹窗）
+  -> 无项目内 import，仅依赖全局 CSS 变量主题（UiTabs 自 v0.7.0 支持 wrap 模式：固定宽度 + 换行；UiScrollModal 默认由内容区滚动，也可关闭 body 滚动并由调用方提供内部滚动区；用于抄录法术书与新增物品弹窗）
 
 src/components/AddItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
-  -> src/components/ui/{ExpandableOptionCard,ListShell,UiScrollModal}
-  -> src/rules/{repository,equipment-filter,source-books}
+  -> src/components/ui/{ExpandableOptionCard,UiScrollModal}
+  -> src/rules/{repository,equipment-filter,item-catalog-loader,source-books}
+  -> src/rules/data/generated/magic-items-catalog-2014（动态 import 分块，仅弹窗打开时加载）
   -> src/types/rules
 
 src/components/AdjustItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
@@ -428,7 +429,8 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 ### 8.7 rules 层
 
 ```text
-src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-expansions-2014,magic-items-xgte-tcoe-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
+src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-expansions-2014,magic-items-xgte-tcoe-2014,generated/magic-items-catalog-index-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
+src/rules/item-catalog-loader.ts  -> src/rules/data/generated/magic-items-catalog-2014（动态 import；模块级 Promise 缓存 + 失败重试）
 src/rules/derive.ts              -> src/rules/{repository,feats,subclass-effects}
 src/rules/validate.ts            -> src/rules/{repository,derive,feats,abilities,timeline,spellcasting,starting-equipment} + src/rules/data/subclass-features-2014
 src/rules/dependency.ts          -> src/rules/{derive,repository,timeline} + src/rules/data/subclass-features-2014
@@ -452,10 +454,14 @@ feats-2014             <- {martials-2014, fighter, arcane-casters-2014, half-cas
 subclass-features-2014 <- {martials-2014, fighter, arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（子职特性）
 spells-2014            <- {arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（职业/子职法术归属）
 spell-slots-2014       <- {arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（法术位表与最高施法环级常量；无依赖，最底层）
-magic-items-dmg-catalog-2014 <- magic-items-2014 <- repository（DMG 候选目录先标准化，手工条目按稳定身份覆盖）
-magic-items-expansions-2014  <- repository（ERftLW/EGtW 元数据索引；重印按稳定身份合并来源）
+magic-items-dmg-catalog-2014 <- magic-items-2014 <- repository（同调审计表 JSON 共享；DMG 候选目录由构建期脚本生成，运行时仅做合并去重）
+magic-items-expansions-2014  <- repository（ERftLW/EGtW 目录由构建期脚本生成；重印按稳定身份合并来源）
+generated/magic-items-catalog-2014       （构建期产物：完整目录含 description，由 item-catalog-loader 动态加载；不进入主分块）
+generated/magic-items-catalog-index-2014 （构建期产物：目录轻量索引，description 为空串，静态装配进最小运行时索引）
 equipment-metadata     <- {equipment-2014,magic-items-2014,magic-items-xgte-tcoe-2014,magic-items-2024}（英文名、细分类别与特殊同调迁移辅助）
 ```
+
+`rules/data/generated/` 是构建期产物目录：`scripts/build-item-catalog.mjs` 从 `docs/equipment/5e-2014/` Markdown 生成类型化 TS（提交进仓库、纳入 vue-tsc 校验），运行时不再解析 Markdown；`src/rules/data/dmg-attunement-table.json` 为同调审计表，与生成脚本共享同一数据源。
 
 ### 8.8 types / styles
 

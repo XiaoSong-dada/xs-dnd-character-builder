@@ -1,11 +1,13 @@
 {
   "name": "xs-dnd-character-builder",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.9.1",
   "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "generate:items": "node scripts/build-item-catalog.mjs",
+    "prebuild": "npm run generate:items",
     "build": "vue-tsc -b && vite-ssg build",
     "preview": "vite preview",
     "test": "vitest",

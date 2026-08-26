@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
 import { magicItems2014 } from '@/rules/data/magic-items-2014'
-import { magicItemsDmgCatalog2014 } from '@/rules/data/magic-items-dmg-catalog-2014'
-import { magicItemsOfficialExpansions2014 } from '@/rules/data/magic-items-expansions-2014'
+import {
+  magicItemsDmgCatalogIndex2014,
+  magicItemsExpansionCatalogIndex2014,
+} from '@/rules/data/generated/magic-items-catalog-index-2014'
+import { magicItemsCatalog2014 } from '@/rules/data/generated/magic-items-catalog-2014'
 import { magicItemsXgteTcoe2014 } from '@/rules/data/magic-items-xgte-tcoe-2014'
 import { rulesRepository } from '@/rules/repository'
 import type { EquipmentRule } from '@/types/rules'
 
 describe('magic-items-2014 数据完整性', () => {
   it('DMG A–Z/神器 247 条候选均已进入明确运行时状态', () => {
-    expect(magicItemsDmgCatalog2014).toHaveLength(247)
-    for (const candidate of magicItemsDmgCatalog2014) {
+    expect(magicItemsDmgCatalogIndex2014).toHaveLength(247)
+    for (const candidate of magicItemsDmgCatalogIndex2014) {
       const runtime = rulesRepository.equipment.find((item) => item.id === candidate.id
         || item.name === candidate.name
         || item.englishName.toLocaleLowerCase() === candidate.englishName.toLocaleLowerCase())
@@ -96,10 +99,10 @@ describe('magic-items-2014 数据完整性', () => {
   })
 
   it('ERftLW 与 EGtW 官方扩展元数据已进入索引并按来源可筛选', () => {
-    expect(magicItemsOfficialExpansions2014).toHaveLength(71)
+    expect(magicItemsExpansionCatalogIndex2014).toHaveLength(71)
     expect(rulesRepository.equipment.filter((item) => item.sourceIds.includes('erftlw-2019-index'))).toHaveLength(23)
     expect(rulesRepository.equipment.filter((item) => item.sourceIds.includes('egtw-2020-index'))).toHaveLength(48)
-    for (const candidate of magicItemsOfficialExpansions2014) {
+    for (const candidate of magicItemsExpansionCatalogIndex2014) {
       expect(rulesRepository.equipment.some((item) => item.id === candidate.id
         || item.name === candidate.name
         || item.englishName.toLocaleLowerCase() === candidate.englishName.toLocaleLowerCase()), candidate.englishName).toBe(true)
@@ -131,7 +134,12 @@ describe('magic-items-2014 数据完整性', () => {
       expect(item.englishName.length).toBeGreaterThan(0)
       expect(item.ruleset).toBe('5e-2014')
       expect(['implemented', 'selectable', 'index-only', 'dm-only', 'unavailable']).toContain(item.status)
-      expect(item.description.length).toBeGreaterThan(0)
+      // 最小运行时索引允许目录条目省略 description（完整描述在懒加载分块中提供）。
+      if (item.description.length === 0) {
+        expect(magicItemsCatalog2014.some((candidate) => candidate.id === item.id && candidate.description.length > 0), item.id).toBe(true)
+      } else {
+        expect(item.description.length).toBeGreaterThan(0)
+      }
       expect(['armor', 'shield', 'weapon', 'tool', 'gear', 'potion', 'magic']).toContain(item.category)
       expect(['none', 'required', 'conditional']).toContain(item.attunement)
       expect(item.sourceIds.length).toBeGreaterThan(0)

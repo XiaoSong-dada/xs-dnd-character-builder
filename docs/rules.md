@@ -176,7 +176,7 @@ TODO：TCoE 自定义起源、既有 12 职业的整套可选职业特性、多�
 - 全量装备资料索引位于 `docs/dnd-equipment.md`，分文档位于 `docs/equipment/5e-2014/`；每个条目记录稳定 ID、中英文名、分类、官方价格与重量（普通装备；魔法物品按稀有度给参考区间并由 DM 定价）、是否可装备、**原创中文介绍**与登记状态，版权合规转述，不复制原书正文。
 - 代码现状：`EquipmentRule` 已显式登记 `ruleset`、中英文名、内容状态与三态同调；魔法物品另有九类目录索引、`varies` 稀有度和特殊同调条件。旧 `requiresAttunement` 字段已原子移除。
 - 魔法物品无固定价格，价格按稀有度参考区间（常见 50–100 gp、非普通 101–500 gp、稀有 501–5,000 gp、非常稀有 5,001–50,000 gp、传说 50,001+ gp）；扩展书补充魔法物品（XGtE 常见魔法物品、TCoE 刺青等）列为待补批次。
-- DMG 2014 的 247 条 A–Z/神器候选由 `magic-items-dmg-catalog-2014.ts` 装配，手工核验条目按稳定 ID/中英文名覆盖；聚合型号与神器保持 `index-only`，具体候选为 `selectable`，复杂效果不进入自动派生。
+- DMG 2014 的 247 条 A–Z/神器候选与 ERftLW、EGtW 扩展目录由构建期脚本 `scripts/build-item-catalog.mjs` 从 `docs/equipment/5e-2014/` Markdown 生成类型化分块（`rules/data/generated/`），运行时不再解析 Markdown；主界面只装配最小运行时索引（展示/校验/派生所需字段，不含完整描述），完整描述在“添加物品”弹窗首次打开时按需加载并缓存，加载失败可重试。手工核验条目按稳定 ID/中英文名覆盖；聚合型号与神器保持 `index-only`，具体候选为 `selectable`，复杂效果不进入自动派生。
 - “添加物品”弹窗支持中文名、英文名和稳定 ID 搜索；稀有度、类别、同调与来源组内取或、组间取且，空组返回空结果。普通装备只在稀有度全选时保留，避免与 `common` 魔法物品混淆。
 - 物品栏数量调整边界：仅"冒险获得"（`sourceKind === 'adventure'`）条目可在角色卡物品页签调整数量（减少/增加/删除全部）；职业与背景起始装备条目由重新编辑流程管理、不直接调整。减少时装备数量同步收缩（恒满足 `equippedQuantity ≤ quantity`），扣减至 0 或删除整条需二次确认且不返还金币；增加只入物品栏、不改变装备数量。删除/减量/增量由 `app/src/rules/starting-equipment.ts` 的 `removeAdventureItem` / `decreaseAdventureItem` / `increaseAdventureItem` 纯函数处理，变更随草稿持久化。
 
