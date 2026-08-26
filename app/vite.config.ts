@@ -73,6 +73,10 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [vue()],
+    server: {
+      // DMG 2014 候选清单保存在工作区 docs，作为规则索引的可审计数据源打包为 raw 文本。
+      fs: { allow: ['..'] },
+    },
     ssgOptions: {
       dirStyle: 'nested',
       includedRoutes: () => INCLUDED_ROUTES,

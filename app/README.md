@@ -4,11 +4,12 @@
 
 > 当前运行时仅支持 `5e-2014`。仓库中的 2024 资料用于未来规则集建设，不会混入当前可编辑草稿。
 
-## 最新版本：v0.8.0
+## 最新版本：v0.9.0
 
-- “个人中心”替换为“关于本站”，导航与正式地址改为“关于”和 `/about`。
-- 新增项目简介、永久免费声明、B站、GitHub、QQ 群问题反馈及可选“请杯咖啡”入口。
-- 微信、支付宝收款码通过本地配置加载且不进入 GitHub；缺少本地素材时自动隐藏打赏区。
+- 添加物品弹窗支持中英文名与稳定 ID 搜索，以及稀有度、类别、同调和来源多选筛选。
+- 物品规则新增英文名、规则集、内容状态、九类魔法物品索引与三态同调，旧同调布尔字段已移除。
+- 运行时物品库扩充至 677 条：DMG 2014 的 247 条候选全部建立对照，并加入 ERftLW、EGtW 首批扩展索引。
+- 修正首批魔法物品译名与摘要，聚合型号保持只读索引，2014 与 2024 数据继续严格隔离。
 
 ## 当前能力
 
@@ -158,7 +159,7 @@ docker run --rm -p 8080:80 dnd-character-builder
 docker build \
   --build-arg VITE_AUTHOR_NAME="小宋哒哒" \
   --build-arg VITE_GITHUB_URL="https://github.com/XiaoSong-dada" \
-  --build-arg VITE_APP_VERSION="0.8.0" \
+  --build-arg VITE_APP_VERSION="0.9.0" \
   --build-arg VITE_TIP_WECHAT_QR_URL="/local-assets/tips/wechat.jpg" \
   --build-arg VITE_TIP_ALIPAY_QR_URL="/local-assets/tips/alipay.jpg" \
   --build-arg VITE_UMAMI_SCRIPT_URL="https://your_url/script.js" \

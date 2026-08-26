@@ -633,7 +633,7 @@ function openTranscribe(spellId?: string): void {
       :preselect-spell-id="transcribePreselectId"
       @close="showTranscribeModal = false"
     />
-    <AddItemModal :open="showAddItemModal" @close="showAddItemModal = false" @add="handleAddItem" />
+    <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" @close="showAddItemModal = false" @add="handleAddItem" />
     <AdjustItemModal
       v-if="adjustEntry"
       :open="showAdjustItemModal"

@@ -360,7 +360,7 @@ src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile�
 
 src/components/AddItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
   -> src/components/ui/{ExpandableOptionCard,ListShell,UiScrollModal}
-  -> src/rules/repository.ts
+  -> src/rules/{repository,equipment-filter,source-books}
   -> src/types/rules
 
 src/components/AdjustItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
@@ -428,7 +428,7 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 ### 8.7 rules 层
 
 ```text
-src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
+src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-expansions-2014,magic-items-xgte-tcoe-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
 src/rules/derive.ts              -> src/rules/{repository,feats,subclass-effects}
 src/rules/validate.ts            -> src/rules/{repository,derive,feats,abilities,timeline,spellcasting,starting-equipment} + src/rules/data/subclass-features-2014
 src/rules/dependency.ts          -> src/rules/{derive,repository,timeline} + src/rules/data/subclass-features-2014
@@ -439,6 +439,7 @@ src/rules/starting-equipment.ts  -> src/rules/repository
 src/rules/feats.ts               -> src/rules/data/feats-2014
 src/rules/recommend.ts           -> src/rules/data/feats-2014（仅保留成长速览与起源提示）
 src/rules/source-books.ts        -> src/rules/data/sources-2014 + src/rules/repository（迁移推导入口）
+src/rules/equipment-filter.ts    -> src/types/rules（中英文/ID、稀有度、类别、同调、来源组合筛选纯函数）
 src/rules/abilities.ts           （无 rules 内部依赖，最纯）
 src/rules/subclass-effects.ts    （无依赖，纯函数）
 src/rules/dice.ts                -> src/types/dice（骰池、d100、总和与投掷准备纯函数）
@@ -451,6 +452,9 @@ feats-2014             <- {martials-2014, fighter, arcane-casters-2014, half-cas
 subclass-features-2014 <- {martials-2014, fighter, arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（子职特性）
 spells-2014            <- {arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（职业/子职法术归属）
 spell-slots-2014       <- {arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（法术位表与最高施法环级常量；无依赖，最底层）
+magic-items-dmg-catalog-2014 <- magic-items-2014 <- repository（DMG 候选目录先标准化，手工条目按稳定身份覆盖）
+magic-items-expansions-2014  <- repository（ERftLW/EGtW 元数据索引；重印按稳定身份合并来源）
+equipment-metadata     <- {equipment-2014,magic-items-2014,magic-items-xgte-tcoe-2014,magic-items-2024}（英文名、细分类别与特殊同调迁移辅助）
 ```
 
 ### 8.8 types / styles
@@ -498,7 +502,7 @@ views/character-builder/index.vue
   -> features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
   -> stores/character-drafts.ts
       -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}
-          -> rules/data/{sources-2014,artificer-2014,subclasses-2014,subclass-features-2014,class-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,magic-items-xgte-tcoe-2014,starting-equipment-2014,feats-2014,spells-2014}
+          -> rules/data/{sources-2014,artificer-2014,subclasses-2014,subclass-features-2014,class-features-2014,classes-2014,martials-2014,fighter,half-casters-2014,arcane-casters-2014,full-casters-2014,origins-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-xgte-tcoe-2014,equipment-metadata,starting-equipment-2014,feats-2014,spells-2014}
       -> services/{draft-storage,character-json}
           -> rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点，见 8.9
   -> components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiNotice、UiProgress、UiTabs）

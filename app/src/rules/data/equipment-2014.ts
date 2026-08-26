@@ -1,4 +1,5 @@
 import type { EquipmentGrant, EquipmentRule } from '@/types/rules'
+import { equipmentEnglishName } from '@/rules/data/equipment-metadata'
 
 const sourceIds = ['basic-rules-2014'] as const
 const allClassIds = [
@@ -16,10 +17,19 @@ const allClassIds = [
   'class-2014-wizard',
 ] as const
 
-type EquipmentSeed = Omit<EquipmentRule, 'classIds' | 'sourceIds'>
+type EquipmentSeed = Omit<EquipmentRule, 'classIds' | 'sourceIds' | 'englishName' | 'ruleset' | 'status' | 'attunement'> &
+  Partial<Pick<EquipmentRule, 'englishName' | 'status' | 'attunement'>>
 
 function item(seed: EquipmentSeed): EquipmentRule {
-  return { ...seed, classIds: allClassIds, sourceIds }
+  return {
+    englishName: equipmentEnglishName(seed.id),
+    ruleset: '5e-2014',
+    status: 'implemented',
+    attunement: 'none',
+    ...seed,
+    classIds: allClassIds,
+    sourceIds,
+  }
 }
 
 function gear(id: string, name: string, description = '随身物品。'): EquipmentRule {

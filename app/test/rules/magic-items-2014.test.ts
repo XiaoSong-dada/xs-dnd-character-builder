@@ -1,11 +1,24 @@
 import { describe, expect, it } from 'vitest'
 
 import { magicItems2014 } from '@/rules/data/magic-items-2014'
+import { magicItemsDmgCatalog2014 } from '@/rules/data/magic-items-dmg-catalog-2014'
+import { magicItemsOfficialExpansions2014 } from '@/rules/data/magic-items-expansions-2014'
 import { magicItemsXgteTcoe2014 } from '@/rules/data/magic-items-xgte-tcoe-2014'
 import { rulesRepository } from '@/rules/repository'
 import type { EquipmentRule } from '@/types/rules'
 
 describe('magic-items-2014 数据完整性', () => {
+  it('DMG A–Z/神器 247 条候选均已进入明确运行时状态', () => {
+    expect(magicItemsDmgCatalog2014).toHaveLength(247)
+    for (const candidate of magicItemsDmgCatalog2014) {
+      const runtime = rulesRepository.equipment.find((item) => item.id === candidate.id
+        || item.name === candidate.name
+        || item.englishName.toLocaleLowerCase() === candidate.englishName.toLocaleLowerCase())
+      expect(runtime, candidate.englishName).toBeDefined()
+      expect(runtime?.status, candidate.englishName).not.toBe('stub')
+    }
+  })
+
   it('全部魔法物品已合并进 rulesRepository.equipment', () => {
     for (const item of [...magicItems2014, ...magicItemsXgteTcoe2014]) {
       expect(rulesRepository.getEquipment(item.id)).toBeDefined()
@@ -74,17 +87,32 @@ describe('magic-items-2014 数据完整性', () => {
   })
 
   it('稀有度字段仅魔法物品使用；普通装备不携带 rarity', () => {
-    const plain = rulesRepository.equipment.filter((item) => item.rarity !== undefined)
-    const magicIds = new Set([...magicItems2014, ...magicItemsXgteTcoe2014].map((item) => item.id))
-    for (const item of plain) {
-      expect(magicIds.has(item.id), item.id).toBe(true)
+    for (const item of rulesRepository.equipment.filter((entry) => entry.rarity !== undefined)) {
+      expect(item.magicItemCategory, item.id).toBeDefined()
+    }
+    for (const item of rulesRepository.equipment.filter((entry) => entry.magicItemCategory === undefined)) {
+      expect(item.rarity, item.id).toBeUndefined()
+    }
+  })
+
+  it('ERftLW 与 EGtW 官方扩展元数据已进入索引并按来源可筛选', () => {
+    expect(magicItemsOfficialExpansions2014).toHaveLength(71)
+    expect(rulesRepository.equipment.filter((item) => item.sourceIds.includes('erftlw-2019-index'))).toHaveLength(23)
+    expect(rulesRepository.equipment.filter((item) => item.sourceIds.includes('egtw-2020-index'))).toHaveLength(48)
+    for (const candidate of magicItemsOfficialExpansions2014) {
+      expect(rulesRepository.equipment.some((item) => item.id === candidate.id
+        || item.name === candidate.name
+        || item.englishName.toLocaleLowerCase() === candidate.englishName.toLocaleLowerCase()), candidate.englishName).toBe(true)
     }
   })
 
   it('2024 批次与 2014 可编辑仓库严格隔离', async () => {
     const { magicItems2024 } = await import('@/rules/data/magic-items-2024')
     expect(magicItems2024.length).toBeGreaterThanOrEqual(6)
-    for (const item of magicItems2024) expect(rulesRepository.getEquipment(item.id)).toBeUndefined()
+    for (const item of magicItems2024) {
+      expect(item.ruleset).toBe('5e-2024')
+      expect(rulesRepository.getEquipment(item.id)).toBeUndefined()
+    }
     for (const id of ['enspelled-staff', 'enspelled-weapon', 'enspelled-amulet', 'wraps-of-unarmed-power-+1']) {
       expect(rulesRepository.getEquipment(id), id).toBeUndefined()
     }
@@ -97,11 +125,34 @@ describe('magic-items-2014 数据完整性', () => {
   })
 
   it('每个条目都有原创描述且字段合法', () => {
+    const legalSourceIds = new Set(rulesRepository.sources.map((source) => source.id))
     for (const item of rulesRepository.equipment as readonly EquipmentRule[]) {
       expect(item.name.length).toBeGreaterThan(0)
+      expect(item.englishName.length).toBeGreaterThan(0)
+      expect(item.ruleset).toBe('5e-2014')
+      expect(['implemented', 'selectable', 'index-only', 'dm-only', 'unavailable']).toContain(item.status)
       expect(item.description.length).toBeGreaterThan(0)
       expect(['armor', 'shield', 'weapon', 'tool', 'gear', 'potion', 'magic']).toContain(item.category)
+      expect(['none', 'required', 'conditional']).toContain(item.attunement)
       expect(item.sourceIds.length).toBeGreaterThan(0)
+      for (const sourceId of item.sourceIds) expect(legalSourceIds.has(sourceId), `${item.id}:${sourceId}`).toBe(true)
+      if (item.rarity) {
+        expect(item.magicItemCategory).toMatch(/^(armor|potion|ring|rod|scroll|staff|wand|weapon|wondrous)$/)
+      }
+      if (item.attunement === 'conditional') expect(item.attunementCondition?.length).toBeGreaterThan(0)
     }
+  })
+
+  it('稳定 ID、中文名和英文名在非重印实体间唯一', () => {
+    for (const key of ['id', 'name', 'englishName'] as const) {
+      const values = rulesRepository.equipment.map((item) => item[key].toLocaleLowerCase())
+      expect(new Set(values).size, key).toBe(values.length)
+    }
+  })
+
+  it('重印条目合并来源而不创建重复实体', () => {
+    const prostheticLimbs = rulesRepository.equipment.filter((item) => item.id === 'prosthetic-limb')
+    expect(prostheticLimbs).toHaveLength(1)
+    expect(prostheticLimbs[0]?.sourceIds).toEqual(expect.arrayContaining(['xgte-2017-index', 'tcoe-2020-index', 'egtw-2020-index']))
   })
 })

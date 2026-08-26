@@ -1,4 +1,5 @@
 import type { EquipmentRule } from '@/types/rules'
+import { equipmentAttunementCondition, equipmentEnglishName, inferMagicItemCategory } from '@/rules/data/equipment-metadata'
 
 /**
  * 扩展魔法物品（2014）— XGtE 常见魔法物品全量 + TCoE 刺青全量。
@@ -23,18 +24,43 @@ const allClassIds = [
   'class-2014-artificer',
 ] as const
 
-type MagicSeed = Omit<EquipmentRule, 'classIds' | 'sourceIds'>
+type MagicSeed = Omit<EquipmentRule, 'classIds' | 'sourceIds' | 'englishName' | 'ruleset' | 'status' | 'attunement' | 'magicItemCategory'> &
+  Partial<Pick<EquipmentRule, 'englishName' | 'status' | 'attunement' | 'magicItemCategory'>>
 
 function xg(seed: MagicSeed): EquipmentRule {
-  return { ...seed, classIds: allClassIds, sourceIds: xgteSourceIds }
+  const { attunement: seedAttunement = 'none', attunementCondition, ...item } = seed
+  const condition = attunementCondition ?? equipmentAttunementCondition(seed.id)
+  return {
+    englishName: equipmentEnglishName(seed.id),
+    ruleset: '5e-2014',
+    status: 'selectable',
+    attunement: condition ? 'conditional' : seedAttunement,
+    ...(condition ? { attunementCondition: condition } : {}),
+    magicItemCategory: inferMagicItemCategory(seed.id, seed.category),
+    ...item,
+    classIds: allClassIds,
+    sourceIds: xgteSourceIds,
+  }
 }
 
 function tc(seed: MagicSeed): EquipmentRule {
-  return { ...seed, classIds: allClassIds, sourceIds: tcoeSourceIds }
+  const { attunement: seedAttunement = 'none', attunementCondition, ...item } = seed
+  const condition = attunementCondition ?? equipmentAttunementCondition(seed.id)
+  return {
+    englishName: equipmentEnglishName(seed.id),
+    ruleset: '5e-2014',
+    status: 'selectable',
+    attunement: condition ? 'conditional' : seedAttunement,
+    ...(condition ? { attunementCondition: condition } : {}),
+    magicItemCategory: inferMagicItemCategory(seed.id, seed.category),
+    ...item,
+    classIds: allClassIds,
+    sourceIds: tcoeSourceIds,
+  }
 }
 
 function tcAttuned(id: string, name: string, description: string, rarity: NonNullable<EquipmentRule['rarity']>, extra: Partial<MagicSeed> = {}): EquipmentRule {
-  return tc({ id, name, description, category: 'magic', equippable: true, rarity, requiresAttunement: true, ...extra })
+  return tc({ id, name, description, category: 'magic', equippable: true, rarity, attunement: 'required', ...extra })
 }
 
 function tcFocus(id: string, name: string, description: string): readonly EquipmentRule[] {
@@ -110,8 +136,8 @@ export const magicItemsXgteTcoe2014: readonly EquipmentRule[] = [
   tc({ id: 'spellwrought-tattoo-2nd-3rd', name: '法术刺青（2–3 环）', description: '身体刺青：内含一个 2–3 环法术，可施放一次，施放后刺青消散。', category: 'magic', equippable: false, rarity: 'uncommon' }),
   tc({ id: 'spellwrought-tattoo-4th-5th', name: '法术刺青（4–5 环）', description: '身体刺青：内含一个 4–5 环法术，可施放一次，施放后刺青消散。', category: 'magic', equippable: false, rarity: 'rare' }),
   tc({ id: 'ghost-step-tattoo', name: '鬼步刺青', description: '身体刺青：每日数次，可虚体化移动（穿过生物与物体）。', category: 'magic', equippable: false, rarity: 'rare' }),
-  tc({ id: 'shadowfell-brand-tattoo', name: '影界烙印刺青', description: '身体刺青：获得死灵伤害抗性，并可以反应减半一次所受伤害。', category: 'magic', equippable: false, rarity: 'rare', requiresAttunement: true }),
-  tc({ id: 'lifewell-tattoo', name: '生命之井刺青', description: '身体刺青：获得死灵伤害抗性；每日一次，生命值降至 0 时改为 1。', category: 'magic', equippable: false, rarity: 'very-rare', requiresAttunement: true }),
+  tc({ id: 'shadowfell-brand-tattoo', name: '影界烙印刺青', description: '身体刺青：获得死灵伤害抗性，并可以反应减半一次所受伤害。', category: 'magic', equippable: false, rarity: 'rare', attunement: 'required' }),
+  tc({ id: 'lifewell-tattoo', name: '生命之井刺青', description: '身体刺青：获得死灵伤害抗性；每日一次，生命值降至 0 时改为 1。', category: 'magic', equippable: false, rarity: 'very-rare', attunement: 'required' }),
   tc({ id: 'absorbing-tattoo', name: '吸收刺青', description: '身体刺青：每日一次，以反应吸收一次指定类型伤害，转化为自身生命值。', category: 'magic', equippable: false, rarity: 'legendary' }),
   tc({ id: 'blood-fury-tattoo', name: '血怒刺青', description: '身体刺青：近战武器攻击可造成额外伤害并反伤攻击者（每日次数有限）。', category: 'magic', equippable: false, rarity: 'legendary' }),
 
@@ -145,10 +171,10 @@ export const magicItemsXgteTcoe2014: readonly EquipmentRule[] = [
   tcAttuned('libram-of-souls-and-flesh', '灵魂与血肉大全', '魔法法术书，聚焦于死灵、不死与生命能量。', 'rare'),
   tcAttuned('planecallers-codex', '位面召唤师密典', '魔法法术书，聚焦于召唤与异界生物。', 'rare'),
   tcAttuned('protective-verses', '防护韵文', '魔法法术书，聚焦于防护、结界与减伤。', 'rare'),
-  tc({ id: 'baba-yagas-mortar-and-pestle', name: '芭芭雅嘎的研钵与研棒', description: '神器工具：可研磨魔法材料、召唤研钵移动，并在满足材料条件时远行。', category: 'magic', equippable: true, rarity: 'artifact', requiresAttunement: true }),
-  tc({ id: 'lubas-tarokka-of-souls', name: '露芭的灵魂塔罗卡', description: '神器牌组：可操纵命运、囚禁灵魂，并伴随需要 DM 裁定的风险。', category: 'magic', equippable: false, rarity: 'artifact', requiresAttunement: true }),
-  tc({ id: 'mighty-servant-of-leuk-o', name: '鲁科的强大仆从', description: '神器级构装载具：需要两名同调操作者共同控制，战斗统计以来源摘要处理。', category: 'magic', equippable: false, rarity: 'artifact', requiresAttunement: true }),
-  tc({ id: 'crook-of-rao', name: '拉奥牧钩', description: '神器：具有强大的驱逐异界生物与封锁能力，具体使用由 DM 控制。', category: 'magic', equippable: true, rarity: 'artifact', requiresAttunement: true }),
-  tc({ id: 'demonomicon-of-iggwilv', name: '伊格威尔伏魔记', description: '神器魔典：记录恶魔真名与束缚法门，并能封印邪魔。', category: 'magic', equippable: true, rarity: 'artifact', requiresAttunement: true }),
-  tc({ id: 'teeth-of-dahlver-nar', name: '达尔弗·纳尔之牙', description: '神器遗物：每颗牙齿都能埋植出不同的故事化效果，结果由表格与 DM 决定。', category: 'magic', equippable: false, rarity: 'artifact', requiresAttunement: true }),
+  tc({ id: 'baba-yagas-mortar-and-pestle', name: '芭芭雅嘎的研钵与研棒', description: '神器工具：可研磨魔法材料、召唤研钵移动，并在满足材料条件时远行。', category: 'magic', equippable: true, rarity: 'artifact', attunement: 'required' }),
+  tc({ id: 'lubas-tarokka-of-souls', name: '露芭的灵魂塔罗卡', description: '神器牌组：可操纵命运、囚禁灵魂，并伴随需要 DM 裁定的风险。', category: 'magic', equippable: false, rarity: 'artifact', attunement: 'required' }),
+  tc({ id: 'mighty-servant-of-leuk-o', name: '鲁科的强大仆从', description: '神器级构装载具：需要两名同调操作者共同控制，战斗统计以来源摘要处理。', category: 'magic', equippable: false, rarity: 'artifact', attunement: 'required' }),
+  tc({ id: 'crook-of-rao', name: '拉奥牧钩', description: '神器：具有强大的驱逐异界生物与封锁能力，具体使用由 DM 控制。', category: 'magic', equippable: true, rarity: 'artifact', attunement: 'required' }),
+  tc({ id: 'demonomicon-of-iggwilv', name: '伊格威尔伏魔记', description: '神器魔典：记录恶魔真名与束缚法门，并能封印邪魔。', category: 'magic', equippable: true, rarity: 'artifact', attunement: 'required' }),
+  tc({ id: 'teeth-of-dahlver-nar', name: '达尔弗·纳尔之牙', description: '神器遗物：每颗牙齿都能埋植出不同的故事化效果，结果由表格与 DM 决定。', category: 'magic', equippable: false, rarity: 'artifact', attunement: 'required' }),
 ]

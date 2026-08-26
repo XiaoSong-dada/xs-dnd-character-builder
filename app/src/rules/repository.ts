@@ -5,6 +5,8 @@ import { fighterOptions, fighterRule } from '@/rules/data/fighter'
 import { martialClasses2014, martialOptions2014 } from '@/rules/data/martials-2014'
 import { equipment2014 } from '@/rules/data/equipment-2014'
 import { magicItems2014 } from '@/rules/data/magic-items-2014'
+import { mergeDmgCatalog } from '@/rules/data/magic-items-dmg-catalog-2014'
+import { mergeOfficialExpansionItems } from '@/rules/data/magic-items-expansions-2014'
 import { magicItemsXgteTcoe2014 } from '@/rules/data/magic-items-xgte-tcoe-2014'
 import { abilityImprovementOptions2014, featChoiceOptions2014, feats2014 } from '@/rules/data/feats-2014'
 import { halfCasterClasses2014, halfCasterOptions2014 } from '@/rules/data/half-casters-2014'
@@ -47,7 +49,7 @@ export const rulesRepository: RulesRepository = {
     ...artificerInfusions2014,
   ],
   feats: feats2014,
-  equipment: [...equipment2014, ...magicItems2014, ...magicItemsXgteTcoe2014],
+  equipment: mergeOfficialExpansionItems([...equipment2014, ...mergeDmgCatalog(magicItems2014), ...magicItemsXgteTcoe2014]),
   classStartingEquipment: classStartingEquipment2014,
   backgroundStartingEquipment: backgroundStartingEquipment2014,
   spells: spells2014,

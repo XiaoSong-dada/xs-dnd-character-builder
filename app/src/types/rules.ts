@@ -280,6 +280,9 @@ export interface BackgroundRule {
 export interface EquipmentRule {
   readonly id: string
   readonly name: string
+  readonly englishName: string
+  readonly ruleset: RulesetId | '5e-2024'
+  readonly status: CompatibilityStatus
   /** 展开区详情：护甲 AC/力量需求/隐蔽劣势、武器伤害与特性、魔法物品效果要点等（原创转述）。 */
   readonly description: string
   readonly classIds: readonly string[]
@@ -302,9 +305,13 @@ export interface EquipmentRule {
   readonly armorClassBonus?: number
   readonly category: 'armor' | 'shield' | 'weapon' | 'tool' | 'gear' | 'potion' | 'magic'
   /** 魔法物品稀有度；普通装备省略。 */
-  readonly rarity?: 'common' | 'uncommon' | 'rare' | 'very-rare' | 'legendary' | 'artifact'
-  /** 是否需要同调（attunement）才能使用；仅魔法物品使用。 */
-  readonly requiresAttunement?: boolean
+  readonly rarity?: 'common' | 'uncommon' | 'rare' | 'very-rare' | 'legendary' | 'artifact' | 'varies'
+  /** 魔法物品目录分类；普通装备省略。 */
+  readonly magicItemCategory?: 'armor' | 'potion' | 'ring' | 'rod' | 'scroll' | 'staff' | 'wand' | 'weapon' | 'wondrous'
+  /** 同调状态；普通装备与无需同调的魔法物品均为 none。 */
+  readonly attunement: 'none' | 'required' | 'conditional'
+  /** 特殊同调条件的中文说明；仅 conditional 使用。 */
+  readonly attunementCondition?: string
   /** 魔法加值（+1/+2/+3）：供命中/AC/伤害派生计算；仅魔法物品使用。 */
   readonly magicBonus?: number
   readonly sourceIds: readonly string[]

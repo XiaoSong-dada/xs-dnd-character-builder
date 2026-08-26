@@ -1,4 +1,5 @@
 import type { EquipmentRule } from '@/types/rules'
+import { equipmentEnglishName, inferMagicItemCategory } from '@/rules/data/equipment-metadata'
 
 /**
  * 2024 规则魔法物品（2024《地下城主指南》XDMG）— 第一批：2024 新增的确认条目。
@@ -23,10 +24,21 @@ const allClassIds = [
   'class-2014-wizard',
 ] as const
 
-type MagicSeed = Omit<EquipmentRule, 'classIds' | 'sourceIds'>
+type MagicSeed = Omit<EquipmentRule, 'classIds' | 'sourceIds' | 'englishName' | 'ruleset' | 'status' | 'attunement' | 'magicItemCategory'> &
+  Partial<Pick<EquipmentRule, 'englishName' | 'status' | 'attunement' | 'magicItemCategory'>>
 
 function m24(seed: MagicSeed): EquipmentRule {
-  return { ...seed, classIds: allClassIds, sourceIds }
+  const { attunement = 'none', ...item } = seed
+  return {
+    englishName: equipmentEnglishName(seed.id),
+    ruleset: '5e-2024',
+    status: 'index-only',
+    attunement,
+    magicItemCategory: inferMagicItemCategory(seed.id, seed.category),
+    ...item,
+    classIds: allClassIds,
+    sourceIds,
+  }
 }
 
 export const magicItems2024: readonly EquipmentRule[] = [
@@ -37,7 +49,8 @@ export const magicItems2024: readonly EquipmentRule[] = [
     description: '2024 规则新物品：内含一个指定法术的法杖，持握并专注时可施放其中法术（每日次数有限）。稀有度随所含法术环级提升（戏法常见至 5 环传说）。',
     category: 'magic',
     equippable: true,
-    requiresAttunement: true,
+    rarity: 'varies',
+    attunement: 'required',
   }),
   m24({
     id: 'enspelled-weapon',
@@ -45,7 +58,8 @@ export const magicItems2024: readonly EquipmentRule[] = [
     description: '2024 规则新物品：内含一个指定法术的魔法武器，持握并专注时可施放其中法术（每日次数有限）。稀有度随所含法术环级提升（戏法常见至 5 环传说）。',
     category: 'weapon',
     equippable: true,
-    requiresAttunement: true,
+    rarity: 'varies',
+    attunement: 'required',
   }),
   m24({
     id: 'enspelled-amulet',
@@ -53,7 +67,8 @@ export const magicItems2024: readonly EquipmentRule[] = [
     description: '2024 规则新物品：内含一个指定法术的护符，佩戴并专注时可施放其中法术（每日次数有限）。稀有度随所含法术环级提升（戏法常见至 5 环传说）。',
     category: 'magic',
     equippable: true,
-    requiresAttunement: true,
+    rarity: 'varies',
+    attunement: 'required',
   }),
 
   // ── 2024 新增：徒手力量绑带（Wraps of Unarmed Power）────────────

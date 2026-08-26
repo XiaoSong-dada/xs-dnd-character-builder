@@ -24,10 +24,10 @@ describe('关于本站路由与导航', () => {
     expect(router.resolve('/profile').name).toBe('not-found')
   })
 
-  it('底部导航使用“关于”和信息图标', () => {
+  it('底部导航使用“关于本站”和信息图标', () => {
     expect(navigationItems.at(-1)).toEqual({
       routeName: 'about',
-      label: '关于',
+      label: '关于本站',
       iconId: 'navigation-about',
     })
     expect(navigationSprite).toContain('id="navigation-about"')

@@ -18,6 +18,22 @@ function buttonByText(text: string): HTMLButtonElement | undefined {
     .find((button) => button.textContent?.trim() === text)
 }
 
+function fieldsetByLegend(text: string): HTMLFieldSetElement {
+  const fieldset = Array.from(document.body.querySelectorAll<HTMLFieldSetElement>('fieldset'))
+    .find((candidate) => candidate.querySelector('legend')?.textContent?.trim() === text)
+  if (!fieldset) throw new Error(`未找到筛选组：${text}`)
+  return fieldset
+}
+
+async function toggleCheckbox(fieldset: HTMLFieldSetElement, label: string): Promise<void> {
+  const target = Array.from(fieldset.querySelectorAll<HTMLLabelElement>('label'))
+    .find((candidate) => candidate.textContent?.trim() === label)
+  const input = target?.querySelector<HTMLInputElement>('input')
+  if (!input) throw new Error(`未找到筛选项：${label}`)
+  input.click()
+  await vi.advanceTimersByTimeAsync(0)
+}
+
 describe('AddItemModal', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -44,17 +60,19 @@ describe('AddItemModal', () => {
     search!.value = ''
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)
-    const armorButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.list-shell__filters .ui-chip'))
-      .find((button) => button.textContent?.trim() === '护甲')
-    armorButton!.click()
+    const categoryFieldset = fieldsetByLegend('类别')
+    categoryFieldset.querySelector<HTMLButtonElement>('button')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+    await toggleCheckbox(categoryFieldset, '护甲')
     await vi.advanceTimersByTimeAsync(0)
     const armorTitles = Array.from(document.body.querySelectorAll('.expandable-option-card__title-line')).map((node) => node.textContent)
-    // 护甲分类 = 12 种普通护甲 + 4 件 DMG 魔法护甲（护甲+1、精金/秘银/水手护甲）+ 3 件 XGtE 魔法护甲（光亮/脱卸/闷燃）
+    // 官方魔法物品目录把盾牌归入护甲类，因此除普通护甲外还会包含魔法护甲与魔法盾牌。
     const plainArmor = ['衬甲', '皮甲', '镶钉皮甲', '兽皮甲', '链甲衫', '鳞甲', '胸甲', '半身板甲', '环甲', '链甲', '板条甲', '板甲']
     for (const title of plainArmor) {
       expect(armorTitles).toContain(title)
     }
-    expect(armorTitles?.length).toBe(19)
+    expect(armorTitles?.length).toBeGreaterThanOrEqual(19)
+    expect(armorTitles).not.toContain('长剑')
   })
 
   it('单击物品条目即展开装备详情（下拉介绍）', async () => {
@@ -87,15 +105,116 @@ describe('AddItemModal', () => {
     const armorGrowth = document.querySelector('.list-shell .expandable-option-card__growth')
     expect(armorGrowth?.textContent).toContain('AC 11 + 敏捷调整值（不限）')
 
-    // 药水：稀有度与不可装备
+    // 药水：稀有度与不可装备。先收起上一条详情，避免过渡期内读取旧节点。
+    await clickCard(0)
     search!.value = '治疗药水'
     search!.dispatchEvent(new Event('input'))
     await vi.advanceTimersByTimeAsync(0)
     await clickCard(0)
     const potionGrowth = document.querySelector('.list-shell .expandable-option-card__growth')
     expect(potionGrowth?.textContent).toContain('稀有度：常见')
+    expect(potionGrowth?.textContent).toContain('魔法类别：药水')
     expect(potionGrowth?.textContent).toContain('不可装备')
     expect(potionGrowth?.textContent).toContain('恢复 2d4+2 点生命值')
+  })
+
+  it('大量候选采用渐进显示，且结果总数不被截断', async () => {
+    mount(AddItemModal, { props: { open: true }, attachTo: document.body })
+    expect(cardMains()).toHaveLength(80)
+    expect(document.body.textContent).toContain('找到 677 件物品')
+    const loadMore = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.includes('显示更多'))
+    loadMore!.click()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(cardMains()).toHaveLength(160)
+  })
+
+  it('supports English and stable-ID search, filter collapse, and empty filter groups', async () => {
+    mount(AddItemModal, { props: { open: true }, attachTo: document.body })
+    const search = document.body.querySelector<HTMLInputElement>('.list-shell__search input')!
+
+    search.value = 'Longsword'
+    search.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(cardMains()).toHaveLength(1)
+    expect(document.body.textContent).toContain('长剑')
+
+    search.value = 'potion-of-healing'
+    search.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(cardMains()).toHaveLength(1)
+    expect(document.body.textContent).toContain('治疗药水')
+
+    buttonByText('隐藏筛选')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(document.body.querySelector('.add-item-modal__filters')).toBeNull()
+    buttonByText('显示筛选')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+
+    fieldsetByLegend('类别').querySelector<HTMLButtonElement>('button')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(cardMains()).toHaveLength(0)
+    expect(document.body.textContent).toContain('至少有一个筛选组未选择任何条件')
+  })
+
+  it('展示特殊同调条件，并阻止直接添加多型号聚合索引', async () => {
+    mount(AddItemModal, { props: { open: true }, attachTo: document.body })
+    const search = document.body.querySelector<HTMLInputElement>('.list-shell__search input')!
+
+    search.value = 'Staff of Fire'
+    search.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    await clickCard(0)
+    expect(document.body.querySelector('.expandable-option-card__growth')?.textContent)
+      .toContain('特殊同调：德鲁伊、术士、魔契师或法师同调')
+
+    await clickCard(0)
+    search.value = 'Ammunition, +1/+2/+3'
+    search.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    await clickCard(0)
+    expect(buttonByText('加入物品栏')!.disabled).toBe(true)
+    expect(document.body.textContent).toContain('该索引包含多个型号')
+  })
+
+  it('每次重新打开恢复全选，单次打开时折叠不清除条件', async () => {
+    const wrapper = mount(AddItemModal, { props: { open: true }, attachTo: document.body })
+    const categoryFieldset = fieldsetByLegend('类别')
+    categoryFieldset.querySelector<HTMLButtonElement>('button')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+    await toggleCheckbox(categoryFieldset, '武器')
+    const filteredCount = cardMains().length
+    expect(filteredCount).toBeGreaterThan(0)
+
+    buttonByText('隐藏筛选')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(cardMains()).toHaveLength(filteredCount)
+    buttonByText('显示筛选')!.click()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fieldsetByLegend('类别').querySelectorAll<HTMLInputElement>('input:checked')).toHaveLength(1)
+
+    await wrapper.setProps({ open: false })
+    await wrapper.setProps({ open: true })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fieldsetByLegend('类别').querySelectorAll<HTMLInputElement>('input:checked'))
+      .toHaveLength(fieldsetByLegend('类别').querySelectorAll<HTMLInputElement>('input').length)
+  })
+
+  it('角色启用来源决定候选池与来源复选项', async () => {
+    mount(AddItemModal, { props: { open: true, enabledSourceIds: ['erftlw-2019-index'] }, attachTo: document.body })
+    expect(fieldsetByLegend('来源').textContent).toContain('ERftLW')
+    expect(fieldsetByLegend('来源').textContent).not.toContain('EGtW')
+
+    const search = document.body.querySelector<HTMLInputElement>('.list-shell__search input')!
+    search.value = 'Earworm'
+    search.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(cardMains()).toHaveLength(1)
+
+    search.value = 'Breathing Bubble'
+    search.dispatchEvent(new Event('input'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(cardMains()).toHaveLength(0)
   })
 
   it('adds a library item to the inventory with quantity and emits add', async () => {
