@@ -16,9 +16,13 @@
  * 修改 Markdown 或同调表后运行 `npm run generate:items` 重新生成。
  */
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const appRoot = resolve(process.cwd())
+// 目录一律基于脚本自身位置定位（app/scripts -> app -> 仓库根 docs），
+// 与运行时的 cwd 无关：本地 npm run、Docker 构建（WORKDIR /app）、CI 行为一致。
+const scriptsDir = dirname(fileURLToPath(import.meta.url))
+const appRoot = resolve(scriptsDir, '..')
 const magicItemsDirectory = resolve(appRoot, '../docs/equipment/5e-2014/magic-items')
 const expansionsDirectory = resolve(appRoot, '../docs/equipment/5e-2014/expansions')
 const generatedDirectory = resolve(appRoot, 'src/rules/data/generated')

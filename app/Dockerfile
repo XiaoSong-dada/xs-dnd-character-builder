@@ -28,15 +28,17 @@ ENV VITE_AUTHOR_NAME=$VITE_AUTHOR_NAME \
     VITE_TIP_WECHAT_QR_URL=$VITE_TIP_WECHAT_QR_URL \
     VITE_TIP_ALIPAY_QR_URL=$VITE_TIP_ALIPAY_QR_URL
 
-COPY package.json pnpm-lock.yaml ./
+COPY app/package.json app/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-COPY . .
+# 构建上下文为仓库根：docs/ 是物品目录的 Markdown 审计源，构建期生成需要
+COPY app/ .
+COPY docs/ ../docs/
 RUN pnpm build
 
 FROM nginx:1.27-alpine AS runtime
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY app/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80

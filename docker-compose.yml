@@ -4,8 +4,8 @@ services:
   app:
     container_name: dnd-character-builder-app
     build:
-      context: ./app
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: app/Dockerfile
       pull: true
       args:
         # Vite 构建期注入的站点信息（取自仓库根 .env，未配置则空）
