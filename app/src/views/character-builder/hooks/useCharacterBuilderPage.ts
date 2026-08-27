@@ -21,6 +21,7 @@ import type {
   AbilityMethod,
   AbilityScores,
   CharacterDraft,
+  CharacterManualEdits,
   CurrencyWallet,
   DependencyImpact,
   DraftStep,
@@ -469,6 +470,10 @@ export function useCharacterBuilderPage() {
     store.updateDraft({ spellSelections: value })
   }
 
+  function updateManualEdits(value: CharacterManualEdits): void {
+    store.updateManualEdits(value)
+  }
+
   function updateIdentity(value: Pick<CharacterDraft, 'name' | 'alignment' | 'notes'>): void {
     store.updateDraft(value)
   }
@@ -605,6 +610,7 @@ export function useCharacterBuilderPage() {
     updateInfusions,
     updateAdventureGold,
     updateSpells,
+    updateManualEdits,
     updateIdentity,
     updateAbilities,
     updateRaceAbilityChoices,

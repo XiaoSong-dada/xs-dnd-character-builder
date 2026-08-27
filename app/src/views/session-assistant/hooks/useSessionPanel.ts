@@ -3,7 +3,8 @@ import type { Ref } from 'vue'
 
 import { deriveCharacter } from '@/rules/derive'
 import { rulesRepository } from '@/rules/repository'
-import { getRequiredSpellCount, getSpellCandidates, getSpellSlots, getSpellcastingConfig } from '@/rules/spellcasting'
+import { getEffectiveSpellSlots, getRequiredSpellCount, getSpellCandidates, getSpellcastingConfig, getUnpreparedManualSpellIds } from '@/rules/spellcasting'
+import { normalizeManualEdits } from '@/rules/manual-edits'
 import {
   applyExhaustionChange,
   applyHpChange,
@@ -29,9 +30,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   const maxHp = computed(() => derived.value.hitPoints.value)
   const className = computed(() => draft.value.classId ? (rulesRepository.getClass(draft.value.classId)?.name ?? '') : '')
   const spellcastingConfig = computed(() => getSpellcastingConfig(draft.value))
-  const spellSlots = computed(() =>
-    spellcastingConfig.value ? getSpellSlots(spellcastingConfig.value, draft.value.targetLevel) : [],
-  )
+  const spellSlots = computed(() => getEffectiveSpellSlots(draft.value))
   const pactSlotLevels = computed(() => spellSlots.value.filter((slot) => slot.pact).map((slot) => slot.level))
 
   // ---- 法术书（spellbook 模式）：未准备法术与准备切换 ----
@@ -41,8 +40,8 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   /** 法术书中未准备的法术（长休可换入准备）；仅 spellbook 模式有值。 */
   const unpreparedFromBook = computed(() => {
     const config = spellcastingConfig.value
-    if (!config) return []
-    return getSpellCandidates(draft.value, config).prepareFromBook
+    const normal = config ? getSpellCandidates(draft.value, config).prepareFromBook : []
+    return [...new Set([...normal, ...getUnpreparedManualSpellIds(draft.value)])]
       .map((id) => rulesRepository.getSpell(id))
       .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell))
   })
@@ -52,6 +51,17 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
 
   /** 准备/取消准备法术书中未准备的法术（与角色卡 togglePrepare 同一语义）。 */
   function togglePrepareSpell(spellId: string): void {
+    const manual = normalizeManualEdits(draft.value.manualEdits)
+    const manualSpell = manual.addedSpells.find((item) => item.spellId === spellId)
+    if (manualSpell) {
+      store.updateDraftById(draft.value.id, {
+        manualEdits: {
+          ...manual,
+          addedSpells: manual.addedSpells.map((item) => item.spellId === spellId ? { ...item, prepared: !item.prepared } : item),
+        },
+      })
+      return
+    }
     const current = draft.value.spellSelections.preparedSpellIds
     const next = current.includes(spellId)
       ? current.filter((id) => id !== spellId)
@@ -62,6 +72,11 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     store.updateDraftById(draft.value.id, {
       spellSelections: { ...draft.value.spellSelections, preparedSpellIds: next },
     })
+  }
+
+  function canPrepareSpell(spellId: string): boolean {
+    return normalizeManualEdits(draft.value.manualEdits).addedSpells.some((item) => item.spellId === spellId)
+      || canPrepareMore.value
   }
 
   // ---- 局内状态（首次进入初始化；按草稿 id 独立存储）----
@@ -79,11 +94,11 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   }
   ensureState()
 
-  // 角色升级/重新编辑后最大 HP 变化 → 当前 HP 按新上限钳制
-  watch(maxHp, (value) => {
-    if (!sessionState.value) return
-    sessionState.value = clampCurrentHp(sessionState.value, value)
-    SessionStateStorageService.save(sessionState.value)
+  // Store 会先协调并持久化 HP/环位；草稿刷新后重新载入，避免面板内存态覆盖协调结果。
+  watch([maxHp, () => spellSlots.value.map((slot) => `${slot.level}:${slot.count}`).join('|')], ([value]) => {
+    const stored = SessionStateStorageService.load(draft.value.id)
+    if (!stored) return
+    sessionState.value = clampCurrentHp(stored, value)
   })
 
   function persist(next: SessionState): void {
@@ -205,6 +220,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     unpreparedFromBook,
     canPrepareMore,
     togglePrepareSpell,
+    canPrepareSpell,
     changeHp,
     changeSpellSlot,
     changeExhaustion,

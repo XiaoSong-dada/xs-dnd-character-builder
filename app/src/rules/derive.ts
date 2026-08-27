@@ -4,6 +4,7 @@ import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
 import { isSourceEnabled } from '@/rules/source-books'
 import { artificerInfusions2014 } from '@/rules/data/artificer-2014'
 import { getSpellcastingConfig } from '@/rules/spellcasting'
+import { normalizeManualEdits } from '@/rules/manual-edits'
 import type { RaceRule } from '@/types/rules'
 import type {
   AbilityKey,
@@ -147,11 +148,24 @@ function derived(value: number, sources: readonly ValueSource[]): DerivedValue<n
   return { value, sources }
 }
 
+function withManualAdjustment(value: DerivedValue<number>, adjustment: number | undefined, field: string): DerivedValue<number> {
+  if (!adjustment) return value
+  return derived(value.value + adjustment, [...value.sources, {
+    id: `manual-${field}`,
+    label: '人工调整',
+    value: adjustment,
+    detail: adjustment > 0 ? `人工增加 ${adjustment}` : `人工减少 ${Math.abs(adjustment)}`,
+  }])
+}
+
 export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
-  const abilities = deriveAbilities(draft)
+  const manual = normalizeManualEdits(draft.manualEdits)
+  const systemAbilities = deriveAbilities(draft)
   const abilityKeys: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
+  const abilities = Object.fromEntries(abilityKeys.map((key) => [key, systemAbilities[key] + (manual.abilityAdjustments[key] ?? 0)])) as unknown as AbilityScores
   const modifiers = Object.fromEntries(abilityKeys.map((key) => [key, abilityModifier(abilities[key])])) as Record<AbilityKey, number>
-  const proficiency = proficiencyBonus(draft.targetLevel)
+  const systemProficiency = proficiencyBonus(draft.targetLevel)
+  const proficiency = systemProficiency + manual.proficiencyBonusAdjustment
   const selectedClass = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
   const classRule = selectedClass && isSourceEnabled(selectedClass.sourceIds, draft.enabledSourceIds) ? selectedClass : undefined
   const selectedSubclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
@@ -250,15 +264,15 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   }
   const savingThrows = Object.fromEntries(abilityKeys.map((key) => {
     const proficient = classRule?.savingThrowAbilities.includes(key) ?? false
-    return [key, derived(modifiers[key] + (proficient ? proficiency : 0), [
+    return [key, withManualAdjustment(derived(modifiers[key] + (proficient ? proficiency : 0), [
       { id: `${key}-save-ability`, label: '属性调整值', value: modifiers[key], detail: `${key.toUpperCase()} ${abilities[key]}` },
       ...(proficient ? [{ id: `${key}-save-proficiency`, label: '职业豁免熟练', value: proficiency, detail: classRule?.name ?? '' }] : []),
-    ])]
+    ]), manual.savingThrowAdjustments[key], `save-${key}`)]
   })) as Record<AbilityKey, DerivedValue<number>>
   const skills = Object.fromEntries(Object.entries(skillAbilities).map(([skillId, ability]) => {
     const proficient = proficientSkillIds.has(skillId)
     const expertise = expertiseIds.has(skillId)
-    return [skillId, derived(modifiers[ability] + (proficient ? proficiency : 0) + (expertise ? proficiency : 0), [
+    return [skillId, withManualAdjustment(derived(modifiers[ability] + (proficient ? proficiency : 0) + (expertise ? proficiency : 0), [
       { id: `${skillId}-ability`, label: `${ability.toUpperCase()}调整值`, value: modifiers[ability], detail: `属性 ${abilities[ability]}` },
       ...(proficient ? [{
         id: `${skillId}-proficiency`,
@@ -272,7 +286,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
         value: proficiency,
         detail: '熟练加值再增加一次',
       }] : []),
-    ])]
+    ]), manual.skillAdjustments[skillId], skillId)]
   }))
   const raceSpeed = subrace?.speed ?? race?.speed ?? 30
   const classSpeedBonus = draft.classId === 'class-2014-barbarian' && draft.targetLevel >= 5 && !hasHeavyArmor
@@ -290,77 +304,87 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const spellcasting = getSpellcastingConfig(draft)
   const spellAbilityModifier = spellcasting ? modifiers[spellcasting.ability] : undefined
 
+  const proficiencyValue = withManualAdjustment(
+    derived(systemProficiency, [{ id: 'level-proficiency', label: '熟练加值', value: systemProficiency, detail: `${draft.targetLevel}级角色` }]),
+    manual.proficiencyBonusAdjustment,
+    'proficiency',
+  )
+  const hitPoints = withManualAdjustment(derived(hp, [
+    { id: 'class-hit-die', label: '职业生命骰', value: hitDie, detail: classRule?.name ?? '未选择职业' },
+    { id: 'constitution', label: '体质调整值', value: modifiers.con * draft.targetLevel, detail: `体质 ${abilities.con}` },
+    ...(subclassEffects.hitPointBonus !== 0 ? [{ id: 'subclass-hit-points', label: '子职生命加成', value: subclassEffects.hitPointBonus, detail: draft.subclassId ? `${rulesRepository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
+  ]), manual.derivedAdjustments.hitPoints, 'hit-points')
+  const armorClassValue = withManualAdjustment(derived(armorClass, [
+    {
+      id: 'armor-base',
+      label: equippedArmor?.name ?? (barbarianUnarmored ? '野蛮人无甲防御' : monkUnarmored ? '武僧无甲防御' : subclassEffects.armorClassBase ? '子职护甲公式' : '基础护甲'),
+      value: baseArmor,
+      detail: equippedArmor
+        ? equippedArmor.description
+        : barbarianUnarmored
+          ? '10 + 敏捷调整值 + 体质调整值'
+          : monkUnarmored
+            ? '10 + 敏捷调整值 + 感知调整值'
+            : subclassEffects.armorClassBase
+              ? `${subclassEffects.armorClassBase} + 敏捷调整值`
+              : '10 + 敏捷调整值',
+    },
+    ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: '已装备' }] : []),
+    ...(defenseStyle && equippedArmor ? [{ id: 'defense-style', label: '防御战斗风格', value: 1, detail: '穿着护甲时生效' }] : []),
+    ...(armorInfusionBonus ? [{ id: 'artificer-enhanced-defense', label: '工匠灌注', value: armorInfusionBonus, detail: '已绑定并装备的强化防御物品' }] : []),
+    ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${rulesRepository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
+  ]), manual.derivedAdjustments.armorClass, 'armor-class')
+  const initiativeValue = withManualAdjustment(derived(modifiers.dex, [{ id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` }]), manual.derivedAdjustments.initiative, 'initiative')
+  const attackValue = withManualAdjustment(derived(proficiency + modifiers[attackAbility] + weaponMagicBonus + subclassEffects.attackBonus, [
+    { id: 'attack-proficiency', label: '熟练加值', value: proficiency, detail: '熟练武器' },
+    { id: `attack-${attackAbility}`, label: `${attackAbility.toUpperCase()}调整值`, value: modifiers[attackAbility], detail: `属性 ${abilities[attackAbility]}` },
+    ...(weaponMagicBonus ? [{ id: 'magic-weapon-attack', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []),
+    ...(subclassEffects.attackBonus !== 0 ? [{ id: 'subclass-attack', label: '子职攻击加成', value: subclassEffects.attackBonus, detail: '来自子职特性' }] : []),
+  ]), manual.derivedAdjustments.attackBonus, 'attack')
+  const damageValue = withManualAdjustment(derived(modifiers[attackAbility] + weaponMagicBonus + subclassEffects.damageBonus, [{
+    id: `damage-${attackAbility}`,
+    label: `${attackAbility.toUpperCase()}调整值`,
+    value: modifiers[attackAbility],
+    detail: `属性 ${abilities[attackAbility]}`,
+  }, ...(weaponMagicBonus ? [{ id: 'magic-weapon-damage', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []), ...(subclassEffects.damageBonus !== 0 ? [{ id: 'subclass-damage', label: '子职伤害加成', value: subclassEffects.damageBonus, detail: '来自子职特性' }] : [])]), manual.derivedAdjustments.attackDamageBonus, 'damage')
+  const speedValue = withManualAdjustment(derived(speed, [{
+    id: 'race-speed', label: '种族速度', value: raceSpeed, detail: subrace?.speed ? subrace.name : race?.name ?? '默认',
+  }, ...(classSpeedBonus ? [{ id: 'class-speed', label: '职业移动加值', value: classSpeedBonus, detail: classRule?.name ?? '' }] : []), ...(subclassEffects.speedBonus !== 0 ? [{ id: 'subclass-speed', label: '子职移动加值', value: subclassEffects.speedBonus, detail: '来自子职特性' }] : [])]), manual.derivedAdjustments.speed, 'speed')
+  const passivePerception = withManualAdjustment(derived(10 + (skills['skill-perception']?.value ?? 0), [
+    { id: 'passive-base', label: '被动基础', value: 10, detail: '固定基础值' },
+    { id: 'passive-perception-skill', label: '察觉加值', value: skills['skill-perception']?.value ?? 0, detail: '来自察觉技能' },
+  ]), manual.derivedAdjustments.passivePerception, 'passive-perception')
+  const hasManualSpellAttack = manual.derivedAdjustments.spellAttackBonus !== undefined
+  const hasManualSpellDc = manual.derivedAdjustments.spellSaveDc !== undefined
+  const baseSpellAttack = spellcasting && spellAbilityModifier !== undefined && draft.targetLevel >= spellcasting.startsAtLevel
+    ? derived(proficiency + spellAbilityModifier + subclassEffects.spellAttackBonus, [
+      { id: 'spell-attack-proficiency', label: '熟练加值', value: proficiency, detail: `${draft.targetLevel}级角色` },
+      { id: 'spell-attack-ability', label: `${spellcasting.ability.toUpperCase()}调整值`, value: spellAbilityModifier, detail: '职业施法属性' },
+      ...(subclassEffects.spellAttackBonus !== 0 ? [{ id: 'subclass-spell-attack', label: '子职法术攻击加成', value: subclassEffects.spellAttackBonus, detail: '来自子职特性' }] : []),
+    ])
+    : hasManualSpellAttack ? derived(0, [{ id: 'manual-spell-base', label: '人工施法基础', value: 0, detail: '当前职业无系统施法能力' }]) : undefined
+  const baseSpellDc = spellcasting && spellAbilityModifier !== undefined && draft.targetLevel >= spellcasting.startsAtLevel
+    ? derived(8 + proficiency + spellAbilityModifier + subclassEffects.spellSaveDcBonus, [
+      { id: 'spell-dc-base', label: '法术豁免基础', value: 8, detail: '固定基础值' },
+      { id: 'spell-dc-proficiency', label: '熟练加值', value: proficiency, detail: `${draft.targetLevel}级角色` },
+      { id: 'spell-dc-ability', label: `${spellcasting.ability.toUpperCase()}调整值`, value: spellAbilityModifier, detail: '职业施法属性' },
+      ...(subclassEffects.spellSaveDcBonus !== 0 ? [{ id: 'subclass-spell-dc', label: '子职法术DC加成', value: subclassEffects.spellSaveDcBonus, detail: '来自子职特性' }] : []),
+    ])
+    : hasManualSpellDc ? derived(0, [{ id: 'manual-spell-dc-base', label: '人工施法基础', value: 0, detail: '当前职业无系统施法能力' }]) : undefined
+
   return {
     abilities,
     modifiers,
-    proficiencyBonus: derived(proficiency, [{ id: 'level-proficiency', label: '熟练加值', value: proficiency, detail: `${draft.targetLevel}级角色` }]),
-    hitPoints: derived(hp, [
-      { id: 'class-hit-die', label: '职业生命骰', value: hitDie, detail: classRule?.name ?? '未选择职业' },
-      { id: 'constitution', label: '体质调整值', value: modifiers.con * draft.targetLevel, detail: `体质 ${abilities.con}` },
-      ...(subclassEffects.hitPointBonus !== 0 ? [{ id: 'subclass-hit-points', label: '子职生命加成', value: subclassEffects.hitPointBonus, detail: draft.subclassId ? `${rulesRepository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
-    ]),
-    armorClass: derived(armorClass, [
-      {
-        id: 'armor-base',
-        label: equippedArmor?.name ?? (barbarianUnarmored ? '野蛮人无甲防御' : monkUnarmored ? '武僧无甲防御' : subclassEffects.armorClassBase ? '子职护甲公式' : '基础护甲'),
-        value: baseArmor,
-        detail: equippedArmor
-          ? equippedArmor.description
-          : barbarianUnarmored
-            ? '10 + 敏捷调整值 + 体质调整值'
-            : monkUnarmored
-              ? '10 + 敏捷调整值 + 感知调整值'
-              : subclassEffects.armorClassBase
-                ? `${subclassEffects.armorClassBase} + 敏捷调整值`
-                : '10 + 敏捷调整值',
-      },
-      ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: '已装备' }] : []),
-      ...(defenseStyle && equippedArmor ? [{ id: 'defense-style', label: '防御战斗风格', value: 1, detail: '穿着护甲时生效' }] : []),
-      ...(armorInfusionBonus ? [{ id: 'artificer-enhanced-defense', label: '工匠灌注', value: armorInfusionBonus, detail: '已绑定并装备的强化防御物品' }] : []),
-      ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${rulesRepository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
-    ]),
-    initiative: derived(modifiers.dex, [{ id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` }]),
-    attackBonus: derived(proficiency + modifiers[attackAbility] + weaponMagicBonus + subclassEffects.attackBonus, [
-      { id: 'attack-proficiency', label: '熟练加值', value: proficiency, detail: '熟练武器' },
-      { id: `attack-${attackAbility}`, label: `${attackAbility.toUpperCase()}调整值`, value: modifiers[attackAbility], detail: `属性 ${abilities[attackAbility]}` },
-      ...(weaponMagicBonus ? [{ id: 'magic-weapon-attack', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []),
-      ...(subclassEffects.attackBonus !== 0 ? [{ id: 'subclass-attack', label: '子职攻击加成', value: subclassEffects.attackBonus, detail: '来自子职特性' }] : []),
-    ]),
-    attackDamageBonus: derived(modifiers[attackAbility] + weaponMagicBonus + subclassEffects.damageBonus, [{
-      id: `damage-${attackAbility}`,
-      label: `${attackAbility.toUpperCase()}调整值`,
-      value: modifiers[attackAbility],
-      detail: `属性 ${abilities[attackAbility]}`,
-    }, ...(weaponMagicBonus ? [{ id: 'magic-weapon-damage', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []), ...(subclassEffects.damageBonus !== 0 ? [{ id: 'subclass-damage', label: '子职伤害加成', value: subclassEffects.damageBonus, detail: '来自子职特性' }] : [])]),
-    ...(spellcasting && spellAbilityModifier !== undefined && draft.targetLevel >= spellcasting.startsAtLevel ? {
-      spellAttackBonus: derived(proficiency + spellAbilityModifier + subclassEffects.spellAttackBonus, [
-        { id: 'spell-attack-proficiency', label: '熟练加值', value: proficiency, detail: `${draft.targetLevel}级角色` },
-        { id: 'spell-attack-ability', label: `${spellcasting.ability.toUpperCase()}调整值`, value: spellAbilityModifier, detail: '职业施法属性' },
-        ...(subclassEffects.spellAttackBonus !== 0 ? [{ id: 'subclass-spell-attack', label: '子职法术攻击加成', value: subclassEffects.spellAttackBonus, detail: '来自子职特性' }] : []),
-      ]),
-      spellSaveDc: derived(8 + proficiency + spellAbilityModifier + subclassEffects.spellSaveDcBonus, [
-        { id: 'spell-dc-base', label: '法术豁免基础', value: 8, detail: '固定基础值' },
-        { id: 'spell-dc-proficiency', label: '熟练加值', value: proficiency, detail: `${draft.targetLevel}级角色` },
-        { id: 'spell-dc-ability', label: `${spellcasting.ability.toUpperCase()}调整值`, value: spellAbilityModifier, detail: '职业施法属性' },
-        ...(subclassEffects.spellSaveDcBonus !== 0 ? [{ id: 'subclass-spell-dc', label: '子职法术DC加成', value: subclassEffects.spellSaveDcBonus, detail: '来自子职特性' }] : []),
-      ]),
-    } : {}),
-    speed: derived(speed, [{
-      id: 'race-speed',
-      label: '种族速度',
-      value: raceSpeed,
-      detail: subrace?.speed ? subrace.name : race?.name ?? '默认',
-    }, ...(classSpeedBonus ? [{
-      id: 'class-speed',
-      label: '职业移动加值',
-      value: classSpeedBonus,
-      detail: classRule?.name ?? '',
-    }] : []), ...(subclassEffects.speedBonus !== 0 ? [{
-      id: 'subclass-speed',
-      label: '子职移动加值',
-      value: subclassEffects.speedBonus,
-      detail: '来自子职特性',
-    }] : [])]),
+    proficiencyBonus: proficiencyValue,
+    hitPoints,
+    armorClass: armorClassValue,
+    initiative: initiativeValue,
+    attackBonus: attackValue,
+    attackDamageBonus: damageValue,
+    ...(baseSpellAttack ? { spellAttackBonus: withManualAdjustment(baseSpellAttack, manual.derivedAdjustments.spellAttackBonus, 'spell-attack') } : {}),
+    ...(baseSpellDc ? { spellSaveDc: withManualAdjustment(baseSpellDc, manual.derivedAdjustments.spellSaveDc, 'spell-dc') } : {}),
+    speed: speedValue,
+    passivePerception,
     savingThrows,
     skills,
   }

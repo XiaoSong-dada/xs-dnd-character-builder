@@ -2,6 +2,9 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
+import { deriveCharacter } from '@/rules/derive'
+import { EMPTY_MANUAL_EDITS } from '@/rules/manual-edits'
+import { SessionStateStorageService } from '@/services/session-state-storage'
 
 describe('character drafts store', () => {
   beforeEach(() => {
@@ -58,5 +61,33 @@ describe('character drafts store', () => {
     expect(store.drafts).toHaveLength(0)
     expect(store.activeDraftId).toBeUndefined()
     expect(store.deleteDraft('missing')).toBe(false)
+  })
+
+  it('人工最大生命与环位变化时协调跑团状态，并统一归一化写入', () => {
+    const store = useCharacterDraftsStore()
+    const draft = store.createDraft()
+    store.updateDraft({ classId: 'class-2014-wizard', targetLevel: 5 })
+    const current = store.activeDraft!
+    const oldMax = deriveCharacter(current).hitPoints.value
+    SessionStateStorageService.save({
+      draftId: draft.id,
+      currentHp: oldMax - 10,
+      usedSpellSlots: { 1: 3, 3: 2 },
+      exhaustionLevel: 0,
+      debuffs: [],
+      updatedAt: '',
+    })
+
+    store.updateManualEdits({
+      ...EMPTY_MANUAL_EDITS,
+      derivedAdjustments: { hitPoints: 20, invalid: 4 } as never,
+      spellSlotAdjustments: { 1: -3, 9: 2, 10: 4 },
+    })
+
+    const next = store.activeDraft!
+    expect(next.manualEdits.derivedAdjustments).toEqual({ hitPoints: 20 })
+    expect(next.manualEdits.spellSlotAdjustments).toEqual({ 1: -3, 9: 2 })
+    expect(SessionStateStorageService.load(draft.id)?.currentHp).toBe(oldMax + 10)
+    expect(SessionStateStorageService.load(draft.id)?.usedSpellSlots).toEqual({ 1: 1, 3: 2 })
   })
 })

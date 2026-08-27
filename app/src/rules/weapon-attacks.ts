@@ -64,13 +64,15 @@ export function deriveWeaponAttack(
   const magicBonus = equipment.magicBonus ?? 0
   const subclassAttackBonus = derived.attackBonus.sources.find((source) => source.id === 'subclass-attack')?.value ?? 0
   const subclassDamageBonus = derived.attackDamageBonus.sources.find((source) => source.id === 'subclass-damage')?.value ?? 0
+  const manualAttackBonus = derived.attackBonus.sources.find((source) => source.id === 'manual-attack')?.value ?? 0
+  const manualDamageBonus = derived.attackDamageBonus.sources.find((source) => source.id === 'manual-damage')?.value ?? 0
   return {
     itemId: equipment.id,
     name: equipment.name,
     ability,
     proficient,
-    attackBonus: derived.modifiers[ability] + (proficient ? derived.proficiencyBonus.value : 0) + magicBonus + subclassAttackBonus,
-    damageBonus: derived.modifiers[ability] + magicBonus + subclassDamageBonus,
+    attackBonus: derived.modifiers[ability] + (proficient ? derived.proficiencyBonus.value : 0) + magicBonus + subclassAttackBonus + manualAttackBonus,
+    damageBonus: derived.modifiers[ability] + magicBonus + subclassDamageBonus + manualDamageBonus,
     damageDice: equipment.damageDice,
     versatileDamageDice: equipment.versatileDamageDice,
     damageType: equipment.damageType,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
+import { EMPTY_MANUAL_EDITS } from '@/rules/manual-edits'
 import {
   FULL_CASTER_SPELL_SLOTS,
   HALF_CASTER_SPELL_SLOTS,
@@ -8,7 +9,7 @@ import {
   THIRD_CASTER_SPELL_SLOTS,
 } from '@/rules/data/spell-slots-2014'
 import { rulesRepository } from '@/rules/repository'
-import { getCheckpointCandidates, getMagicalSecretsSpellIds, getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellCount, getSpellcastingConfig, getSpellSlots, validateSpellSelections } from '@/rules/spellcasting'
+import { getCheckpointCandidates, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellCount, getSpellcastingConfig, getSpellSlots, getUnpreparedManualSpellIds, validateSpellSelections } from '@/rules/spellcasting'
 import { validateDraft } from '@/rules/validate'
 import type { CharacterDraft } from '@/types/character'
 import type { ChoiceCheckpoint } from '@/types/rules'
@@ -42,6 +43,7 @@ function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
     adventureGold: 0,
     equipmentNeedsReview: false,
     spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
+    manualEdits: EMPTY_MANUAL_EDITS,
     name: '施法测试',
     alignment: '',
     notes: '',
@@ -235,6 +237,44 @@ describe('2014 spell slots', () => {
         }
       }
     }
+  })
+})
+
+describe('人工法术与法术位', () => {
+  it('无施法职业可获得 1—9 环人工法术位', () => {
+    const fighter = draft({
+      classId: 'class-2014-fighter',
+      subclassId: undefined,
+      manualEdits: { ...EMPTY_MANUAL_EDITS, spellSlotAdjustments: { 1: 2, 9: 1 } },
+    })
+    expect(getEffectiveSpellSlots(fighter)).toEqual([
+      { level: 1, count: 2 },
+      { level: 9, count: 1 },
+    ])
+  })
+
+  it('按加入目标和准备状态区分可施放与未准备人工法术，并按 ID 去重', () => {
+    const edited = draft({
+      classId: 'class-2014-fighter',
+      spellSelections: {
+        cantripIds: ['spell-2014-fire-bolt'], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [],
+      },
+      manualEdits: {
+        ...EMPTY_MANUAL_EDITS,
+        addedSpells: [
+          { spellId: 'spell-2014-fire-bolt', destination: 'granted', prepared: false },
+          { spellId: 'spell-2014-magic-missile', destination: 'spellbook', prepared: false },
+          { spellId: 'spell-2014-shield', destination: 'prepared-list', prepared: true },
+          { spellId: 'spell-2014-bless', destination: 'granted', prepared: false },
+        ],
+      },
+    })
+    expect(getEffectiveSelectedSpellIds(edited)).toEqual([
+      'spell-2014-fire-bolt',
+      'spell-2014-shield',
+      'spell-2014-bless',
+    ])
+    expect(getUnpreparedManualSpellIds(edited)).toEqual(['spell-2014-magic-missile'])
   })
 })
 

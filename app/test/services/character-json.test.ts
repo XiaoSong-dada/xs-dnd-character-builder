@@ -12,7 +12,7 @@ describe('CharacterJsonService', () => {
     expect(() => CharacterJsonService.importDraft(JSON.stringify({ schemaVersion: 2, ruleset: '5e-2024' }))).toThrowError('当前仅支持 5e-2014')
   })
 
-  it('imports a 2014 v2 draft as schema v5 without silently dropping equipment', () => {
+  it('imports a 2014 v2 draft as schema v6 without silently dropping equipment', () => {
     const imported = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 2,
       id: 'old-wizard',
@@ -23,7 +23,7 @@ describe('CharacterJsonService', () => {
       equippedItemIds: ['dagger'],
     }))
 
-    expect(imported.schemaVersion).toBe(5)
+    expect(imported.schemaVersion).toBe(6)
     expect(imported.equipmentNeedsReview).toBe(true)
     expect(imported.adventureGold).toBe(0)
     expect(imported.inventory.find((entry) => entry.itemId === 'dagger')).toMatchObject({
@@ -31,9 +31,10 @@ describe('CharacterJsonService', () => {
       equippedQuantity: 1,
       sourceKind: 'legacy',
     })
+    expect(imported.manualEdits.addedSpells).toEqual([])
   })
 
-  it('v3 导入保留 adventureGold，缺省时兜底为 0，并升级为 v5 补全转录字段', () => {
+  it('v3 导入保留 adventureGold，缺省时兜底为 0，并升级为 v6 补全转录字段', () => {
     const withGold = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 3,
       id: 'v3-with-gold',
@@ -43,7 +44,7 @@ describe('CharacterJsonService', () => {
       adventureGold: 42,
     }))
     expect(withGold.adventureGold).toBe(42)
-    expect(withGold.schemaVersion).toBe(5)
+    expect(withGold.schemaVersion).toBe(6)
     expect(withGold.spellSelections.transcribedSpellIds).toEqual([])
 
     const withoutGold = CharacterJsonService.importDraft(JSON.stringify({
@@ -56,7 +57,7 @@ describe('CharacterJsonService', () => {
     expect(withoutGold.adventureGold).toBe(0)
   })
 
-  it('v4 导入升级到 v5，导出往返保留 transcribedSpellIds', () => {
+  it('v4 导入升级到 v6，导出往返保留 transcribedSpellIds 与人工编辑', () => {
     const imported = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 4,
       id: 'v4-with-transcribed',
@@ -71,9 +72,10 @@ describe('CharacterJsonService', () => {
         transcribedSpellIds: ['spell-2014-magic-missile'],
       },
     }))
-    expect(imported.schemaVersion).toBe(5)
+    expect(imported.schemaVersion).toBe(6)
     expect(imported.spellSelections.transcribedSpellIds).toEqual(['spell-2014-magic-missile'])
     const roundTrip = CharacterJsonService.importDraft(CharacterJsonService.exportDraft(imported))
     expect(roundTrip.spellSelections.transcribedSpellIds).toEqual(['spell-2014-magic-missile'])
+    expect(roundTrip.manualEdits).toEqual(imported.manualEdits)
   })
 })

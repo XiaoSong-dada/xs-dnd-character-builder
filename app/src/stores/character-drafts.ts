@@ -1,16 +1,21 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 
-import { deriveCharacterSummary } from '@/rules/derive'
+import { deriveCharacter, deriveCharacterSummary } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { validateDraft } from '@/rules/validate'
 import { validateSpellSelections } from '@/rules/spellcasting'
 import { EMPTY_CURRENCY, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { getDefaultEnabledSourceIds } from '@/rules/source-books'
+import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
+import { getEffectiveSpellSlots } from '@/rules/spellcasting'
+import { reconcileSessionLimits } from '@/rules/session-state'
+import { SessionStateStorageService } from '@/services/session-state-storage'
 import { CharacterJsonService } from '@/services/character-json'
 import { DraftStorageService } from '@/services/draft-storage'
 import type {
   AbilityScores,
+  CharacterManualEdits,
   CharacterDraft,
   ChoiceSelection,
   DraftStep,
@@ -26,7 +31,7 @@ function newId(): string {
 function createCharacterDraft(): CharacterDraft {
   const now = new Date().toISOString()
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     id: newId(),
     ruleset: '5e-2014',
     createdAt: now,
@@ -54,6 +59,7 @@ function createCharacterDraft(): CharacterDraft {
       spellbookSpellIds: [],
       transcribedSpellIds: [],
     },
+    manualEdits: EMPTY_MANUAL_EDITS,
     name: '',
     alignment: '',
     notes: '',
@@ -128,7 +134,18 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     if (index < 0) return
     const current = drafts.value[index]
     if (!current) return
-    drafts.value[index] = { ...current, ...patch, updatedAt: new Date().toISOString() }
+    replaceDraft(index, current, { ...current, ...patch, updatedAt: new Date().toISOString() })
+  }
+
+  function replaceDraft(index: number, current: CharacterDraft, next: CharacterDraft): void {
+    next = { ...next, manualEdits: normalizeManualEdits(next.manualEdits) }
+    const state = SessionStateStorageService.load(current.id)
+    if (state) {
+      const oldMaxHp = deriveCharacter(current).hitPoints.value
+      const newMaxHp = deriveCharacter(next).hitPoints.value
+      SessionStateStorageService.save(reconcileSessionLimits(state, oldMaxHp, newMaxHp, getEffectiveSpellSlots(next)))
+    }
+    drafts.value[index] = next
   }
 
   /** 按草稿 id 更新（不改变 activeDraftId）：跑团助手等非车卡流程使用。 */
@@ -137,8 +154,12 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     if (index < 0) return false
     const current = drafts.value[index]
     if (!current) return false
-    drafts.value[index] = { ...current, ...patch, updatedAt: new Date().toISOString() }
+    replaceDraft(index, current, { ...current, ...patch, updatedAt: new Date().toISOString() })
     return true
+  }
+
+  function updateManualEdits(manualEdits: CharacterManualEdits): void {
+    updateDraft({ manualEdits })
   }
 
   function setStep(step: DraftStep): void {
@@ -203,6 +224,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     deleteDraft,
     updateDraft,
     updateDraftById,
+    updateManualEdits,
     setStep,
     saveSelection,
     invalidateSelections,

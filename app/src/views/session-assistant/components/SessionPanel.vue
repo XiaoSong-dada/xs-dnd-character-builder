@@ -17,7 +17,7 @@ import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { getAvailableSlotLevels } from '@/rules/session-state'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
-import { getMaximumSpellLevel, getSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
+import { getEffectiveSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
 import { useSessionAssistantStore } from '@/stores/session-assistant'
 import { DEBUFF_STATUSES, EXHAUSTION_DESCRIPTION } from '@/types/session-state'
@@ -194,21 +194,17 @@ const preparedOrKnownLabel = computed(() =>
   spellcastingConfig.value?.mode === 'prepared' || spellcastingConfig.value?.mode === 'spellbook' ? '已准备' : '已掌握',
 )
 const selectedSpells = computed(() => {
-  const config = spellcastingConfig.value
-  if (!config) return []
-  return getSelectedSpellIds(props.draft, config)
+  return getEffectiveSelectedSpellIds(props.draft)
     .map((id) => rulesRepository.getSpell(id))
-    .filter((spell): spell is SpellRule => Boolean(spell))
+    .filter((spell): spell is SpellRule => Boolean(spell && spell.level > 0))
 })
 const cantripSpells = computed(() =>
-  props.draft.spellSelections.cantripIds
+  getEffectiveSelectedSpellIds(props.draft)
     .map((id) => rulesRepository.getSpell(id))
-    .filter((spell): spell is SpellRule => Boolean(spell)),
+    .filter((spell): spell is SpellRule => Boolean(spell && spell.level === 0)),
 )
 const spellGroups = computed(() => {
-  const config = spellcastingConfig.value
-  if (!config) return []
-  const maximumLevel = getMaximumSpellLevel(config, props.draft.targetLevel)
+  const maximumLevel = Math.max(0, ...selectedSpells.value.map((spell) => spell.level))
   return Array.from({ length: maximumLevel }, (_, index) => index + 1)
     .map((level) => ({ level, spells: selectedSpells.value.filter((spell) => spell.level === level) }))
     .filter((group) => group.spells.length)
@@ -541,10 +537,10 @@ function openTranscribe(spellId?: string): void {
               <button
                 type="button"
                 class="session-panel__adjust"
-                :disabled="!panel.canPrepareMore.value"
-                @click="panel.togglePrepareSpell(spell.id)"
-              >
-                {{ panel.canPrepareMore.value ? '准备' : '已满' }}
+                  :disabled="!panel.canPrepareSpell(spell.id)"
+                  @click="panel.togglePrepareSpell(spell.id)"
+                >
+                  {{ panel.canPrepareSpell(spell.id) ? '准备' : '已满' }}
               </button>
             </template>
             <template v-if="spell.description" #expanded>{{ spell.description }}</template>

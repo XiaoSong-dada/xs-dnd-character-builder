@@ -21,9 +21,9 @@
 - 13 个职业的 2014 起始装备分支、13 个背景固定装备与正式变体替换已接入；冒险套组会展开为具体物品和数量。
 - 118 项子职已登记（116 项玩家可用、2 项 DM 专用）；情境效果使用 `selectable`，缺少必选结构的条目才使用 `index-only`。
 - 子职特性界面：时间线选中子职后展示其等级特性列表；`requiresChoice` 特性（图腾/猎人/战技等）以 `subclass-feature` 检查点提供选择并持久化；角色卡"能力"页签新增"子职特性"区块；首批可核验派生（龙族血脉 AC/HP）已接入 `derive`。
-- 2014 草稿已升级为 schema v5，使用 `enabledSourceIds` 与独立灌注绑定；v2—v4 会推导实际引用来源并保留未知旧 ID。
+- 2014 草稿已升级为 schema v6，使用 `enabledSourceIds`、独立灌注绑定和 `CharacterManualEdits`；v2—v5 自动迁移，旧版本会推导实际引用来源并保留未知旧 ID。
 - 草稿保存、刷新恢复、JSON 导入导出、规则校验、依赖失效保留和角色卡预览已经接通。
-- 角色卡导出：PDF、XLSX 与 JSON 共用角色导出模型；扩展专长、子职选择、工匠灌注和扩展法术保持一致，来源关闭的派生不会静默进入导出。JSON 使用 schema v5。
+- 角色卡导出：PDF、XLSX 与 JSON 共用角色导出模型；扩展专长、子职选择、工匠灌注、人工编辑和人工法术保持一致，来源关闭的派生不会静默进入导出。JSON 使用 schema v6。
 - 车卡编辑流程与最终角色卡顶部可直接返回草稿首页；退出只关闭当前活动草稿，保留全部内容和当前步骤，之后可继续编辑。
 - 首页角色条第三段信息分级展示：完成态显示职业名；进行中已选职业显示"职业 · 第N步"；未选职业显示"第N步 · 步骤名"（步骤文案来自公共 `STEP_META`，不再裸显 `currentStep` 英文 ID）。
 - 主页站点信息：`src/config/site.ts` 为唯一读取 `import.meta.env` 的模块（`VITE_AUTHOR_NAME`/`VITE_GITHUB_URL`/`VITE_AUTHOR_TAGLINE`/`VITE_APP_VERSION`，可选）；首页 hero 底部渲染署名行"由 X 制作 · GitHub · v版本"，全部未配置时隐藏；模板见 `app/.env.example`。

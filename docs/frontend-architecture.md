@@ -198,7 +198,7 @@ import type { CharacterDraft } from '../../types/character'
 src/main.ts
   -> src/App.vue
   -> src/router/router.ts
-  -> src/styles/index.scss（含通用工具类：flex.scss 布局工具、touch.scss 的 .touch-manipulation 禁双击缩放——跑团助手与骰娘页面复用）
+  -> src/styles/index.scss（含 flex.scss 布局工具；touch.scss 在 html/body/#app 根级统一使用 touch-action: manipulation，并保留局部 .touch-manipulation）
   -> Pinia（createPinia）
 
 src/App.vue
@@ -322,7 +322,13 @@ src/views/character-builder/hooks/useCharacterBuilderPage.ts
   -> src/rules/{derive,abilities,dependency,repository,timeline,spellcasting,starting-equipment}
   -> vue-router（useRoute / useRouter，路由查询与步骤编排）
 
+src/views/character-builder/hooks/useCharacterSheetEditing.ts
+  -> src/rules/{manual-edits,spellcasting}
+  -> src/types/character
+  （角色卡私有编辑状态、字段差值换算、人工法术与一键恢复；不持有第二份业务事实）
+
 src/views/character-builder/components/*
+  -> src/views/character-builder/components/{EditableStatTile,AddManualSpellModal}（双击/键盘数值编辑与完整系统法术库选择）
   -> src/views/character-builder/components/{FeatChoicePanel}（页面内复用）
   -> src/features/spellbook-transcription（CharacterSheetStep 抄录弹层：同一草稿的 spellSelections 与 adventureGold）
   -> src/components/ui/*
@@ -375,8 +381,8 @@ src/utils/format-spell-label.ts（无状态法术列表副标题格式化）
 
 ```text
 src/stores/character-drafts.ts
-  -> src/rules/{derive,timeline,validate,spellcasting,starting-equipment}
-  -> src/services/{character-json,draft-storage}
+  -> src/rules/{derive,manual-edits,session-state,timeline,validate,spellcasting,starting-equipment}
+  -> src/services/{character-json,draft-storage,session-state-storage}
   -> src/types/character
 
 src/stores/session-assistant.ts（跑团助手视图状态：选中角色 id + 当前页签，localStorage 持久化）
@@ -403,7 +409,7 @@ src/features/character-export/build-export-data.ts
   （唯一导出模型：身份、属性、战斗、攻击、物品、钱币、特性、法术、人物资料与诊断）
 
 src/services/draft-storage.ts
-  -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
+  -> src/rules/{manual-edits,starting-equipment}（EMPTY_CURRENCY）⚠️ starting-equipment 为既有越权点
   -> src/types/character
 
 src/services/session-state-storage.ts（跑团助手局内状态，独立 localStorage key）
@@ -425,6 +431,14 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
   -> src/features/character-export/build-export-data（与 XLSX 共用同一导出数据）
   -> src/types/character
 ```
+
+### 8.6.1 schema v6 与有效角色数据
+
+`CharacterDraft` schema v6 新增独立 `CharacterManualEdits`。v2—v5 草稿与 JSON 导入统一经过 `draft-storage` 的 v6 迁移入口，人工字段缺省为空；v6 localStorage key 与旧 key 并存读取，保存只写 v6。JSON 保存差值和人工法术来源，不降格为不可重算的绝对最终值。
+
+`rules/derive.ts` 是有效属性、熟练、技能、豁免与派生战斗数值的唯一规则出口；`rules/manual-edits.ts` 负责人工数据归一化和字段差值换算；`rules/spellcasting.ts` 负责有效环位及有效法术集合；`rules/weapon-attacks.ts` 将公共人工武器调整应用到每件可计算武器。角色卡、摘要、跑团助手和导出模型均消费这些有效结果。
+
+草稿替换由 `character-drafts` Store 统一协调：写入前归一化人工编辑；若已有局内状态，则比较变更前后有效最大生命值与环位，并通过 `rules/session-state.ts` 同步当前状态和休息快照。页面组件不得直接改写 localStorage 或自行复制协调公式。
 
 ### 8.7 rules 层
 

@@ -1,11 +1,12 @@
-import { abilityModifier, getRaceAbilityBonuses } from '@/rules/derive'
+import { abilityModifier, deriveAbilities } from '@/rules/derive'
+import { normalizeManualEdits } from '@/rules/manual-edits'
 import { rulesRepository } from '@/rules/repository'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { CharacterDraft } from '@/types/character'
 import type { ChoiceCheckpoint, SpellcastingConfig } from '@/types/rules'
 
 function abilityScoreAfterOrigin(draft: CharacterDraft, ability: SpellcastingConfig['ability']): number {
-  return draft.baseAbilities[ability] + (getRaceAbilityBonuses(draft)[ability] ?? 0)
+  return deriveAbilities(draft)[ability] + (normalizeManualEdits(draft.manualEdits).abilityAdjustments[ability] ?? 0)
 }
 
 export function getMaximumSpellLevel(config: SpellcastingConfig, classLevel: number): number {
@@ -32,6 +33,44 @@ export function getSpellSlots(config: SpellcastingConfig, classLevel: number): r
   return slots
     .map((count, index) => ({ level: index + 1, count }))
     .filter((slot) => slot.count > 0)
+}
+
+/** 角色最终法术位：职业表加人工环位差值；无施法职业也可通过人工调整获得环位。 */
+export function getEffectiveSpellSlots(draft: CharacterDraft): readonly SpellSlotInfo[] {
+  const config = getSpellcastingConfig(draft)
+  const base = config ? getSpellSlots(config, draft.targetLevel) : []
+  const baseByLevel = new Map(base.map((slot) => [slot.level, slot]))
+  const adjustments = normalizeManualEdits(draft.manualEdits).spellSlotAdjustments
+  return Array.from({ length: 9 }, (_, index) => index + 1).flatMap((level) => {
+    const system = baseByLevel.get(level)
+    const count = (system?.count ?? 0) + (adjustments[level] ?? 0)
+    return count > 0 ? [{ level, count, ...(system?.pact ? { pact: true } : {}) }] : []
+  })
+}
+
+/** 页面、跑团与导出共用：正常已选法术与人工添加法术按 ID 去重。 */
+export function getEffectiveSelectedSpellIds(draft: CharacterDraft): readonly string[] {
+  const config = getSpellcastingConfig(draft)
+  const normal = config ? getSelectedSpellIds(draft, config) : []
+  const manual = normalizeManualEdits(draft.manualEdits).addedSpells
+    .filter((item) => {
+      const level = rulesRepository.getSpell(item.spellId)?.level
+      return level === 0
+        || item.prepared
+        || item.destination === 'known'
+        || item.destination === 'pact-known'
+        || item.destination === 'granted'
+    })
+    .map((item) => item.spellId)
+  return [...new Set([...draft.spellSelections.cantripIds, ...normal, ...manual])]
+}
+
+/** 人工加入准备列表/法术书、但尚未准备的有环法术。 */
+export function getUnpreparedManualSpellIds(draft: CharacterDraft): readonly string[] {
+  return normalizeManualEdits(draft.manualEdits).addedSpells
+    .filter((item) => !item.prepared && (item.destination === 'prepared-list' || item.destination === 'spellbook'))
+    .filter((item) => (rulesRepository.getSpell(item.spellId)?.level ?? 0) > 0)
+    .map((item) => item.spellId)
 }
 
 export function getRequiredSpellCount(draft: CharacterDraft, config: SpellcastingConfig): number {

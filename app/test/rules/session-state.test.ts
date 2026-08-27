@@ -10,6 +10,7 @@ import {
   createInitialSessionState,
   getAvailableSlotLevels,
   restoreLastRest,
+  reconcileSessionLimits,
   toggleDebuff,
 } from '@/rules/session-state'
 import type { SessionState } from '@/types/session-state'
@@ -190,6 +191,37 @@ describe('session-state 升级钳制', () => {
     const state: SessionState = { ...baseState, currentHp: 50 }
     expect(clampCurrentHp(state, 40).currentHp).toBe(40)
     expect(clampCurrentHp(state, 60).currentHp).toBe(50)
+  })
+})
+
+describe('session-state 人工编辑协调', () => {
+  it('最大生命提高时保持已损失生命，并同步休息快照', () => {
+    const state: SessionState = {
+      ...baseState,
+      currentHp: 20,
+      usedSpellSlots: { 1: 2, 3: 3 },
+      lastRestSnapshot: {
+        currentHp: 15,
+        usedSpellSlots: { 1: 4, 3: 1 },
+        exhaustionLevel: 0,
+        debuffs: [],
+        at: '2026-08-01T00:30:00.000Z',
+      },
+    }
+    const reconciled = reconcileSessionLimits(state, 30, 40, [
+      { level: 1, count: 3 },
+      { level: 3, count: 2 },
+    ])
+
+    expect(reconciled.currentHp).toBe(30)
+    expect(reconciled.lastRestSnapshot?.currentHp).toBe(25)
+    expect(reconciled.usedSpellSlots).toEqual({ 1: 2, 3: 2 })
+    expect(reconciled.lastRestSnapshot?.usedSpellSlots).toEqual({ 1: 3, 3: 1 })
+  })
+
+  it('恢复较低最大生命时仍保持伤害，并在必要时钳制到零', () => {
+    expect(reconcileSessionLimits({ ...baseState, currentHp: 30 }, 40, 30, []).currentHp).toBe(20)
+    expect(reconcileSessionLimits({ ...baseState, currentHp: 5 }, 40, 30, []).currentHp).toBe(0)
   })
 })
 

@@ -1,5 +1,5 @@
 import type { CharacterDraft } from '@/types/character'
-import { migrateDraftToV5 } from '@/services/draft-storage'
+import { migrateDraftToV6 } from '@/services/draft-storage'
 
 export type ImportErrorCode = 'invalid-json' | 'unsupported-schema' | 'ruleset-mismatch' | 'incomplete-data'
 
@@ -28,7 +28,7 @@ export const CharacterJsonService = {
     }
     const schemaVersion = (value as { schemaVersion?: unknown }).schemaVersion
     const draft = value as Partial<CharacterDraft>
-    if (![2, 3, 4, 5].includes(Number(schemaVersion))) {
+    if (![2, 3, 4, 5, 6].includes(Number(schemaVersion))) {
       throw new CharacterImportError('unsupported-schema', '角色文件版本不受支持。')
     }
     if (draft.ruleset !== '5e-2014') {
@@ -37,7 +37,7 @@ export const CharacterJsonService = {
     if (!draft.id || !draft.baseAbilities || !Array.isArray(draft.selections)) {
       throw new CharacterImportError('incomplete-data', '角色文件缺少必要字段。')
     }
-    const migrated = migrateDraftToV5(value)
+    const migrated = migrateDraftToV6(value)
     if (!migrated) throw new CharacterImportError('incomplete-data', '角色文件无法迁移到当前版本。')
     return migrated
   },

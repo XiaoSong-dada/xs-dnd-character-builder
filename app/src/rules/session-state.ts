@@ -153,3 +153,37 @@ export function clampCurrentHp(state: SessionState, maxHp: number): SessionState
   if (currentHp === state.currentHp) return state
   return { ...state, currentHp }
 }
+
+/**
+ * 角色最大 HP / 环位上限变化时协调局内状态：保持已损失 HP，已用环位按新上限钳制。
+ * 休息快照同步换算，保证撤回休息后仍落在新的角色上限内。
+ */
+export function reconcileSessionLimits(
+  state: SessionState,
+  oldMaxHp: number,
+  newMaxHp: number,
+  newSlots: readonly { level: number; count: number }[],
+): SessionState {
+  const preserveDamage = (currentHp: number): number => clamp(newMaxHp - Math.max(0, oldMaxHp - currentHp), 0, newMaxHp)
+  const slotMax = new Map(newSlots.map((slot) => [slot.level, slot.count]))
+  const reconcileSlots = (used: Readonly<Record<number, number>>): Readonly<Record<number, number>> => Object.fromEntries(
+    Object.entries(used).flatMap(([level, count]) => {
+      const maximum = slotMax.get(Number(level)) ?? 0
+      const next = clamp(count, 0, maximum)
+      return next > 0 ? [[level, next]] : []
+    }),
+  )
+  return {
+    ...state,
+    currentHp: preserveDamage(state.currentHp),
+    usedSpellSlots: reconcileSlots(state.usedSpellSlots),
+    ...(state.lastRestSnapshot ? {
+      lastRestSnapshot: {
+        ...state.lastRestSnapshot,
+        currentHp: preserveDamage(state.lastRestSnapshot.currentHp),
+        usedSpellSlots: reconcileSlots(state.lastRestSnapshot.usedSpellSlots),
+      },
+    } : {}),
+    updatedAt: new Date().toISOString(),
+  }
+}

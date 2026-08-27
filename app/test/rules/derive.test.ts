@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import { abilityModifier, deriveCharacter, proficiencyBonus } from '@/rules/derive'
+import { EMPTY_MANUAL_EDITS } from '@/rules/manual-edits'
 import type { CharacterDraft } from '@/types/character'
 
 const draft: CharacterDraft = {
-  schemaVersion: 4,
+  schemaVersion: 6,
   id: 'test',
   ruleset: '5e-2014',
   createdAt: '2026-07-30T00:00:00.000Z',
@@ -32,6 +33,8 @@ const draft: CharacterDraft = {
   currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
   adventureGold: 0,
   equipmentNeedsReview: false,
+  spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [] },
+  manualEdits: EMPTY_MANUAL_EDITS,
   name: '凯恩',
   alignment: '中立善良',
   notes: '',
@@ -143,5 +146,42 @@ describe('deriveCharacter', () => {
     expect(derived.skills['skill-deception']?.sources.some((source) => source.detail === '来自种族')).toBe(true)
     // 工具选择不改变攻击等任何数值。
     expect(derived.attackBonus.value).toBe(proficiencyBonus(10) + 2)
+  })
+
+  it('先重算上游属性与熟练，再叠加下游人工差值', () => {
+    const edited = deriveCharacter({
+      ...draft,
+      backgroundSkillIds: ['skill-investigation', 'skill-perception'],
+      manualEdits: {
+        ...EMPTY_MANUAL_EDITS,
+        abilityAdjustments: { int: 4 },
+        proficiencyBonusAdjustment: 1,
+        derivedAdjustments: { armorClass: 2, passivePerception: 3 },
+        savingThrowAdjustments: { int: 2 },
+        skillAdjustments: { 'skill-investigation': -1 },
+      },
+    })
+
+    expect(edited.abilities.int).toBe(12)
+    // 调查：智力 +1、熟练 +5，再叠加人工 -1。
+    expect(edited.skills['skill-investigation']?.value).toBe(5)
+    expect(edited.savingThrows.int.value).toBe(3)
+    expect(edited.armorClass.value).toBe(21)
+    // 察觉 +6（感知 +1、人工熟练 +5），被动 16，再叠加人工 +3。
+    expect(edited.passivePerception.value).toBe(19)
+    expect(edited.armorClass.sources.some((source) => source.label === '人工调整')).toBe(true)
+  })
+
+  it('下游差值在系统基线改变后保持不变而不重复累计', () => {
+    const manualEdits = { ...EMPTY_MANUAL_EDITS, derivedAdjustments: { armorClass: 2 } }
+    expect(deriveCharacter({ ...draft, manualEdits }).armorClass.value).toBe(21)
+
+    const withoutShield = {
+      ...draft,
+      inventory: draft.inventory.map((entry) => entry.itemId === 'shield' ? { ...entry, equippedQuantity: 0 } : entry),
+      manualEdits,
+    }
+    expect(deriveCharacter(withoutShield).armorClass.value).toBe(19)
+    expect(deriveCharacter(withoutShield).armorClass.value).toBe(19)
   })
 })

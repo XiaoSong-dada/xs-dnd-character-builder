@@ -2,7 +2,8 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { SUBCLASS_CHOICE_OPTION_IDS } from '@/rules/data/subclass-choice-options-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
-import { getAlwaysPreparedSpellIds, getAvailableSpells, getMagicalSecretsSpellIds, getSpellcastingConfig, getSpellSlots } from '@/rules/spellcasting'
+import { normalizeManualEdits } from '@/rules/manual-edits'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
 import { isSourceEnabled } from '@/rules/source-books'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
@@ -199,15 +200,15 @@ function buildInventory(draft: CharacterDraft, diagnostics: ExportDiagnostic[]) 
 
 function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): readonly ExportSpell[] {
   const config = getSpellcastingConfig(draft)
-  if (!config) return []
-  const baseIds = config.mode === 'spellbook'
+  const baseIds = config?.mode === 'spellbook'
     ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.spellbookSpellIds]
-    : config.mode === 'prepared'
+    : config?.mode === 'prepared'
       ? [...draft.spellSelections.cantripIds, ...getAvailableSpells(draft, config).filter((spell) => spell.level > 0).map((spell) => spell.id)]
       : [...draft.spellSelections.cantripIds, ...draft.spellSelections.knownSpellIds]
   const alwaysPrepared = getAlwaysPreparedSpellIds(draft)
-  const ids = [...new Set([...baseIds, ...alwaysPrepared, ...getMagicalSecretsSpellIds(draft)])]
-  const prepared = new Set([...draft.spellSelections.preparedSpellIds, ...alwaysPrepared])
+  const manual = normalizeManualEdits(draft.manualEdits).addedSpells
+  const ids = [...new Set([...baseIds, ...alwaysPrepared, ...getMagicalSecretsSpellIds(draft), ...manual.map((item) => item.spellId)])]
+  const prepared = new Set([...draft.spellSelections.preparedSpellIds, ...alwaysPrepared, ...manual.filter((item) => item.prepared).map((item) => item.spellId)])
   return ids.map((id) => {
     const spell = rulesRepository.getSpell(id)
     if (!spell) diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `spell.${id}`, message: `无法解析法术 ${id}。` })
@@ -270,7 +271,7 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
     combat: {
       proficiencyBonus: derived.proficiencyBonus.value, armorClass: derived.armorClass.value, initiative: derived.initiative.value, speed: derived.speed.value,
       hitPointMaximum: derived.hitPoints.value, hitPointCurrent: derived.hitPoints.value, hitPointTemporary: 0,
-      hitDice: classRule ? `d${classRule.hitDie}` : '', passivePerception: 10 + (derived.skills['skill-perception']?.value ?? 0),
+      hitDice: classRule ? `d${classRule.hitDie}` : '', passivePerception: derived.passivePerception.value,
     },
     skills,
     proficiencies: { languages, text: languages.join('、') },
@@ -278,10 +279,10 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
     inventory,
     currency: { ...draft.currency, gp: draft.currency.gp + draft.adventureGold },
     features: buildFeatures(draft),
-    ...(spellcastingConfig && derived.spellSaveDc && derived.spellAttackBonus ? {
+    ...(spellcastingConfig || normalizeManualEdits(draft.manualEdits).addedSpells.length > 0 || getEffectiveSpellSlots(draft).length > 0 ? {
       spellcasting: {
-        className: classRule?.name ?? subclass?.name ?? '', abilityLabel: ABILITY_LABELS[spellcastingConfig.ability], saveDc: derived.spellSaveDc.value,
-        attackBonus: derived.spellAttackBonus.value, slots: getSpellSlots(spellcastingConfig, draft.targetLevel).map((slot) => ({ ...slot, pact: Boolean(slot.pact) })),
+        className: classRule?.name ?? subclass?.name ?? '人工施法', abilityLabel: spellcastingConfig ? ABILITY_LABELS[spellcastingConfig.ability] : '人工', saveDc: derived.spellSaveDc?.value ?? 0,
+        attackBonus: derived.spellAttackBonus?.value ?? 0, slots: getEffectiveSpellSlots(draft).map((slot) => ({ ...slot, pact: Boolean(slot.pact) })),
         spells: spellList(draft, diagnostics),
       },
     } : {}),

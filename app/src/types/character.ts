@@ -3,6 +3,17 @@ export type CompatibilityStatus = 'implemented' | 'selectable' | 'index-only' | 
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 export type AbilityMethod = 'standard-array' | 'point-buy' | 'custom'
 export type SpellcastingMode = 'prepared' | 'known' | 'spellbook' | 'pact'
+export type ManualSpellDestination = 'known' | 'pact-known' | 'prepared-list' | 'spellbook' | 'granted'
+export type ManualDerivedField =
+  | 'armorClass'
+  | 'hitPoints'
+  | 'initiative'
+  | 'speed'
+  | 'attackBonus'
+  | 'attackDamageBonus'
+  | 'passivePerception'
+  | 'spellAttackBonus'
+  | 'spellSaveDc'
 
 export type DraftStep =
   | 'setup'
@@ -60,6 +71,23 @@ export interface SpellSelections {
   readonly transcribedSpellIds: readonly string[]
 }
 
+export interface ManualAddedSpell {
+  readonly spellId: string
+  readonly destination: ManualSpellDestination
+  readonly prepared: boolean
+}
+
+/** 角色卡人工编辑只保存相对系统计算值的差值；空对象代表完全使用系统规则。 */
+export interface CharacterManualEdits {
+  readonly abilityAdjustments: Readonly<Partial<Record<AbilityKey, number>>>
+  readonly proficiencyBonusAdjustment: number
+  readonly derivedAdjustments: Readonly<Partial<Record<ManualDerivedField, number>>>
+  readonly savingThrowAdjustments: Readonly<Partial<Record<AbilityKey, number>>>
+  readonly skillAdjustments: Readonly<Record<string, number>>
+  readonly spellSlotAdjustments: Readonly<Record<number, number>>
+  readonly addedSpells: readonly ManualAddedSpell[]
+}
+
 export interface StartingEquipmentSelection {
   readonly groupId: string
   readonly optionId: string
@@ -92,7 +120,7 @@ export interface CurrencyWallet {
 }
 
 export interface CharacterDraft {
-  readonly schemaVersion: 5
+  readonly schemaVersion: 6
   readonly id: string
   readonly ruleset: '5e-2014'
   readonly createdAt: string
@@ -126,6 +154,7 @@ export interface CharacterDraft {
   readonly adventureGold: number
   readonly equipmentNeedsReview: boolean
   readonly spellSelections: SpellSelections
+  readonly manualEdits: CharacterManualEdits
   readonly name: string
   readonly alignment: string
   readonly notes: string
@@ -164,6 +193,7 @@ export interface DerivedCharacter {
   readonly spellAttackBonus?: DerivedValue<number>
   readonly spellSaveDc?: DerivedValue<number>
   readonly speed: DerivedValue<number>
+  readonly passivePerception: DerivedValue<number>
   readonly savingThrows: Readonly<Record<AbilityKey, DerivedValue<number>>>
   readonly skills: Readonly<Record<string, DerivedValue<number>>>
 }

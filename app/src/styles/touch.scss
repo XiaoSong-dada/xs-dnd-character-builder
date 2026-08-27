@@ -3,3 +3,10 @@
 .touch-manipulation {
   touch-action: manipulation;
 }
+
+// 全应用禁止手机端原生双击放大；保留滚动与双指捏合缩放。
+html,
+body,
+#app {
+  touch-action: manipulation;
+}

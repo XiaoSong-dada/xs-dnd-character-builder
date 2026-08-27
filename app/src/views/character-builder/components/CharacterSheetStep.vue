@@ -3,23 +3,25 @@ import { computed, ref } from 'vue'
 
 import AddItemModal from '@/components/AddItemModal.vue'
 import AdjustItemModal from '@/components/AdjustItemModal.vue'
+import AddManualSpellModal from '@/views/character-builder/components/AddManualSpellModal.vue'
+import EditableStatTile from '@/views/character-builder/components/EditableStatTile.vue'
 import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
-import StatTile from '@/components/ui/StatTile.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
-import { getAvailableSpells, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellSlots, getSpellcastingConfig } from '@/rules/spellcasting'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { buildTimeline } from '@/rules/timeline'
-import type { AbilityKey, CharacterDraft, DerivedCharacter, InventoryEntry, SpellSelections } from '@/types/character'
+import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
+import type { AbilityKey, CharacterDraft, CharacterManualEdits, DerivedCharacter, InventoryEntry, ManualAddedSpell, SpellSelections } from '@/types/character'
 import type { ClassFeature, SpellRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 
@@ -38,7 +40,13 @@ const emit = defineEmits<{
   changeSpellSelections: [value: SpellSelections]
   changeInventory: [inventory: readonly InventoryEntry[]]
   changeAdventureGold: [adventureGold: number]
+  changeManualEdits: [manualEdits: CharacterManualEdits]
 }>()
+const editing = useCharacterSheetEditing(
+  () => props.draft,
+  () => props.derived,
+  (manualEdits) => emit('changeManualEdits', manualEdits),
+)
 const activeTab = ref('overview')
 const tabs = [
   { id: 'overview', label: '总览' },
@@ -53,6 +61,14 @@ function abilityLabel(key: string): string {
 function skillLabel(skillId: string): string {
   return rulesRepository.getOption(skillId)?.name ?? skillId
 }
+function sourceNote(sources: DerivedCharacter['armorClass']['sources']): string {
+  return sources.map((source) => `${source.label} ${source.value >= 0 ? '+' : ''}${source.value}`).join(' · ')
+}
+function abilityNote(key: AbilityKey): string {
+  const modifier = props.derived.modifiers[key]
+  const adjustment = editing.manual.value.abilityAdjustments[key]
+  return `调整值 ${modifier >= 0 ? '+' : ''}${modifier}${adjustment ? ` · 人工调整 ${adjustment >= 0 ? '+' : ''}${adjustment}` : ''}`
+}
 const identityLine = computed(() => {
   const draft = props.draft
   const names = [
@@ -66,7 +82,11 @@ const identityLine = computed(() => {
   return `${draft.targetLevel}级 · ${names.join(' · ')}`
 })
 const spellcastingConfig = computed(() => getSpellcastingConfig(props.draft))
-const spellSlots = computed(() => spellcastingConfig.value ? getSpellSlots(spellcastingConfig.value, props.draft.targetLevel) : [])
+const spellSlots = computed(() => getEffectiveSpellSlots(props.draft))
+const editableSpellSlots = computed(() => Array.from({ length: 9 }, (_, index) => ({
+  level: index + 1,
+  count: spellSlots.value.find((slot) => slot.level === index + 1)?.count ?? 0,
+})))
 const spellSlotsLabel = computed(() => {
   if (!spellSlots.value.length) return ''
   if (spellSlots.value[0]?.pact) {
@@ -75,7 +95,9 @@ const spellSlotsLabel = computed(() => {
   }
   return spellSlots.value.map((slot) => `${slot.level}环×${slot.count}`).join(' · ')
 })
+const manualSpellIds = computed(() => new Set(editing.manual.value.addedSpells.map((item) => item.spellId)))
 const cantripSpells = computed(() => props.draft.spellSelections.cantripIds
+  .filter((id) => !manualSpellIds.value.has(id))
   .map((id) => rulesRepository.getSpell(id))
   .filter((spell): spell is SpellRule => Boolean(spell)))
 const preparedOrKnownSpells = computed(() => {
@@ -83,12 +105,27 @@ const preparedOrKnownSpells = computed(() => {
   if (!config) return []
   // 已准备 / 已掌握法术以规则层 getSelectedSpellIds 为唯一事实源（覆盖 spellbook/prepared/known/pact 四种模式）。
   return getSelectedSpellIds(props.draft, config)
+    .filter((id) => !manualSpellIds.value.has(id))
     .map((id) => rulesRepository.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
+const manualAddedSpells = computed(() => editing.manual.value.addedSpells
+  .map((entry) => ({ entry, spell: rulesRepository.getSpell(entry.spellId) }))
+  .filter((item): item is { entry: ManualAddedSpell; spell: SpellRule } => Boolean(item.spell)))
+const existingSpellIds = computed(() => [...new Set([
+  ...props.draft.spellSelections.cantripIds,
+  ...props.draft.spellSelections.knownSpellIds,
+  ...props.draft.spellSelections.preparedSpellIds,
+  ...props.draft.spellSelections.spellbookSpellIds,
+  ...getMagicalSecretsSpellIds(props.draft),
+  ...getAlwaysPreparedSpellIds(props.draft),
+  ...editing.manual.value.addedSpells.map((item) => item.spellId),
+])])
+const showManualSpellModal = ref(false)
 const spellbookSpells = computed(() => {
   if (spellcastingConfig.value?.mode !== 'spellbook') return []
   return props.draft.spellSelections.spellbookSpellIds
+    .filter((id) => !manualSpellIds.value.has(id))
     .map((id) => rulesRepository.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
@@ -193,8 +230,29 @@ const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || prepa
 
 /** 吟游诗人魔法奥秘法术（来自时间线检查点选择，不计入已知法术上限）。 */
 const magicalSecretsSpells = computed(() => getMagicalSecretsSpellIds(props.draft)
+  .filter((id) => !manualSpellIds.value.has(id))
   .map((id) => rulesRepository.getSpell(id))
   .filter((spell): spell is SpellRule => Boolean(spell)))
+
+function manualSpellDestinationLabel(entry: ManualAddedSpell): string {
+  const labels = {
+    known: '已掌握',
+    'pact-known': '契约已掌握',
+    'prepared-list': '额外准备列表',
+    spellbook: '法术书',
+    granted: '人工获得',
+  } as const
+  return `${labels[entry.destination]}${entry.prepared ? ' · 已准备' : ''}`
+}
+
+function isAlsoNormallyAcquired(spellId: string): boolean {
+  return props.draft.spellSelections.cantripIds.includes(spellId)
+    || props.draft.spellSelections.knownSpellIds.includes(spellId)
+    || props.draft.spellSelections.preparedSpellIds.includes(spellId)
+    || props.draft.spellSelections.spellbookSpellIds.includes(spellId)
+    || getMagicalSecretsSpellIds(props.draft).includes(spellId)
+    || getAlwaysPreparedSpellIds(props.draft).includes(spellId)
+}
 
 /** 已选选择类选项的详情条目（超魔、战技与其余子职选项、法术专精/招牌法术等）：供能力页签"已选选项详情"区块展示。 */
 const selectedOptionEntries = computed(() => {
@@ -416,41 +474,58 @@ function handleExportPdf(): void {
       <div v-if="draft.classId" class="character-sheet__header-actions">
         <UiBadge v-if="needsReview" tone="warning">待补全</UiBadge>
         <button type="button" class="character-sheet__level-button" @click="$emit('adjustLevel')">调整等级</button>
+        <button type="button" class="character-sheet__level-button" @click="editing.editMode.value = !editing.editMode.value">{{ editing.editMode.value ? '完成编辑' : '编辑角色卡' }}</button>
+        <button v-if="editing.editMode.value && editing.hasEdits.value" type="button" class="character-sheet__level-button character-sheet__level-button--danger" @click="editing.showResetConfirm.value = true">恢复系统默认</button>
       </div>
     </header>
     <UiTabs v-model="activeTab" :items="tabs" />
     <div v-if="activeTab === 'overview'" class="character-sheet__stats">
-      <StatTile label="护甲等级" :value="derived.armorClass.value" :note="derived.armorClass.sources.map((item) => item.label).join(' + ')" />
-      <StatTile label="生命值" :value="derived.hitPoints.value" note="职业生命骰 + 体质" />
-      <StatTile label="先攻" :value="derived.initiative.value >= 0 ? `+${derived.initiative.value}` : derived.initiative.value" note="敏捷调整值" />
-      <StatTile label="速度" :value="`${derived.speed.value}尺`" :note="derived.speed.sources[0]?.detail" />
-      <StatTile v-for="(value, key) in derived.abilities" :key="key" :label="abilityLabel(String(key))" :value="value" :note="`${derived.modifiers[key] >= 0 ? '+' : ''}${derived.modifiers[key]}`" />
+      <EditableStatTile label="护甲等级" :value="derived.armorClass.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.armorClass.sources)" @commit="editing.commitDerived('armorClass', $event)" />
+      <EditableStatTile label="最大生命值" :value="derived.hitPoints.value" :minimum="1" :edit-mode="editing.editMode.value" :note="sourceNote(derived.hitPoints.sources)" @commit="editing.commitDerived('hitPoints', $event)" />
+      <EditableStatTile label="先攻" :value="derived.initiative.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.initiative.sources)" @commit="editing.commitDerived('initiative', $event)" />
+      <EditableStatTile label="速度" :value="derived.speed.value" :minimum="0" suffix="尺" :edit-mode="editing.editMode.value" :note="sourceNote(derived.speed.sources)" @commit="editing.commitDerived('speed', $event)" />
+      <EditableStatTile label="熟练加值" :value="derived.proficiencyBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.proficiencyBonus.sources)" @commit="editing.commitProficiency" />
+      <EditableStatTile v-for="(value, key) in derived.abilities" :key="key" :label="abilityLabel(String(key))" :value="value" :minimum="1" :edit-mode="editing.editMode.value" :note="abilityNote(key)" @commit="editing.commitAbility(key, $event)" />
     </div>
-    <div v-else-if="activeTab === 'combat'" class="character-sheet__panel"><h3>主要武器</h3><p>命中 +{{ derived.attackBonus.value }} · 伤害骰 + {{ derived.attackDamageBonus.value }}</p><small>{{ derived.attackBonus.sources.map((item) => `${item.label} ${item.value >= 0 ? '+' : ''}${item.value}`).join('，') }}</small></div>
+    <div v-else-if="activeTab === 'combat'" class="character-sheet__panel">
+      <h3>主要武器</h3>
+      <div class="character-sheet__combat-stats">
+        <EditableStatTile label="武器命中加值" :value="derived.attackBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.attackBonus.sources)" @commit="editing.commitDerived('attackBonus', $event)" />
+        <EditableStatTile label="武器伤害加值" :value="derived.attackDamageBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.attackDamageBonus.sources)" @commit="editing.commitDerived('attackDamageBonus', $event)" />
+      </div>
+    </div>
     <div v-else-if="activeTab === 'features'" class="character-sheet__derived">
       <section>
         <h3>豁免</h3>
         <div>
-          <StatTile
+          <EditableStatTile
             v-for="(value, key) in derived.savingThrows"
             :key="key"
             :label="abilityLabel(String(key))"
-            :value="value.value >= 0 ? `+${value.value}` : value.value"
-            :note="value.sources.map((source) => source.label).join(' + ')"
+            :value="value.value"
+            :edit-mode="editing.editMode.value"
+            :note="sourceNote(value.sources)"
+            @commit="editing.commitSavingThrow(key, $event)"
           />
         </div>
       </section>
       <section>
         <h3>技能</h3>
         <div>
-          <StatTile
+          <EditableStatTile
             v-for="(value, key) in derived.skills"
             :key="key"
             :label="skillLabel(String(key))"
-            :value="value.value >= 0 ? `+${value.value}` : value.value"
-            :note="value.sources.map((source) => source.detail).join(' · ')"
+            :value="value.value"
+            :edit-mode="editing.editMode.value"
+            :note="sourceNote(value.sources)"
+            @commit="editing.commitSkill(String(key), $event)"
           />
         </div>
+      </section>
+      <section>
+        <h3>被动察觉</h3>
+        <div><EditableStatTile label="被动察觉" :value="derived.passivePerception.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.passivePerception.sources)" @commit="editing.commitDerived('passivePerception', $event)" /></div>
       </section>
       <section v-if="classInfo">
         <section v-if="classInfo.features.length" class="character-sheet__subclass-features">
@@ -539,10 +614,32 @@ function handleExportPdf(): void {
     </div>
     <div v-else-if="activeTab === 'spells'" class="character-sheet__spells">
       <div class="character-sheet__spell-stats">
-        <StatTile label="法术攻击" :value="derived.spellAttackBonus ? `+${derived.spellAttackBonus.value}` : '—'" :note="derived.spellAttackBonus?.sources.map((item) => item.label).join(' + ') ?? '当前职业无施法能力'" />
-        <StatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? '—'" :note="derived.spellSaveDc?.sources.map((item) => item.label).join(' + ') ?? '当前职业无施法能力'" />
+        <EditableStatTile label="法术攻击" :value="derived.spellAttackBonus?.value ?? 0" :edit-mode="editing.editMode.value" :note="derived.spellAttackBonus ? sourceNote(derived.spellAttackBonus.sources) : '当前职业无施法能力'" @commit="editing.commitDerived('spellAttackBonus', $event)" />
+        <EditableStatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? 0" :minimum="0" :edit-mode="editing.editMode.value" :note="derived.spellSaveDc ? sourceNote(derived.spellSaveDc.sources) : '当前职业无施法能力'" @commit="editing.commitDerived('spellSaveDc', $event)" />
       </div>
-      <p v-if="spellSlots.length" class="character-sheet__spell-slots">法术位：{{ spellSlotsLabel }}</p>
+      <p v-if="spellSlots.length && !editing.editMode.value" class="character-sheet__spell-slots">法术位：{{ spellSlotsLabel }}</p>
+      <section v-if="editing.editMode.value" class="character-sheet__spell-section">
+        <h4>法术位总量</h4>
+        <div class="character-sheet__slot-editor">
+          <EditableStatTile v-for="slot in editableSpellSlots" :key="slot.level" :label="`${slot.level}环`" :value="slot.count" :minimum="0" :edit-mode="true" @commit="editing.commitSpellSlot(slot.level, $event)" />
+        </div>
+      </section>
+      <section v-if="editing.editMode.value || manualAddedSpells.length" class="character-sheet__spell-section">
+        <div class="character-sheet__spell-section-header">
+          <h4>人工添加法术 · {{ manualAddedSpells.length }}</h4>
+          <button v-if="editing.editMode.value" type="button" class="character-sheet__spell-action" @click="showManualSpellModal = true">添加法术</button>
+        </div>
+        <ListShell v-if="manualAddedSpells.length">
+          <ExpandableOptionCard v-for="item in manualAddedSpells" :key="item.entry.spellId" :title="item.spell.name" :description="`${formatSpellLabel(item.spell)} · ${manualSpellDestinationLabel(item.entry)}`" expanded-label="法术效果">
+            <template #suffix>
+              <UiBadge tone="success">{{ isAlsoNormallyAcquired(item.entry.spellId) ? '系统获得 + 人工添加' : '人工添加' }}</UiBadge>
+              <button v-if="editing.editMode.value" type="button" class="character-sheet__spell-action" @click="editing.removeSpell(item.entry.spellId)">移除</button>
+            </template>
+            <template #expanded>{{ item.spell.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+        <p v-else>尚未人工添加法术。</p>
+      </section>
       <template v-if="hasSpellContent">
         <section v-if="cantripSpells.length" class="character-sheet__spell-section">
           <h4>戏法 · {{ draft.spellSelections.cantripIds.length }} / {{ requiredCantripCount }}</h4>
@@ -769,6 +866,13 @@ function handleExportPdf(): void {
       :preselect-spell-id="transcribePreselectId"
       @close="showTranscribeModal = false"
     />
+    <AddManualSpellModal
+      :open="showManualSpellModal"
+      :mode="editing.spellMode.value"
+      :existing-ids="existingSpellIds"
+      @close="showManualSpellModal = false"
+      @add="editing.addSpell"
+    />
     <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" @close="showAddItemModal = false" @add="handleAddItem" />
     <AdjustItemModal
       v-if="adjustEntry"
@@ -791,6 +895,13 @@ function handleExportPdf(): void {
         <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportJson">导出 JSON 数据文件</button>
       </div>
     </UiModal>
+    <UiModal :open="editing.showResetConfirm.value" title="恢复系统默认" @close="editing.showResetConfirm.value = false">
+      <p>这会清除全部人工数值调整和人工添加法术，但不会删除正常车卡选择、抄录法术、装备或跑团状态。</p>
+      <template #footer>
+        <button type="button" class="character-sheet__export character-sheet__export--secondary" @click="editing.showResetConfirm.value = false">取消</button>
+        <button type="button" class="character-sheet__export" @click="editing.resetAll">确认恢复</button>
+      </template>
+    </UiModal>
   </section>
 </template>
 
@@ -811,6 +922,13 @@ function handleExportPdf(): void {
   }
 
   &__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+
+  &__combat-stats, &__slot-editor {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
 
   &__panel {
     padding: 1rem;

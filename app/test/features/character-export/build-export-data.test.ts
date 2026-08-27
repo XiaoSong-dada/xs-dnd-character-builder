@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { buildCharacterExportModel } from '@/features/character-export/build-export-data'
 import { deriveCharacter } from '@/rules/derive'
+import { EMPTY_MANUAL_EDITS } from '@/rules/manual-edits'
 import { fighterDraft, fighterExportModel, wizardExportModel } from '../../fixtures/export-character'
 
 describe('CharacterExportModel', () => {
@@ -144,5 +145,35 @@ describe('CharacterExportModel', () => {
     }
     const wizardModel = buildCharacterExportModel(wizard, deriveCharacter(wizard))
     expect(wizardModel.features.find((feature) => feature.id === 'spell-2014-magic-missile')?.name).toBe('魔法飞弹')
+  })
+
+  it('非施法职业导出最终人工数值、环位与系统库法术', () => {
+    const edited = {
+      ...fighterDraft,
+      manualEdits: {
+        ...EMPTY_MANUAL_EDITS,
+        abilityAdjustments: { str: 3 },
+        derivedAdjustments: {
+          armorClass: 2,
+          hitPoints: 20,
+          attackBonus: 1,
+          attackDamageBonus: 2,
+          spellAttackBonus: 7,
+          spellSaveDc: 15,
+        },
+        spellSlotAdjustments: { 1: 2 },
+        addedSpells: [{ spellId: 'spell-2014-magic-missile', destination: 'granted' as const, prepared: true }],
+      },
+    }
+    const derived = deriveCharacter(edited)
+    const model = buildCharacterExportModel(edited, derived)
+
+    expect(model.abilities.str.score).toBe(derived.abilities.str)
+    expect(model.combat.armorClass).toBe(derived.armorClass.value)
+    expect(model.combat.hitPointMaximum).toBe(derived.hitPoints.value)
+    expect(model.attacks[0]?.attackBonus).toBe(derived.attackBonus.value)
+    expect(model.spellcasting).toMatchObject({ className: '战士', saveDc: 15, attackBonus: 7 })
+    expect(model.spellcasting?.slots).toEqual([{ level: 1, count: 2, pact: false }])
+    expect(model.spellcasting?.spells).toContainEqual(expect.objectContaining({ id: 'spell-2014-magic-missile', prepared: true }))
   })
 })

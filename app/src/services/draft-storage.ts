@@ -2,8 +2,10 @@ import type { CharacterDraft, LegacyDraftRecord, SpellSelections } from '@/types
 import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
 import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { rulesRepository } from '@/rules/repository'
+import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 
-const STORAGE_KEY = 'dnd-character-builder:drafts:v5'
+const STORAGE_KEY = 'dnd-character-builder:drafts:v6'
+const V5_STORAGE_KEY = 'dnd-character-builder:drafts:v5'
 const V4_STORAGE_KEY = 'dnd-character-builder:drafts:v4'
 const V3_STORAGE_KEY = 'dnd-character-builder:drafts:v3'
 const V2_STORAGE_KEY = 'dnd-character-builder:drafts:v2'
@@ -22,7 +24,7 @@ function emptySpellSelections(): SpellSelections {
 function isDraft(value: unknown): value is CharacterDraft {
   if (!value || typeof value !== 'object') return false
   const draft = value as Partial<CharacterDraft>
-  return draft.schemaVersion === 5 && draft.ruleset === '5e-2014' && typeof draft.id === 'string'
+  return draft.schemaVersion === 6 && draft.ruleset === '5e-2014' && typeof draft.id === 'string'
 }
 
 function normalizeDraft(draft: CharacterDraft): CharacterDraft {
@@ -43,14 +45,15 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     spellSelections: draft.spellSelections
       ? { ...draft.spellSelections, transcribedSpellIds: draft.spellSelections.transcribedSpellIds ?? [] }
       : emptySpellSelections(),
+    manualEdits: normalizeManualEdits(draft.manualEdits),
   }
 }
 
-/** v2—v5 统一迁移入口；旧玩法偏好不再进入 v5 草稿。 */
-export function migrateDraftToV5(value: unknown): CharacterDraft | undefined {
+/** v2—v6 统一迁移入口；旧玩法偏好不再进入当前草稿。 */
+export function migrateDraftToV6(value: unknown): CharacterDraft | undefined {
   if (!value || typeof value !== 'object') return undefined
   const draft = value as Record<string, unknown>
-  if (![2, 3, 4, 5].includes(Number(draft.schemaVersion)) || draft.ruleset !== '5e-2014' || typeof draft.id !== 'string') return undefined
+  if (![2, 3, 4, 5, 6].includes(Number(draft.schemaVersion)) || draft.ruleset !== '5e-2014' || typeof draft.id !== 'string') return undefined
   const oldVersion = Number(draft.schemaVersion)
   const inventoryItemIds = oldVersion === 2 && Array.isArray(draft.inventoryItemIds)
     ? draft.inventoryItemIds.filter((item): item is string => typeof item === 'string')
@@ -70,7 +73,7 @@ export function migrateDraftToV5(value: unknown): CharacterDraft | undefined {
       equippedQuantity: equippedItemIds.has(itemId) ? 1 : 0,
     }))
     : (draft.inventory as CharacterDraft['inventory'] | undefined) ?? []
-  const enabledSourceIds = oldVersion === 5
+  const enabledSourceIds = oldVersion >= 5
     ? normalizeEnabledSourceIds(draft.enabledSourceIds as readonly string[] | undefined)
     : inferEnabledSourceIds({
       ...draft,
@@ -79,17 +82,21 @@ export function migrateDraftToV5(value: unknown): CharacterDraft | undefined {
   const { preferences: _preferences, inventoryItemIds: _inventoryItemIds, equippedItemIds: _equippedItemIds, ...rest } = draft
   return normalizeDraft({
     ...rest,
-    schemaVersion: 5,
+    schemaVersion: 6,
     currentStep: draft.currentStep === 'preferences' ? 'sources' : draft.currentStep,
     enabledSourceIds,
     startingEquipmentSelections: oldVersion === 2 ? [] : draft.startingEquipmentSelections,
     inventory: migratedInventory,
-    infusionAssignments: oldVersion === 5 ? draft.infusionAssignments : [],
+    infusionAssignments: oldVersion >= 5 ? draft.infusionAssignments : [],
     currency: oldVersion === 2 ? EMPTY_CURRENCY : draft.currency,
     adventureGold: oldVersion === 2 ? 0 : draft.adventureGold,
     equipmentNeedsReview: oldVersion === 2 ? true : draft.equipmentNeedsReview,
+    manualEdits: oldVersion === 6 ? draft.manualEdits : EMPTY_MANUAL_EDITS,
   } as unknown as CharacterDraft)
 }
+
+/** 兼容旧调用名；统一返回当前 v6 草稿。 */
+export const migrateDraftToV5 = migrateDraftToV6
 
 function readArray(key: string): readonly unknown[] {
   try {
@@ -107,6 +114,7 @@ export const DraftStorageService = {
     const current = readArray(STORAGE_KEY).filter(isDraft).map(normalizeDraft)
     const seenIds = new Set(current.map((draft) => draft.id))
     const migrated = [
+      ...readArray(V5_STORAGE_KEY).map(migrateDraftToV6),
       ...readArray(V4_STORAGE_KEY).map(migrateDraftToV5),
       ...readArray(V3_STORAGE_KEY).map(migrateDraftToV5),
       ...readArray(V2_STORAGE_KEY).map(migrateDraftToV5),
