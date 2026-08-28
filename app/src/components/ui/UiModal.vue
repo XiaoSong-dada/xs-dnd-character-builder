@@ -26,20 +26,22 @@ defineEmits<{ close: [] }>()
   background: rgb(33 31 26 / 48%);
 
   section {
+    display: flex;
     width: min(100%, 30rem);
     max-height: min(80dvh, 42rem);
-    overflow: auto;
+    flex-direction: column;
+    overflow: hidden;
     border-radius: var(--radius-xl);
     background: var(--color-surface);
     box-shadow: var(--shadow-subtle);
   }
 
-  header, footer { display: flex; align-items: center; gap: 0.75rem; padding: 1rem; }
+  header, footer { display: flex; flex-shrink: 0; align-items: center; gap: 0.75rem; padding: 1rem; }
   header { border-bottom: 1px solid var(--color-border); }
   footer { border-top: 1px solid var(--color-border); }
   h2 { margin: 0; flex: 1; font-size: 1.1rem; }
   header button { min-width: 2.75rem; min-height: 2.75rem; border: 0; background: transparent; font-size: 1.5rem; }
 
-  &__body { padding: 1rem; }
+  &__body { display: flex; flex: 1; min-height: 0; flex-direction: column; padding: 1rem; overflow-y: auto; }
 }
 </style>

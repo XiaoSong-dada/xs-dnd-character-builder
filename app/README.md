@@ -4,8 +4,9 @@
 
 > 当前运行时仅支持 `5e-2014`。仓库中的 2024 资料用于未来规则集建设，不会混入当前可编辑草稿。
 
-## 最新版本：v1.1.0
+## 最新版本：v1.1.1
 
+- 弹窗标题栏固定优化：编辑角色形象、调整等级等长内容弹窗的标题与关闭按钮固定在弹窗顶部，仅内容区滚动，不再随内容滚出视野。
 - 新增可选角色头像与立绘：身份步骤和角色卡编辑模式均可上传、调整焦点、从立绘一键生成头像，并自动展示在车卡首页、角色卡与跑团助手；图片缺失或加载失败时自动隐藏，不显示占位图。
 - 草稿升级至 schema v7，图片 Blob 独立保存在 IndexedDB；新增 ZIP 完整角色包（角色数据 + 头像/立绘）导入导出，支持跨设备迁移，普通 JSON 导出明确不含图片。
 
@@ -158,7 +159,7 @@ docker run --rm -p 8080:80 dnd-character-builder
 docker build \
   --build-arg VITE_AUTHOR_NAME="小宋哒哒" \
   --build-arg VITE_GITHUB_URL="https://github.com/XiaoSong-dada" \
-  --build-arg VITE_APP_VERSION="1.1.0" \
+  --build-arg VITE_APP_VERSION="1.1.1" \
   --build-arg VITE_TIP_WECHAT_QR_URL="/local-assets/tips/wechat.jpg" \
   --build-arg VITE_TIP_ALIPAY_QR_URL="/local-assets/tips/alipay.jpg" \
   --build-arg VITE_UMAMI_SCRIPT_URL="https://your_url/script.js" \
