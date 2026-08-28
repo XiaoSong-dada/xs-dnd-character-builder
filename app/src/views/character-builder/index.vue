@@ -49,6 +49,7 @@ const {
   returnToStart,
   deleteDraft,
   importDraft,
+  importPackage,
   nextStep,
   previousStep,
   setStep,
@@ -70,6 +71,7 @@ const {
   updateAbilities,
   updateRaceAbilityChoices,
   exportDraft,
+  exportPackage,
   exportPdf,
   exportXlsx,
   exportLegacyDraft,
@@ -123,6 +125,7 @@ function updateMethod(value: AbilityMethod): void {
     @open="openDraft"
     @delete="deleteDraft"
     @import="importDraft"
+    @import-package="importPackage"
     @export-legacy="exportLegacyDraft"
   />
   <QuickBuildShell v-else :has-drawer="step !== 'sheet'" :has-actions="step !== 'sheet'">
@@ -198,9 +201,9 @@ function updateMethod(value: AbilityMethod): void {
       @infusions="updateInfusions"
     />
     <SpellcastingStep v-else-if="step === 'spells'" :draft="activeDraft" @change="updateSpells" />
-    <IdentityStep v-else-if="step === 'identity'" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" />
+    <IdentityStep v-else-if="step === 'identity'" :draft="activeDraft" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" @change-media="updateDraft({ media: $event })" />
     <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" @go="setStep($event as DraftStep)" />
-    <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" :exporting-format="exportingFormat" :export-notice="exportNotice" @export="exportDraft" @export-pdf="exportPdf" @export-xlsx="exportXlsx" @adjust-level="openLevelModal" @reedit="startReedit" @change-spell-selections="updateSpells" @change-inventory="updateInventory" @change-adventure-gold="updateAdventureGold" @change-manual-edits="updateManualEdits" />
+    <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" :exporting-format="exportingFormat" :export-notice="exportNotice" @export="exportDraft" @export-package="exportPackage" @export-pdf="exportPdf" @export-xlsx="exportXlsx" @adjust-level="openLevelModal" @reedit="startReedit" @change-spell-selections="updateSpells" @change-inventory="updateInventory" @change-adventure-gold="updateAdventureGold" @change-manual-edits="updateManualEdits" @change-media="updateDraft({ media: $event })" />
 
     <template v-if="step !== 'sheet' && derivedSummary" #drawer>
       <CharacterDrawer :summary="derivedSummary" :completion="completion" />

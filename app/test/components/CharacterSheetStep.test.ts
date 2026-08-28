@@ -1200,12 +1200,13 @@ describe('CharacterSheetStep 导出入口', () => {
     expect(document.body.textContent).toContain('导出 PDF 角色卡')
     expect(document.body.textContent).toContain('导出 XLSX 自动计算卡')
     expect(document.body.textContent).toContain('导出 JSON 数据文件')
+    expect(document.body.textContent).toContain('导出完整角色包')
   })
 
   it('JSON 菜单项触发 export 事件，XLSX 菜单项触发 exportXlsx 事件', async () => {
     const wrapper = await openExportMenu()
     const items = Array.from(document.body.querySelectorAll('.character-sheet__export-menu-item'))
-    expect(items).toHaveLength(3)
+    expect(items).toHaveLength(4)
 
     ;(items[2] as HTMLButtonElement).click()
     await nextTick()
@@ -1218,6 +1219,14 @@ describe('CharacterSheetStep 导出入口', () => {
     ;(itemsAgain[1] as HTMLButtonElement).click()
     await nextTick()
     expect(wrapper.emitted('exportXlsx')).toEqual([[]])
+  })
+
+  it('完整角色包菜单项触发 exportPackage 事件', async () => {
+    const wrapper = await openExportMenu()
+    const items = Array.from(document.body.querySelectorAll('.character-sheet__export-menu-item'))
+    ;(items[3] as HTMLButtonElement).click()
+    await nextTick()
+    expect(wrapper.emitted('exportPackage')).toEqual([[]])
   })
 
   it('PDF 菜单项触发 exportPdf 事件（模板填充下载）', async () => {

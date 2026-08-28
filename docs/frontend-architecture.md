@@ -353,6 +353,14 @@ src/features/spellbook-transcription（法师抄录法术书共享能力：角�
     -> src/stores/character-drafts.ts（updateDraftById：spellSelections + adventureGold 一次 patch 原子写回）
     -> src/types/{character,rules}
 
+src/features/character-media（身份步骤、角色卡、车卡首页与跑团助手共享的角色形象能力）
+  components/CharacterMediaEditor.vue
+    -> hooks/useCharacterMediaEditing.ts（上传、焦点调整、独立删除、从立绘生成头像）
+  components/CharacterMediaImage.vue
+    -> hooks/useCharacterMediaUrl.ts（客户端对象 URL、加载失败隐藏与释放）
+  -> src/services/{character-image,character-media-storage}
+  -> src/types/character
+
 src/features/quick-build/components/CharacterDrawer.vue
   -> src/components/ui/{StatTile,UiDrawer}
   -> src/types/character
@@ -382,7 +390,7 @@ src/utils/format-spell-label.ts（无状态法术列表副标题格式化）
 ```text
 src/stores/character-drafts.ts
   -> src/rules/{derive,manual-edits,session-state,timeline,validate,spellcasting,starting-equipment}
-  -> src/services/{character-json,draft-storage,session-state-storage}
+  -> src/services/{character-json,character-media-storage,character-package,draft-storage,session-state-storage}
   -> src/types/character
 
 src/stores/session-assistant.ts（跑团助手视图状态：选中角色 id + 当前页签，localStorage 持久化）
@@ -390,6 +398,18 @@ src/stores/session-assistant.ts（跑团助手视图状态：选中角色 id + �
 
 src/services/character-json.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
+  -> src/types/character
+
+src/services/character-media-storage.ts（IndexedDB Blob 边界；草稿不得直接保存图片二进制）
+  -> 浏览器 IndexedDB
+
+src/services/character-image.ts（格式/大小校验、WebP 压缩、头像裁切与立绘缩放）
+  -> Canvas / ImageBitmap
+  -> src/types/character
+
+src/services/character-package.ts
+  -> src/services/{character-json,character-media-storage}
+  -> fflate（ZIP 完整角色包：character.json + 可选 avatar.webp / portrait.webp）
   -> src/types/character
 
 src/services/export-xlsx.ts
@@ -434,7 +454,7 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 
 ### 8.6.1 schema v6 与有效角色数据
 
-`CharacterDraft` schema v6 新增独立 `CharacterManualEdits`。v2—v5 草稿与 JSON 导入统一经过 `draft-storage` 的 v6 迁移入口，人工字段缺省为空；v6 localStorage key 与旧 key 并存读取，保存只写 v6。JSON 保存差值和人工法术来源，不降格为不可重算的绝对最终值。
+`CharacterDraft` schema v7 在 v6 的 `CharacterManualEdits` 基础上新增可选 `media` 引用。v2—v6 草稿与 JSON 导入统一经过 `draft-storage` 的 v7 迁移入口；v7 localStorage key 与旧 key 并存读取，保存只写 v7。图片 Blob 保存在 IndexedDB，普通 JSON 导出移除 `media`，ZIP 完整角色包负责跨设备迁移角色与图片。JSON 仍保存差值和人工法术来源，不降格为不可重算的绝对最终值。
 
 `rules/derive.ts` 是有效属性、熟练、技能、豁免与派生战斗数值的唯一规则出口；`rules/manual-edits.ts` 负责人工数据归一化和字段差值换算；`rules/spellcasting.ts` 负责有效环位及有效法术集合；`rules/weapon-attacks.ts` 将公共人工武器调整应用到每件可计算武器。角色卡、摘要、跑团助手和导出模型均消费这些有效结果。
 

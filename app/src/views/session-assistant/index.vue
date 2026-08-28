@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 import { deriveCharacterSummary } from '@/rules/derive'
+import { CharacterMediaImage } from '@/features/character-media'
 import SessionPanel from './components/SessionPanel.vue'
 import { useSessionAssistantPage } from './hooks/useSessionAssistantPage'
 
@@ -24,8 +25,8 @@ const summaries = computed(() =>
 
       <div class="session-assistant__import">
         <label class="session-assistant__import-button">
-          导入 JSON
-          <input type="file" accept="application/json,.json" @change="readImportFile" />
+          导入 JSON 或完整角色包
+          <input type="file" accept="application/json,.json,application/zip,.zip" @change="readImportFile" />
         </label>
         <p v-if="importError" class="session-assistant__import-error">{{ importError }}</p>
       </div>
@@ -38,11 +39,14 @@ const summaries = computed(() =>
           class="session-assistant__card"
           @click="selectDraft(item.draft.id)"
         >
+          <CharacterMediaImage v-if="item.draft.media?.avatar" class="session-assistant__card-avatar" :media-id="item.draft.media.avatar.mediaId" :alt="`${item.draft.name || '角色'}头像`" />
+          <span class="session-assistant__card-copy">
           <strong>{{ item.draft.name || '未命名角色' }}</strong>
           <small>
             {{ item.summary.level }}级{{ item.summary.className ? ` ${item.summary.className}` : '' }}
             · HP {{ item.summary.hitPoints ?? '—' }}
           </small>
+          </span>
         </button>
         <p v-if="!summaries.length" class="session-assistant__empty">
           还没有角色。请先到「辅助车卡」创建角色，或通过「导入 JSON」加入已有角色文件。
@@ -107,8 +111,7 @@ const summaries = computed(() =>
 
   &__card {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.25rem;
     min-height: 3.5rem;
     padding: 0.75rem;
@@ -116,6 +119,9 @@ const summaries = computed(() =>
     border-radius: var(--radius-md);
     background: var(--color-surface);
     text-align: left;
+
+    &-avatar { width: 3rem; height: 3rem; flex: none; border-radius: 50%; object-fit: cover; }
+    &-copy { display: grid; min-width: 0; }
 
     small {
       color: var(--color-text-muted);

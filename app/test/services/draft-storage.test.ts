@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { DraftStorageService } from '@/services/draft-storage'
 
-const V6_KEY = 'dnd-character-builder:drafts:v6'
+const V7_KEY = 'dnd-character-builder:drafts:v7'
 const V5_KEY = 'dnd-character-builder:drafts:v5'
 const V4_KEY = 'dnd-character-builder:drafts:v4'
 const V3_KEY = 'dnd-character-builder:drafts:v3'
@@ -26,7 +26,7 @@ describe('DraftStorageService', () => {
     }])
     const drafts = DraftStorageService.loadAll()
     expect(drafts).toHaveLength(1)
-    expect(drafts[0]?.schemaVersion).toBe(6)
+    expect(drafts[0]?.schemaVersion).toBe(7)
     expect(drafts[0]?.enabledSourceIds).toBeDefined()
     expect(drafts[0]?.spellSelections.transcribedSpellIds).toEqual([])
     expect(drafts[0]?.spellSelections.spellbookSpellIds).toEqual(['spell-2014-magic-missile'])
@@ -50,7 +50,7 @@ describe('DraftStorageService', () => {
     }])
     const drafts = DraftStorageService.loadAll()
     expect(drafts).toHaveLength(1)
-    expect(drafts[0]?.schemaVersion).toBe(6)
+    expect(drafts[0]?.schemaVersion).toBe(7)
     expect(drafts[0]?.adventureGold).toBe(12)
     expect(drafts[0]?.spellSelections.transcribedSpellIds).toEqual([])
     expect(drafts[0]?.spellSelections.preparedSpellIds).toEqual(['spell-2014-magic-missile'])
@@ -64,7 +64,7 @@ describe('DraftStorageService', () => {
     const drafts = DraftStorageService.loadAll()
     expect(drafts).toHaveLength(1)
     const draft = drafts[0] as NonNullable<typeof drafts[0]>
-    expect(draft.schemaVersion).toBe(6)
+    expect(draft.schemaVersion).toBe(7)
     expect(draft.equipmentNeedsReview).toBe(true)
     expect(draft.inventory[0]).toMatchObject({ itemId: 'dagger', quantity: 2, equippedQuantity: 1, sourceKind: 'legacy' })
     expect(draft.spellSelections.transcribedSpellIds).toEqual([])
@@ -88,14 +88,14 @@ describe('DraftStorageService', () => {
     }])
     const drafts = DraftStorageService.loadAll()
     expect(drafts).toHaveLength(1)
-    expect(drafts[0]?.schemaVersion).toBe(6)
+    expect(drafts[0]?.schemaVersion).toBe(7)
     expect(drafts[0]?.adventureGold).toBe(23)
     expect(drafts[0]?.manualEdits.addedSpells).toEqual([])
   })
 
-  it('saveAll 写入 v6 key', () => {
-    DraftStorageService.saveAll([{ schemaVersion: 6, id: 'save-1', ruleset: '5e-2014', name: '保存' } as never])
-    const raw = JSON.parse(localStorage.getItem(V6_KEY) ?? '[]') as Array<{ id: string }>
+  it('saveAll 写入 v7 key', () => {
+    DraftStorageService.saveAll([{ schemaVersion: 7, id: 'save-1', ruleset: '5e-2014', name: '保存' } as never])
+    const raw = JSON.parse(localStorage.getItem(V7_KEY) ?? '[]') as Array<{ id: string }>
     expect(raw).toHaveLength(1)
     expect(raw[0]?.id).toBe('save-1')
   })

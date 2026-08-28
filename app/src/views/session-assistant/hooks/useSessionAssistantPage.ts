@@ -33,11 +33,21 @@ export function useSessionAssistantPage() {
     }
   }
 
-  function readImportFile(event: Event): void {
+  async function readImportFile(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
     if (!file) return
-    void file.text().then(importRaw)
+    if (file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip') {
+      try {
+        importError.value = ''
+        const draft = await store.importPackage(file)
+        viewStore.selectDraft(draft.id)
+      } catch (error) {
+        importError.value = error instanceof Error ? error.message : '无法导入完整角色包。'
+      }
+      return
+    }
+    importRaw(await file.text())
   }
 
   return {

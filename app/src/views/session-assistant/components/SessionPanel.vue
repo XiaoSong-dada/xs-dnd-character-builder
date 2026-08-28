@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { CharacterMediaImage } from '@/features/character-media'
 
 import AddItemModal from '@/components/AddItemModal.vue'
 import AdjustItemModal from '@/components/AdjustItemModal.vue'
@@ -242,13 +243,24 @@ function openTranscribe(spellId?: string): void {
 <template>
   <div class="session-panel">
     <header class="session-panel__header">
+      <CharacterMediaImage
+        v-if="draft.media?.portrait"
+        class="session-panel__portrait"
+        :media-id="draft.media.portrait.mediaId"
+        decorative
+        :focus-x="draft.media.portrait.focusX"
+        :focus-y="draft.media.portrait.focusY"
+      />
       <button type="button" class="session-panel__back" @click="$emit('back')">← 返回列表</button>
-      <div class="session-panel__identity">
+      <div class="session-panel__identity" :class="{ 'session-panel__identity--portrait': draft.media?.portrait }">
+        <CharacterMediaImage v-if="draft.media?.avatar" class="session-panel__avatar" :media-id="draft.media.avatar.mediaId" :alt="`${draft.name || '角色'}头像`" />
+        <span class="session-panel__identity-copy">
         <strong>{{ draft.name || '未命名角色' }}</strong>
         <small>
           {{ draft.classId ? `${draft.targetLevel}级 ${panel.className.value}` : `${draft.targetLevel}级` }}
           · {{ draft.raceId ? '已选种族' : '未选种族' }}{{ draft.alignment ? ` · ${draft.alignment}` : '' }}
         </small>
+        </span>
       </div>
       <div class="session-panel__tags" aria-label="已挂载状态">
         <button
@@ -645,14 +657,18 @@ function openTranscribe(spellId?: string): void {
 <style scoped lang="scss">
 .session-panel {
   &__header {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     padding: 1rem;
     border-bottom: 1px solid var(--color-border);
+    overflow: hidden;
   }
 
   &__back {
+    position: relative;
+    z-index: 2;
     align-self: flex-start;
     display: inline-flex;
     align-items: center;
@@ -674,16 +690,26 @@ function openTranscribe(spellId?: string): void {
   }
 
   &__identity {
+    position: relative;
+    z-index: 2;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 0.25rem;
+
+    &--portrait { max-width: 72%; }
 
     small {
       color: var(--color-text-muted);
     }
   }
 
+  &__identity-copy { display: grid; gap: 0.25rem; }
+  &__avatar { width: 4rem; height: 4rem; flex: none; margin-right: 0.55rem; border: 2px solid var(--color-surface); border-radius: 50%; object-fit: cover; }
+  &__portrait { position: absolute; z-index: 1; inset: 0 0 0 auto; width: 48%; height: 100%; object-fit: cover; mask-image: linear-gradient(to right, transparent, #000 42%); opacity: 0.88; }
+
   &__tags {
+    position: relative;
+    z-index: 2;
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;

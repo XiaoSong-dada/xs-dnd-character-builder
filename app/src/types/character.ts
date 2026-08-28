@@ -119,8 +119,25 @@ export interface CurrencyWallet {
   readonly pp: number
 }
 
+export interface CharacterMediaRef {
+  readonly mediaId: string
+  readonly mimeType: 'image/webp'
+  readonly width: number
+  readonly height: number
+}
+
+export interface CharacterPortraitRef extends CharacterMediaRef {
+  readonly focusX: number
+  readonly focusY: number
+}
+
+export interface CharacterMedia {
+  readonly avatar?: CharacterMediaRef
+  readonly portrait?: CharacterPortraitRef
+}
+
 export interface CharacterDraft {
-  readonly schemaVersion: 6
+  readonly schemaVersion: 7
   readonly id: string
   readonly ruleset: '5e-2014'
   readonly createdAt: string
@@ -158,6 +175,8 @@ export interface CharacterDraft {
   readonly name: string
   readonly alignment: string
   readonly notes: string
+  /** 可选角色形象；二进制保存在 IndexedDB，草稿仅保存媒体引用。 */
+  readonly media?: CharacterMedia
   readonly currentStep: DraftStep
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "xs-dnd-character-builder",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -33,6 +33,7 @@
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/test-utils": "^2.4.11",
     "@vue/tsconfig": "^0.5.1",
+    "fake-indexeddb": "^6.2.4",
     "happy-dom": "^20.11.1",
     "sass": "^1.101.3",
     "typescript": "~5.7.2",

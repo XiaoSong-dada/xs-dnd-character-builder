@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
 import IdentityStep from '@/views/character-builder/components/IdentityStep.vue'
+import type { CharacterDraft } from '@/types/character'
 
 const alignments = [
   '守序善良',
@@ -39,5 +40,15 @@ describe('IdentityStep', () => {
       alignment: '守序邪恶',
       notes: '前士兵',
     })
+  })
+
+  it('传入角色草稿时显示角色形象编辑区并转发媒体变更', async () => {
+    const media = { avatar: { mediaId: 'avatar-1', mimeType: 'image/webp' as const, width: 512, height: 512 } }
+    const wrapper = mount(IdentityStep, {
+      props: { name: '凯恩', alignment: '', notes: '', draft: { name: '凯恩' } as CharacterDraft },
+      global: { stubs: { CharacterMediaEditor: { emits: ['change'], template: '<button class="media-stub" @click="$emit(\'change\', media)">媒体</button>', data: () => ({ media }) } } },
+    })
+    await wrapper.get('.media-stub').trigger('click')
+    expect(wrapper.emitted('changeMedia')?.[0]?.[0]).toEqual(media)
   })
 })

@@ -1,10 +1,11 @@
-import type { CharacterDraft, LegacyDraftRecord, SpellSelections } from '@/types/character'
+import type { CharacterDraft, CharacterMedia, LegacyDraftRecord, SpellSelections } from '@/types/character'
 import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
 import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { rulesRepository } from '@/rules/repository'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 
-const STORAGE_KEY = 'dnd-character-builder:drafts:v6'
+const STORAGE_KEY = 'dnd-character-builder:drafts:v7'
+const V6_STORAGE_KEY = 'dnd-character-builder:drafts:v6'
 const V5_STORAGE_KEY = 'dnd-character-builder:drafts:v5'
 const V4_STORAGE_KEY = 'dnd-character-builder:drafts:v4'
 const V3_STORAGE_KEY = 'dnd-character-builder:drafts:v3'
@@ -24,7 +25,29 @@ function emptySpellSelections(): SpellSelections {
 function isDraft(value: unknown): value is CharacterDraft {
   if (!value || typeof value !== 'object') return false
   const draft = value as Partial<CharacterDraft>
-  return draft.schemaVersion === 6 && draft.ruleset === '5e-2014' && typeof draft.id === 'string'
+  return draft.schemaVersion === 7 && draft.ruleset === '5e-2014' && typeof draft.id === 'string'
+}
+
+function normalizeMedia(value: unknown): CharacterMedia | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const media = value as Record<string, unknown>
+  const normalizeRef = (candidate: unknown) => {
+    if (!candidate || typeof candidate !== 'object') return undefined
+    const ref = candidate as Record<string, unknown>
+    if (typeof ref.mediaId !== 'string' || ref.mimeType !== 'image/webp') return undefined
+    if (!Number.isFinite(ref.width) || !Number.isFinite(ref.height)) return undefined
+    const base = { mediaId: ref.mediaId, mimeType: 'image/webp' as const, width: Number(ref.width), height: Number(ref.height) }
+    return base
+  }
+  const avatar = normalizeRef(media.avatar)
+  const portraitBase = normalizeRef(media.portrait)
+  const portraitSource = media.portrait as Record<string, unknown> | undefined
+  const portrait = portraitBase && portraitSource ? {
+    ...portraitBase,
+    focusX: Math.min(1, Math.max(0, Number(portraitSource.focusX) || 0.5)),
+    focusY: Math.min(1, Math.max(0, Number(portraitSource.focusY) || 0.5)),
+  } : undefined
+  return avatar || portrait ? { avatar, portrait } : undefined
 }
 
 function normalizeDraft(draft: CharacterDraft): CharacterDraft {
@@ -46,14 +69,15 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
       ? { ...draft.spellSelections, transcribedSpellIds: draft.spellSelections.transcribedSpellIds ?? [] }
       : emptySpellSelections(),
     manualEdits: normalizeManualEdits(draft.manualEdits),
+    media: normalizeMedia(draft.media),
   }
 }
 
-/** v2—v6 统一迁移入口；旧玩法偏好不再进入当前草稿。 */
-export function migrateDraftToV6(value: unknown): CharacterDraft | undefined {
+/** v2—v7 统一迁移入口；旧玩法偏好不再进入当前草稿。 */
+export function migrateDraftToV7(value: unknown): CharacterDraft | undefined {
   if (!value || typeof value !== 'object') return undefined
   const draft = value as Record<string, unknown>
-  if (![2, 3, 4, 5, 6].includes(Number(draft.schemaVersion)) || draft.ruleset !== '5e-2014' || typeof draft.id !== 'string') return undefined
+  if (![2, 3, 4, 5, 6, 7].includes(Number(draft.schemaVersion)) || draft.ruleset !== '5e-2014' || typeof draft.id !== 'string') return undefined
   const oldVersion = Number(draft.schemaVersion)
   const inventoryItemIds = oldVersion === 2 && Array.isArray(draft.inventoryItemIds)
     ? draft.inventoryItemIds.filter((item): item is string => typeof item === 'string')
@@ -82,7 +106,7 @@ export function migrateDraftToV6(value: unknown): CharacterDraft | undefined {
   const { preferences: _preferences, inventoryItemIds: _inventoryItemIds, equippedItemIds: _equippedItemIds, ...rest } = draft
   return normalizeDraft({
     ...rest,
-    schemaVersion: 6,
+    schemaVersion: 7,
     currentStep: draft.currentStep === 'preferences' ? 'sources' : draft.currentStep,
     enabledSourceIds,
     startingEquipmentSelections: oldVersion === 2 ? [] : draft.startingEquipmentSelections,
@@ -91,12 +115,14 @@ export function migrateDraftToV6(value: unknown): CharacterDraft | undefined {
     currency: oldVersion === 2 ? EMPTY_CURRENCY : draft.currency,
     adventureGold: oldVersion === 2 ? 0 : draft.adventureGold,
     equipmentNeedsReview: oldVersion === 2 ? true : draft.equipmentNeedsReview,
-    manualEdits: oldVersion === 6 ? draft.manualEdits : EMPTY_MANUAL_EDITS,
+    manualEdits: oldVersion >= 6 ? draft.manualEdits : EMPTY_MANUAL_EDITS,
+    media: oldVersion >= 7 ? draft.media : undefined,
   } as unknown as CharacterDraft)
 }
 
-/** 兼容旧调用名；统一返回当前 v6 草稿。 */
-export const migrateDraftToV5 = migrateDraftToV6
+/** 兼容旧调用名；统一返回当前 v7 草稿。 */
+export const migrateDraftToV6 = migrateDraftToV7
+export const migrateDraftToV5 = migrateDraftToV7
 
 function readArray(key: string): readonly unknown[] {
   try {
@@ -114,7 +140,8 @@ export const DraftStorageService = {
     const current = readArray(STORAGE_KEY).filter(isDraft).map(normalizeDraft)
     const seenIds = new Set(current.map((draft) => draft.id))
     const migrated = [
-      ...readArray(V5_STORAGE_KEY).map(migrateDraftToV6),
+      ...readArray(V6_STORAGE_KEY).map(migrateDraftToV7),
+      ...readArray(V5_STORAGE_KEY).map(migrateDraftToV7),
       ...readArray(V4_STORAGE_KEY).map(migrateDraftToV5),
       ...readArray(V3_STORAGE_KEY).map(migrateDraftToV5),
       ...readArray(V2_STORAGE_KEY).map(migrateDraftToV5),

@@ -12,6 +12,7 @@ import { validateSpellSelections } from '@/rules/spellcasting'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
+import { CharacterPackageService } from '@/services/character-package'
 import { downloadXlsx, fillTemplate, loadCharacterSheetTemplate } from '@/services/export-xlsx'
 import { buildCharacterSheetPdf, downloadPdf } from '@/services/export-pdf'
 import { buildCharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
@@ -41,7 +42,7 @@ export function useCharacterBuilderPage() {
   const store = useCharacterDraftsStore()
   const { drafts, legacyDrafts, activeDraft, derivedSummary, validationIssues, completion } = storeToRefs(store)
   const importError = ref('')
-  const exportingFormat = ref<'pdf' | 'xlsx'>()
+  const exportingFormat = ref<'pdf' | 'xlsx' | 'zip'>()
   const exportNotice = ref<{ readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }>()
   const pendingChange = ref<{
     readonly title: string
@@ -470,6 +471,15 @@ export function useCharacterBuilderPage() {
     store.updateDraft({ spellSelections: value })
   }
 
+  async function importPackage(file: File): Promise<void> {
+    try {
+      importError.value = ''
+      syncRoute(await store.importPackage(file))
+    } catch (error) {
+      importError.value = error instanceof Error ? error.message : '无法导入完整角色包。'
+    }
+  }
+
   function updateManualEdits(value: CharacterManualEdits): void {
     store.updateManualEdits(value)
   }
@@ -488,6 +498,21 @@ export function useCharacterBuilderPage() {
 
   function exportDraft(): void {
     if (activeDraft.value) CharacterJsonService.downloadDraft(activeDraft.value)
+  }
+
+  async function exportPackage(): Promise<void> {
+    const draft = activeDraft.value
+    if (!draft || exportingFormat.value) return
+    exportingFormat.value = 'zip'
+    exportNotice.value = undefined
+    try {
+      await CharacterPackageService.download(draft)
+      exportNotice.value = { tone: 'success', title: '完整角色包导出完成', message: '角色数据、头像与立绘已打包并开始下载。' }
+    } catch (error) {
+      exportNotice.value = { tone: 'error', title: '角色包导出失败', message: exportErrorMessage(error) }
+    } finally {
+      exportingFormat.value = undefined
+    }
   }
 
   function diagnosticSummary(diagnostics: readonly ExportDiagnostic[]): string {
@@ -594,6 +619,7 @@ export function useCharacterBuilderPage() {
     returnToStart,
     deleteDraft,
     importDraft,
+    importPackage,
     nextStep,
     previousStep,
     setStep,
@@ -615,6 +641,7 @@ export function useCharacterBuilderPage() {
     updateAbilities,
     updateRaceAbilityChoices,
     exportDraft,
+    exportPackage,
     exportPdf,
     exportXlsx,
     exportLegacyDraft: store.exportLegacyDraft,

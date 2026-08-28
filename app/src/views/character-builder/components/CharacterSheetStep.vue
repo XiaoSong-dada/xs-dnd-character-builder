@@ -12,6 +12,7 @@ import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
+import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-media'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
@@ -21,18 +22,19 @@ import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { buildTimeline } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
-import type { AbilityKey, CharacterDraft, CharacterManualEdits, DerivedCharacter, InventoryEntry, ManualAddedSpell, SpellSelections } from '@/types/character'
+import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, DerivedCharacter, InventoryEntry, ManualAddedSpell, SpellSelections } from '@/types/character'
 import type { ClassFeature, SpellRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{
   draft: CharacterDraft
   derived: DerivedCharacter
-  exportingFormat?: 'pdf' | 'xlsx'
+  exportingFormat?: 'pdf' | 'xlsx' | 'zip'
   exportNotice?: { readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }
 }>()
 const emit = defineEmits<{
   export: []
+  exportPackage: []
   exportPdf: []
   exportXlsx: []
   adjustLevel: []
@@ -41,7 +43,9 @@ const emit = defineEmits<{
   changeInventory: [inventory: readonly InventoryEntry[]]
   changeAdventureGold: [adventureGold: number]
   changeManualEdits: [manualEdits: CharacterManualEdits]
+  changeMedia: [media: CharacterMedia | undefined]
 }>()
+const showMediaEditor = ref(false)
 const editing = useCharacterSheetEditing(
   () => props.draft,
   () => props.derived,
@@ -457,6 +461,9 @@ function handleExportJson(): void {
   showExportMenu.value = false
   emit('export')
 }
+function handleExportPackage(): void {
+  emit('exportPackage')
+}
 function handleExportXlsx(): void {
   emit('exportXlsx')
 }
@@ -467,16 +474,23 @@ function handleExportPdf(): void {
 
 <template>
   <section class="character-sheet">
-    <header>
-      <span>规则预览 · 5e-2014</span>
-      <h2>{{ draft.name || '未命名角色' }}</h2>
-      <p>{{ identityLine }}</p>
-      <div v-if="draft.classId" class="character-sheet__header-actions">
-        <UiBadge v-if="needsReview" tone="warning">待补全</UiBadge>
-        <button type="button" class="character-sheet__level-button" @click="$emit('adjustLevel')">调整等级</button>
-        <button type="button" class="character-sheet__level-button" @click="editing.editMode.value = !editing.editMode.value">{{ editing.editMode.value ? '完成编辑' : '编辑角色卡' }}</button>
-        <button v-if="editing.editMode.value && editing.hasEdits.value" type="button" class="character-sheet__level-button character-sheet__level-button--danger" @click="editing.showResetConfirm.value = true">恢复系统默认</button>
+    <header :class="{ 'character-sheet__header--media': draft.media?.avatar || draft.media?.portrait }">
+      <div class="character-sheet__header-content" :class="{ 'character-sheet__header-content--portrait': draft.media?.portrait }">
+        <CharacterMediaImage v-if="draft.media?.avatar" class="character-sheet__avatar" :media-id="draft.media.avatar.mediaId" :alt="`${draft.name || '角色'}头像`" />
+        <div>
+          <span>规则预览 · 5e-2014</span>
+          <h2>{{ draft.name || '未命名角色' }}</h2>
+          <p>{{ identityLine }}</p>
+          <div v-if="draft.classId" class="character-sheet__header-actions">
+            <UiBadge v-if="needsReview" tone="warning">待补全</UiBadge>
+            <button type="button" class="character-sheet__level-button" @click="$emit('adjustLevel')">调整等级</button>
+            <button type="button" class="character-sheet__level-button" @click="editing.editMode.value = !editing.editMode.value">{{ editing.editMode.value ? '完成编辑' : '编辑角色卡' }}</button>
+            <button v-if="editing.editMode.value" type="button" class="character-sheet__level-button" @click="showMediaEditor = true">编辑角色形象</button>
+            <button v-if="editing.editMode.value && editing.hasEdits.value" type="button" class="character-sheet__level-button character-sheet__level-button--danger" @click="editing.showResetConfirm.value = true">恢复系统默认</button>
+          </div>
+        </div>
       </div>
+      <CharacterMediaImage v-if="draft.media?.portrait" class="character-sheet__portrait" :media-id="draft.media.portrait.mediaId" decorative :focus-x="draft.media.portrait.focusX" :focus-y="draft.media.portrait.focusY" />
     </header>
     <UiTabs v-model="activeTab" :items="tabs" />
     <div v-if="activeTab === 'overview'" class="character-sheet__stats">
@@ -887,12 +901,16 @@ function handleExportPdf(): void {
       <button type="button" class="character-sheet__export" :disabled="Boolean(exportingFormat)" @click="showExportMenu = true">{{ exportingFormat ? '正在导出…' : '导出' }}</button>
       <button type="button" class="character-sheet__export character-sheet__export--secondary" @click="$emit('reedit')">重新编辑</button>
     </div>
+    <UiModal :open="showMediaEditor" title="编辑角色形象" @close="showMediaEditor = false">
+      <CharacterMediaEditor :draft="draft" @change="$emit('changeMedia', $event)" />
+    </UiModal>
     <UiModal :open="showExportMenu" title="导出角色" @close="showExportMenu = false">
       <div class="character-sheet__export-menu">
         <UiNotice v-if="exportNotice" :tone="exportNotice.tone" :title="exportNotice.title">{{ exportNotice.message }}</UiNotice>
         <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportPdf">{{ exportingFormat === 'pdf' ? '正在生成 PDF…' : '导出 PDF 角色卡' }}</button>
         <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportXlsx">{{ exportingFormat === 'xlsx' ? '正在生成 XLSX…' : '导出 XLSX 自动计算卡' }}</button>
-        <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportJson">导出 JSON 数据文件</button>
+        <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportJson">导出 JSON 数据文件（不含图片）</button>
+        <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportPackage">{{ exportingFormat === 'zip' ? '正在生成角色包…' : '导出完整角色包（含图片）' }}</button>
       </div>
     </UiModal>
     <UiModal :open="editing.showResetConfirm.value" title="恢复系统默认" @close="editing.showResetConfirm.value = false">
@@ -911,10 +929,12 @@ function handleExportPdf(): void {
   gap: 0.9rem;
 
   > header {
+    position: relative;
     padding: 1rem;
     border: 1px solid #dfc49a;
     border-radius: var(--radius-lg);
     background: linear-gradient(125deg, var(--color-gold-soft), var(--color-surface));
+    overflow: hidden;
 
     span { color: var(--color-success); font-size: 0.7rem; font-weight: 700; }
     h2 { margin: 0.4rem 0 0; }
@@ -929,6 +949,12 @@ function handleExportPdf(): void {
     gap: 0.5rem;
     margin-top: 0.75rem;
   }
+
+  &__header--media { min-height: 9rem; }
+
+  &__header-content { position: relative; z-index: 2; display: flex; align-items: center; gap: 0.8rem; &--portrait { max-width: 72%; } }
+  &__avatar { width: 4.5rem; height: 4.5rem; flex: none; border: 2px solid var(--color-surface); border-radius: 50%; object-fit: cover; }
+  &__portrait { position: absolute; z-index: 1; inset: 0 0 0 auto; width: 45%; height: 100%; object-fit: cover; mask-image: linear-gradient(to right, transparent, #000 40%); opacity: 0.9; }
 
   &__panel {
     padding: 1rem;

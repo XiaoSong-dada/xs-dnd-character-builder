@@ -10,7 +10,7 @@ const mockConfig = vi.hoisted(() => ({
 vi.mock('@/config/site', () => mockConfig)
 
 const draft: CharacterDraft = {
-  schemaVersion: 4,
+  schemaVersion: 7,
   id: 'draft-delete-test',
   ruleset: '5e-2014',
   createdAt: '',
@@ -95,6 +95,15 @@ describe('StartPanel 角色条信息展示', () => {
 
     expect(wrapper.text()).toContain('3级 · 角色完成')
     expect(wrapper.text()).not.toContain('sheet')
+  })
+
+  it('仅有头像引用的角色条渲染头像，没有头像时不显示占位', () => {
+    const withAvatar = { ...draft, id: 'with-avatar', media: { avatar: { mediaId: 'avatar-1', mimeType: 'image/webp' as const, width: 512, height: 512 } } }
+    const wrapper = mount(StartPanel, {
+      props: { drafts: [withAvatar, { ...draft, id: 'without-avatar' }], legacyDrafts: [] },
+      global: { stubs: { CharacterMediaImage: { template: '<img>' } } },
+    })
+    expect(wrapper.findAll('.start-panel__draft-avatar')).toHaveLength(1)
   })
 })
 

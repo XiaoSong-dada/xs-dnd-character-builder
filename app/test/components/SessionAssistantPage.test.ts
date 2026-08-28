@@ -43,6 +43,17 @@ describe('跑团助手 · 角色列表与导入', () => {
     expect(wrapper.text()).toContain('还没有角色')
   })
 
+  it('角色列表只为有头像引用的草稿渲染头像', () => {
+    const store = useCharacterDraftsStore()
+    makeWizardDraft(store)
+    store.updateDraft({ media: { avatar: { mediaId: 'avatar-1', mimeType: 'image/webp', width: 512, height: 512 } } })
+    store.createDraft()
+    const wrapper = mount(SessionAssistantPage, {
+      global: { stubs: { CharacterMediaImage: { template: '<img>' } } },
+    })
+    expect(wrapper.findAll('.session-assistant__card-avatar')).toHaveLength(1)
+  })
+
   it('导入合法 JSON 后直接进入该角色的局内面板', async () => {
     const store = useCharacterDraftsStore()
     const draft = makeWizardDraft(store)

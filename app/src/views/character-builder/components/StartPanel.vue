@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
+import { CharacterMediaImage } from '@/features/character-media'
 import { siteConfig } from '@/config/site'
 import { rulesRepository } from '@/rules/repository'
 import { STEP_META } from '@/views/character-builder/steps'
@@ -18,7 +19,8 @@ function readFile(event: Event): void {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
-  void file.text().then((raw) => emit('import', raw))
+  if (file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip') emit('importPackage', file)
+  else void file.text().then((raw) => emit('import', raw))
 }
 
 const emit = defineEmits<{
@@ -26,6 +28,7 @@ const emit = defineEmits<{
   open: [id: string]
   delete: [id: string]
   import: [raw: string]
+  importPackage: [file: File]
   exportLegacy: [id: string]
 }>()
 
@@ -89,6 +92,7 @@ const hasSiteInfo = computed(() => Boolean(siteConfig.authorName || siteConfig.g
       class="start-panel__draft"
     >
       <button type="button" class="start-panel__draft-open" @click="$emit('open', draft.id)">
+        <CharacterMediaImage v-if="draft.media?.avatar" class="start-panel__draft-avatar" :media-id="draft.media.avatar.mediaId" :alt="`${draft.name || '角色'}头像`" />
         <span><strong>{{ draft.name || '未命名角色' }}</strong><small>{{ draft.targetLevel }}级 · {{ statusText(draft) }}</small></span>
         <b>继续 ›</b>
       </button>
@@ -116,8 +120,8 @@ const hasSiteInfo = computed(() => Boolean(siteConfig.authorName || siteConfig.g
       <button type="button" @click="$emit('exportLegacy', draft.id)">导出</button>
     </article>
     <label class="start-panel__import">
-      导入角色 JSON
-      <input type="file" accept="application/json,.json" @change="readFile">
+      导入角色 JSON 或完整角色包
+      <input type="file" accept="application/json,.json,application/zip,.zip" @change="readFile">
     </label>
     <UiModal
       :open="Boolean(pendingDeleteDraft)"
@@ -215,6 +219,8 @@ const hasSiteInfo = computed(() => Boolean(siteConfig.authorName || siteConfig.g
       font-size: 0.75rem;
       font-weight: 700;
     }
+
+    &-avatar { width: 3rem; height: 3rem; flex: none; border-radius: 50%; object-fit: cover; }
   }
 
   &__delete-message {

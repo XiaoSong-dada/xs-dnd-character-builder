@@ -13,6 +13,8 @@ import { reconcileSessionLimits } from '@/rules/session-state'
 import { SessionStateStorageService } from '@/services/session-state-storage'
 import { CharacterJsonService } from '@/services/character-json'
 import { DraftStorageService } from '@/services/draft-storage'
+import { CharacterMediaStorageService } from '@/services/character-media-storage'
+import { CharacterPackageService } from '@/services/character-package'
 import type {
   AbilityScores,
   CharacterManualEdits,
@@ -31,7 +33,7 @@ function newId(): string {
 function createCharacterDraft(): CharacterDraft {
   const now = new Date().toISOString()
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     id: newId(),
     ruleset: '5e-2014',
     createdAt: now,
@@ -124,7 +126,9 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
   function deleteDraft(id: string): boolean {
     const index = drafts.value.findIndex((draft) => draft.id === id)
     if (index < 0) return false
+    const mediaIds = CharacterPackageService.mediaIds(drafts.value[index]?.media)
     drafts.value.splice(index, 1)
+    void CharacterMediaStorageService.removeMany(mediaIds).catch(() => undefined)
     if (activeDraftId.value === id) activeDraftId.value = undefined
     return true
   }
@@ -200,6 +204,13 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     return draft
   }
 
+  async function importPackage(file: Blob): Promise<CharacterDraft> {
+    const draft = await CharacterPackageService.import(file)
+    drafts.value.push(draft)
+    activeDraftId.value = draft.id
+    return draft
+  }
+
   function exportActiveDraft(): string | undefined {
     return activeDraft.value ? CharacterJsonService.exportDraft(activeDraft.value) : undefined
   }
@@ -229,6 +240,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     saveSelection,
     invalidateSelections,
     importDraft,
+    importPackage,
     exportActiveDraft,
     exportLegacyDraft,
   }

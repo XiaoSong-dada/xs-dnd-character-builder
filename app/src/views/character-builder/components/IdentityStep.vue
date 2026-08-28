@@ -1,6 +1,12 @@
 <script setup lang="ts">
-defineProps<{ name: string; alignment: string; notes: string }>()
-defineEmits<{ change: [value: { name: string; alignment: string; notes: string }] }>()
+import { CharacterMediaEditor } from '@/features/character-media'
+import type { CharacterDraft, CharacterMedia } from '@/types/character'
+
+defineProps<{ name: string; alignment: string; notes: string; draft?: CharacterDraft }>()
+defineEmits<{
+  change: [value: { name: string; alignment: string; notes: string }]
+  changeMedia: [media: CharacterMedia | undefined]
+}>()
 
 const alignments = [
   '守序善良',
@@ -17,6 +23,7 @@ const alignments = [
 
 <template>
   <section class="identity-step">
+    <CharacterMediaEditor v-if="draft" :draft="draft" @change="$emit('changeMedia', $event)" />
     <label>角色姓名<input :value="name" placeholder="例如：凯恩" @input="$emit('change', { name: ($event.target as HTMLInputElement).value, alignment, notes })"></label>
     <label>
       阵营
