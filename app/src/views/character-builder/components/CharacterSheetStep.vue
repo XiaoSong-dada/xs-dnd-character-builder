@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import AddItemModal from '@/components/AddItemModal.vue'
 import AdjustItemModal from '@/components/AdjustItemModal.vue'
@@ -46,6 +46,35 @@ const emit = defineEmits<{
   changeMedia: [media: CharacterMedia | undefined]
 }>()
 const showMediaEditor = ref(false)
+const showMoreActions = ref(false)
+const moreButtonRef = ref<HTMLButtonElement>()
+const morePanelRef = ref<HTMLElement>()
+
+function toggleMoreActions(): void {
+  showMoreActions.value = !showMoreActions.value
+}
+
+function closeMoreActions(event: Event): void {
+  const target = event.target as Node
+  if (morePanelRef.value?.contains(target) || moreButtonRef.value?.contains(target)) return
+  showMoreActions.value = false
+}
+
+function handleMoreKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && showMoreActions.value) {
+    showMoreActions.value = false
+    moreButtonRef.value?.focus()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', closeMoreActions)
+  document.addEventListener('keydown', handleMoreKeydown)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', closeMoreActions)
+  document.removeEventListener('keydown', handleMoreKeydown)
+})
 const editing = useCharacterSheetEditing(
   () => props.draft,
   () => props.derived,
@@ -485,8 +514,20 @@ function handleExportPdf(): void {
             <UiBadge v-if="needsReview" tone="warning">待补全</UiBadge>
             <button type="button" class="character-sheet__level-button" @click="$emit('adjustLevel')">调整等级</button>
             <button type="button" class="character-sheet__level-button" @click="editing.editMode.value = !editing.editMode.value">{{ editing.editMode.value ? '完成编辑' : '编辑角色卡' }}</button>
-            <button v-if="editing.editMode.value" type="button" class="character-sheet__level-button" @click="showMediaEditor = true">编辑角色形象</button>
-            <button v-if="editing.editMode.value && editing.hasEdits.value" type="button" class="character-sheet__level-button character-sheet__level-button--danger" @click="editing.showResetConfirm.value = true">恢复系统默认</button>
+            <template v-if="editing.editMode.value">
+              <button
+                ref="moreButtonRef"
+                type="button"
+                class="character-sheet__level-button"
+                :aria-expanded="showMoreActions"
+                aria-controls="character-sheet-more-actions"
+                @click="toggleMoreActions"
+              >更多{{ showMoreActions ? ' ▴' : ' ▾' }}</button>
+              <div v-if="showMoreActions" id="character-sheet-more-actions" ref="morePanelRef" class="character-sheet__more-panel">
+                <button type="button" class="character-sheet__more-action" @click="showMediaEditor = true; showMoreActions = false">编辑角色形象</button>
+                <button v-if="editing.hasEdits.value" type="button" class="character-sheet__more-action character-sheet__more-action--danger" @click="editing.showResetConfirm.value = true; showMoreActions = false">恢复系统默认</button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -1191,9 +1232,13 @@ function handleExportPdf(): void {
 
   &__export--secondary { color: var(--color-primary); background: var(--color-surface); border: 1px solid var(--color-border); }
 
-  &__header-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; }
+  &__header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.6rem; }
 
-  &__level-button { min-height: 2.25rem; padding: 0 0.9rem; border: 1px solid var(--color-primary); border-radius: var(--radius-md); color: var(--color-primary); background: var(--color-surface); font-size: 0.75rem; font-weight: 700; }
+  &__level-button,
+  &__more-action { min-height: 2.25rem; padding: 0 0.7rem; border: 1px solid var(--color-primary); border-radius: var(--radius-md); color: var(--color-primary); background: var(--color-surface); font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+
+  &__more-panel { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem; width: 100%; }
+  &__more-action--danger { color: var(--color-error); border-color: currentColor; }
 
   &__subclass-features { display: grid; gap: 0.5rem; }
   &__subclass-features-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }

@@ -252,6 +252,95 @@ describe('CharacterSheetStep 升级降级与重新编辑入口', () => {
   })
 })
 
+describe('CharacterSheetStep 头部按钮布局（编辑模式收纳）', () => {
+  const editedDraft: CharacterDraft = {
+    ...draft,
+    manualEdits: {
+      abilityAdjustments: { str: 2 },
+      proficiencyBonusAdjustment: 0,
+      derivedAdjustments: {},
+      savingThrowAdjustments: {},
+      skillAdjustments: {},
+      spellSlotAdjustments: {},
+      addedSpells: [],
+    },
+  }
+
+  async function openEditMode(wrapper: ReturnType<typeof mount<typeof CharacterSheetStep>>): Promise<void> {
+    const editButton = wrapper.findAll('.character-sheet__level-button').find((button) => button.text() === '编辑角色卡')
+    expect(editButton).toBeDefined()
+    await editButton!.trigger('click')
+    await nextTick()
+  }
+
+  async function openMorePanel(wrapper: ReturnType<typeof mount<typeof CharacterSheetStep>>): Promise<void> {
+    const moreButton = wrapper.findAll('.character-sheet__level-button').find((button) => button.text().startsWith('更多'))
+    expect(moreButton).toBeDefined()
+    await moreButton!.trigger('click')
+    await nextTick()
+  }
+
+  it('编辑模式开启后头部收敛为调整等级/完成编辑/更多，不直接显示次要操作', async () => {
+    const wrapper = mount(CharacterSheetStep, { props: { draft, derived: deriveCharacter(draft) } })
+    expect(wrapper.text()).not.toContain('更多')
+    await openEditMode(wrapper)
+    expect(wrapper.text()).toContain('完成编辑')
+    expect(wrapper.text()).toContain('更多')
+    expect(wrapper.find('.character-sheet__more-panel').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('编辑角色形象')
+    expect(wrapper.text()).not.toContain('恢复系统默认')
+  })
+
+  it('「更多」展开显示编辑角色形象；无人工编辑时不显示恢复系统默认', async () => {
+    const wrapper = mount(CharacterSheetStep, { props: { draft, derived: deriveCharacter(draft) } })
+    await openEditMode(wrapper)
+    await openMorePanel(wrapper)
+    expect(wrapper.find('.character-sheet__more-panel').exists()).toBe(true)
+    expect(wrapper.text()).toContain('编辑角色形象')
+    expect(wrapper.text()).not.toContain('恢复系统默认')
+  })
+
+  it('「更多」面板的编辑角色形象打开媒体编辑器弹窗并收起面板', async () => {
+    const wrapper = mount(CharacterSheetStep, { props: { draft, derived: deriveCharacter(draft) } })
+    await openEditMode(wrapper)
+    await openMorePanel(wrapper)
+    const mediaAction = wrapper.findAll('.character-sheet__more-action').find((button) => button.text() === '编辑角色形象')
+    expect(mediaAction).toBeDefined()
+    await mediaAction!.trigger('click')
+    await nextTick()
+    expect(document.body.textContent).toContain('编辑角色形象')
+    expect(wrapper.find('.character-sheet__more-panel').exists()).toBe(false)
+  })
+
+  it('有人工编辑时「更多」面板显示恢复系统默认并可打开恢复确认弹窗', async () => {
+    const wrapper = mount(CharacterSheetStep, { props: { draft: editedDraft, derived: deriveCharacter(editedDraft) } })
+    await openEditMode(wrapper)
+    await openMorePanel(wrapper)
+    const resetAction = wrapper.findAll('.character-sheet__more-action').find((button) => button.text() === '恢复系统默认')
+    expect(resetAction).toBeDefined()
+    await resetAction!.trigger('click')
+    await nextTick()
+    expect(document.body.textContent).toContain('恢复系统默认')
+    expect(wrapper.find('.character-sheet__more-panel').exists()).toBe(false)
+  })
+
+  it('面板外点击与 Esc 均可关闭「更多」面板', async () => {
+    const wrapper = mount(CharacterSheetStep, { props: { draft, derived: deriveCharacter(draft) } })
+    await openEditMode(wrapper)
+    await openMorePanel(wrapper)
+    expect(wrapper.find('.character-sheet__more-panel').exists()).toBe(true)
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await nextTick()
+    expect(wrapper.find('.character-sheet__more-panel').exists()).toBe(false)
+
+    await openMorePanel(wrapper)
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+    await nextTick()
+    expect(wrapper.find('.character-sheet__more-panel').exists()).toBe(false)
+  })
+})
+
 describe('CharacterSheetStep 法术展示', () => {
   const spellbookDraft: CharacterDraft = {
     ...draft,
