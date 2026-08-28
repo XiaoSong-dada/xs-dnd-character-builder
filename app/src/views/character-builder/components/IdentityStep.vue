@@ -23,7 +23,6 @@ const alignments = [
 
 <template>
   <section class="identity-step">
-    <CharacterMediaEditor v-if="draft" :draft="draft" @change="$emit('changeMedia', $event)" />
     <label>角色姓名<input :value="name" placeholder="例如：凯恩" @input="$emit('change', { name: ($event.target as HTMLInputElement).value, alignment, notes })"></label>
     <label>
       阵营
@@ -32,6 +31,7 @@ const alignments = [
         <option v-for="option in alignments" :key="option" :value="option">{{ option }}</option>
       </select>
     </label>
+    <CharacterMediaEditor v-if="draft" :draft="draft" @change="$emit('changeMedia', $event)" />
     <label>人物细节<textarea :value="notes" rows="6" placeholder="外貌、理想、羁绊或背景故事（可选）" @input="$emit('change', { name, alignment, notes: ($event.target as HTMLTextAreaElement).value })" /></label>
   </section>
 </template>
