@@ -42,6 +42,26 @@ export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subr
   return ids
 }
 
+/** 解析专长授予的豁免熟练：feat-child 子选择中带豁免授予语义的属性（如强健身心）。返回 属性 → 专长名。 */
+function collectFeatSavingThrowAbilities(draft: CharacterDraft): Readonly<Partial<Record<AbilityKey, string>>> {
+  const result: Partial<Record<AbilityKey, string>> = {}
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:')) continue
+    const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
+    const feat = featId ? rulesRepository.getFeat(featId) : undefined
+    if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds)) continue
+    const parentActive = draft.selections.some((item) => item.checkpointId === parentCheckpointId && !item.invalidatedAt && item.optionIds.includes(featId ?? ''))
+    if (!parentActive) continue
+    const choice = feat.choices?.find((item) => item.id === choiceId && item.grantSavingThrowProficiency)
+    if (!choice) continue
+    for (const optionId of selection.optionIds) {
+      const match = /^feat-bonus-(str|dex|con|int|wis|cha)-1$/.exec(optionId)
+      if (match) result[match[1] as AbilityKey] = feat.name
+    }
+  }
+  return result
+}
+
 /** 全部 18 项 2014 技能 ID（种族自选规格的缺省选项列表）。 */
 export const SKILL_IDS: readonly string[] = [
   'skill-acrobatics',
@@ -242,6 +262,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const expertiseIds = new Set((classRule?.checkpoints ?? [])
     .filter((checkpoint) => checkpoint.kind === 'expertise')
     .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? []))
+  const featSavingThrowAbilities = collectFeatSavingThrowAbilities(draft)
   const skillAbilities: Readonly<Record<string, AbilityKey>> = {
     'skill-acrobatics': 'dex',
     'skill-animal-handling': 'wis',
@@ -263,10 +284,12 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     'skill-survival': 'wis',
   }
   const savingThrows = Object.fromEntries(abilityKeys.map((key) => {
-    const proficient = classRule?.savingThrowAbilities.includes(key) ?? false
+    const featSavingName = featSavingThrowAbilities[key]
+    const proficient = (classRule?.savingThrowAbilities.includes(key) ?? false) || Boolean(featSavingName)
     return [key, withManualAdjustment(derived(modifiers[key] + (proficient ? proficiency : 0), [
       { id: `${key}-save-ability`, label: '属性调整值', value: modifiers[key], detail: `${key.toUpperCase()} ${abilities[key]}` },
-      ...(proficient ? [{ id: `${key}-save-proficiency`, label: '职业豁免熟练', value: proficiency, detail: classRule?.name ?? '' }] : []),
+      ...(classRule?.savingThrowAbilities.includes(key) ? [{ id: `${key}-save-proficiency`, label: '职业豁免熟练', value: proficiency, detail: classRule?.name ?? '' }] : []),
+      ...(featSavingName ? [{ id: `${key}-save-feat-proficiency`, label: '专长豁免熟练', value: proficiency, detail: featSavingName }] : []),
     ]), manual.savingThrowAdjustments[key], `save-${key}`)]
   })) as Record<AbilityKey, DerivedValue<number>>
   const skills = Object.fromEntries(Object.entries(skillAbilities).map(([skillId, ability]) => {

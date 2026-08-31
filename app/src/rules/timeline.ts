@@ -122,6 +122,7 @@ function buildFeatChoiceCheckpoints(
       parentCheckpointId: parent.id,
       parentOptionId: feat.id,
       abilityBonus: choice.abilityBonus,
+      grantSavingThrowProficiency: choice.grantSavingThrowProficiency,
     }))
   })
 }

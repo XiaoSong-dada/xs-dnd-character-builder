@@ -50,6 +50,28 @@ describe('deriveCharacter', () => {
     expect(proficiencyBonus(20)).toBe(6)
   })
 
+  it('强健身心专长：所选属性 +1 且豁免含熟练加值，来源显示专长名', () => {
+    const resilientDraft: CharacterDraft = {
+      ...draft,
+      selections: [
+        { checkpointId: 'fighter-2014-style-1', optionIds: ['style-defense'], confirmedAt: '2026-07-30T00:00:00.000Z' },
+        { checkpointId: 'fighter-2014-asi-4', optionIds: ['feat-resilient'], confirmedAt: '2026-07-30T00:00:00.000Z' },
+        {
+          checkpointId: 'feat-child:fighter-2014-asi-4:feat-resilient:resilient-ability',
+          optionIds: ['feat-bonus-con-1'],
+          confirmedAt: '2026-07-30T00:00:00.000Z',
+        },
+      ],
+    }
+    const result = deriveCharacter(resilientDraft)
+    // 半兽人 +2 力量、+1 体质：体质 13 → 15（种族 +1 后再叠加专长 +1）
+    expect(result.abilities.con).toBe(15)
+    // 战士豁免为力量/体质：体质豁免 = 调整值 2 + 熟练 4
+    expect(result.savingThrows.con.value).toBe(6)
+    const sources = result.savingThrows.con.sources
+    expect(sources.some((source) => source.id === 'con-save-feat-proficiency' && source.detail === '强健身心')).toBe(true)
+  })
+
   it('区分拥有与已装备，并保留数值来源', () => {
     const result = deriveCharacter(draft)
     expect(result.abilities.str).toBe(17)

@@ -42,6 +42,21 @@ describe('2014 feats and ability improvements', () => {
     expect(gwm?.detail).toContain('+10 伤害')
   })
 
+  it('强健身心（Resilient）配置属性子选择并授予豁免熟练，专长名全量唯一', () => {
+    const resilient = feats2014.find((feat) => feat.id === 'feat-resilient')
+    expect(resilient?.name).toBe('强健身心')
+    const choice = resilient?.choices?.[0]
+    expect(choice?.title).toBe('选择属性加值')
+    expect(choice?.optionIds).toHaveLength(6)
+    expect(choice?.abilityBonus).toBe(1)
+    expect(choice?.grantSavingThrowProficiency).toBe(true)
+
+    const names = feats2014.map((feat) => feat.name)
+    expect(new Set(names).size).toBe(names.length)
+    expect(feats2014.find((feat) => feat.id === 'feat-tavern-brawler')?.name).toBe('斗殴高手')
+    expect(feats2014.find((feat) => feat.id === 'feat-artificer-initiate')?.name).toBe('奇械学徒')
+  })
+
   it('provides six +2 choices and fifteen distinct +1/+1 choices', () => {
     expect(abilityImprovementOptions2014).toHaveLength(21)
     expect(ABILITY_IMPROVEMENT_OPTION_IDS.filter((id) => id.endsWith('-2'))).toHaveLength(6)

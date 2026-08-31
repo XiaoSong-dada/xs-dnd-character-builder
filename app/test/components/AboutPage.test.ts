@@ -4,7 +4,7 @@ import { createPinia } from 'pinia'
 
 const mockConfig = vi.hoisted(() => ({
   siteConfig: {
-    version: '1.1.2',
+    version: '1.1.3',
     tipQrCodes: {
       wechatUrl: undefined as string | undefined,
       alipayUrl: undefined as string | undefined,
@@ -54,7 +54,7 @@ describe('关于本站页面', () => {
     expect(wrapper.text()).toContain('B站个人空间')
     expect(wrapper.text()).toContain('GitHub 项目')
     expect(wrapper.text()).toContain('群号 831306509')
-    expect(wrapper.text()).toContain('当前版本 v1.1.2')
+    expect(wrapper.text()).toContain('当前版本 v1.1.3')
     expect(wrapper.text()).toContain('查看本次更新')
     expect(wrapper.text()).not.toContain('小宋哒哒')
     expect(wrapper.text()).not.toContain('赞助鸣谢')

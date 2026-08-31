@@ -60,6 +60,8 @@ export interface FeatChoiceSpec {
   readonly candidateKind?: CheckpointCandidateKind
   readonly abilityBonus?: number
   readonly uniqueGroup?: string
+  /** 所选属性同时获得豁免熟练（如专长强健身心；选项需为属性 +1 选项）。 */
+  readonly grantSavingThrowProficiency?: boolean
 }
 
 export interface FeatRule extends RuleOption {
@@ -94,6 +96,8 @@ export interface ChoiceCheckpoint {
   readonly parentOptionId?: string
   /** 子选择向对应属性提供的固定加值（半专长等）。 */
   readonly abilityBonus?: number
+  /** 所选属性同时获得豁免熟练（专长子选择，如强健身心）。 */
+  readonly grantSavingThrowProficiency?: boolean
 }
 
 /** 动态候选池：检查点选项随草稿状态（等级、法术书）由规则层生成。 */

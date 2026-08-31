@@ -22,7 +22,7 @@ describe('角色卡导出黄金样例', () => {
     expect(model.spellcasting?.spells.filter((spell) => spell.prepared)).toHaveLength(9)
     expect(model.attacks.map((attack) => attack.name)).toContain('长棍')
     expect(model.currency.gp).toBe(10)
-    expect(model.features.map((feature) => feature.name)).toEqual(expect.arrayContaining(['警觉', '冲锋者']))
+    expect(model.features.map((feature) => feature.name)).toEqual(expect.arrayContaining(['警觉', '冲锋手']))
 
     const { values, diagnostics } = buildXlsxFieldValues(model)
     expect(diagnostics.filter((item) => item.severity === 'error')).toEqual([])
@@ -30,7 +30,7 @@ describe('角色卡导出黄金样例', () => {
     expect(values.gp).toBe(10)
     expect(Object.entries(values).filter(([key, value]) => /^spell_\d+_\d+_prepared$/.test(key) && value === '●')).toHaveLength(9)
     expect(`${values.features_traits}\n${values.additional_features}`).toContain('警觉')
-    expect(`${values.features_traits}\n${values.additional_features}`).toContain('冲锋者')
+    expect(`${values.features_traits}\n${values.additional_features}`).toContain('冲锋手')
 
     const pdf = await fillPdfTemplate(new Uint8Array(readFileSync(PDF_TEMPLATE)), new Uint8Array(readFileSync(PDF_FONT)), model)
     expect(pdf.diagnostics.filter((item) => item.severity === 'error')).toEqual([])

@@ -62,16 +62,16 @@ feat-2014-alert
 
 | 中文名 | 英文名 | 详细资料 | 开放状态 |
 | --- | --- | --- | --- |
-| 警觉 | Alert | [2024 警觉](feats/5e-2024/origin/alert/alert.md) | 开放规则；样例已完成 |
-| 工匠 | Crafter | [2024 工匠](feats/5e-2024/origin/crafter/crafter.md) | 商业摘要 |
-| 医者 | Healer | [2024 医者](feats/5e-2024/origin/healer/healer.md) | 商业摘要 |
+| 警戒 | Alert | [2024 警戒](feats/5e-2024/origin/alert/alert.md) | 开放规则；样例已完成 |
+| 巧匠 | Crafter | [2024 巧匠](feats/5e-2024/origin/crafter/crafter.md) | 商业摘要 |
+| 医疗师 | Healer | [2024 医疗师](feats/5e-2024/origin/healer/healer.md) | 商业摘要 |
 | 幸运 | Lucky | [2024 幸运](feats/5e-2024/origin/lucky/lucky.md) | 商业摘要 |
 | 魔法学徒 | Magic Initiate | [2024 魔法学徒](feats/5e-2024/origin/magic-initiate/magic-initiate.md) | 开放规则 |
 | 音乐家 | Musician | [2024 音乐家](feats/5e-2024/origin/musician/musician.md) | 商业摘要 |
-| 凶蛮攻击者 | Savage Attacker | [2024 凶蛮攻击者](feats/5e-2024/origin/savage-attacker/savage-attacker.md) | 开放规则 |
-| 熟练 | Skilled | [2024 熟练](feats/5e-2024/origin/skilled/skilled.md) | 开放规则 |
+| 凶蛮打手 | Savage Attacker | [2024 凶蛮打手](feats/5e-2024/origin/savage-attacker/savage-attacker.md) | 开放规则 |
+| 熟习 | Skilled | [2024 熟习](feats/5e-2024/origin/skilled/skilled.md) | 开放规则 |
 | 酒馆斗殴者 | Tavern Brawler | [2024 酒馆斗殴者](feats/5e-2024/origin/tavern-brawler/tavern-brawler.md) | 商业摘要 |
-| 强韧 | Tough | [2024 强韧](feats/5e-2024/origin/tough/tough.md) | 商业摘要 |
+| 健壮 | Tough | [2024 健壮](feats/5e-2024/origin/tough/tough.md) | 商业摘要 |
 
 ### 通用专长（43）
 
@@ -79,45 +79,45 @@ feat-2014-alert
 | --- | --- | --- |
 | 属性值提升 | Ability Score Improvement | 第三批建立 |
 | 演员 | Actor | 第三批建立 |
-| 运动健将 | Athlete | 第三批建立 |
-| 冲锋者 | Charger | 第三批建立 |
-| 厨师 | Chef | 第三批建立 |
-| 弩箭专家 | Crossbow Expert | 第三批建立 |
+| 运动精英 | Athlete | 第三批建立 |
+| 冲锋手 | Charger | 第三批建立 |
+| 大厨 | Chef | 第三批建立 |
+| 强弩专家 | Crossbow Expert | 第三批建立 |
 | 粉碎者 | Crusher | 第三批建立 |
 | 防御式决斗 | Defensive Duelist | 第三批建立 |
 | 双持客 | Dual Wielder | 第三批建立 |
-| 耐久 | Durable | 第三批建立 |
-| 元素专精 | Elemental Adept | 第三批建立 |
+| 耐性 | Durable | 第三批建立 |
+| 元素掌控 | Elemental Adept | 第三批建立 |
 | 妖精触碰 | Fey-Touched | 第三批建立 |
 | 擒抱者 | Grappler | 第三批建立 |
 | 巨武器大师 | Great Weapon Master | 第三批建立 |
-| 重甲训练 | Heavily Armored | 第三批建立 |
+| 重甲运用 | Heavily Armored | 第三批建立 |
 | 重甲大师 | Heavy Armor Master | 第三批建立 |
-| 激励领袖 | Inspiring Leader | 第三批建立 |
+| 领袖之证 | Inspiring Leader | 第三批建立 |
 | 敏锐心灵 | Keen Mind | 第三批建立 |
-| 轻甲训练 | Lightly Armored | 第三批建立 |
-| 法师杀手 | Mage Slayer | 第三批建立 |
+| 轻甲运用 | Lightly Armored | 第三批建立 |
+| 巫师杀手 | Mage Slayer | 第三批建立 |
 | 军用武器训练 | Martial Weapon Training | 第三批建立 |
 | 中甲大师 | Medium Armor Master | 第三批建立 |
-| 中甲训练 | Moderately Armored | 第三批建立 |
-| 骑乘战斗 | Mounted Combatant | 第三批建立 |
-| 观察者 | Observant | 第三批建立 |
+| 中甲运用 | Moderately Armored | 第三批建立 |
+| 骑乘斗士 | Mounted Combatant | 第三批建立 |
+| 观察力 | Observant | 第三批建立 |
 | 穿刺者 | Piercer | 第三批建立 |
-| 投毒者 | Poisoner | 第三批建立 |
+| 毒师 | Poisoner | 第三批建立 |
 | 长柄武器大师 | Polearm Master | 第三批建立 |
-| 坚韧 | Resilient | 第三批建立 |
+| 强健身心 | Resilient | 第三批建立 |
 | 仪式施法者 | Ritual Caster | 第三批建立 |
 | 哨兵 | Sentinel | 第三批建立 |
-| 暗影触碰 | Shadow-Touched | 第三批建立 |
+| 影界触碰 | Shadow-Touched | 第三批建立 |
 | 神射手 | Sharpshooter | 第三批建立 |
 | 盾牌大师 | Shield Master | 第三批建立 |
-| 技能专家 | Skill Expert | 第三批建立 |
-| 潜伏者 | Skulker | 第三批建立 |
-| 挥砍者 | Slasher | 第三批建立 |
-| 迅捷 | Speedy | 第三批建立 |
-| 法术狙击手 | Spell Sniper | 第三批建立 |
-| 心灵遥控 | Telekinetic | 第三批建立 |
-| 心灵感应 | Telepathic | 第三批建立 |
+| 技艺专家 | Skill Expert | 第三批建立 |
+| 隐伏者 | Skulker | 第三批建立 |
+| 劈砍者 | Slasher | 第三批建立 |
+| 飙速跑者 | Speedy | 第三批建立 |
+| 法术射手 | Spell Sniper | 第三批建立 |
+| 念动力 | Telekinetic | 第三批建立 |
+| 心电感应 | Telepathic | 第三批建立 |
 | 战地施法者 | War Caster | 第三批建立 |
 | 武器大师 | Weapon Master | 第三批建立 |
 
@@ -128,10 +128,10 @@ feat-2014-alert
 | 箭术 | Archery | 第四批建立 |
 | 盲斗 | Blind Fighting | 第四批建立 |
 | 防御 | Defense | 第四批建立 |
-| 决斗 | Dueling | 第四批建立 |
+| 对决 | Dueling | 第四批建立 |
 | 巨武器战斗 | Great Weapon Fighting | 第四批建立 |
 | 拦截 | Interception | 第四批建立 |
-| 保护 | Protection | 第四批建立 |
+| 守护 | Protection | 第四批建立 |
 | 投掷武器战斗 | Thrown Weapon Fighting | 第四批建立 |
 | 双武器战斗 | Two-Weapon Fighting | 第四批建立 |
 | 徒手战斗 | Unarmed Fighting | 第四批建立 |
@@ -140,18 +140,18 @@ feat-2014-alert
 
 | 中文名 | 英文名 | 详细资料 |
 | --- | --- | --- |
-| 战斗技艺恩惠 | Boon of Combat Prowess | 第五批建立 |
-| 次元旅行恩惠 | Boon of Dimensional Travel | 第五批建立 |
-| 能量抗性恩惠 | Boon of Energy Resistance | 第五批建立 |
-| 命运恩惠 | Boon of Fate | 第五批建立 |
-| 坚韧恩惠 | Boon of Fortitude | 第五批建立 |
-| 无阻攻势恩惠 | Boon of Irresistible Offense | 第五批建立 |
-| 恢复恩惠 | Boon of Recovery | 第五批建立 |
-| 技能恩惠 | Boon of Skill | 第五批建立 |
-| 速度恩惠 | Boon of Speed | 第五批建立 |
-| 法术回想恩惠 | Boon of Spell Recall | 第五批建立 |
-| 夜之灵恩惠 | Boon of the Night Spirit | 第五批建立 |
-| 真视恩惠 | Boon of Truesight | 第五批建立 |
+| 英勇战斗之恩惠 | Boon of Combat Prowess | 第五批建立 |
+| 次元旅行之恩惠 | Boon of Dimensional Travel | 第五批建立 |
+| 能量抗性之恩惠 | Boon of Energy Resistance | 第五批建立 |
+| 扭曲命运之恩惠 | Boon of Fate | 第五批建立 |
+| 超凡强韧之恩惠 | Boon of Fortitude | 第五批建立 |
+| 无敌攻势之恩惠 | Boon of Irresistible Offense | 第五批建立 |
+| 强力恢复之恩惠 | Boon of Recovery | 第五批建立 |
+| 博学多才之恩惠 | Boon of Skill | 第五批建立 |
+| 神行无拘之恩惠 | Boon of Speed | 第五批建立 |
+| 法术溯回之恩惠 | Boon of Spell Recall | 第五批建立 |
+| 暗夜精魂之恩惠 | Boon of the Night Spirit | 第五批建立 |
+| 真实视觉之恩惠 | Boon of Truesight | 第五批建立 |
 
 ## 2014《玩家手册》专长清单
 
@@ -163,44 +163,44 @@ feat-2014-alert
 | --- | --- | --- | --- |
 | 演员 | Actor | 后续批次建立 | 商业摘要 |
 | 警觉 | Alert | [2014 警觉](feats/5e-2014/alert/alert.md) | 样例已完成；商业摘要 |
-| 运动健将 | Athlete | 后续批次建立 | 商业摘要 |
-| 冲锋者 | Charger | 后续批次建立 | 商业摘要 |
-| 弩箭专家 | Crossbow Expert | 后续批次建立 | 商业摘要 |
+| 运动员 | Athlete | 后续批次建立 | 商业摘要 |
+| 冲锋手 | Charger | 后续批次建立 | 商业摘要 |
+| 强弩专家 | Crossbow Expert | 后续批次建立 | 商业摘要 |
 | 防御式决斗 | Defensive Duelist | 后续批次建立 | 商业摘要 |
 | 双持客 | Dual Wielder | 后续批次建立 | 商业摘要 |
 | 地城探索者 | Dungeon Delver | 后续批次建立 | 商业摘要 |
-| 耐久 | Durable | 后续批次建立 | 商业摘要 |
-| 元素专精 | Elemental Adept | 后续批次建立 | 商业摘要 |
+| 耐性 | Durable | 后续批次建立 | 商业摘要 |
+| 元素导师 | Elemental Adept | 后续批次建立 | 商业摘要 |
 | 擒抱者 | Grappler | 后续批次建立 | SRD 开放内容 |
 | 巨武器大师 | Great Weapon Master | 后续批次建立 | 商业摘要 |
-| 医者 | Healer | 后续批次建立 | 商业摘要 |
-| 重甲训练 | Heavily Armored | 后续批次建立 | 商业摘要 |
+| 医疗师 | Healer | 后续批次建立 | 商业摘要 |
+| 重甲运用 | Heavily Armored | 后续批次建立 | 商业摘要 |
 | 重甲大师 | Heavy Armor Master | 后续批次建立 | 商业摘要 |
-| 激励领袖 | Inspiring Leader | 后续批次建立 | 商业摘要 |
+| 领袖之证 | Inspiring Leader | 后续批次建立 | 商业摘要 |
 | 敏锐心灵 | Keen Mind | 后续批次建立 | 商业摘要 |
-| 轻甲训练 | Lightly Armored | 后续批次建立 | 商业摘要 |
+| 轻甲运用 | Lightly Armored | 后续批次建立 | 商业摘要 |
 | 语言学家 | Linguist | 后续批次建立 | 商业摘要 |
 | 幸运 | Lucky | 后续批次建立 | 商业摘要 |
-| 法师杀手 | Mage Slayer | 后续批次建立 | 商业摘要 |
+| 巫师杀手 | Mage Slayer | 后续批次建立 | 商业摘要 |
 | 魔法学徒 | Magic Initiate | 后续批次建立 | 商业摘要 |
-| 武术学徒 | Martial Adept | 后续批次建立 | 商业摘要 |
+| 战技专家 | Martial Adept | 后续批次建立 | 商业摘要 |
 | 中甲大师 | Medium Armor Master | 后续批次建立 | 商业摘要 |
 | 灵活移动 | Mobile | 后续批次建立 | 商业摘要 |
-| 中甲训练 | Moderately Armored | 后续批次建立 | 商业摘要 |
+| 中甲运用 | Moderately Armored | 后续批次建立 | 商业摘要 |
 | 骑乘战斗 | Mounted Combatant | 后续批次建立 | 商业摘要 |
-| 观察者 | Observant | 后续批次建立 | 商业摘要 |
+| 观察力 | Observant | 后续批次建立 | 商业摘要 |
 | 长柄武器大师 | Polearm Master | 后续批次建立 | 商业摘要 |
-| 坚韧 | Resilient | 后续批次建立 | 商业摘要 |
+| 强健身心 | Resilient | 后续批次建立 | 商业摘要 |
 | 仪式施法者 | Ritual Caster | 后续批次建立 | 商业摘要 |
-| 凶蛮攻击者 | Savage Attacker | 后续批次建立 | 商业摘要 |
+| 凶蛮打手 | Savage Attacker | 后续批次建立 | 商业摘要 |
 | 哨兵 | Sentinel | 后续批次建立 | 商业摘要 |
 | 神射手 | Sharpshooter | 后续批次建立 | 商业摘要 |
 | 盾牌大师 | Shield Master | 后续批次建立 | 商业摘要 |
-| 熟练 | Skilled | 后续批次建立 | 商业摘要 |
-| 潜伏者 | Skulker | 后续批次建立 | 商业摘要 |
-| 法术狙击手 | Spell Sniper | 后续批次建立 | 商业摘要 |
-| 酒馆斗殴者 | Tavern Brawler | 后续批次建立 | 商业摘要 |
-| 强韧 | Tough | 后续批次建立 | 商业摘要 |
+| 熟习 | Skilled | 后续批次建立 | 商业摘要 |
+| 隐伏者 | Skulker | 后续批次建立 | 商业摘要 |
+| 法术射手 | Spell Sniper | 后续批次建立 | 商业摘要 |
+| 斗殴高手 | Tavern Brawler | 后续批次建立 | 商业摘要 |
+| 健壮 | Tough | 后续批次建立 | 商业摘要 |
 | 战地施法者 | War Caster | 后续批次建立 | 商业摘要 |
 | 武器大师 | Weapon Master | 后续批次建立 | 商业摘要 |
 
