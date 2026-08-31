@@ -14,15 +14,15 @@ describe('useUpdateNoticeStore', () => {
     const store = useUpdateNoticeStore()
     store.initialize()
     expect(store.isOpen).toBe(true)
-    expect(store.notice?.version).toBe('1.1.3')
+    expect(store.notice?.version).toBe('1.1.4')
 
     store.dismiss()
     expect(store.isOpen).toBe(false)
-    expect(JSON.parse(localStorage.getItem(UPDATE_NOTICE_STORAGE_KEY) ?? '{}')).toEqual({ lastSeenVersion: '1.1.3' })
+    expect(JSON.parse(localStorage.getItem(UPDATE_NOTICE_STORAGE_KEY) ?? '{}')).toEqual({ lastSeenVersion: '1.1.4' })
   })
 
   it('相同版本不弹，不同版本弹出，初始化保持幂等', () => {
-    localStorage.setItem(UPDATE_NOTICE_STORAGE_KEY, JSON.stringify({ lastSeenVersion: '1.1.3' }))
+    localStorage.setItem(UPDATE_NOTICE_STORAGE_KEY, JSON.stringify({ lastSeenVersion: '1.1.4' }))
     const store = useUpdateNoticeStore()
     store.initialize()
     expect(store.isOpen).toBe(false)
@@ -33,7 +33,7 @@ describe('useUpdateNoticeStore', () => {
   })
 
   it('关于页可忽略已读状态手动回看', () => {
-    localStorage.setItem(UPDATE_NOTICE_STORAGE_KEY, JSON.stringify({ lastSeenVersion: '1.1.3' }))
+    localStorage.setItem(UPDATE_NOTICE_STORAGE_KEY, JSON.stringify({ lastSeenVersion: '1.1.4' }))
     const store = useUpdateNoticeStore()
     store.initialize()
     store.openManual()

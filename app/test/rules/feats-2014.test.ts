@@ -57,6 +57,25 @@ describe('2014 feats and ability improvements', () => {
     expect(feats2014.find((feat) => feat.id === 'feat-artificer-initiate')?.name).toBe('奇械学徒')
   })
 
+  it('专长详情术语与规则表述防回归（v1.1.4 修正后锁定）', () => {
+    const detailOf = (id: string) => feats2014.find((feat) => feat.id === id)?.detail ?? ''
+    expect(detailOf('feat-fey-touched')).toContain('迷踪步')
+    expect(detailOf('feat-fey-teleportation')).toContain('迷踪步')
+    expect(detailOf('feat-drow-high-magic')).toContain('解除魔法')
+    expect(detailOf('feat-drow-high-magic')).toContain('漂浮术')
+    expect(detailOf('feat-wood-elf-magic')).toContain('大步奔行')
+    expect(detailOf('feat-wood-elf-magic')).toContain('行动无踪')
+    expect(detailOf('feat-chef')).toContain('厨具')
+    expect(detailOf('feat-squat-nimbleness')).toContain('特技熟练')
+    expect(detailOf('feat-dragon-fear')).toContain('咆哮')
+    expect(detailOf('feat-crusher')).toContain('钝击命中')
+    expect(detailOf('feat-war-caster')).toContain('姿势成分')
+    expect(detailOf('feat-mounted-combatant')).toContain('未被骑乘')
+    expect(detailOf('feat-inspiring-leader')).toContain('30 尺内')
+    expect(detailOf('feat-tavern-brawler')).toContain('临时武器熟练')
+    expect(detailOf('feat-dragon-hide')).toContain('13 + 敏捷调整值')
+  })
+
   it('provides six +2 choices and fifteen distinct +1/+1 choices', () => {
     expect(abilityImprovementOptions2014).toHaveLength(21)
     expect(ABILITY_IMPROVEMENT_OPTION_IDS.filter((id) => id.endsWith('-2'))).toHaveLength(6)

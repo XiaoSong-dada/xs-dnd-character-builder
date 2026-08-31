@@ -13,14 +13,14 @@ describe('UpdateNoticeStorageService', () => {
   })
 
   it('保存并归一化已读版本', () => {
-    expect(UpdateNoticeStorageService.saveLastSeenVersion('v1.1.3')).toBe(true)
-    expect(UpdateNoticeStorageService.loadLastSeenVersion()).toBe('1.1.3')
+    expect(UpdateNoticeStorageService.saveLastSeenVersion('v1.1.4')).toBe(true)
+    expect(UpdateNoticeStorageService.loadLastSeenVersion()).toBe('1.1.4')
   })
 
   it('读写异常时安全降级', () => {
     vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => { throw new Error('denied') })
     expect(UpdateNoticeStorageService.loadLastSeenVersion()).toBeUndefined()
     vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('denied') })
-    expect(UpdateNoticeStorageService.saveLastSeenVersion('1.1.3')).toBe(false)
+    expect(UpdateNoticeStorageService.saveLastSeenVersion('1.1.4')).toBe(false)
   })
 })
