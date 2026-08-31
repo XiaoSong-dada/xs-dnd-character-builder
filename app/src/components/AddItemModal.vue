@@ -498,6 +498,8 @@ function addItem(equip: boolean): void {
     flex: 1;
     min-height: 0;
     align-content: start;
+    // 展开卡片包含标题区与详情区；显式按内容高度计算隐式行，避免卡片仍被压在最小高度内。
+    grid-auto-rows: max-content;
     gap: 0.5rem;
     overflow-y: auto;
     overscroll-behavior: contain;
