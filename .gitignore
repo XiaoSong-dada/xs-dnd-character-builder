@@ -20,3 +20,5 @@ app/scripts/*.txt
 
 # 本地打赏收款码：仅由部署环境提供，不进入仓库
 app/public/local-assets/tips/
+
+.chm_output
