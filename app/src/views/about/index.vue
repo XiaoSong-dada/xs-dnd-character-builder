@@ -6,6 +6,7 @@ import { useAboutPage } from '@/views/about/hooks/useAboutPage'
 
 const {
   title,
+  currentVersion,
   projectDescription,
   freeNotice,
   qqGroup,
@@ -17,6 +18,7 @@ const {
   openQrCode,
   closeQrCode,
   markQrCodeFailed,
+  openUpdateNotice,
 } = useAboutPage()
 </script>
 
@@ -27,7 +29,12 @@ const {
       <h1>{{ title }}</h1>
     </header>
 
-    <AboutIntroSection :description="projectDescription" :free-notice="freeNotice" />
+    <AboutIntroSection
+      :description="projectDescription"
+      :free-notice="freeNotice"
+      :current-version="currentVersion"
+      @open-update-notice="openUpdateNotice"
+    />
     <AboutLinksSection
       :links="externalLinks"
       :qq-group="qqGroup"

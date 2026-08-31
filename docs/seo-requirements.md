@@ -38,7 +38,7 @@
 - 生产域名 `your_url`（占位符，以构建配置为准，站点 URL 应走 `src/config` 环境变量注入）。
 - nginx 仅配置 SPA fallback（`try_files $uri $uri/ /index.html`），无 gzip、无静态缓存头、无 robots/sitemap 显式服务。
 - 已接入 Umami 统计，不影响 SEO。
-- 站点信息（作者名、版本、GitHub 链接）已通过 `VITE_*` 环境变量注入 `src/config/site.ts`，SEO 相关配置应沿用同一入口，不得在业务模块直接读 `import.meta.env`。
+- 站点信息统一由 `src/config/site.ts` 暴露：作者名与 GitHub 链接来自 `VITE_*` 环境变量，版本号由 `app/package.json` 在构建期注入；SEO 相关配置应沿用同一入口，不得在业务模块直接读 `import.meta.env`。
 
 ### 2.4 内容与版权约束
 

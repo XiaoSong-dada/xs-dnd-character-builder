@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
+import { readFileSync } from 'node:fs'
 
 import vue from '@vitejs/plugin-vue'
 import { loadEnv } from 'vite'
@@ -10,6 +11,11 @@ import type { ViteSSGContext } from 'vite-ssg'
 // 根路径（重定向后渲染车卡页）+ 辅助车卡 + 赛博骰娘 + 404（命中 catch-all 路由）
 const INCLUDED_ROUTES = ['/', '/character-builder', '/assistant', '/dice', '/about', '/404']
 const DEFAULT_TITLE = 'D&D车卡辅助'
+const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version?: unknown }
+if (typeof packageJson.version !== 'string' || !packageJson.version.trim()) {
+  throw new Error('app/package.json 必须提供非空 version')
+}
+const APP_VERSION = packageJson.version.trim()
 
 function escapeHtml(value: string): string {
   return value
@@ -67,6 +73,9 @@ export default defineConfig(({ mode }) => {
   const siteUrl = env.VITE_SITE_URL?.trim().replace(/\/+$/, '') || undefined
 
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(APP_VERSION),
+    },
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

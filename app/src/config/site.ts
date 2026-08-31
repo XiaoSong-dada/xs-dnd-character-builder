@@ -10,8 +10,8 @@ export interface SiteConfig {
   readonly githubUrl?: string
   /** 可选署名标语 */
   readonly tagline?: string
-  /** 可选版本号（未配置则不显示） */
-  readonly version?: string
+  /** 当前应用版本，由 app/package.json 在构建期注入。 */
+  readonly version: string
   /** 站点公开根 URL（SEO canonical、og:url、sitemap 使用；无尾斜杠，未配置则不输出 canonical） */
   readonly siteUrl?: string
   /** 站点分享/OG 图片绝对 URL（可选，建议 1200×630） */
@@ -63,7 +63,7 @@ export const siteConfig: SiteConfig = {
   authorName: defined(import.meta.env.VITE_AUTHOR_NAME),
   githubUrl: defined(import.meta.env.VITE_GITHUB_URL),
   tagline: defined(import.meta.env.VITE_AUTHOR_TAGLINE),
-  version: defined(import.meta.env.VITE_APP_VERSION),
+  version: __APP_VERSION__,
   siteUrl: normalizeSiteUrl(import.meta.env.VITE_SITE_URL),
   siteImage: defined(import.meta.env.VITE_SITE_IMAGE),
   tipQrCodes: {

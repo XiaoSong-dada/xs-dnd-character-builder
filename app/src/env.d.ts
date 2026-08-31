@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+declare const __APP_VERSION__: string
+
 interface ImportMetaEnv {
   /** 站点作者名，如 小宋哒哒 */
   readonly VITE_AUTHOR_NAME?: string
@@ -7,8 +9,6 @@ interface ImportMetaEnv {
   readonly VITE_GITHUB_URL?: string
   /** 可选署名标语 */
   readonly VITE_AUTHOR_TAGLINE?: string
-  /** 可选版本号（如 0.1.0），未配置则不显示 */
-  readonly VITE_APP_VERSION?: string
   /** Umami 追踪脚本地址 */
   readonly VITE_UMAMI_SCRIPT_URL?: string
   /** Umami 网站标识 */

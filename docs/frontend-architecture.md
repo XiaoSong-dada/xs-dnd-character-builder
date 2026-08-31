@@ -203,6 +203,8 @@ src/main.ts
 
 src/App.vue
   -> Vue Router 的 RouterView
+  -> src/features/update-notice/components/UpdateNoticeModal.vue
+  -> src/stores/update-notice.ts（浏览器挂载后执行一次版本检查）
 
 src/router/router.ts
   -> src/layout/MainLayout.vue
@@ -237,6 +239,7 @@ src/layout/hooks/useBottomNavigation.ts
 src/views/about/index.vue
   -> src/views/about/hooks/useAboutPage.ts
       -> src/config/site.ts（可选收款码 URL）
+      -> src/stores/update-notice.ts（手动回看当前版本公告）
   -> src/views/about/components/AboutIntroSection.vue
   -> src/views/about/components/AboutLinksSection.vue
   -> src/views/about/components/TipQrSection.vue
@@ -341,6 +344,10 @@ src/views/character-builder/components/*
 ### 8.5 features / components/ui
 
 ```text
+src/features/update-notice/components/UpdateNoticeModal.vue
+  -> src/components/ui/UiScrollModal.vue
+  -> src/stores/update-notice.ts
+
 src/features/spellbook-transcription（法师抄录法术书共享能力：角色卡与跑团助手双调用方）
   index.ts                          （装配导出：Modal + hook）
   components/SpellbookTranscriptionModal.vue
@@ -396,6 +403,11 @@ src/stores/character-drafts.ts
 src/stores/session-assistant.ts（跑团助手视图状态：选中角色 id + 当前页签，localStorage 持久化）
   -> src/stores/character-drafts.ts（草稿存在性校验，回退列表）
 
+src/stores/update-notice.ts（全站公告开关、启动幂等与手动回看）
+  -> src/config/site.ts
+  -> src/constants/update-notices.ts
+  -> src/services/update-notice-storage.ts
+
 src/services/character-json.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
   -> src/types/character
@@ -435,6 +447,9 @@ src/services/draft-storage.ts
 src/services/session-state-storage.ts（跑团助手局内状态，独立 localStorage key）
   -> src/types/session-state
 
+src/services/update-notice-storage.ts（已读版本，独立 localStorage key；SSR/异常安全降级）
+  -> src/utils/version.ts
+
 src/types/session-state.ts
   -> 无项目内依赖（SessionState、13 项预置状态与力竭常量）
 
@@ -444,7 +459,7 @@ src/services/dice-random.ts
 src/services/umami.ts
   -> src/config/site.ts（域名匹配后幂等加载 Umami 统计脚本）
 
-src/config/site.ts    （无依赖；项目内唯一读取 import.meta.env 的入口；导出 baseUrl 供字体等 public 资产 URL）
+src/config/site.ts    （项目内唯一读取 import.meta.env 的入口；版本由 package.json 构建期注入；导出 baseUrl 供字体等 public 资产 URL）
 src/config/setting.ts （空占位文件，无消费者）
 
 src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打印版面）

@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 
 import { siteConfig } from '@/config/site'
+import { useUpdateNoticeStore } from '@/stores/update-notice'
 
 export interface AboutExternalLink {
   readonly id: 'bilibili' | 'github'
@@ -58,6 +59,7 @@ function configuredQrCodes(): readonly TipQrCode[] {
 }
 
 export function useAboutPage() {
+  const updateNoticeStore = useUpdateNoticeStore()
   const copyFeedback = ref('')
   const failedQrCodeIds = ref<ReadonlySet<TipQrCode['id']>>(new Set())
   const activeQrCode = ref<TipQrCode>()
@@ -92,6 +94,7 @@ export function useAboutPage() {
 
   return {
     title: '关于本站',
+    currentVersion: siteConfig.version,
     projectDescription: '一个面向 D&D 5e 2014 玩家、尤其是新手的免费车卡与跑团辅助工具。通过分步引导、自动计算和规则校验，帮助你更轻松地创建并使用角色卡。',
     freeNotice: '本站永久免费。所有功能均可免费使用；“请杯咖啡”仅为自愿打赏，不会解锁额外功能，也不会影响正常使用。',
     qqGroup: QQ_GROUP,
@@ -103,5 +106,6 @@ export function useAboutPage() {
     openQrCode,
     closeQrCode,
     markQrCodeFailed,
+    openUpdateNotice: updateNoticeStore.openManual,
   } as const
 }
