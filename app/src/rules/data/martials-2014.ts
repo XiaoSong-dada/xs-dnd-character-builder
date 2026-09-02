@@ -106,6 +106,14 @@ export const martialOptions2014: readonly RuleOption[] = [
   { id: 'tool-artisans-tools', name: '一种工匠工具', description: '选择一种工匠工具熟练。', status: 'index-only', sourceIds: indexSource },
   { id: 'tool-musical-instrument', name: '一种乐器', description: '选择一种乐器熟练。', status: 'index-only', sourceIds: indexSource },
   { id: 'tool-poisoners-kit', name: '制毒工具', description: '选择制毒工具熟练。', status: 'index-only', sourceIds: indexSource },
+  // 具体工匠工具选项（奇械师 1 级「选择一套工匠工具」检查点引用；译名对齐 5e 不全书工具详述）
+  { id: 'tool-alchemists-supplies', name: '炼金工具', description: '选择炼金工具熟练。', status: 'index-only', sourceIds: indexSource },
+  { id: 'tool-brewers-supplies', name: '酿酒工具', description: '选择酿酒工具熟练。', status: 'index-only', sourceIds: indexSource },
+  { id: 'tool-calligraphers-supplies', name: '书法工具', description: '选择书法工具熟练。', status: 'index-only', sourceIds: indexSource },
+  { id: 'tool-carpenters-tools', name: '木匠工具', description: '选择木匠工具熟练。', status: 'index-only', sourceIds: indexSource },
+  { id: 'tool-masons-tools', name: '石匠工具', description: '选择石匠工具熟练。', status: 'index-only', sourceIds: indexSource },
+  { id: 'tool-smiths-tools', name: '铁匠工具', description: '选择铁匠工具熟练。', status: 'index-only', sourceIds: indexSource },
+  { id: 'tool-woodcarvers-tools', name: '木雕工具', description: '选择木雕工具熟练。', status: 'index-only', sourceIds: indexSource },
   ...barbarianSubclassIds.map((id) => ({
     id,
     name: ({

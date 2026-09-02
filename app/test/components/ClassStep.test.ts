@@ -16,14 +16,14 @@ describe('ClassStep 职业选择', () => {
     const wrapper = mount(ClassStep)
     const cards = wrapper.findAll('.expandable-option-card')
     expect(cards).toHaveLength(13)
-    expect(cards.map((card) => card.get('strong').text())).toContain('工匠')
+    expect(cards.map((card) => card.get('strong').text())).toContain('奇械师')
     expect(wrapper.text()).not.toContain('推荐')
   })
 
-  it('关闭 TCoE 后隐藏工匠但保留核心职业', () => {
+  it('关闭 TCoE 后隐藏奇械师但保留核心职业', () => {
     const wrapper = mount(ClassStep, { props: { enabledSourceIds: [] } })
     expect(wrapper.findAll('.expandable-option-card')).toHaveLength(12)
-    expect(wrapper.text()).not.toContain('工匠')
+    expect(wrapper.text()).not.toContain('奇械师')
     expect(wrapper.text()).toContain('战士')
   })
 

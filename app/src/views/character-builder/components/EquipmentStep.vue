@@ -218,7 +218,7 @@ function sourceLabel(entry: InventoryEntry): string {
     <section v-if="draft.classId === 'class-2014-artificer' && knownInfusions.length" class="equipment-step__section">
       <header>
         <div>
-          <p>工匠灌注</p>
+          <p>奇械师灌注</p>
           <h2>将已知灌注绑定至物品</h2>
         </div>
         <UiBadge :tone="draft.infusionAssignments.length <= infusedItemLimit ? 'success' : 'warning'">

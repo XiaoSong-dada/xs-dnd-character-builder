@@ -107,6 +107,34 @@ describe('2014 pure martial classes', () => {
     expect(result.armorClass.value).toBe(13)
   })
 
+  it('奇械师工具选择：具体工匠工具选项已注册中文名（对齐 5e 不全书）', () => {
+    const toolOptions = [
+      'tool-alchemists-supplies', 'tool-brewers-supplies', 'tool-calligraphers-supplies',
+      'tool-carpenters-tools', 'tool-masons-tools', 'tool-smiths-tools', 'tool-woodcarvers-tools',
+    ]
+    const expected: Record<string, string> = {
+      'tool-alchemists-supplies': '炼金工具',
+      'tool-brewers-supplies': '酿酒工具',
+      'tool-calligraphers-supplies': '书法工具',
+      'tool-carpenters-tools': '木匠工具',
+      'tool-masons-tools': '石匠工具',
+      'tool-smiths-tools': '铁匠工具',
+      'tool-woodcarvers-tools': '木雕工具',
+    }
+    for (const optionId of toolOptions) {
+      const option = rulesRepository.getOption(optionId)
+      expect(option, optionId).toBeDefined()
+      expect(option?.name, optionId).toBe(expected[optionId])
+    }
+    // 奇械师 1 级「选择一套工匠工具」检查点引用这些选项，界面不再回退显示英文 ID
+    const timeline = buildTimeline('class-2014-artificer', 1)
+    const toolCheckpoint = timeline.find((item) => item.id === 'artificer-2014-tool-1')
+    expect(toolCheckpoint).toBeDefined()
+    for (const optionId of toolCheckpoint?.optionIds ?? []) {
+      expect(rulesRepository.getOption(optionId)?.name, optionId).toBeDefined()
+    }
+  })
+
   it('rejects expertise in a skill without proficiency', () => {
     const issues = validateDraft(draft({
       classId: 'class-2014-rogue',

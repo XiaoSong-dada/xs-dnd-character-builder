@@ -354,7 +354,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     },
     ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: '已装备' }] : []),
     ...(defenseStyle && equippedArmor ? [{ id: 'defense-style', label: '防御战斗风格', value: 1, detail: '穿着护甲时生效' }] : []),
-    ...(armorInfusionBonus ? [{ id: 'artificer-enhanced-defense', label: '工匠灌注', value: armorInfusionBonus, detail: '已绑定并装备的强化防御物品' }] : []),
+    ...(armorInfusionBonus ? [{ id: 'artificer-enhanced-defense', label: '奇械师灌注', value: armorInfusionBonus, detail: '已绑定并装备的强化防御物品' }] : []),
     ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${rulesRepository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
   ]), manual.derivedAdjustments.armorClass, 'armor-class')
   const initiativeValue = withManualAdjustment(derived(modifiers.dex, [{ id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` }]), manual.derivedAdjustments.initiative, 'initiative')

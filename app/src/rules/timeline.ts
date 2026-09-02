@@ -29,7 +29,7 @@ export interface TimelineContext {
 }
 
 const subclassTitles: Readonly<Record<string, string>> = {
-  'class-2014-artificer': '选择工匠专职',
+  'class-2014-artificer': '选择奇械师专职',
   'class-2014-barbarian': '选择原初道途',
   'class-2014-bard': '选择吟游诗人学院',
   'class-2014-cleric': '选择神圣领域',

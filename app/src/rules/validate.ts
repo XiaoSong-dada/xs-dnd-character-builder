@@ -92,14 +92,14 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     && Boolean(isSourceEnabled(rulesRepository.getClass(draft.classId)?.sourceIds ?? [], draft.enabledSourceIds))
   const infusionAssignments = draft.infusionAssignments ?? []
   if (infusionAssignments.length > 0 && !infusionActive) {
-    issues.push({ id: 'infusions-inactive', step: 'equipment', severity: 'warning', message: '工匠灌注绑定已保留，但当前职业或来源不允许它们生效。', resolution: '重新选择工匠并启用 ERftLW 或 TCoE 后会自动恢复。' })
+    issues.push({ id: 'infusions-inactive', step: 'equipment', severity: 'warning', message: '奇械师灌注绑定已保留，但当前职业或来源不允许它们生效。', resolution: '重新选择奇械师并启用 ERftLW 或 TCoE 后会自动恢复。' })
   }
   if (infusionActive) {
     const knownIds = new Set(draft.selections
       .filter((selection) => selection.checkpointId.startsWith('artificer-2014-infusions-') && !selection.invalidatedAt)
       .flatMap((selection) => selection.optionIds))
     if (infusionAssignments.length > getArtificerInfusedItemLimit(draft.targetLevel)) {
-      issues.push({ id: 'infusion-limit', step: 'equipment', severity: 'error', message: '同时生效的灌注超过当前工匠等级上限。', resolution: `当前最多生效 ${getArtificerInfusedItemLimit(draft.targetLevel)} 项灌注。` })
+      issues.push({ id: 'infusion-limit', step: 'equipment', severity: 'error', message: '同时生效的灌注超过当前奇械师等级上限。', resolution: `当前最多生效 ${getArtificerInfusedItemLimit(draft.targetLevel)} 项灌注。` })
     }
     const infusionIds = infusionAssignments.map((assignment) => assignment.infusionId)
     const itemEntryIds = infusionAssignments.map((assignment) => assignment.inventoryEntryId)
@@ -112,7 +112,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       if (!infusion || !knownIds.has(assignment.infusionId)) {
         issues.push({ id: `infusion-not-known-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: `灌注“${infusion?.name ?? assignment.infusionId}”尚未掌握或因降级失效。`, resolution: '返回时间线检查已知灌注。' })
       } else if (infusion.minimumLevel > draft.targetLevel) {
-        issues.push({ id: `infusion-level-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: `灌注“${infusion.name}”的等级前置不满足。`, resolution: `需要工匠 ${infusion.minimumLevel} 级。` })
+        issues.push({ id: `infusion-level-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: `灌注“${infusion.name}”的等级前置不满足。`, resolution: `需要奇械师 ${infusion.minimumLevel} 级。` })
       }
       if (!entry || !item) {
         issues.push({ id: `infusion-item-missing-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: '灌注绑定的物品已被删除或无法解析。', resolution: '保留的绑定已停止应用；请选择新的合法物品。' })

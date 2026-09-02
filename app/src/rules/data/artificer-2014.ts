@@ -96,7 +96,7 @@ const asi = (level: number) => ({
 const infusionCheckpoint = (level: number, count: number) => ({
   id: `artificer-2014-infusions-${level}`, level, step: 'timeline' as const, kind: 'infusion' as const,
   title: level === 2 ? '选择已知灌注' : '新增已知灌注',
-  description: '选择尚未掌握且符合工匠等级前置的灌注。', required: true,
+  description: '选择尚未掌握且符合奇械师等级前置的灌注。', required: true,
   minSelections: count, maxSelections: count, optionIds: infusionIdsAt(level), uniqueGroup: 'artificer-infusions-known',
 })
 
@@ -104,15 +104,15 @@ const ARTIFICER_SLOTS = HALF_CASTER_SPELL_SLOTS.map((slots, index) => index === 
 const ARTIFICER_MAX_LEVELS = halfCasterMaximumSpellLevels.map((level, index) => index === 0 ? 1 : level)
 
 export const artificerClass2014: ClassRule = {
-  id: 'class-2014-artificer', ruleset: '5e-2014', name: '工匠', englishName: 'Artificer',
+  id: 'class-2014-artificer', ruleset: '5e-2014', name: '奇械师', englishName: 'Artificer',
   summary: '以智力施法、魔法工具与物品注法支援队伍的 d8 职业。',
   hitDie: 8, primaryAbilities: ['int'], playStyleTags: ['spellcaster', 'support', 'utility', 'durable'],
   savingThrowAbilities: ['con', 'int'], status: 'implemented', sourceIds: sources,
   checkpoints: [
-    { id: 'artificer-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择 2 项工匠技能', description: '从工匠职业技能中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-history', 'skill-investigation', 'skill-medicine', 'skill-nature', 'skill-perception', 'skill-sleight-of-hand'] },
+    { id: 'artificer-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择 2 项奇械师技能', description: '从奇械师职业技能中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-history', 'skill-investigation', 'skill-medicine', 'skill-nature', 'skill-perception', 'skill-sleight-of-hand'] },
     { id: 'artificer-2014-tool-1', level: 1, step: 'timeline', kind: 'class-choice', title: '选择一套工匠工具', description: '除盗贼工具与修补工具外，再选择一类工匠工具熟练。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['tool-alchemists-supplies', 'tool-brewers-supplies', 'tool-calligraphers-supplies', 'tool-carpenters-tools', 'tool-masons-tools', 'tool-smiths-tools', 'tool-woodcarvers-tools'] },
     infusionCheckpoint(2, 4),
-    { id: 'artificer-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择工匠专职', description: '在炼金师、装甲师、魔炮师与战地匠师中选择。', required: true, minSelections: 1, maxSelections: 1, optionIds: [] },
+    { id: 'artificer-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择奇械师专职', description: '在炼金师、装甲师、魔炮师与战地匠师中选择。', required: true, minSelections: 1, maxSelections: 1, optionIds: [] },
     asi(4), infusionCheckpoint(6, 2), asi(8), infusionCheckpoint(10, 2), asi(12), infusionCheckpoint(14, 2), asi(16), infusionCheckpoint(18, 2), asi(19),
   ],
   spellcasting: {

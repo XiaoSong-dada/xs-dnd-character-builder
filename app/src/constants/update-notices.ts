@@ -3,6 +3,14 @@ import { normalizeVersion } from '@/utils/version'
 
 export const updateNotices: readonly UpdateNotice[] = [
   {
+    version: '1.1.9',
+    title: '版本更新公告',
+    items: [
+      'Artificer 职业名对齐 5e 不全书：工匠 → 奇械师（职业选择、检查点标题与相关文案同步更新）。',
+      '修复奇械师创建时「选择一套工匠工具」显示英文的问题：炼金/酿酒/书法/木匠/石匠/铁匠/木雕 7 种工具已补齐中文名。',
+    ],
+  },
+  {
     version: '1.1.8',
     title: '版本更新公告',
     items: [

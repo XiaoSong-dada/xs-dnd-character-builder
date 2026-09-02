@@ -153,7 +153,7 @@ const xgteFeats2014: readonly FeatRule[] = [
 ]
 
 const tcoeFeats2014: readonly FeatRule[] = [
-  supplementFeat('feat-artificer-initiate', '奇械学徒', 'Artificer Initiate', 'tcoe-2020-index', '习得一项工匠戏法、一项 1 环工匠法术与一套工匠工具熟练。', ['施法', '工具']),
+  supplementFeat('feat-artificer-initiate', '奇械学徒', 'Artificer Initiate', 'tcoe-2020-index', '习得一项奇械师戏法、一项 1 环奇械师法术与一套工匠工具熟练。', ['施法', '工具']),
   supplementFeat('feat-chef', '大厨', 'Chef', 'tcoe-2020-index', '体质或感知 +1；获得厨具熟练，可在休息时准备恢复食物。', ['属性', '支援'], { choices: [abilityChoice('chef', ['con', 'wis'])] }),
   supplementFeat('feat-crusher', '粉碎者', 'Crusher', 'tcoe-2020-index', '力量或体质 +1；钝击命中可移动目标，暴击后盟友攻击获得优势。', ['属性', '战斗'], { choices: [abilityChoice('crusher', ['str', 'con'])] }),
   supplementFeat('feat-eldritch-adept', '魔能导师', 'Eldritch Adept', 'tcoe-2020-index', '前置：施法或契约魔法。习得一项没有不满足前置的魔能祈唤。', ['施法', '选项'], { prerequisite: { requiredCapability: 'spellcasting' } }),

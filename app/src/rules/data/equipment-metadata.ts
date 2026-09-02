@@ -33,9 +33,9 @@ export function inferMagicItemCategory(
 }
 
 const ATTUNEMENT_CONDITION_BY_ID: Readonly<Record<string, string>> = {
-  'all-purpose-tool-+1': '工匠同调',
-  'all-purpose-tool-+2': '工匠同调',
-  'all-purpose-tool-+3': '工匠同调',
+  'all-purpose-tool-+1': '奇械师同调',
+  'all-purpose-tool-+2': '奇械师同调',
+  'all-purpose-tool-+3': '奇械师同调',
   'amulet-of-the-devout-+1': '牧师或圣武士同调',
   'amulet-of-the-devout-+2': '牧师或圣武士同调',
   'amulet-of-the-devout-+3': '牧师或圣武士同调',

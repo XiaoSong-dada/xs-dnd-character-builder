@@ -142,7 +142,7 @@ export const magicItemsXgteTcoe2014: readonly EquipmentRule[] = [
   tc({ id: 'blood-fury-tattoo', name: '血怒刺青', description: '身体刺青：近战武器攻击可造成额外伤害并反伤攻击者（每日次数有限）。', category: 'magic', equippable: false, rarity: 'legendary' }),
 
   // 职业法器与常规玩家物品。加值只在可靠表达时进入派生，其余效果保留原创摘要。
-  ...tcFocus('all-purpose-tool', '全能工具', '工匠同调的变形工具；可化为任意工匠工具并暂时获得一项职业戏法。'),
+  ...tcFocus('all-purpose-tool', '全能工具', '奇械师同调的变形工具；可化为任意工匠工具并暂时获得一项职业戏法。'),
   ...tcFocus('amulet-of-the-devout', '虔诚护符', '牧师或圣武士的圣徽；可额外使用一次引导神力。'),
   ...tcFocus('arcane-grimoire', '奥术魔典', '法师可将其作为法术书与施法焦点，并强化奥术回复。'),
   ...tcFocus('bloodwell-vial', '血脉小瓶', '术士施法焦点；花费生命骰时可恢复术法点。'),
