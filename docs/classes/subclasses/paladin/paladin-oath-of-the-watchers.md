@@ -21,9 +21,9 @@
 |---:|---:|---|---|
 | 3 | 3 | 誓言法术（Oath Spells） | 自动常备 |
 | 3 | 3 | 守望引导神力（Watcher's Will and Abjure the Extraplanar） | 消耗引导神力 |
-| 7 | 7 | 哨兵灵光（Aura of the Sentinel） | 无次数限制 |
-| 15 | 15 | 警戒斥责（Vigilant Rebuke） | 受反应限制 |
-| 20 | 20 | 凡世壁垒（Mortal Bulwark） | 长休一次 |
+| 7 | 7 | 哨卫灵光（Aura of the Sentinel） | 无次数限制 |
+| 15 | 15 | 警戒呵斥（Vigilant Rebuke） | 受反应限制 |
+| 20 | 20 | 尘世壁垒（Mortal Bulwark） | 长休一次 |
 
 ## 特性详解
 
@@ -51,7 +51,7 @@
 
 - 两个选项共用资源；正确过滤生物类型；驱逐逐目标豁免。
 
-### 7级：哨兵灵光 Aura of the Sentinel
+### 7级：哨卫灵光 Aura of the Sentinel
 
 - 特性 ID：`paladin-oath-of-the-watchers-aura-of-the-sentinel`
 - 动作或触发：被动；自己与灵光内盟友掷先攻
@@ -63,7 +63,7 @@
 
 - 掷先攻时校验范围；同名灵光不叠加；范围随等级扩大。
 
-### 15级：警戒斥责 Vigilant Rebuke
+### 15级：警戒呵斥 Vigilant Rebuke
 
 - 特性 ID：`paladin-oath-of-the-watchers-vigilant-rebuke`
 - 动作或触发：反应；附近生物成功通过智力、感知或魅力豁免
@@ -75,7 +75,7 @@
 
 - 校验成功豁免、来源生物与距离；每个事件最多触发一次反应。
 
-### 20级：凡世壁垒 Mortal Bulwark
+### 20级：尘世壁垒 Mortal Bulwark
 
 - 特性 ID：`paladin-oath-of-the-watchers-mortal-bulwark`
 - 动作或触发：奖励动作；变身

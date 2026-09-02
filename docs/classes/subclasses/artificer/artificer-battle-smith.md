@@ -1,4 +1,4 @@
-# 战斗铁匠（Battle Smith）
+# 战地匠师（Battle Smith）
 
 - 稳定 ID：`subclass-2014-artificer-battle-smith`
 - 选择等级：3；来源：TCoE 2020

@@ -22,7 +22,7 @@
 | 3 | 2 | 次级炼金（Minor Alchemy） | 持续时间和材料体积受限 |
 | 6 | 6 | 变化之石（Transmuter's Stone） | 同一时间一块；重新制作或按规则切换 |
 | 10 | 10 | 变形大师（Shapechanger） | 含一次免费自我变形及法术位施放 |
-| 14 | 14 | 变化大师（Master Transmuter） | 消耗石头后需重新制作 |
+| 14 | 14 | 变化宗师（Master Transmuter） | 消耗石头后需重新制作 |
 
 ## 特性详解
 
@@ -74,7 +74,7 @@
 
 - 绑定2014变形术和兽形数据；校验目标只能是自己、挑战等级与恢复状态。
 
-### 14级：变化大师 Master Transmuter
+### 14级：变化宗师 Master Transmuter
 
 - 特性 ID：`wizard-transmutation-master-transmuter`
 - 动作或触发：动作并消耗变化之石

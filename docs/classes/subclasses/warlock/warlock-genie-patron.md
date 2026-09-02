@@ -19,8 +19,8 @@
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
 | 3 | 1 | 扩展法术列表（Expanded Spell List） | 由巨灵类型和等级决定 |
-| 3 | 1 | 巨灵容器（Genie's Vessel） | 容器内休息和额外伤害各有回合/长休限制 |
-| 6 | 6 | 元素赠礼（Elemental Gift） | 飞行熟练加值次/长休 |
+| 3 | 1 | 巨灵器皿（Genie's Vessel） | 容器内休息和额外伤害各有回合/长休限制 |
+| 6 | 6 | 元素赐福（Elemental Gift） | 飞行熟练加值次/长休 |
 | 10 | 10 | 庇护容器（Sanctuary Vessel） | 长休相关增益 |
 | 14 | 14 | 有限祈愿（Limited Wish） | 使用后需要多次长休冷却 |
 
@@ -38,7 +38,7 @@
 
 - 保存巨灵类型；按2014已知法术处理；类型改变需要DM批准。
 
-### 3级（原版1级）：巨灵容器 Genie's Vessel
+### 3级（原版1级）：巨灵器皿 Genie's Vessel
 
 - 特性 ID：`warlock-genie-patron-genies-vessel`
 - 动作或触发：选择容器；命中或进入容器时触发
@@ -50,7 +50,7 @@
 
 - 保存容器ID、持有者、内部生物、进入次数和伤害每回合限制；容器摧毁时按原版释放内容。
 
-### 6级：元素赠礼 Elemental Gift
+### 6级：元素赐福 Elemental Gift
 
 - 特性 ID：`warlock-genie-patron-elemental-gift`
 - 动作或触发：被动及奖励动作飞行
@@ -65,7 +65,7 @@
 ### 10级：庇护容器 Sanctuary Vessel
 
 - 特性 ID：`warlock-genie-patron-sanctuary-vessel`
-- 动作或触发：进入巨灵容器时可带自愿目标
+- 动作或触发：进入巨灵器皿时可带自愿目标
 - 资源与恢复：长休相关增益
 
 让数名自愿生物一起进入容器，并使他们在其中完成短休时获得额外恢复。

@@ -149,7 +149,7 @@ export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingCo
  * 动态候选池：解析检查点在当前草稿下的候选选项。
  * 普通检查点返回静态 optionIds；法术级候选（candidateKind）按草稿状态生成：
  * `all-spells` 为全部已登记 1 环及以上法术（环级不高于当前可用最高环，魔法奥秘用）；
- * `spellbook-level-N` 为法术书中对应环级的法术（法师法术专精/招牌法术用）。
+ * `spellbook-level-N` 为法术书中对应环级的法术（法师法术精通/招牌法术用）。
  */
 export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: ChoiceCheckpoint): readonly string[] {
   if (checkpoint.optionIds.length > 0) return checkpoint.optionIds
@@ -171,7 +171,7 @@ export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: Choic
     .map((spell) => spell.id)
 }
 
-/** 吟游诗人魔法奥秘法术：从时间线检查点选择中提取（不计入已知法术上限，展示与导出用）。 */
+/** 魔法奥秘法术：从时间线检查点选择中提取（不计入已知法术上限，展示与导出用）。 */
 export function getMagicalSecretsSpellIds(draft: CharacterDraft): readonly string[] {
   return draft.selections
     .filter((item) => item.checkpointId.startsWith('bard-2014-magical-secrets-') && !item.invalidatedAt)

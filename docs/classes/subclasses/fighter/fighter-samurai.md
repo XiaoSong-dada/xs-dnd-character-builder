@@ -13,14 +13,14 @@
 
 ## 玩法定位
 
-用战斗精神换取攻击优势与临时生命，以感知和社交能力增强角色，后期把优势兑换为额外攻击并在0生命前行动。
+用战意换取攻击优势与临时生命，以感知和社交能力增强角色，后期把优势兑换为额外攻击并在0生命前行动。
 
 ## 快速索引
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 3 | 额外熟练（Bonus Proficiency） | 无次数限制 |
-| 3 | 3 | 战斗精神（Fighting Spirit） | 3次/长休 |
+| 3 | 3 | 附赠熟练项（Bonus Proficiency） | 无次数限制 |
+| 3 | 3 | 战意（Fighting Spirit） | 3次/长休 |
 | 7 | 7 | 优雅廷臣（Elegant Courtier） | 无次数限制 |
 | 10 | 10 | 不竭精神（Tireless Spirit） | 每场战斗按条件 |
 | 15 | 15 | 迅捷打击（Rapid Strike） | 每回合一次 |
@@ -28,19 +28,19 @@
 
 ## 特性详解
 
-### 3级：额外熟练 Bonus Proficiency
+### 3级：附赠熟练项 Bonus Proficiency
 
 - 特性 ID：`fighter-samurai-bonus-proficiency`
 - 动作或触发：被动
 - 资源与恢复：无次数限制
 
-从指定技能中获得一种额外熟练，或学习一门语言。
+从指定技能中获得一种附赠熟练项，或学习一门语言。
 
 实现与校验：
 
 - 保存选择和来源；重复熟练按规则处理。
 
-### 3级：战斗精神 Fighting Spirit
+### 3级：战意 Fighting Spirit
 
 - 特性 ID：`fighter-samurai-fighting-spirit`
 - 动作或触发：奖励动作
@@ -67,10 +67,10 @@
 ### 10级：不竭精神 Tireless Spirit
 
 - 特性 ID：`fighter-samurai-tireless-spirit`
-- 动作或触发：掷先攻且没有战斗精神次数时
+- 动作或触发：掷先攻且没有战意次数时
 - 资源与恢复：每场战斗按条件
 
-恢复一次战斗精神。
+恢复一次战意。
 
 实现与校验：
 

@@ -19,7 +19,7 @@
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
 | 3 | 2 | 魔法羽笔（Wizardly Quill） | 同一时间一支 |
-| 3 | 2 | 觉醒法术书（Awakened Spellbook） | 被动；伤害替换受同环法术限制 |
+| 3 | 2 | 觉醒魔典（Awakened Spellbook） | 被动；伤害替换受同环法术限制 |
 | 6 | 6 | 显化心灵（Manifest Mind） | 从心灵位置施法次数等于熟练加值/长休；再显化可消耗法术位 |
 | 10 | 10 | 卷轴大师（Master Scrivener） | 每次长休一张 |
 | 14 | 14 | 与文字合一（One with the Word） | 长休恢复；会暂时失去部分法术 |
@@ -38,7 +38,7 @@
 
 - 保存羽笔存在状态；快速抄录仍需支付未被特性免除的金币；只能影响自己用该笔书写的文本。
 
-### 3级（原版2级）：觉醒法术书 Awakened Spellbook
+### 3级（原版2级）：觉醒魔典 Awakened Spellbook
 
 - 特性 ID：`wizard-order-of-scribes-awakened-spellbook`
 - 动作或触发：使用法术书施法或进行仪式

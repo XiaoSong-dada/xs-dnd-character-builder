@@ -18,14 +18,14 @@
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 2 | 调整密度（Adjust Density） | 同一时间一个目标；持续1分钟 |
+| 3 | 2 | 调节密度（Adjust Density） | 同一时间一个目标；持续1分钟 |
 | 6 | 6 | 重力井（Gravity Well） | 每个合格法术目标一次 |
-| 10 | 10 | 暴力吸引（Violent Attraction） | 智力调整值次/长休，至少1次 |
+| 10 | 10 | 狂暴牵引（Violent Attraction） | 智力调整值次/长休，至少1次 |
 | 14 | 14 | 事件视界（Event Horizon） | 长休一次，或按来源消耗法术位恢复 |
 
 ## 特性详解
 
-### 3级（原版2级）：调整密度 Adjust Density
+### 3级（原版2级）：调节密度 Adjust Density
 
 - 特性 ID：`wizard-graviturgy-magic-adjust-density`
 - 动作或触发：动作并保持专注
@@ -49,7 +49,7 @@
 
 - 只在特性列出的三种触发之一发生；目标移动到合法空位；属于被迫移动，不按普通移动处理借机攻击。
 
-### 10级：暴力吸引 Violent Attraction
+### 10级：狂暴牵引 Violent Attraction
 
 - 特性 ID：`wizard-graviturgy-magic-violent-attraction`
 - 动作或触发：反应；附近攻击命中或生物坠落时

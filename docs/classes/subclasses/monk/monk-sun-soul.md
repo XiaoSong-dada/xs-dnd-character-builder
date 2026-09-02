@@ -20,8 +20,8 @@
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
 | 3 | 3 | 耀阳弹（Radiant Sun Bolt） | 可消耗气用奖励动作追加 |
-| 6 | 6 | 灼热弧击（Searing Arc Strike） | 消耗气，可追加气提高环阶 |
-| 11 | 11 | 灼热日爆（Searing Sunburst） | 基础可免费，消耗气提高伤害 |
+| 6 | 6 | 热能袭（Searing Arc Strike） | 消耗气，可追加气提高环阶 |
+| 11 | 11 | 焰阳爆（Searing Sunburst） | 基础可免费，消耗气提高伤害 |
 | 17 | 17 | 太阳护盾（Sun Shield） | 受反应限制 |
 
 ## 特性详解
@@ -38,7 +38,7 @@
 
 - 使用规定射程和光耀伤害；追加攻击数量与气消耗按来源。
 
-### 6级：灼热弧击 Searing Arc Strike
+### 6级：热能袭 Searing Arc Strike
 
 - 特性 ID：`monk-sun-soul-searing-arc-strike`
 - 动作或触发：攻击动作后用奖励动作施放燃烧之手
@@ -50,7 +50,7 @@
 
 - 必须先执行攻击动作；扣除基础和升环气；使用感知作为施法属性。
 
-### 11级：灼热日爆 Searing Sunburst
+### 11级：焰阳爆 Searing Sunburst
 
 - 特性 ID：`monk-sun-soul-searing-sunburst`
 - 动作或触发：动作；选择远处爆发点

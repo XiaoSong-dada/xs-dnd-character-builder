@@ -55,7 +55,7 @@ describe('CharacterExportModel', () => {
     expect(model.diagnostics).toContainEqual(expect.objectContaining({ code: 'missing-rule-data', field: 'inventory.missing-weapon' }))
   })
 
-  it('已选选择类选项（超魔、战技、法术专精）进入导出特性列表', () => {
+  it('已选选择类选项（超魔、战技、法术精通）进入导出特性列表', () => {
     const draft = {
       ...fighterDraft,
       classId: 'class-2014-sorcerer',
@@ -120,7 +120,7 @@ describe('CharacterExportModel', () => {
     expect(spells.slice(firstUnpreparedIndex).every((spell) => !spell.prepared)).toBe(true)
   })
 
-  it('战斗大师战技与法术专精选项同样导出', () => {
+  it('战斗大师战技与法术精通选项同样导出', () => {
     const battleMaster = {
       ...fighterDraft,
       targetLevel: 3,

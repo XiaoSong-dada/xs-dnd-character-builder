@@ -23,7 +23,7 @@
 | 3 | 3 | 征服引导神力（Conquering Presence and Guided Strike） | 每次消耗引导神力 |
 | 7 | 7 | 征服灵光（Aura of Conquest） | 无次数限制 |
 | 15 | 15 | 蔑视斥责（Scornful Rebuke） | 无次数限制 |
-| 20 | 20 | 无敌征服者（Invincible Conqueror） | 长休一次 |
+| 20 | 20 | 不移胜者（Invincible Conqueror） | 长休一次 |
 
 ## 特性详解
 
@@ -75,7 +75,7 @@
 
 - 必须是攻击命中；每次命中分别触发；魅力负值按规则下限处理。
 
-### 20级：无敌征服者 Invincible Conqueror
+### 20级：不移胜者 Invincible Conqueror
 
 - 特性 ID：`paladin-oath-of-conquest-invincible-conqueror`
 - 动作或触发：动作；变身

@@ -1,4 +1,4 @@
-# 不朽者宗主 Undying Patron
+# 不朽者 Undying Patron
 
 ## 基本信息
 
@@ -22,7 +22,7 @@
 | 3 | 1 | 不死族之中（Among the Dead） | 成功后目标暂时免疫 |
 | 6 | 6 | 拒绝死亡（Defy Death） | 长休一次 |
 | 10 | 10 | 不朽本质（Undying Nature） | 无次数限制 |
-| 14 | 14 | 不灭生命（Indestructible Life） | 短休或长休恢复 |
+| 14 | 14 | 永恒生命（Indestructible Life） | 短休或长休恢复 |
 
 ## 特性详解
 
@@ -74,7 +74,7 @@
 
 - 这些是生理规则例外，不等于长休需求消失；仍按职业资源规则完成长休。
 
-### 14级：不灭生命 Indestructible Life
+### 14级：永恒生命 Indestructible Life
 
 - 特性 ID：`warlock-undying-patron-indestructible-life`
 - 动作或触发：奖励动作

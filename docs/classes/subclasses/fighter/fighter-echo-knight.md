@@ -19,16 +19,16 @@
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 3 | 显现回音（Manifest Echo） | 无固定次数；同一时间通常一个 |
+| 3 | 3 | 回音显现（Manifest Echo） | 无固定次数；同一时间通常一个 |
 | 3 | 3 | 化身突袭（Unleash Incarnation） | 体质调整值次/长休，至少一次 |
-| 7 | 7 | 回音化身（Echo Avatar） | 每次持续受距离和时间限制 |
+| 7 | 7 | 回音现身（Echo Avatar） | 每次持续受距离和时间限制 |
 | 10 | 10 | 暗影殉身（Shadow Martyr） | 短休或长休一次 |
 | 15 | 15 | 回收潜能（Reclaim Potential） | 体质调整值次/长休，至少一次 |
-| 18 | 18 | 一人成军（Legion of One） | 共享显现回音能力 |
+| 18 | 18 | 一人成军（Legion of One） | 共享回音显现能力 |
 
 ## 特性详解
 
-### 3级：显现回音 Manifest Echo
+### 3级：回音显现 Manifest Echo
 
 - 特性 ID：`fighter-echo-knight-manifest-echo`
 - 动作或触发：奖励动作；在附近空位生成或移动回音
@@ -52,7 +52,7 @@
 
 - 必须有回音且选择攻击动作；扣除次数；额外攻击位置读取回音。
 
-### 7级：回音化身 Echo Avatar
+### 7级：回音现身 Echo Avatar
 
 - 特性 ID：`fighter-echo-knight-echo-avatar`
 - 动作或触发：动作；把意识转入回音
@@ -91,8 +91,8 @@
 ### 18级：一人成军 Legion of One
 
 - 特性 ID：`fighter-echo-knight-legion-of-one`
-- 动作或触发：奖励动作显现回音时
-- 资源与恢复：共享显现回音能力
+- 动作或触发：奖励动作回音显现时
+- 资源与恢复：共享回音显现能力
 
 可同时维持两个回音，并在掷先攻且无化身突袭次数时恢复一次。
 

@@ -19,15 +19,15 @@
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 3 | 额外熟练（Bonus Proficiencies） | 无次数限制 |
-| 3 | 3 | 醉拳技法（Drunken Technique） | 依赖疾风连击气消耗 |
-| 6 | 6 | 醉步（Tipsy Sway） | 误导攻击消耗反应 |
+| 3 | 3 | 附赠熟练项（Bonus Proficiencies） | 无次数限制 |
+| 3 | 3 | 醉拳技巧（Drunken Technique） | 依赖疾风连击气消耗 |
+| 6 | 6 | 微醺摇摆（Tipsy Sway） | 误导攻击消耗反应 |
 | 11 | 11 | 醉者好运（Drunkard's Luck） | 消耗气 |
-| 17 | 17 | 酣醉狂攻（Intoxicated Frenzy） | 依赖疾风连击气消耗 |
+| 17 | 17 | 酣醉若狂（Intoxicated Frenzy） | 依赖疾风连击气消耗 |
 
 ## 特性详解
 
-### 3级：额外熟练 Bonus Proficiencies
+### 3级：附赠熟练项 Bonus Proficiencies
 
 - 特性 ID：`monk-drunken-master-bonus-proficiencies`
 - 动作或触发：被动
@@ -39,7 +39,7 @@
 
 - 熟练来源独立保存；重复熟练不自动转为专精。
 
-### 3级：醉拳技法 Drunken Technique
+### 3级：醉拳技巧 Drunken Technique
 
 - 特性 ID：`monk-drunken-master-drunken-technique`
 - 动作或触发：使用疾风连击时
@@ -51,7 +51,7 @@
 
 - 与疾风连击同一触发；记录临时速度；回合结束清除。
 
-### 6级：醉步 Tipsy Sway
+### 6级：微醺摇摆 Tipsy Sway
 
 - 特性 ID：`monk-drunken-master-tipsy-sway`
 - 动作或触发：从倒地起身或被近战攻击未命中时
@@ -75,7 +75,7 @@
 
 - 在掷骰前扣点；只取消劣势，不赋予优势。
 
-### 17级：酣醉狂攻 Intoxicated Frenzy
+### 17级：酣醉若狂 Intoxicated Frenzy
 
 - 特性 ID：`monk-drunken-master-intoxicated-frenzy`
 - 动作或触发：使用疾风连击时

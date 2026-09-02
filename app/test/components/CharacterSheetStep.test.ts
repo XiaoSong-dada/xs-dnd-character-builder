@@ -89,10 +89,10 @@ describe('CharacterSheetStep', () => {
     await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
 
     expect(wrapper.text()).toContain('子职特性 · 生命领域')
-    expect(wrapper.text()).toContain('领域法术')
-    expect(wrapper.text()).toContain('生命引导者')
+    expect(wrapper.text()).toContain('生命领域法术')
+    expect(wrapper.text()).toContain('生命门徒')
     expect(wrapper.text()).not.toContain('仅索引 · 未核验')
-    expect(wrapper.text()).not.toContain('至高治疗')
+    expect(wrapper.text()).not.toContain('极效治疗')
 
     const text = wrapper.text()
     expect(text.indexOf('豁免')).toBeLessThan(text.indexOf('技能'))

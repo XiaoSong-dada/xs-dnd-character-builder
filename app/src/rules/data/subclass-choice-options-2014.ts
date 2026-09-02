@@ -34,7 +34,7 @@ export const SUBCLASS_CHOICE_OPTION_IDS: readonly string[] = [
   'totem-bear',
   'totem-eagle',
   'totem-wolf',
-  // 猎人的猎物 / 防御战术 / 多重攻击 / 高级猎人防御
+  // 猎物 / 防守战术 / 多重攻击 / 高效猎人防术
   'hunter-prey-colossus-slayer',
   'hunter-prey-giant-killer',
   'hunter-prey-horde-breaker',
@@ -168,7 +168,7 @@ export const subclassChoiceOptions2014: readonly RuleOption[] = [
   { id: 'storm-aura-sea', name: '海洋', englishName: 'Sea', description: '狂暴期间可用附赠动作，迫使 1.5 米内一名生物敏捷豁免失败则受 1d6 闪电或雷鸣伤害（自选）。', status: 'implemented', sourceIds: xgte },
   { id: 'storm-aura-tundra', name: '苔原', englishName: 'Tundra', description: '狂暴期间可用附赠动作，使 3 米内其他生物各获得 2 点临时生命。', status: 'implemented', sourceIds: xgte },
 
-  // ============ 精魂图腾（XGtE，牧者结社） ============
+  // ============ 精魂图腾（XGtE，牧人结社） ============
   { id: 'spirit-totem-bear', name: '熊', englishName: 'Bear Spirit', description: '召唤熊精魂守护 9 米内盟友：范围内你与盟友每回合开始时获得等于德鲁伊等级的临时生命。', status: 'implemented', sourceIds: xgte },
   { id: 'spirit-totem-eagle', name: '鹰', englishName: 'Eagle Spirit', description: '召唤鹰精魂：你获得 18 米飞行速度；9 米内盟友对 9 米外可见生物的攻击检定具有优势。', status: 'implemented', sourceIds: xgte },
   { id: 'spirit-totem-unicorn', name: '独角兽', englishName: 'Unicorn Spirit', description: '召唤独角兽精魂：你施放治疗法术后，9 米内一名生物额外恢复等于德鲁伊等级的生命值。', status: 'implemented', sourceIds: xgte },
@@ -209,7 +209,7 @@ export const subclassChoiceOptions2014: readonly RuleOption[] = [
   { id: 'kensei-weapon-longbow', name: '长弓', englishName: 'Longbow', description: '选择长弓作为剑圣武器：视为武僧武器并计入徒手攻击体系，可获得对应专精与强化。', status: 'implemented', sourceIds: xgte },
   { id: 'kensei-weapon-whip', name: '长鞭', englishName: 'Whip', description: '选择长鞭作为剑圣武器：视为武僧武器并计入徒手攻击体系，可获得对应专精与强化。', status: 'implemented', sourceIds: xgte },
 
-  // ============ 月之化身（Dragonlance，月相术法） ============
+  // ============ 月之化身（Dragonlance，月之术法） ============
   { id: 'lunar-phase-new-moon', name: '新月', englishName: 'New Moon', description: '月之化身-新月：武器攻击与法术攻击检定 +1。', status: 'implemented', sourceIds: dsotdq },
   { id: 'lunar-phase-full-moon', name: '满月', englishName: 'Full Moon', description: '月之化身-满月：近战武器伤害 +1。', status: 'implemented', sourceIds: dsotdq },
   { id: 'lunar-phase-crescent-moon', name: '残月', englishName: 'Crescent Moon', description: '月之化身-残月：护甲等级 +1。', status: 'implemented', sourceIds: dsotdq },

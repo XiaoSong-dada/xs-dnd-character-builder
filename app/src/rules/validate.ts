@@ -117,7 +117,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       if (!entry || !item) {
         issues.push({ id: `infusion-item-missing-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: '灌注绑定的物品已被删除或无法解析。', resolution: '保留的绑定已停止应用；请选择新的合法物品。' })
       } else if (infusion && !infusion.eligibleCategories.some((category) => category === item.category)) {
-        issues.push({ id: `infusion-item-category-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: `“${infusion.name}”不能应用于“${item.name}”。`, resolution: '选择符合灌注物品类别的条目。' })
+        issues.push({ id: `infusion-item-category-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: `“${infusion.name}”不能应用于“${item.name}”。`, resolution: '选择符合物品注法类别的条目。' })
       }
     }
   }

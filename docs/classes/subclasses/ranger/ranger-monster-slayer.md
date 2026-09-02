@@ -23,8 +23,8 @@
 | 3 | 3 | 猎手感知（Hunter's Sense） | 感知调整值次/长休，至少一次 |
 | 3 | 3 | 杀手猎物（Slayer's Prey） | 一次维持一个目标 |
 | 7 | 7 | 超凡防御（Supernatural Defense） | 无固定次数 |
-| 11 | 11 | 施法者克星（Magic-User's Nemesis） | 短休或长休一次 |
-| 15 | 15 | 杀手反击（Slayer's Counter） | 受反应限制 |
+| 11 | 11 | 魔法使的克星（Magic-User's Nemesis） | 短休或长休一次 |
+| 15 | 15 | 杀手反制（Slayer's Counter） | 受反应限制 |
 
 ## 特性详解
 
@@ -76,7 +76,7 @@
 
 - 触发来源必须是当前猎物；一次检定加入一次。
 
-### 11级：施法者克星 Magic-User's Nemesis
+### 11级：魔法使的克星 Magic-User's Nemesis
 
 - 特性 ID：`ranger-monster-slayer-magic-users-nemesis`
 - 动作或触发：反应；附近生物施法或传送时
@@ -88,7 +88,7 @@
 
 - 校验距离、可见和触发类型；记录豁免及被取消资源。
 
-### 15级：杀手反击 Slayer's Counter
+### 15级：杀手反制 Slayer's Counter
 
 - 特性 ID：`ranger-monster-slayer-slayers-counter`
 - 动作或触发：反应；猎物迫使自己进行豁免时

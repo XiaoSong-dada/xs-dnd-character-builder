@@ -20,9 +20,9 @@
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
 | 3 | 3 | 集群牧者魔法（Swarmkeeper Magic） | 自动获得 |
-| 3 | 3 | 聚集虫群（Gathered Swarm） | 每回合一次 |
+| 3 | 3 | 蜂聚集群（Gathered Swarm） | 每回合一次 |
 | 7 | 7 | 蠕动浪潮（Writhing Tide） | 熟练加值次/长休 |
-| 11 | 11 | 强力虫群（Mighty Swarm） | 每回合一次并沿用原选择 |
+| 11 | 11 | 壮大集群（Mighty Swarm） | 每回合一次并沿用原选择 |
 | 15 | 15 | 集群驱散（Swarming Dispersal） | 熟练加值次/长休 |
 
 ## 特性详解
@@ -39,7 +39,7 @@
 
 - 按等级解锁；额外法术不占普通准备数量；法师之手外观可主题化。
 
-### 3级：聚集虫群 Gathered Swarm
+### 3级：蜂聚集群 Gathered Swarm
 
 - 特性 ID：`ranger-swarmkeeper-gathered-swarm`
 - 动作或触发：每回合武器命中生物后
@@ -63,10 +63,10 @@
 
 - 扣除次数并记录持续；结束时移除飞行；失能等结束条件按来源处理。
 
-### 11级：强力虫群 Mighty Swarm
+### 11级：壮大集群 Mighty Swarm
 
 - 特性 ID：`ranger-swarmkeeper-mighty-swarm`
-- 动作或触发：聚集虫群触发时
+- 动作或触发：蜂聚集群触发时
 - 资源与恢复：每回合一次并沿用原选择
 
 强化三个虫群选项：提高伤害、使推动目标倒地，或为自身提供额外防护。

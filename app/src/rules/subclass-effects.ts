@@ -15,7 +15,7 @@ export interface SubclassDerivedEffects {
   readonly spellAttackBonus: number
   readonly spellSaveDcBonus: number
   readonly speedBonus: number
-  /** 子职未着甲时的基础护甲公式（如龙族坚韧的 13 + 敏捷调整值）；undefined 表示不覆盖默认公式。 */
+  /** 子职未着甲时的基础护甲公式（如龙族体魄的 13 + 敏捷调整值）；undefined 表示不覆盖默认公式。 */
   readonly armorClassBase?: number
 }
 
@@ -30,14 +30,14 @@ export const ZERO_SUBCLASS_EFFECTS: SubclassDerivedEffects = {
 }
 
 /**
- * 按子职返回派生效果。targetLevel 用于按等级的加成（如龙族坚韧每级 +1 生命值）。
+ * 按子职返回派生效果。targetLevel 用于按等级的加成（如龙族体魄每级 +1 生命值）。
  * 新条目只有在官方文本核验通过后登记（`status: 'implemented'` 的子职特性）。
  */
 export function getSubclassDerivedEffects(subclassId: string | undefined, targetLevel = 1): SubclassDerivedEffects {
   if (!subclassId) return ZERO_SUBCLASS_EFFECTS
   switch (subclassId) {
     case 'subclass-2014-sorcerer-draconic-bloodline':
-      // 龙族坚韧（PHB 2014 / SRD 5.1）：未着甲时基础护甲 13 + 敏捷调整值；每个术士等级 +1 生命值。
+      // 龙族体魄（PHB 2014 / SRD 5.1）：未着甲时基础护甲 13 + 敏捷调整值；每个术士等级 +1 生命值。
       return { ...ZERO_SUBCLASS_EFFECTS, armorClassBase: 13, hitPointBonus: targetLevel }
     default:
       return ZERO_SUBCLASS_EFFECTS

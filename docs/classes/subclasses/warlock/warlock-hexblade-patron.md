@@ -1,4 +1,4 @@
-# 咒剑宗主 Hexblade Patron
+# 咒剑 Hexblade Patron
 
 ## 基本信息
 
@@ -22,8 +22,8 @@
 | 3 | 1 | 咒剑诅咒（Hexblade's Curse） | 短休或长休恢复 |
 | 3 | 1 | 咒战士（Hex Warrior） | 持续到下次长休 |
 | 6 | 6 | 诅咒幽灵（Accursed Specter） | 长休一次 |
-| 10 | 10 | 诅咒护甲（Armor of Hexes） | 每轮反应一次 |
-| 14 | 14 | 诅咒大师（Master of Hexes） | 每次原诅咒持续中转移 |
+| 10 | 10 | 巫咒盔甲（Armor of Hexes） | 每轮反应一次 |
+| 14 | 14 | 巫咒大师（Master of Hexes） | 每次原诅咒持续中转移 |
 
 ## 特性详解
 
@@ -75,7 +75,7 @@
 
 - 校验目标类型、击杀归属和唯一召唤；绑定2014幽灵数据；长休时清除。
 
-### 10级：诅咒护甲 Armor of Hexes
+### 10级：巫咒盔甲 Armor of Hexes
 
 - 特性 ID：`warlock-hexblade-patron-armor-of-hexes`
 - 动作或触发：反应；被诅咒目标命中自己时
@@ -87,7 +87,7 @@
 
 - 攻击者必须是当前咒剑诅咒目标；在伤害前触发；保存反应。
 
-### 14级：诅咒大师 Master of Hexes
+### 14级：巫咒大师 Master of Hexes
 
 - 特性 ID：`warlock-hexblade-patron-master-of-hexes`
 - 动作或触发：被诅咒目标死亡时

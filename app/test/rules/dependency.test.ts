@@ -355,7 +355,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
       transcribedSpellIds: [],
     })
     const impact = getDependencyImpact(draft, { kind: 'target-level', value: 2 })
-    expect(impact.added).toContainEqual({ checkpointId: 'wizard-2014-subclass-2', title: '2级 · 选择奥术传统' })
+    expect(impact.added).toContainEqual({ checkpointId: 'wizard-2014-subclass-2', title: '2级 · 选择奥术传承' })
     expect(impact.spellUpdates).toEqual(['准备法术 3/4', '法术书 6/8'])
   })
 
@@ -402,7 +402,7 @@ describe('getDependencyImpact target-level 升级与降级', () => {
     ])
   })
 
-  it('法师 17→18 级升级：added 包含两个法术专精检查点', () => {
+  it('法师 17→18 级升级：added 包含两个法术精通检查点', () => {
     const draft = makeWizardDraft(
       {
         cantripIds: spellIdsOfClass('class-2014-wizard', [0]).slice(0, 4),
@@ -423,8 +423,8 @@ describe('getDependencyImpact target-level 升级与降级', () => {
     )
     const impact = getDependencyImpact(draft, { kind: 'target-level', value: 18 })
     expect(impact.added).toEqual([
-      { checkpointId: 'wizard-2014-spell-mastery-1', title: '18级 · 选择1个1环法术专精' },
-      { checkpointId: 'wizard-2014-spell-mastery-2', title: '18级 · 选择1个2环法术专精' },
+      { checkpointId: 'wizard-2014-spell-mastery-1', title: '18级 · 选择1个1环法术精通' },
+      { checkpointId: 'wizard-2014-spell-mastery-2', title: '18级 · 选择1个2环法术精通' },
     ])
   })
 })

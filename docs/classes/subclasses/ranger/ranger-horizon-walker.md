@@ -1,4 +1,4 @@
-# 地平线行者 Horizon Walker
+# 边界行者 Horizon Walker
 
 ## 基本信息
 
@@ -19,7 +19,7 @@
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 3 | 地平线行者法术（Horizon Walker Magic） | 自动常备 |
+| 3 | 3 | 边界行者法术（Horizon Walker Magic） | 自动常备 |
 | 3 | 3 | 侦测传送门（Detect Portal） | 短休或长休一次 |
 | 3 | 3 | 位面战士（Planar Warrior） | 每回合一次 |
 | 7 | 7 | 虚化步（Ethereal Step） | 短休或长休一次 |
@@ -28,7 +28,7 @@
 
 ## 特性详解
 
-### 3级：地平线行者法术 Horizon Walker Magic
+### 3级：边界行者法术 Horizon Walker Magic
 
 - 特性 ID：`ranger-horizon-walker-horizon-walker-magic`
 - 动作或触发：被动；随等级解锁

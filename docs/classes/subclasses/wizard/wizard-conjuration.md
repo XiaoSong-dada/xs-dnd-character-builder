@@ -21,7 +21,7 @@
 | 3 | 2 | 咒法学者（Conjuration Savant） | 无次数限制 |
 | 3 | 2 | 次级咒法（Minor Conjuration） | 同一时间一个造物 |
 | 6 | 6 | 良性传送（Benign Transposition） | 使用后长休恢复；施放咒法法术可按规则刷新 |
-| 10 | 10 | 专注咒法（Focused Conjuration） | 无次数限制 |
+| 10 | 10 | 咒法专注（Focused Conjuration） | 无次数限制 |
 | 14 | 14 | 耐久召唤（Durable Summons） | 每个合格生物一次 |
 
 ## 特性详解
@@ -62,7 +62,7 @@
 
 - 校验距离、可见空位、目标体型与自愿状态；交换位置属于传送，不触发普通移动事件。
 
-### 10级：专注咒法 Focused Conjuration
+### 10级：咒法专注 Focused Conjuration
 
 - 特性 ID：`wizard-conjuration-focused-conjuration`
 - 动作或触发：被动

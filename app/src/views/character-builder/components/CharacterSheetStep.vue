@@ -261,7 +261,7 @@ function isTranscribedSpell(id: string): boolean {
 }
 const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || preparedOrKnownSpells.value.length > 0 || spellbookSpells.value.length > 0 || magicalSecretsSpells.value.length > 0)
 
-/** 吟游诗人魔法奥秘法术（来自时间线检查点选择，不计入已知法术上限）。 */
+/** 魔法奥秘法术（来自时间线检查点选择，不计入已知法术上限）。 */
 const magicalSecretsSpells = computed(() => getMagicalSecretsSpellIds(props.draft)
   .filter((id) => !manualSpellIds.value.has(id))
   .map((id) => rulesRepository.getSpell(id))
@@ -287,7 +287,7 @@ function isAlsoNormallyAcquired(spellId: string): boolean {
     || getAlwaysPreparedSpellIds(props.draft).includes(spellId)
 }
 
-/** 已选选择类选项的详情条目（超魔、战技与其余子职选项、法术专精/招牌法术等）：供能力页签"已选选项详情"区块展示。 */
+/** 已选选择类选项的详情条目（超魔、战技与其余子职选项、法术精通/招牌法术等）：供能力页签"已选选项详情"区块展示。 */
 const selectedOptionEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []

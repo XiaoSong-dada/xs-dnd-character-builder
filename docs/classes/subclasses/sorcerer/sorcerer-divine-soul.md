@@ -20,8 +20,8 @@
 |---:|---:|---|---|
 | 3 | 1 | 神圣魔法（Divine Magic） | 无独立次数 |
 | 3 | 1 | 众神眷顾（Favored by the Gods） | 短休或长休一次 |
-| 6 | 6 | 强化治疗（Empowered Healing） | 每次消耗1术法点 |
-| 14 | 14 | 异界之翼（Otherworldly Wings） | 无次数限制 |
+| 6 | 6 | 强效治疗（Empowered Healing） | 每次消耗1术法点 |
+| 14 | 14 | 异界光翼（Otherworldly Wings） | 无次数限制 |
 | 18 | 18 | 超凡复苏（Unearthly Recovery） | 长休一次 |
 
 ## 特性详解
@@ -50,7 +50,7 @@
 
 - 仅限攻击或豁免；看到原结果后决定；扣除资源。
 
-### 6级：强化治疗 Empowered Healing
+### 6级：强效治疗 Empowered Healing
 
 - 特性 ID：`sorcerer-divine-soul-empowered-healing`
 - 动作或触发：附近生物以法术掷治疗骰时
@@ -62,7 +62,7 @@
 
 - 校验距离与法术治疗来源；同一批骰不得反复重掷。
 
-### 14级：异界之翼 Otherworldly Wings
+### 14级：异界光翼 Otherworldly Wings
 
 - 特性 ID：`sorcerer-divine-soul-otherworldly-wings`
 - 动作或触发：奖励动作；显现或收起翅膀

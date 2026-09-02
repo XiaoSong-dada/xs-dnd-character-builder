@@ -63,7 +63,7 @@
 
 2024：[慈悲宗](monk-mercy.md)、[暗影宗](monk-shadow.md)、[元素宗](monk-elements.md)、[敞手宗](monk-open-hand.md)。
 
-2014扩展：[长死宗](monk-long-death.md)、[醉拳宗](monk-drunken-master.md)、[剑圣宗](monk-kensei.md)、[日魂宗](monk-sun-soul.md)、[星界灵体宗](monk-astral-self.md)、[升龙宗](monk-ascendant-dragon.md)。
+2014扩展：[永亡宗](monk-long-death.md)、[醉拳宗](monk-drunken-master.md)、[剑圣宗](monk-kensei.md)、[日魂宗](monk-sun-soul.md)、[星我宗](monk-astral-self.md)、[神龙宗](monk-ascendant-dragon.md)。
 
 ## 来源与边界
 

@@ -20,7 +20,7 @@
 |---:|---|---|
 | 1 | 知识领域法术（Knowledge Domain Spells） | 获得始终准备的预言、控制和信息类法术 |
 | 1 | 知识祝福（Blessings of Knowledge） | 学会语言，并从指定知识技能中选择熟练与专精 |
-| 2 | 万古知识（Knowledge of the Ages） | 消耗引导神力，暂时获得一种技能或工具熟练 |
+| 2 | 引导神力：岁月知识（Channel Divinity: Knowledge of the Ages） | 消耗引导神力，暂时获得一种技能或工具熟练 |
 | 6 | 读取思想（Read Thoughts） | 以引导神力读取表层思想，并可接续施加影响 |
 | 8 | 强力施法（Potent Spellcasting） | 旧版戏法伤害强化；使用2024基础职业时由神佑打击路线承接 |
 | 17 | 往昔幻象（Visions of the Past） | 通过冥想读取物品或地点相关的过去事件 |

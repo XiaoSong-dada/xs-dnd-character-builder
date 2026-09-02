@@ -18,15 +18,15 @@
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 3 | 游击者（Skirmisher） | 每轮受反应限制 |
+| 3 | 3 | 散兵战术（Skirmisher） | 每轮受反应限制 |
 | 3 | 3 | 生存专家（Survivalist） | 无次数限制 |
-| 9 | 9 | 卓越机动（Superior Mobility） | 无次数限制 |
+| 9 | 9 | 优异灵活（Superior Mobility） | 无次数限制 |
 | 13 | 13 | 伏击大师（Ambush Master） | 每场战斗按触发 |
-| 17 | 17 | 突袭（Sudden Strike） | 每回合一次 |
+| 17 | 17 | 瞬息打击（Sudden Strike） | 每回合一次 |
 
 ## 特性详解
 
-### 3级：游击者 Skirmisher
+### 3级：散兵战术 Skirmisher
 
 - 特性 ID：`rogue-scout-skirmisher`
 - 动作或触发：反应；敌人在自己回合结束于身旁
@@ -50,7 +50,7 @@
 
 - 处理已有熟练和专精，避免重复翻倍；分别记录来源。
 
-### 9级：卓越机动 Superior Mobility
+### 9级：优异灵活 Superior Mobility
 
 - 特性 ID：`rogue-scout-superior-mobility`
 - 动作或触发：被动
@@ -74,7 +74,7 @@
 
 - 记录战斗首个命中目标和效果期限；优势不对无关目标生效。
 
-### 17级：突袭 Sudden Strike
+### 17级：瞬息打击 Sudden Strike
 
 - 特性 ID：`rogue-scout-sudden-strike`
 - 动作或触发：攻击动作中使用奖励动作追加攻击

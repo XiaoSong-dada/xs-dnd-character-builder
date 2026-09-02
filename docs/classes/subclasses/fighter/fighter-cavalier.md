@@ -13,23 +13,23 @@
 
 ## 玩法定位
 
-通过骑乘优势、坚定标记和反应护卫锁住敌人，后期以冲锋击倒和每回合借机攻击成为阵线守卫。
+通过骑乘优势、坚定之印和反应护卫锁住敌人，后期以冲锋击倒和每回合借机攻击成为阵线守卫。
 
 ## 快速索引
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 3 | 额外熟练（Bonus Proficiency） | 无次数限制 |
+| 3 | 3 | 附赠熟练项（Bonus Proficiency） | 无次数限制 |
 | 3 | 3 | 天生骑手（Born to the Saddle） | 无次数限制 |
-| 3 | 3 | 坚定标记（Unwavering Mark） | 每目标持续至下回合；奖励攻击次数有限 |
+| 3 | 3 | 坚定之印（Unwavering Mark） | 每目标持续至下回合；奖励攻击次数有限 |
 | 7 | 7 | 守护机动（Warding Maneuver） | 体质调整值次/长休，至少一次 |
 | 10 | 10 | 坚守阵线（Hold the Line） | 受反应限制 |
-| 15 | 15 | 凶猛冲锋（Ferocious Charger） | 每回合一次 |
+| 15 | 15 | 冲锋陷阵（Ferocious Charger） | 每回合一次 |
 | 18 | 18 | 警戒守卫（Vigilant Defender） | 每个生物回合一次特殊反应 |
 
 ## 特性详解
 
-### 3级：额外熟练 Bonus Proficiency
+### 3级：附赠熟练项 Bonus Proficiency
 
 - 特性 ID：`fighter-cavalier-bonus-proficiency`
 - 动作或触发：被动
@@ -53,7 +53,7 @@
 
 - 校验当前是否骑乘；上下马成本按剩余移动计算；坠落条件明确。
 
-### 3级：坚定标记 Unwavering Mark
+### 3级：坚定之印 Unwavering Mark
 
 - 特性 ID：`fighter-cavalier-unwavering-mark`
 - 动作或触发：近战武器命中生物后
@@ -89,7 +89,7 @@
 
 - 区分强制移动；命中才归零速度；使用正常反应。
 
-### 15级：凶猛冲锋 Ferocious Charger
+### 15级：冲锋陷阵 Ferocious Charger
 
 - 特性 ID：`fighter-cavalier-ferocious-charger`
 - 动作或触发：移动一定距离后以攻击命中

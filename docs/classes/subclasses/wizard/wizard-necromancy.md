@@ -19,7 +19,7 @@
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
 | 3 | 2 | 死灵学者（Necromancy Savant） | 无次数限制 |
-| 3 | 2 | 冷酷收割（Grim Harvest） | 每回合一次 |
+| 3 | 2 | 惧怖收割（Grim Harvest） | 每回合一次 |
 | 6 | 6 | 不死奴仆（Undead Thralls） | 被动强化召唤物 |
 | 10 | 10 | 不死适应（Inured to Undeath） | 无次数限制 |
 | 14 | 14 | 命令不死生物（Command Undead） | 同一时间受控目标有限；目标可重复豁免 |
@@ -38,7 +38,7 @@
 
 - 只影响法术书抄录；校验死灵学派和法术来源。
 
-### 3级（原版2级）：冷酷收割 Grim Harvest
+### 3级（原版2级）：惧怖收割 Grim Harvest
 
 - 特性 ID：`wizard-necromancy-grim-harvest`
 - 动作或触发：用带法术位的法术令生物生命归零时

@@ -1,4 +1,4 @@
-# 暗影魔法 Shadow Magic
+# 幽影魔法 Shadow Magic
 
 ## 基本信息
 
@@ -18,16 +18,16 @@
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 1 | 暗夜之眼（Eyes of the Dark） | 无次数限制 |
+| 3 | 1 | 黑夜明目（Eyes of the Dark） | 无次数限制 |
 | 3 | 1 | 墓中之力（Strength of the Grave） | 长休一次 |
-| 3 | 3 | 黑暗之眼强化（Eyes of the Dark Upgrade） | 消耗术法点 |
+| 3 | 3 | 幽暗之瞳强化（Eyes of the Dark Upgrade） | 消耗术法点 |
 | 6 | 6 | 恶兆猎犬（Hound of Ill Omen） | 消耗术法点 |
-| 14 | 14 | 暗影行走（Shadow Walk） | 无次数限制 |
+| 14 | 14 | 幽影漫步（Shadow Walk） | 无次数限制 |
 | 18 | 18 | 阴影形态（Umbral Form） | 消耗术法点 |
 
 ## 特性详解
 
-### 3级（原版1级）：暗夜之眼 Eyes of the Dark
+### 3级（原版1级）：黑夜明目 Eyes of the Dark
 
 - 特性 ID：`sorcerer-shadow-magic-eyes-of-the-dark`
 - 动作或触发：被动
@@ -51,7 +51,7 @@
 
 - 先判断排除条件，再计算DC；成功后改写生命并消耗资源。
 
-### 3级：黑暗之眼强化 Eyes of the Dark Upgrade
+### 3级：幽暗之瞳强化 Eyes of the Dark Upgrade
 
 - 特性 ID：`sorcerer-shadow-magic-eyes-of-the-dark-upgrade`
 - 动作或触发：施放黑暗术时
@@ -75,7 +75,7 @@
 
 - 校验空位和目标；使用指定模板；劣势只应用于对应法术。
 
-### 14级：暗影行走 Shadow Walk
+### 14级：幽影漫步 Shadow Walk
 
 - 特性 ID：`sorcerer-shadow-magic-shadow-walk`
 - 动作或触发：奖励动作；位于昏暗或黑暗中

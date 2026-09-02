@@ -1,4 +1,4 @@
-# 星界灵体宗 Way of the Astral Self
+# 星我宗 Way of the Astral Self
 
 ## 基本信息
 

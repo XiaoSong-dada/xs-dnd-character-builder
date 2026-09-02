@@ -21,7 +21,7 @@
 |---:|---:|---|---|
 | 3 | 3 | 誓言法术（Oath Spells） | 自动常备 |
 | 3 | 3 | 救赎引导神力（Emissary of Peace and Rebuke the Violent） | 消耗引导神力 |
-| 7 | 7 | 守护者灵光（Aura of the Guardian） | 受反应限制 |
+| 7 | 7 | 护卫灵光（Aura of the Guardian） | 受反应限制 |
 | 15 | 15 | 庇护灵魂（Protective Spirit） | 每回合自动触发 |
 | 20 | 20 | 救赎使者（Emissary of Redemption） | 无次数限制 |
 
@@ -51,7 +51,7 @@
 
 - 两个选项共用资源；反噬需目标豁免并读取刚结算伤害。
 
-### 7级：守护者灵光 Aura of the Guardian
+### 7级：护卫灵光 Aura of the Guardian
 
 - 特性 ID：`paladin-oath-of-redemption-aura-of-the-guardian`
 - 动作或触发：反应；灵光内盟友受伤

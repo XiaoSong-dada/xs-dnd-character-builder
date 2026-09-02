@@ -1,4 +1,4 @@
-# 长死宗 Way of the Long Death
+# 永亡宗 Way of the Long Death
 
 ## 基本信息
 
@@ -19,14 +19,14 @@
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 3 | 死亡之触（Touch of Death） | 无固定次数 |
-| 6 | 6 | 收割时刻（Hour of Reaping） | 无固定次数 |
+| 3 | 3 | 往生咒（Touch of Death） | 无固定次数 |
+| 6 | 6 | 索命镰（Hour of Reaping） | 无固定次数 |
 | 11 | 11 | 死亡精通（Mastery of Death） | 每次消耗1气 |
-| 17 | 17 | 长死之触（Touch of the Long Death） | 消耗1至10气 |
+| 17 | 17 | 永亡触（Touch of the Long Death） | 消耗1至10气 |
 
 ## 特性详解
 
-### 3级：死亡之触 Touch of Death
+### 3级：往生咒 Touch of Death
 
 - 特性 ID：`monk-long-death-touch-of-death`
 - 动作或触发：附近生物被自己降至0生命时
@@ -38,7 +38,7 @@
 
 - 校验距离、击倒来源和敌对生物；临时生命不叠加。
 
-### 6级：收割时刻 Hour of Reaping
+### 6级：索命镰 Hour of Reaping
 
 - 特性 ID：`monk-long-death-hour-of-reaping`
 - 动作或触发：动作；释放恐惧威仪
@@ -62,7 +62,7 @@
 
 - 在伤害结算时扣气；若无气则不能触发；不等同于免疫其他附带效果。
 
-### 17级：长死之触 Touch of the Long Death
+### 17级：永亡触 Touch of the Long Death
 
 - 特性 ID：`monk-long-death-touch-of-the-long-death`
 - 动作或触发：动作；接触生物

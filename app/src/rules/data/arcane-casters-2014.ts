@@ -17,8 +17,8 @@ const wizardSubclassIds = ['subclass-2014-wizard-abjuration', 'subclass-2014-wiz
 const warlockSubclassIds = ['subclass-2014-warlock-archfey', 'subclass-2014-warlock-fiend', 'subclass-2014-warlock-great-old-one'] as const
 
 export const arcaneCasterOptions2014: readonly RuleOption[] = [
-  ...wizardSubclassIds.map((id) => ({ id, name: ({ abjuration: '防护学派', conjuration: '咒法学派', divination: '预言学派', enchantment: '附魔学派', evocation: '塑能学派', illusion: '幻术学派', necromancy: '死灵学派', transmutation: '变化学派' } as Record<string, string>)[id.split('-').slice(-1)[0] ?? ''] ?? id, description: '2014法师奥术传统索引。', status: 'index-only' as const, sourceIds: indexSource })),
-  ...warlockSubclassIds.map((id) => ({ id, name: ({ archfey: '至高妖精宗主', fiend: '邪魔宗主', 'great-old-one': '旧日支配者宗主' } as Record<string, string>)[id.replace('subclass-2014-warlock-', '')] ?? id, description: '2014邪术师异界宗主索引。', status: 'index-only' as const, sourceIds: indexSource })),
+  ...wizardSubclassIds.map((id) => ({ id, name: ({ abjuration: '防护学派', conjuration: '咒法学派', divination: '预言学派', enchantment: '附魔学派', evocation: '塑能学派', illusion: '幻术学派', necromancy: '死灵学派', transmutation: '变化学派' } as Record<string, string>)[id.split('-').slice(-1)[0] ?? ''] ?? id, description: '2014法师奥术传承索引。', status: 'index-only' as const, sourceIds: indexSource })),
+  ...warlockSubclassIds.map((id) => ({ id, name: ({ archfey: '至高妖精', fiend: '邪魔', 'great-old-one': '旧日支配者' } as Record<string, string>)[id.replace('subclass-2014-warlock-', '')] ?? id, description: '2014邪术师异界宗主索引。', status: 'index-only' as const, sourceIds: indexSource })),
   { id: 'pact-chain', name: '锁链契约', description: '获得强化魔宠路线。', status: 'index-only', sourceIds: indexSource },
   { id: 'pact-blade', name: '刀锋契约', description: '获得契约武器路线。', status: 'index-only', sourceIds: indexSource },
   { id: 'pact-tome', name: '魔典契约', description: '获得额外戏法路线。', status: 'index-only', sourceIds: indexSource },
@@ -34,9 +34,9 @@ export const arcaneCasterClasses2014: readonly ClassRule[] = [
     id: 'class-2014-wizard', ruleset: '5e-2014', name: '法师', englishName: 'Wizard', summary: '2014版法术书施法者，分别管理法术书与准备列表。', hitDie: 6, primaryAbilities: ['int'], playStyleTags: ['spellcaster', 'control', 'utility', 'striker'], savingThrowAbilities: ['int', 'wis'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'wizard-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项法师技能', description: '选择职业技能。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-history', 'skill-insight', 'skill-investigation', 'skill-medicine', 'skill-religion'] },
-      { id: 'wizard-2014-subclass-2', level: 2, step: 'timeline', kind: 'subclass', title: '选择奥术传统', description: '奥术传统在2级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: wizardSubclassIds },
-      { id: 'wizard-2014-spell-mastery-1', level: 18, step: 'timeline', kind: 'class-choice', title: '选择1个1环法术专精', description: '从法术书中选择 1 个 1 环法术：可随时以最低环级施放而无需消耗法术位。', required: true, minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'spellbook-level-1' },
-      { id: 'wizard-2014-spell-mastery-2', level: 18, step: 'timeline', kind: 'class-choice', title: '选择1个2环法术专精', description: '从法术书中选择 1 个 2 环法术：可随时以最低环级施放而无需消耗法术位。', required: true, minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'spellbook-level-2' },
+      { id: 'wizard-2014-subclass-2', level: 2, step: 'timeline', kind: 'subclass', title: '选择奥术传承', description: '奥术传统在2级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: wizardSubclassIds },
+      { id: 'wizard-2014-spell-mastery-1', level: 18, step: 'timeline', kind: 'class-choice', title: '选择1个1环法术精通', description: '从法术书中选择 1 个 1 环法术：可随时以最低环级施放而无需消耗法术位。', required: true, minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'spellbook-level-1' },
+      { id: 'wizard-2014-spell-mastery-2', level: 18, step: 'timeline', kind: 'class-choice', title: '选择1个2环法术精通', description: '从法术书中选择 1 个 2 环法术：可随时以最低环级施放而无需消耗法术位。', required: true, minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'spellbook-level-2' },
       { id: 'wizard-2014-signature-spells-20', level: 20, step: 'timeline', kind: 'class-choice', title: '选择2个招牌法术', description: '从法术书中选择 2 个 3 环法术作为招牌法术：长休后可各免费施放一次，且不计入准备数量。', required: true, minSelections: 2, maxSelections: 2, optionIds: [], candidateKind: 'spellbook-level-3' },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'wizard')),
     ],
@@ -48,7 +48,7 @@ export const arcaneCasterClasses2014: readonly ClassRule[] = [
       { id: 'warlock-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项邪术师技能', description: '选择职业技能。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-deception', 'skill-history', 'skill-intimidation', 'skill-investigation', 'skill-nature', 'skill-religion'] },
       { id: 'warlock-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择异界宗主', description: '宗主在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: warlockSubclassIds },
       { id: 'warlock-2014-invocations-2', level: 2, step: 'timeline', kind: 'class-choice', title: '选择2项魔能祈唤', description: '当前提供核心祈唤索引。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['invocation-agonizing-blast', 'invocation-devils-sight', 'invocation-mask-of-many-faces'] },
-      { id: 'warlock-2014-pact-3', level: 3, step: 'timeline', kind: 'class-choice', title: '选择契约恩赐', description: '锁链、刀锋或魔典契约。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['pact-chain', 'pact-blade', 'pact-tome'] },
+      { id: 'warlock-2014-pact-3', level: 3, step: 'timeline', kind: 'class-choice', title: '选择魔契恩泽', description: '锁链、刀锋或魔典契约。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['pact-chain', 'pact-blade', 'pact-tome'] },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'warlock')),
     ],
     spellcasting: { ruleset: '5e-2014', mode: 'pact', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: warlockCantrips, spellsKnownByLevel: warlockSpellsKnown, maxSpellLevelByClassLevel: pactMaximumSpellLevels, pactSlotsByClassLevel: PACT_SPELL_SLOTS, classSpellIds: spellIds('class-2014-warlock') },
@@ -56,6 +56,6 @@ export const arcaneCasterClasses2014: readonly ClassRule[] = [
 ]
 
 export const arcaneCasterSubclasses2014: readonly SubclassRule[] = [
-  ...wizardSubclassIds.map((id) => ({ id, classId: 'class-2014-wizard', ruleset: '5e-2014' as const, name: arcaneCasterOptions2014.find((option) => option.id === id)?.name ?? id, englishName: id.split('-').slice(-1)[0] ?? id, selectionLevel: 2, summary: '2014法师奥术传统索引。', status: 'index-only' as const, sourceIds: indexSource, features: getSubclassFeatures2014(id) })),
+  ...wizardSubclassIds.map((id) => ({ id, classId: 'class-2014-wizard', ruleset: '5e-2014' as const, name: arcaneCasterOptions2014.find((option) => option.id === id)?.name ?? id, englishName: id.split('-').slice(-1)[0] ?? id, selectionLevel: 2, summary: '2014法师奥术传承索引。', status: 'index-only' as const, sourceIds: indexSource, features: getSubclassFeatures2014(id) })),
   ...warlockSubclassIds.map((id) => ({ id, classId: 'class-2014-warlock', ruleset: '5e-2014' as const, name: arcaneCasterOptions2014.find((option) => option.id === id)?.name ?? id, englishName: id.split('-').slice(-1)[0] ?? id, selectionLevel: 1, summary: '2014邪术师宗主索引。', status: 'index-only' as const, sourceIds: indexSource, features: getSubclassFeatures2014(id) })),
 ]

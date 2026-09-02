@@ -19,17 +19,17 @@
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 3 | 额外熟练（Bonus Proficiencies） | 无次数限制 |
+| 3 | 3 | 附赠熟练项（Bonus Proficiencies） | 无次数限制 |
 | 3 | 3 | 符文雕刻者（Rune Carver） | 每枚符文短休或长休恢复主动效果 |
 | 3 | 3 | 巨人之力（Giant's Might） | 熟练加值次/长休 |
-| 7 | 7 | 符文护盾（Runic Shield） | 熟练加值次/长休 |
+| 7 | 7 | 符文之盾（Runic Shield） | 熟练加值次/长休 |
 | 10 | 10 | 伟岸身形（Great Stature） | 无次数限制 |
 | 15 | 15 | 符文大师（Master of Runes） | 无次数限制 |
 | 18 | 18 | 符文巨灵（Runic Juggernaut） | 沿用巨人之力次数 |
 
 ## 特性详解
 
-### 3级：额外熟练 Bonus Proficiencies
+### 3级：附赠熟练项 Bonus Proficiencies
 
 - 特性 ID：`fighter-rune-knight-bonus-proficiencies`
 - 动作或触发：被动
@@ -65,7 +65,7 @@
 
 - 记录持续和体型；空间不足时按规则处理；额外伤害每回合一次。
 
-### 7级：符文护盾 Runic Shield
+### 7级：符文之盾 Runic Shield
 
 - 特性 ID：`fighter-rune-knight-runic-shield`
 - 动作或触发：反应；附近可见生物被攻击命中

@@ -19,7 +19,7 @@
 | 等级 | 特性 | 核心效果 |
 |---:|---|---|
 | 1 | 锻造领域法术（Forge Domain Spells） | 获得始终准备的制造、防护与火焰主题法术 |
-| 1 | 额外熟练（Bonus Proficiencies） | 获得重甲训练和锻造工具熟练 |
+| 1 | 附赠熟练项（Bonus Proficiencies） | 获得重甲训练和锻造工具熟练 |
 | 1 | 锻炉祝福（Blessing of the Forge） | 长休后临时强化一件非魔法武器或护甲 |
 | 2 | 工匠祝福（Artisan’s Blessing） | 以仪式和引导神力，把金属材料重塑为符合价值限制的物品 |
 | 6 | 锻炉之魂（Soul of the Forge） | 获得火焰抗性，并在穿重甲时提高防护 |
@@ -40,7 +40,7 @@
 
 - 重点校验角色等级、规则集、领域法术与普通准备法术分离；具体资源、目标和兼容边界继续以下方校验条目为准。
 
-### 1级：额外熟练 Bonus Proficiencies
+### 1级：附赠熟练项 Bonus Proficiencies
 
 - 特性 ID：`cleric-forge-bonus-proficiencies`
 - 动作或触发：达到1级后，按该能力规定的动作、附赠动作、反应或被动触发条件使用。

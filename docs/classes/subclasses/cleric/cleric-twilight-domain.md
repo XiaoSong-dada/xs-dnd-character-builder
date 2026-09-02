@@ -19,7 +19,7 @@
 | 等级 | 特性 | 核心效果 |
 |---:|---|---|
 | 1 | 暮光领域法术（Twilight Domain Spells） | 获得始终准备的夜幕、防护与机动主题法术 |
-| 1 | 额外熟练（Bonus Proficiencies） | 获得军用武器熟练和重甲训练 |
+| 1 | 附赠熟练项（Bonus Proficiencies） | 获得军用武器熟练和重甲训练 |
 | 1 | 夜幕之眼（Eyes of Night） | 获得超远黑暗视觉，并可临时分享给附近生物 |
 | 1 | 警觉祝福（Vigilant Blessing） | 给予一个生物下次先攻检定优势，使用后或重新指定时结束 |
 | 2 | 暮光圣域（Twilight Sanctuary） | 消耗引导神力展开移动光环，每轮为范围内生物提供临时生命值或结束特定状态 |
@@ -41,7 +41,7 @@
 
 - 重点校验角色等级、规则集、领域法术与普通准备法术分离；具体资源、目标和兼容边界继续以下方校验条目为准。
 
-### 1级：额外熟练 Bonus Proficiencies
+### 1级：附赠熟练项 Bonus Proficiencies
 
 - 特性 ID：`cleric-twilight-bonus-proficiencies`
 - 动作或触发：达到1级后，按该能力规定的动作、附赠动作、反应或被动触发条件使用。

@@ -294,7 +294,7 @@ describe('validateSubclassSelections 子职特性多选校验', () => {
     expect(exclusive?.resolution).toContain('每个特性只能选择其中一项')
   })
 
-  it('3 级战斗大师未选战技：不出现高等级额外战技提示，战斗超驰提示存在', () => {
+  it('3 级战斗大师未选战技：不出现高等级额外战技提示，卓越战技提示存在', () => {
     const draft = battleMasterDraft(3, battleMasterSelections())
     const ids = issueIds(draft)
     // 7/10/15 级额外战技未解锁，不校验。

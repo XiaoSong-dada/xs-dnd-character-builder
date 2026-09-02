@@ -1,4 +1,4 @@
-# 炮术师（Artillerist）
+# 魔炮师（Artillerist）
 
 - 稳定 ID：`subclass-2014-artificer-artillerist`
 - 选择等级：3；来源：TCoE 2020

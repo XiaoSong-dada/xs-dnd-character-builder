@@ -1,4 +1,4 @@
-# 月相术法 Lunar Sorcery
+# 月之术法 Lunar Sorcery
 
 ## 基本信息
 

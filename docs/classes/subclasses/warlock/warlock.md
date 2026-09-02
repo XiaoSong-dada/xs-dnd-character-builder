@@ -56,7 +56,7 @@
 
 2024：[至高妖精宗主](warlock-archfey-patron.md)、[天界宗主](warlock-celestial-patron.md)、[邪魔宗主](warlock-fiend-patron.md)、[旧日支配者宗主](warlock-great-old-one-patron.md)。
 
-2014扩展：[不朽者宗主](warlock-undying-patron.md)、[咒剑宗主](warlock-hexblade-patron.md)、[深海意志宗主](warlock-fathomless-patron.md)、[巨灵宗主](warlock-genie-patron.md)、[死灵宗主](warlock-undead-patron.md)。
+2014扩展：[不朽者](warlock-undying-patron.md)、[咒剑](warlock-hexblade-patron.md)、[深海意志](warlock-fathomless-patron.md)、[巨灵](warlock-genie-patron.md)、[死灵](warlock-undead-patron.md)。
 
 ## 来源与边界
 

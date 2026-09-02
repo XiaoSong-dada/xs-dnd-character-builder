@@ -126,7 +126,7 @@ function checkpointCandidates(checkpoint: ChoiceCheckpoint): readonly string[] {
   return getCheckpointCandidates(props.draft, checkpoint)
 }
 
-/** 法术级候选按环级分组并应用搜索过滤（魔法奥秘、法术专精、招牌法术）。 */
+/** 法术级候选按环级分组并应用搜索过滤（魔法奥秘、法术精通、招牌法术）。 */
 function spellCandidateGroups(checkpoint: ChoiceCheckpoint): ReadonlyArray<{
   readonly level: number
   readonly spells: readonly NonNullable<ReturnType<typeof rulesRepository.getSpell>>[]

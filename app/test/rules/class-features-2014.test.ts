@@ -109,11 +109,11 @@ describe('2014 class features catalog', () => {
     const choiceNames = new Set(
       classFeatures2014.filter((feature) => feature.requiresChoice).map((feature) => feature.id),
     )
-    // 子职选择（原初道途/学院/领域/结社/范型/传统/誓言/起源/宗主/奥术传统）
+    // 子职选择（原初道途/学院/领域/结社/范型/传统/誓言/起源/宗主/奥术传承）
     expect(choiceNames.has('barbarian-2014-class-primal-path')).toBe(true)
     expect(choiceNames.has('fighter-2014-class-martial-archetype')).toBe(true)
     expect(choiceNames.has('wizard-2014-class-arcane-tradition')).toBe(true)
-    // 战斗风格、专精、宿敌/地形、超魔法、魔能祈唤/契约恩赐、法术专精/招牌法术
+    // 战斗风格、专精、宿敌/地形、超魔法、魔能祈唤/魔契恩泽、法术精通/招牌法术
     expect(choiceNames.has('fighter-2014-class-fighting-style')).toBe(true)
     expect(choiceNames.has('rogue-2014-class-expertise')).toBe(true)
     expect(choiceNames.has('ranger-2014-class-favored-enemy')).toBe(true)

@@ -1,4 +1,4 @@
-# 炼金术师（Alchemist）
+# 炼金师（Alchemist）
 
 - 稳定 ID：`subclass-2014-artificer-alchemist`
 - 选择等级：3；来源：TCoE 2020

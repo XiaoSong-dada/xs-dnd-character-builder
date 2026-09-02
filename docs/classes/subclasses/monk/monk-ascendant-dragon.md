@@ -1,4 +1,4 @@
-# 升龙宗 Way of the Ascendant Dragon
+# 神龙宗 Way of the Ascendant Dragon
 
 ## 基本信息
 
@@ -20,7 +20,7 @@
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
 | 3 | 3 | 龙族弟子（Draconic Disciple） | 无固定次数 |
-| 3 | 3 | 龙息（Breath of the Dragon） | 熟练加值次/长休；之后可耗气 |
+| 3 | 3 | 龙之息（Breath of the Dragon） | 熟练加值次/长休；之后可耗气 |
 | 6 | 6 | 展翼（Wings Unfurled） | 熟练加值次/长休 |
 | 11 | 11 | 巨龙威仪（Aspect of the Wyrm） | 长休一次；之后可耗气 |
 | 17 | 17 | 升龙威仪（Ascendant Aspect） | 无独立次数 |
@@ -39,7 +39,7 @@
 
 - 保存伤害选择和语言；社交重掷使用次数按来源恢复；必须采用新结果。
 
-### 3级：龙息 Breath of the Dragon
+### 3级：龙之息 Breath of the Dragon
 
 - 特性 ID：`monk-ascendant-dragon-breath-of-the-dragon`
 - 动作或触发：攻击动作中替换一次攻击
@@ -78,7 +78,7 @@
 ### 17级：升龙威仪 Ascendant Aspect
 
 - 特性 ID：`monk-ascendant-dragon-ascendant-aspect`
-- 动作或触发：被动；强化龙息与巨龙威仪
+- 动作或触发：被动；强化龙之息与巨龙威仪
 - 资源与恢复：无独立次数
 
 获得盲视，吐息伤害增强，灵光还可在开启时爆发元素伤害。

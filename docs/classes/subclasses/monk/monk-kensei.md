@@ -19,14 +19,14 @@
 
 | 2024兼容等级 | 原版等级 | 特性 | 资源摘要 |
 |---:|---:|---|---|
-| 3 | 3 | 剑圣之道（Path of the Kensei） | 达到等级时增加武器选择 |
+| 3 | 3 | 剑圣之途（Path of the Kensei） | 达到等级时增加武器选择 |
 | 6 | 6 | 人剑合一（One with the Blade） | 每回合可消耗气追加伤害 |
 | 11 | 11 | 磨砺锋芒（Sharpen the Blade） | 消耗1至3气，持续一段时间 |
 | 17 | 17 | 百发百中（Unerring Accuracy） | 每回合一次 |
 
 ## 特性详解
 
-### 3级：剑圣之道 Path of the Kensei
+### 3级：剑圣之途 Path of the Kensei
 
 - 特性 ID：`monk-kensei-path-of-the-kensei`
 - 动作或触发：被动；选择剑圣武器并使用相关攻击

@@ -21,8 +21,8 @@
 | 3 | 3 | 敏锐听觉（Ear for Deceit） | 无次数限制 |
 | 3 | 3 | 细节洞察（Eye for Detail） | 受每回合奖励动作限制 |
 | 3 | 3 | 洞悉战斗（Insightful Fighting） | 成功后持续一段时间 |
-| 9 | 9 | 稳定之眼（Steady Eye） | 无次数限制 |
-| 13 | 13 | 无误之眼（Unerring Eye） | 感知调整值次/长休，至少一次 |
+| 9 | 9 | 目不转睛（Steady Eye） | 无次数限制 |
+| 13 | 13 | 明察秋毫（Unerring Eye） | 感知调整值次/长休，至少一次 |
 | 17 | 17 | 洞察弱点（Eye for Weakness） | 每回合随偷袭触发 |
 
 ## 特性详解
@@ -63,7 +63,7 @@
 
 - 保存目标和结束条件；每次攻击仍校验偷袭每回合一次与劣势。
 
-### 9级：稳定之眼 Steady Eye
+### 9级：目不转睛 Steady Eye
 
 - 特性 ID：`rogue-inquisitive-steady-eye`
 - 动作或触发：当回合移动不超过规则限制时
@@ -75,7 +75,7 @@
 
 - 在检定时读取本回合移动距离；后续移动不回溯改变已结算检定。
 
-### 13级：无误之眼 Unerring Eye
+### 13级：明察秋毫 Unerring Eye
 
 - 特性 ID：`rogue-inquisitive-unerring-eye`
 - 动作或触发：动作；察觉附近幻象、变形或欺骗效果

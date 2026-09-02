@@ -149,7 +149,7 @@ function toggleSpellbook(id: string): void {
           : config.mode === 'prepared'
           ? '准备数量由施法属性与职业等级计算；誓言法术后续将作为始终准备法术单独列出。'
           : config.mode === 'pact'
-            ? '契约法术位按短休恢复；本页负责戏法与已知法术，秘法奥秘在后续职业资源批次接入。'
+            ? '契约法术位按短休恢复；本页负责戏法与已知法术，玄奥秘法在后续职业资源批次接入。'
             : '掌握数量来自2014职业表，所选法术必须在当前可用环级内。' }}
       </UiNotice>
       <UiNotice v-if="alwaysPreparedSpells.length" tone="success" title="子职始终准备法术">

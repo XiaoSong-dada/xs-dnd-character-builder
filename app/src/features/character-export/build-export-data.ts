@@ -134,7 +134,7 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
         features.push({ id: optionId, category: 'feat', name: '属性值提升', summary, priority: 10 })
         continue
       }
-      // 已选选择类选项（超魔、战技与其余子职选项、法术专精/招牌法术）进入导出
+      // 已选选择类选项（超魔、战技与其余子职选项、法术精通/招牌法术）进入导出
       const isMetamagic = optionId.startsWith('metamagic-')
       const isInfusion = optionId.startsWith('infusion-2014-')
       const isSpellMasterySelection = selection.checkpointId.startsWith('wizard-2014-spell-mastery-')

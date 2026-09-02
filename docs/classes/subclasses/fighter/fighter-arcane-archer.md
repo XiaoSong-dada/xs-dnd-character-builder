@@ -21,9 +21,9 @@
 |---:|---:|---|---|
 | 3 | 3 | 奥法射手学识（Arcane Archer Lore） | 无次数限制 |
 | 3 | 3 | 奥法射击（Arcane Shot） | 2次/短休或长休 |
-| 7 | 7 | 魔法箭矢（Magic Arrow） | 无次数限制 |
+| 7 | 7 | 注魔箭矢（Magic Arrow） | 无次数限制 |
 | 7 | 7 | 曲射（Curving Shot） | 受奖励动作限制 |
-| 15 | 15 | 常备射击（Ever-Ready Shot） | 每场战斗按条件 |
+| 15 | 15 | 有箭无患（Ever-Ready Shot） | 每场战斗按条件 |
 | 18 | 18 | 奥法射击强化（Arcane Shot Improvement） | 无次数限制 |
 
 ## 特性详解
@@ -52,7 +52,7 @@
 
 - 武器类型、命中后窗口、选项和豁免分别校验；一次箭矢一个选项。
 
-### 7级：魔法箭矢 Magic Arrow
+### 7级：注魔箭矢 Magic Arrow
 
 - 特性 ID：`fighter-arcane-archer-magic-arrow`
 - 动作或触发：使用非魔法短弓或长弓射箭时
@@ -76,7 +76,7 @@
 
 - 新目标必须不同、可见且在范围；不能再次曲射同一箭。
 
-### 15级：常备射击 Ever-Ready Shot
+### 15级：有箭无患 Ever-Ready Shot
 
 - 特性 ID：`fighter-arcane-archer-ever-ready-shot`
 - 动作或触发：掷先攻且没有奥法射击次数时
