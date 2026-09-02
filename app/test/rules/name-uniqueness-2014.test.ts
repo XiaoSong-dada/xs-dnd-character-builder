@@ -35,4 +35,23 @@ describe('规则条目中文名唯一性（5e-2014）', () => {
     const names = feats2014.map((feat) => feat.name)
     expect(new Set(names).size).toBe(names.length)
   })
+
+  it('关键法术名抽查（对齐 5e 不全书译名，防回归）', () => {
+    const byEn = (englishName: string) => spells2014.find((spell) => spell.englishName === englishName)?.name
+    // 更名项（含原 Message/Sending 同名冲突的 Sending）
+    expect(byEn('Branding Smite')).toBe('印记斩')
+    expect(byEn('Sending')).toBe('短讯术')
+    expect(byEn('True Strike')).toBe('克敌先击')
+    expect(byEn('Animal Shapes')).toBe('动物形态')
+    expect(byEn('Levitate')).toBe('浮空术')
+    expect(byEn('Guidance')).toBe('神导术')
+    expect(byEn('Spirit Shroud')).toBe('魂灵环绕')
+    expect(byEn('Summon Lesser Demons')).toBe('低阶恶魔召唤术')
+    expect(byEn('Summon Draconic Spirit')).toBe('龙类灵魄召唤术')
+    expect(byEn('Vortex Warp')).toBe('涡旋翘曲')
+    // 保持项（与 5e 不全书一致，不得被误改）
+    expect(byEn('Shocking Grasp')).toBe('电爪')
+    expect(byEn('Magic Missile')).toBe('魔法飞弹')
+    expect(byEn('Message')).toBe('传讯术')
+  })
 })

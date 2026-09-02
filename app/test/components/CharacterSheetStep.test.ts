@@ -409,8 +409,8 @@ describe('CharacterSheetStep 法术展示', () => {
     })
     await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
 
-    expect(wrapper.text()).toContain('指引术')
-    expect(wrapper.text()).toContain('神圣之火')
+    expect(wrapper.text()).toContain('神导术')
+    expect(wrapper.text()).toContain('圣火术')
     expect(wrapper.text()).toContain('祝福术')
     expect(wrapper.text()).toContain('治愈真言')
     expect(wrapper.text()).toContain('已准备')
@@ -499,7 +499,7 @@ describe('CharacterSheetStep 法术展示', () => {
     })
     await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
 
-    expect(wrapper.text()).toContain('魅惑人类')
+    expect(wrapper.text()).toContain('魅惑类人')
     expect(wrapper.text()).toContain('燃烧之手')
     expect(wrapper.text()).toContain('已掌握')
     expect(wrapper.text()).not.toContain('已准备')
@@ -523,8 +523,8 @@ describe('CharacterSheetStep 法术展示', () => {
     await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
 
     expect(wrapper.text()).toContain('魔能爆')
-    expect(wrapper.text()).toContain('妖火诅咒')
-    expect(wrapper.text()).toContain('阿伽迪斯之铠')
+    expect(wrapper.text()).toContain('脆弱诅咒')
+    expect(wrapper.text()).toContain('黯冰狱铠')
     expect(wrapper.text()).toContain('已掌握')
     expect(wrapper.text()).not.toContain('已准备')
   })
@@ -742,7 +742,7 @@ describe('CharacterSheetStep 候选池与点击交互', () => {
     const wrapper = await mountSheet(clericDraft)
 
     expect(wrapper.text()).toContain('未准备法术')
-    expect(wrapper.text()).toContain('引导箭')
+    expect(wrapper.text()).toContain('光导箭')
     expect(wrapper.text()).toMatch(/1环 · \d+ 个未准备/)
     // 已准备区块提供取消准备，未准备区块提供准备
     expect(wrapper.text()).toContain('取消准备')
@@ -767,7 +767,7 @@ describe('CharacterSheetStep 候选池与点击交互', () => {
       },
     }
     const wrapper = await mountSheet(clericDraft)
-    const button = spellActionFor(wrapper, '引导箭')
+    const button = spellActionFor(wrapper, '光导箭')
     expect(button).toBeTruthy()
     await button!.trigger('click')
 

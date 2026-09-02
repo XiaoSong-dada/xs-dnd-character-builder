@@ -101,8 +101,8 @@ describe('吟游诗人法术步骤(回归:法术池充足且可在手机宽度�
     const draft = bardDraft(1)
     const wrapper = mount(SpellcastingStep, { props: { draft } })
 
-    // 三角形展开：找到恶毒嘲笑（诗人戏法）卡片，展开后可见其原创摘要（含"1d4"）
-    const firstCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('恶毒嘲笑'))
+    // 三角形展开：找到恶言相加（诗人戏法）卡片，展开后可见其原创摘要（含"1d4"）
+    const firstCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('恶言相加'))
     expect(firstCard).toBeTruthy()
     await firstCard!.find('.expandable-option-card__arrow').trigger('click')
     expect(firstCard!.find('.expandable-option-card__growth').exists()).toBe(true)

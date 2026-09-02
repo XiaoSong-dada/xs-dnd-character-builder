@@ -3,6 +3,13 @@ import { normalizeVersion } from '@/utils/version'
 
 export const updateNotices: readonly UpdateNotice[] = [
   {
+    version: '1.1.5',
+    title: '版本更新公告',
+    items: [
+      '法术译名全面对齐 5e 不全书：273 条法术名按不全书译名更新（如 烙印斩击→印记斩、远距传讯→短讯术、引导箭→光导箭、恶毒嘲笑→恶言相加），稳定 ID 与英文名不变，旧草稿完全兼容。',
+    ],
+  },
+  {
     version: '1.1.4',
     title: '版本更新公告',
     items: [
