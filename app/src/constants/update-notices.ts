@@ -3,6 +3,13 @@ import { normalizeVersion } from '@/utils/version'
 
 export const updateNotices: readonly UpdateNotice[] = [
   {
+    version: '1.1.8',
+    title: '版本更新公告',
+    items: [
+      '种族与背景特性展示：角色卡与跑团助手「能力」页签新增分组区块（种族特性 · 基础种族 / 种族特性 · 子种族 / 背景特性 · 背景），共登记 240 条种族特性与 44 条背景特性，按等级过滤并可展开详情。',
+    ],
+  },
+  {
     version: '1.1.7',
     title: '版本更新公告',
     items: [

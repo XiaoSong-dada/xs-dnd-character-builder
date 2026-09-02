@@ -190,6 +190,35 @@ export type SubclassFeatureKind =
   | 'bonus-action'
   | 'reaction'
 
+/** 种族特性（2014）。常驻或按等级自动获得，不建立时间线检查点。 */
+export interface RaceFeature {
+  readonly id: string
+  readonly raceId: string
+  readonly name: string
+  readonly englishName: string
+  readonly level: number
+  readonly summary: string
+  /** 原创中文详细效果（展开区展示）。 */
+  readonly description: string
+  readonly kind: SubclassFeatureKind
+  readonly status: CompatibilityStatus
+  readonly sourceIds: readonly string[]
+}
+
+/** 背景特性（2014）。每个背景 1—N 条；变体背景沿用父背景特性。 */
+export interface BackgroundFeature {
+  readonly id: string
+  readonly backgroundId: string
+  readonly name: string
+  readonly englishName: string
+  readonly level: number
+  readonly summary: string
+  readonly description: string
+  readonly kind: SubclassFeatureKind
+  readonly status: CompatibilityStatus
+  readonly sourceIds: readonly string[]
+}
+
 export interface SubclassFeature {
   readonly id: string
   readonly subclassId: string

@@ -99,6 +99,67 @@ describe('CharacterSheetStep', () => {
     expect(text.indexOf('技能')).toBeLessThan(text.indexOf('子职特性'))
   })
 
+  it('shows race/subrace/background features in the features tab as grouped sections', async () => {
+    const groupedDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-fighter',
+      raceId: 'race-2014-dwarf',
+      subraceId: 'race-2014-dwarf-hill',
+      backgroundId: 'background-2014-soldier',
+      targetLevel: 1,
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: groupedDraft, derived: deriveCharacter(groupedDraft) },
+    })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('种族特性 · 矮人')
+    expect(wrapper.text()).toContain('种族特性 · 丘陵矮人')
+    expect(wrapper.text()).toContain('背景特性 · 士兵')
+    expect(wrapper.text()).toContain('黑暗视觉')
+    expect(wrapper.text()).toContain('属性提升')
+    expect(wrapper.text()).toContain('军衔') // 士兵背景特性（Soldier：Military Rank）
+    // 分组顺序：职业 → 子职 → 种族 → 子种族 → 背景
+    const text = wrapper.text()
+    expect(text.indexOf('种族特性 · 矮人')).toBeLessThan(text.indexOf('种族特性 · 丘陵矮人'))
+    expect(text.indexOf('种族特性 · 丘陵矮人')).toBeLessThan(text.indexOf('背景特性 · 士兵'))
+    // 3 级特性（如天裔光耀之魂）在 1 级时不显示
+    const aasimarDraft: CharacterDraft = {
+      ...groupedDraft,
+      raceId: 'race-2014-aasimar',
+      subraceId: 'race-2014-aasimar-protector',
+    }
+    const aasimarWrapper = mount(CharacterSheetStep, {
+      props: { draft: aasimarDraft, derived: deriveCharacter(aasimarDraft) },
+    })
+    await aasimarWrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+    expect(aasimarWrapper.text()).not.toContain('光耀之魂')
+    expect(aasimarWrapper.text()).toContain('治疗之手')
+    const leveledDraft: CharacterDraft = { ...aasimarDraft, targetLevel: 3 }
+    const leveledWrapper = mount(CharacterSheetStep, {
+      props: { draft: leveledDraft, derived: deriveCharacter(leveledDraft) },
+    })
+    await leveledWrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+    expect(leveledWrapper.text()).toContain('光耀之魂')
+  })
+
+  it('shows empty hints when no subclass is selected', async () => {
+    const noSubclassDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-fighter',
+      raceId: 'race-2014-half-orc',
+      targetLevel: 1,
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: noSubclassDraft, derived: deriveCharacter(noSubclassDraft) },
+    })
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+    expect(wrapper.text()).toContain('尚未选择子职')
+    expect(wrapper.text()).toContain('种族特性 · 半兽人')
+    expect(wrapper.text()).toContain('凶蛮攻击')
+  })
+
   it('shows class features in the features tab filtered by current level', async () => {
     const fighterDraft: CharacterDraft = {
       ...draft,

@@ -240,6 +240,25 @@ describe('跑团助手 · 局内面板操作', () => {
     expect(wrapper.text()).toContain('奥术回想')
   })
 
+  it('能力页签：种族/背景特性分组渲染', async () => {
+    const { wrapper, store } = await mountPanel()
+    store.updateDraft({
+      id: store.drafts[0]!.id,
+      raceId: 'race-2014-dwarf',
+      subraceId: 'race-2014-dwarf-mountain',
+      backgroundId: 'background-2014-soldier',
+    })
+    await wrapper.get('[role="tab"]:nth-child(2)').trigger('click')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(wrapper.text()).toContain('种族特性 · 矮人')
+    expect(wrapper.text()).toContain('种族特性 · 山地矮人')
+    expect(wrapper.text()).toContain('背景特性 · 士兵')
+    expect(wrapper.text()).toContain('黑暗视觉')
+    expect(wrapper.text()).toContain('矮人韧性')
+    expect(wrapper.text()).toContain('军衔')
+  })
+
   it('debuff 挂摘与顶部 tag 联动（总览页签底部）；tag 可点击查看详情', async () => {
     const { wrapper } = await mountPanel()
 

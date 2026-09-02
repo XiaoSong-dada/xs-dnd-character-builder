@@ -16,6 +16,8 @@ import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
+import { getRaceFeatures2014 } from '@/rules/data/race-features-2014'
+import { getBackgroundFeatures2014 } from '@/rules/data/background-features-2014'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
@@ -472,6 +474,36 @@ const subclassInfo = computed(() => {
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { subclass, features }
 })
+/** 基础种族特性（按等级过滤；子种族特性单独分组展示）。 */
+const raceInfo = computed(() => {
+  const raceId = props.draft.raceId
+  if (!raceId) return undefined
+  const race = rulesRepository.getRace(raceId)
+  if (!race) return undefined
+  const features = getRaceFeatures2014(raceId)
+    .filter((feature) => feature.level <= props.draft.targetLevel)
+  return { race, features }
+})
+/** 子种族特性（仅子种族自身条目，父项特性不重复展示）。 */
+const subraceInfo = computed(() => {
+  const subraceId = props.draft.subraceId
+  if (!subraceId || subraceId === props.draft.raceId) return undefined
+  const race = rulesRepository.getRace(subraceId)
+  if (!race) return undefined
+  const features = getRaceFeatures2014(subraceId)
+    .filter((feature) => feature.level <= props.draft.targetLevel)
+  return { race, features }
+})
+/** 背景特性（变体背景沿用父背景特性条目）。 */
+const backgroundInfo = computed(() => {
+  const backgroundId = props.draft.backgroundId ?? props.draft.backgroundVariantId
+  if (!backgroundId) return undefined
+  const background = rulesRepository.getBackground(backgroundId)
+  if (!background) return undefined
+  const ownerId = background.parentBackgroundId ?? backgroundId
+  const features = getBackgroundFeatures2014(ownerId)
+  return { background, features }
+})
 /** 存在失效选择或未完成的时间线检查点时，角色卡标记为"待补全"。 */
 const needsReview = computed(() => {
   const draft = props.draft
@@ -633,6 +665,60 @@ function handleExportPdf(): void {
         <p v-else class="character-sheet__empty-features">该子职在当前等级暂无已登记特性。</p>
       </template>
       <p v-else class="character-sheet__empty-features">尚未选择子职，完成时间线步骤后这里会展示子职特性。</p>
+      <template v-if="raceInfo">
+        <section v-if="raceInfo.features.length" class="character-sheet__subclass-features">
+          <header class="character-sheet__subclass-features-header">
+            <h3>种族特性 · {{ raceInfo.race.name }}</h3>
+          </header>
+          <ListShell>
+            <ExpandableOptionCard
+              v-for="feature in raceInfo.features"
+              :key="feature.id"
+              :title="feature.name"
+              :description="`${feature.level}级 · ${feature.englishName}`"
+              expanded-label="特性详情"
+            >
+              <template #expanded>{{ feature.description }}</template>
+            </ExpandableOptionCard>
+          </ListShell>
+        </section>
+      </template>
+      <template v-if="subraceInfo">
+        <section v-if="subraceInfo.features.length" class="character-sheet__subclass-features">
+          <header class="character-sheet__subclass-features-header">
+            <h3>种族特性 · {{ subraceInfo.race.name }}</h3>
+          </header>
+          <ListShell>
+            <ExpandableOptionCard
+              v-for="feature in subraceInfo.features"
+              :key="feature.id"
+              :title="feature.name"
+              :description="`${feature.level}级 · ${feature.englishName}`"
+              expanded-label="特性详情"
+            >
+              <template #expanded>{{ feature.description }}</template>
+            </ExpandableOptionCard>
+          </ListShell>
+        </section>
+      </template>
+      <template v-if="backgroundInfo">
+        <section v-if="backgroundInfo.features.length" class="character-sheet__subclass-features">
+          <header class="character-sheet__subclass-features-header">
+            <h3>背景特性 · {{ backgroundInfo.background.name }}</h3>
+          </header>
+          <ListShell>
+            <ExpandableOptionCard
+              v-for="feature in backgroundInfo.features"
+              :key="feature.id"
+              :title="feature.name"
+              :description="`${feature.level}级 · ${feature.englishName}`"
+              expanded-label="特性详情"
+            >
+              <template #expanded>{{ feature.description }}</template>
+            </ExpandableOptionCard>
+          </ListShell>
+        </section>
+      </template>
       <section v-if="featAndAsiEntries.length" class="character-sheet__subclass-features">
         <header class="character-sheet__subclass-features-header">
           <h3>专长与属性提升</h3>

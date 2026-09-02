@@ -14,6 +14,8 @@ import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
+import { getRaceFeatures2014 } from '@/rules/data/race-features-2014'
+import { getBackgroundFeatures2014 } from '@/rules/data/background-features-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { getAvailableSlotLevels } from '@/rules/session-state'
@@ -164,6 +166,33 @@ const subclassFeatures = computed(() =>
     ? getSubclassFeatures2014(props.draft.subclassId).filter((feature) => feature.level <= props.draft.targetLevel)
     : [],
 )
+const raceName = computed(() => props.draft.raceId ? (rulesRepository.getRace(props.draft.raceId)?.name ?? '') : '')
+const raceFeatures = computed(() =>
+  props.draft.raceId
+    ? getRaceFeatures2014(props.draft.raceId).filter((feature) => feature.level <= props.draft.targetLevel)
+    : [],
+)
+const subraceName = computed(() =>
+  props.draft.subraceId && props.draft.subraceId !== props.draft.raceId
+    ? (rulesRepository.getRace(props.draft.subraceId)?.name ?? '')
+    : '',
+)
+const subraceFeatures = computed(() =>
+  props.draft.subraceId && props.draft.subraceId !== props.draft.raceId
+    ? getRaceFeatures2014(props.draft.subraceId).filter((feature) => feature.level <= props.draft.targetLevel)
+    : [],
+)
+const backgroundName = computed(() => {
+  const id = props.draft.backgroundId ?? props.draft.backgroundVariantId
+  return id ? (rulesRepository.getBackground(id)?.name ?? '') : ''
+})
+const backgroundFeatures = computed(() => {
+  const id = props.draft.backgroundId ?? props.draft.backgroundVariantId
+  if (!id) return []
+  const background = rulesRepository.getBackground(id)
+  const ownerId = background?.parentBackgroundId ?? id
+  return getBackgroundFeatures2014(ownerId)
+})
 const featAndAsiEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
@@ -436,6 +465,51 @@ function openTranscribe(spellId?: string): void {
         </ListShell>
         <p v-else-if="subclassName" class="session-panel__empty">该子职在当前等级暂无已登记特性。</p>
         <p v-else class="session-panel__empty">尚未选择子职，完成时间线步骤后这里会展示子职特性。</p>
+      </section>
+      <section v-if="raceName" class="session-panel__section">
+        <h3>种族特性 · {{ raceName }}</h3>
+        <ListShell v-if="raceFeatures.length">
+          <ExpandableOptionCard
+            v-for="feature in raceFeatures"
+            :key="feature.id"
+            :title="feature.name"
+            :description="`${feature.level}级 · ${feature.englishName}`"
+            expanded-label="特性详情"
+          >
+            <template #expanded>{{ feature.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+        <p v-else class="session-panel__empty">该种族在当前等级暂无已登记特性。</p>
+      </section>
+      <section v-if="subraceName" class="session-panel__section">
+        <h3>种族特性 · {{ subraceName }}</h3>
+        <ListShell v-if="subraceFeatures.length">
+          <ExpandableOptionCard
+            v-for="feature in subraceFeatures"
+            :key="feature.id"
+            :title="feature.name"
+            :description="`${feature.level}级 · ${feature.englishName}`"
+            expanded-label="特性详情"
+          >
+            <template #expanded>{{ feature.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+        <p v-else class="session-panel__empty">该子种族在当前等级暂无已登记特性。</p>
+      </section>
+      <section v-if="backgroundName" class="session-panel__section">
+        <h3>背景特性 · {{ backgroundName }}</h3>
+        <ListShell v-if="backgroundFeatures.length">
+          <ExpandableOptionCard
+            v-for="feature in backgroundFeatures"
+            :key="feature.id"
+            :title="feature.name"
+            :description="`${feature.level}级 · ${feature.englishName}`"
+            expanded-label="特性详情"
+          >
+            <template #expanded>{{ feature.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+        <p v-else class="session-panel__empty">该背景暂无已登记特性。</p>
       </section>
       <section v-if="featAndAsiEntries.length" class="session-panel__section">
         <h3>专长与属性提升</h3>
