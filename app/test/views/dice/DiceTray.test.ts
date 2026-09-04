@@ -106,3 +106,23 @@ describe('DiceTray', () => {
     wrapper.unmount()
   })
 })
+
+
+it.each([800, 6000])('plays the complete %i ms trajectory within 1500 ms', async (durationMs) => {
+  let frame: FrameRequestCallback | undefined
+  vi.spyOn(performance, 'now').mockReturnValue(0)
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frame = callback; return 1 })
+  const value = { ...presentation, trajectory: { ...presentation.trajectory, durationMs } }
+  const wrapper = mount(DiceTray, { props: { status: 'rolling', reducedMotion: false, physicalCount: 1, presentation: value } })
+  const duration = Math.min(durationMs, 1500)
+  expect(wrapper.emitted('started')).toEqual([['roll-1', duration]])
+  frame?.(duration / 2)
+  expect(rendererMocks.renderAt).toHaveBeenLastCalledWith(value.trajectory, durationMs / 2)
+  expect(wrapper.emitted('complete')).toBeUndefined()
+  frame?.(duration)
+  expect(rendererMocks.renderAt).toHaveBeenLastCalledWith(value.trajectory, durationMs)
+  expect(wrapper.emitted('complete')).toEqual([['roll-1']])
+  wrapper.unmount()
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})

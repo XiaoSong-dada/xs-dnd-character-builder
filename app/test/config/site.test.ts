@@ -27,7 +27,7 @@ describe('siteConfig 环境变量归一化', () => {
       authorName: '小宋哒哒',
       githubUrl: 'https://github.com/XiaoSong-dada',
       tagline: undefined,
-      version: '1.1.4',
+      version: __APP_VERSION__,
       siteUrl: 'https://dnd.example.com',
       siteImage: 'https://dnd.example.com/og.png',
       tipQrCodes: {
@@ -56,7 +56,7 @@ describe('siteConfig 环境变量归一化', () => {
     const config = await loadConfig()
     expect(config.authorName).toBeUndefined()
     expect(config.githubUrl).toBeUndefined()
-    expect(config.version).toBe('1.1.4')
+    expect(config.version).toBe(__APP_VERSION__)
     expect(config.siteUrl).toBeUndefined()
     expect(config.siteImage).toBeUndefined()
     expect(config.tipQrCodes).toEqual({ wechatUrl: undefined, alipayUrl: undefined })

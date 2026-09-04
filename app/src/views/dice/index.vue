@@ -2,6 +2,7 @@
 import BaseButton from '@/components/ui/BaseButton.vue'
 import DicePoolPanel from '@/views/dice/components/DicePoolPanel.vue'
 import DiceResultPanel from '@/views/dice/components/DiceResultPanel.vue'
+import DiceSettings from '@/views/dice/components/DiceSettings.vue'
 import DiceTray from '@/views/dice/components/DiceTray.vue'
 import DiceTypeSelector from '@/views/dice/components/DiceTypeSelector.vue'
 import { useDicePage } from '@/views/dice/hooks/useDicePage'
@@ -10,6 +11,7 @@ const {
   title, description, dieTypes, maxPhysicalDice, pool, results, presentation, status, notice, error,
   physicalDiceCount, remainingPhysicalDice, expression, isBusy, groupedResults, total, reducedMotion,
   canAdd, addDie, removeDie, clearPool, roll, handlePlaybackComplete, handleRendererUnavailable,
+  skipAnimation, soundEnabled, setSkipAnimation, setSoundEnabled, handlePlaybackStarted,
 } = useDicePage()
 </script>
 
@@ -22,13 +24,16 @@ const {
       :remaining="remainingPhysicalDice" :maximum="maxPhysicalDice" :disabled="isBusy"
       :can-add="canAdd" @add="addDie" @remove="removeDie"
     />
-    <DiceTray
+    <DiceSettings :skip-animation="skipAnimation" :sound-enabled="soundEnabled" :busy="isBusy" @skip="setSkipAnimation" @sound="setSoundEnabled" />
+    <DiceResultPanel v-if="results.length" :groups="groupedResults" :total="total" />
+    <p v-if="skipAnimation" class="dice-page__notice">已跳过动画，投掷后直接显示结果。</p>
+    <DiceTray v-else
       :presentation="presentation" :status="status" :reduced-motion="reducedMotion" :physical-count="physicalDiceCount"
       @complete="handlePlaybackComplete" @unavailable="handleRendererUnavailable"
+      @started="handlePlaybackStarted"
     />
     <p v-if="notice" class="dice-page__notice" role="status">{{ notice }}</p>
     <p v-if="error" class="dice-page__error" role="alert">{{ error }}</p>
-    <DiceResultPanel v-if="results.length" :groups="groupedResults" :total="total" />
     <div class="dice-page__actions">
       <BaseButton class="dice-page__roll" :disabled="isBusy || physicalDiceCount === 0" @click="roll">
         {{ results.length ? '再次投掷' : isBusy ? '投掷中…' : '投掷骰子' }}

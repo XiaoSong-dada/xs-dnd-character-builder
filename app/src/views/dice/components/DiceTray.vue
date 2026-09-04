@@ -10,7 +10,7 @@ const props = defineProps<{
   reducedMotion: boolean
   physicalCount: number
 }>()
-const emit = defineEmits<{ complete: [rollId: string]; unavailable: [] }>()
+const emit = defineEmits<{ complete: [rollId: string]; unavailable: []; started: [rollId: string, durationMs: number] }>()
 const canvas = ref<HTMLCanvasElement>()
 const viewControlsEnabled = computed(() => props.status === 'complete' && Boolean(props.presentation))
 
@@ -54,11 +54,14 @@ function play(presentation: DicePresentation) {
     return
   }
   const startedAt = performance.now()
+  const durationMs = Math.min(presentation.trajectory.durationMs, 1500)
+  emit('started', presentation.request.id, durationMs)
   const frame = (now: number) => {
     if (currentPlayback !== playbackId || !renderer) return
     const elapsed = now - startedAt
-    renderer.renderAt(presentation.trajectory, elapsed)
-    if (elapsed >= presentation.trajectory.durationMs) {
+    const progress = durationMs > 0 ? Math.min(1, Math.max(0, elapsed / durationMs)) : 1
+    renderer.renderAt(presentation.trajectory, progress * presentation.trajectory.durationMs)
+    if (progress >= 1) {
       animationFrame = 0
       emit('complete', presentation.request.id)
       return

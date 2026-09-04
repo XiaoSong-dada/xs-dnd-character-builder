@@ -1,3 +1,4 @@
+import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 
 import {
@@ -10,13 +11,13 @@ import {
   groupRollResults,
   prepareRoll,
 } from '@/rules/dice'
+import { DiceAudioService, type DiceAudio } from '@/services/dice-audio'
 import { randomIntegerInclusive, secureUint32 } from '@/services/dice-random'
+import { useDiceStore } from '@/stores/dice'
 import type {
-  DicePoolEntry,
   DicePresentation,
   DiceWorkerResponse,
   DieType,
-  LogicalRollResult,
   RollRequest,
   RollStatus,
 } from '@/types/dice'
@@ -28,31 +29,33 @@ interface WorkerClientLike {
   terminate(): void
 }
 
-export const DICE_ROLL_DEADLINE_MS = 20_000
+export const DICE_ROLL_DEADLINE_MS = 3_000
 
 export interface DicePageDependencies {
   randomUint32?: () => number
   randomInteger?: (minimum: number, maximum: number) => number
   createWorkerClient?: () => WorkerClientLike
+  createAudio?: () => DiceAudio
 }
 
 export function useDicePage(dependencies: DicePageDependencies = {}) {
   const randomUint32 = dependencies.randomUint32 ?? secureUint32
   const randomInteger = dependencies.randomInteger ?? randomIntegerInclusive
   const createWorkerClient = dependencies.createWorkerClient ?? (() => new DiceWorkerClient())
-  const pool = ref<DicePoolEntry[]>([])
-  const results = ref<LogicalRollResult[]>([])
-  const pendingResults = ref<LogicalRollResult[]>([])
+  const store = useDiceStore()
+  const { pool, results, activeRollId, skipAnimation, soundEnabled } = storeToRefs(store)
+  const audio = dependencies.createAudio?.() ?? new DiceAudioService()
+  let disposed = false
+  let soundedRollId: string | undefined
   const presentation = shallowRef<DicePresentation>()
-  const status = ref<RollStatus>('idle')
+  const status = ref<RollStatus>(results.value.length ? 'complete' : 'idle')
   const notice = ref('')
   const error = ref('')
   const visualAvailable = ref(true)
   const reducedMotion = ref(false)
   let mediaQuery: MediaQueryList | undefined
   let workerClient: WorkerClientLike | undefined
-  let rollSequence = 0
-  let activeRollId: string | undefined
+  let rollStartedAt = 0
   let deadlineTimer: ReturnType<typeof setTimeout> | undefined
 
   const physicalDiceCount = computed(() => getPhysicalDiceCount(pool.value))
@@ -68,9 +71,8 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
 
   function invalidateResult() {
     clearDeadline()
-    activeRollId = undefined
-    results.value = []
-    pendingResults.value = []
+    store.invalidate()
+    audio.stop()
     presentation.value = undefined
     notice.value = ''
     error.value = ''
@@ -107,42 +109,57 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     deadlineTimer = undefined
   }
 
-  function completeAsTextFallback(message: string, rollId = activeRollId) {
-    if (!rollId || rollId !== activeRollId) return
+  function completeAsTextFallback(message: string, rollId = activeRollId.value) {
+    if (!rollId || rollId !== activeRollId.value) return
     clearDeadline()
-    activeRollId = undefined
-    results.value = pendingResults.value
-    pendingResults.value = []
+    store.publish(rollId)
+    audio.stop()
     presentation.value = undefined
     notice.value = message
     status.value = 'fallback'
   }
 
   function handleRollDeadline(rollId: string) {
-    if (rollId !== activeRollId || !isBusy.value) return
-    workerClient?.cancel(rollId)
-    completeAsTextFallback('本次投掷超过 20 秒，已直接展示公平文字结果。', rollId)
+    if (rollId !== activeRollId.value || !isBusy.value) return
+    completeAsTextFallback('本次投掷等待超过 3 秒，已直接显示结果', rollId)
+    workerClient?.terminate()
+    workerClient = undefined
+  }
+
+  function checkDeadline() {
+    const id = activeRollId.value
+    if (id && performance.now() - rollStartedAt >= DICE_ROLL_DEADLINE_MS) {
+      handleRollDeadline(id)
+      return true
+    }
+    return false
   }
 
   async function roll() {
-    if (isBusy.value || physicalDiceCount.value === 0) return
+    if (disposed || isBusy.value || physicalDiceCount.value === 0) return
+    rollStartedAt = performance.now()
     error.value = ''
     notice.value = ''
-    results.value = []
     presentation.value = undefined
     status.value = 'preparing'
 
-    rollSequence += 1
-    const rollId = `roll-${Date.now()}-${rollSequence}`
-    activeRollId = rollId
+    const rollId = store.begin()
+    soundedRollId = undefined
+    if (!skipAnimation.value && soundEnabled.value && !reducedMotion.value) audio.unlock()
     clearDeadline()
-    deadlineTimer = setTimeout(() => handleRollDeadline(rollId), DICE_ROLL_DEADLINE_MS)
+    if (!skipAnimation.value) deadlineTimer = setTimeout(() => handleRollDeadline(rollId), DICE_ROLL_DEADLINE_MS)
 
     try {
       const seed = randomUint32()
       const preparation = prepareRoll(pool.value, rollId, seed, randomInteger)
-      pendingResults.value = preparation.results
+      store.prepare(rollId, preparation.results)
+      if (skipAnimation.value) {
+        store.publish(rollId)
+        status.value = 'complete'
+        return
+      }
 
+      if (checkDeadline()) return
       if (!visualAvailable.value) {
         completeAsTextFallback('当前设备无法显示 3D 骰子，已使用公平文字掷骰。')
         return
@@ -150,7 +167,8 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
 
       workerClient ??= createWorkerClient()
       const response = await workerClient.simulate(preparation.request)
-      if (rollId !== activeRollId || status.value !== 'preparing') return
+      if (disposed || rollId !== activeRollId.value || status.value !== 'preparing') return
+      if (checkDeadline()) return
       if (response.type === 'failure') {
         completeAsTextFallback('物理骰盘本次未能稳定落骰，已使用公平文字结果。', rollId)
         return
@@ -158,29 +176,50 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
       presentation.value = { request: preparation.request, trajectory: response.trajectory }
       status.value = 'rolling'
     } catch (reason) {
-      if (rollId !== activeRollId) return
+      if (rollId !== activeRollId.value) return
       clearDeadline()
-      activeRollId = undefined
-      pendingResults.value = []
+      store.invalidate()
+      audio.stop()
       status.value = 'error'
       error.value = reason instanceof Error ? reason.message : '投掷失败，请稍后重试。'
     }
   }
 
   function handlePlaybackComplete(rollId: string) {
-    if (activeRollId !== rollId || presentation.value?.request.id !== rollId || status.value !== 'rolling') return
+    if (disposed || checkDeadline()) return
+    if (activeRollId.value !== rollId || presentation.value?.request.id !== rollId || status.value !== 'rolling') return
     clearDeadline()
-    activeRollId = undefined
-    results.value = pendingResults.value
-    pendingResults.value = []
+    store.publish(rollId)
+    audio.stop()
     status.value = 'complete'
+  }
+
+  function setSkipAnimation(value: boolean) {
+    if (isBusy.value) return
+    skipAnimation.value = value
+    presentation.value = undefined
+    notice.value = ''
+    if (value) audio.stop()
+    else visualAvailable.value = true
+  }
+
+  function setSoundEnabled(value: boolean) {
+    soundEnabled.value = value
+    if (!value) audio.stop()
+  }
+
+  function handlePlaybackStarted(rollId: string, durationMs: number) {
+    if (disposed || checkDeadline()) return
+    if (disposed || rollId !== activeRollId.value || status.value !== 'rolling' || soundedRollId === rollId) return
+    soundedRollId = rollId
+    if (soundEnabled.value && !skipAnimation.value && !reducedMotion.value) audio.play(durationMs)
   }
 
   function handleRendererUnavailable() {
     visualAvailable.value = false
     if (status.value === 'rolling' || status.value === 'preparing') {
-      if (activeRollId) workerClient?.cancel(activeRollId)
-      completeAsTextFallback('当前设备无法显示 3D 骰子，已使用公平文字掷骰。', activeRollId)
+      if (activeRollId.value) workerClient?.cancel(activeRollId.value)
+      completeAsTextFallback('当前设备无法显示 3D 骰子，已使用公平文字掷骰。', activeRollId.value)
     } else {
       notice.value = '当前设备无法显示 3D 骰子，投掷时将使用文字结果。'
     }
@@ -191,6 +230,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   }
 
   onMounted(() => {
+    document.addEventListener('visibilitychange', checkDeadline)
     if (!globalThis.matchMedia) return
     mediaQuery = globalThis.matchMedia('(prefers-reduced-motion: reduce)')
     updateReducedMotion(mediaQuery)
@@ -198,10 +238,15 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   })
 
   onBeforeUnmount(() => {
+    document.removeEventListener('visibilitychange', checkDeadline)
     mediaQuery?.removeEventListener('change', updateReducedMotion)
     clearDeadline()
-    activeRollId = undefined
+    disposed = true
+    const rollId = activeRollId.value
+    store.publish(rollId)
+    if (rollId) workerClient?.cancel(rollId)
     workerClient?.terminate()
+    audio.dispose()
   })
 
   return {
@@ -222,6 +267,11 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     groupedResults,
     total,
     reducedMotion,
+    skipAnimation,
+    soundEnabled,
+    setSkipAnimation,
+    setSoundEnabled,
+    handlePlaybackStarted,
     canAdd,
     addDie,
     removeDie,

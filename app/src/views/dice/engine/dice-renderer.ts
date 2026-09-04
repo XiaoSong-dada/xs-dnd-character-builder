@@ -13,6 +13,7 @@ import {
   LineSegments,
   Mesh,
   MeshStandardMaterial,
+  MeshBasicMaterial,
   PerspectiveCamera,
   PlaneGeometry,
   Quaternion,
@@ -71,21 +72,40 @@ function displayLabel(spec: PhysicalDieSpec, value: number): string {
   return String(value)
 }
 
-function makeLabelTexture(text: string): CanvasTexture {
+export function makeLabelTexture(text: string): CanvasTexture {
   const canvas = document.createElement('canvas')
-  canvas.width = 128
-  canvas.height = 128
+  const resolution = 256
+  canvas.width = resolution
+  canvas.height = resolution
   const context = canvas.getContext('2d')
   if (context) {
-    context.clearRect(0, 0, 128, 128)
-    context.fillStyle = '#8f2d2d'
-    context.font = `${text.length > 1 ? 700 : 800} ${text.length > 1 ? 48 : 58}px "Microsoft YaHei", sans-serif`
-    context.textAlign = 'center'
-    context.textBaseline = 'middle'
-    context.fillText(text, 64, 65)
-    context.strokeStyle = 'rgba(255,253,248,.7)'
+    context.clearRect(0, 0, resolution, resolution)
+    context.textAlign = 'left'
+    context.textBaseline = 'alphabetic'
     context.lineWidth = 2
-    context.strokeText(text, 64, 65)
+    const available = resolution * 0.84 - context.lineWidth
+    let fontSize = text.length > 1 ? 180 : 220
+    const measure = () => {
+      context.font = `800 ${fontSize}px "Microsoft YaHei", sans-serif`
+      const metrics = context.measureText(text)
+      const left = metrics.actualBoundingBoxLeft || 0
+      const right = metrics.actualBoundingBoxRight || metrics.width
+      const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.8
+      const descent = metrics.actualBoundingBoxDescent || 0
+      return { left, right, ascent, descent }
+    }
+    let bounds = measure()
+    const scale = Math.min(1, available / (bounds.left + bounds.right), available / (bounds.ascent + bounds.descent))
+    if (scale < 1) {
+      fontSize *= scale
+      bounds = measure()
+    }
+    const x = resolution / 2 + (bounds.left - bounds.right) / 2
+    const y = resolution / 2 + (bounds.ascent - bounds.descent) / 2
+    context.strokeStyle = 'rgba(255,253,248,.7)'
+    context.strokeText(text, x, y)
+    context.fillStyle = '#481717'
+    context.fillText(text, x, y)
   }
   const texture = new CanvasTexture(canvas)
   texture.colorSpace = SRGBColorSpace
@@ -98,12 +118,12 @@ function orientLabel(mesh: Mesh, position: Vector3, normal: Vector3, size: numbe
   mesh.scale.setScalar(size)
 }
 
-function addLabels(
+export function addLabels(
   group: Group,
   definition: DieDefinition,
   spec: PhysicalDieSpec,
   textures: CanvasTexture[],
-  materials: MeshStandardMaterial[],
+  materials: Array<MeshStandardMaterial | MeshBasicMaterial>,
 ) {
   if (definition.type === 'd4') {
     definition.faces.forEach((face) => {
@@ -114,11 +134,11 @@ function addLabels(
         const value = definition.valuesByDirection[vertexIndex]
         if (!vertex || value === undefined) return
         const texture = makeLabelTexture(displayLabel(spec, value))
-        const material = new MeshStandardMaterial({ map: texture, transparent: true, side: DoubleSide, roughness: 0.6 })
+        const material = new MeshBasicMaterial({ map: texture, transparent: true, side: DoubleSide, toneMapped: false })
         const label = new Mesh(FACE_PLANE, material)
-        const position = new Vector3(...vertex).multiplyScalar(0.62).addScaledVector(center, 0.38)
+        const position = new Vector3(...vertex).multiplyScalar(0.44).addScaledVector(center, 0.56)
           .multiplyScalar(definition.radius)
-        orientLabel(label, position, normal, 0.21)
+        orientLabel(label, position, normal, 0.34)
         group.add(label)
         textures.push(texture)
         materials.push(material)
@@ -132,11 +152,11 @@ function addLabels(
     const value = definition.valuesByDirection[index]
     if (!direction || value === undefined) return
     const texture = makeLabelTexture(displayLabel(spec, value))
-    const material = new MeshStandardMaterial({ map: texture, transparent: true, side: DoubleSide, roughness: 0.6 })
+    const material = new MeshBasicMaterial({ map: texture, transparent: true, side: DoubleSide, toneMapped: false })
     const label = new Mesh(FACE_PLANE, material)
     const normal = new Vector3(...direction)
     const center = faceCenter(definition, face).multiplyScalar(definition.radius)
-    const size = definition.type === 'd20' ? 0.28 : definition.type === 'd12' ? 0.31 : 0.36
+    const size = definition.type === 'd20' ? 0.32 : definition.type === 'd12' ? 0.36 : 0.42
     orientLabel(label, center, normal, size)
     group.add(label)
     textures.push(texture)
@@ -171,7 +191,7 @@ export class DiceRenderer {
   private trayGeometries: BufferGeometry[] = []
   private trayMaterials: MeshStandardMaterial[] = []
   private diceGeometries: BufferGeometry[] = []
-  private diceMaterials: Array<MeshStandardMaterial | LineBasicMaterial> = []
+  private diceMaterials: Array<MeshStandardMaterial | MeshBasicMaterial | LineBasicMaterial> = []
   private diceTextures: CanvasTexture[] = []
 
   constructor(canvas: HTMLCanvasElement) {
@@ -315,7 +335,7 @@ export class DiceRenderer {
       const edges = new LineSegments(edgesGeometry, edgeMaterial)
       edges.scale.setScalar(definition.radius * 1.002)
       group.add(edges)
-      addLabels(group, definition, spec, this.diceTextures, this.diceMaterials as MeshStandardMaterial[])
+      addLabels(group, definition, spec, this.diceTextures, this.diceMaterials as Array<MeshStandardMaterial | MeshBasicMaterial>)
 
       const targetValue = spec.type === 'd10' ? spec.targetValue % 10 : spec.targetValue
       const landingIndex = presentation.trajectory.landingDirectionIndices[index] ?? 0

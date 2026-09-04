@@ -282,13 +282,24 @@ src/views/session-assistant/components/SessionPanel.vue
 ```text
 src/views/dice/index.vue
   -> src/views/dice/hooks/useDicePage.ts
-  -> src/views/dice/components/{DiceTypeSelector,DicePoolPanel,DiceTray,DiceResultPanel}
+  -> src/views/dice/components/{DiceTypeSelector,DicePoolPanel,DiceTray,DiceResultPanel,DiceSettings}
 
 src/views/dice/hooks/useDicePage.ts
+  -> src/stores/dice.ts（会话内骰池、结果、待公布结果、投掷标识及开关；无持久化）
+  -> src/services/dice-audio.ts（页面拥有的惰性 Web Audio 音效）
   -> src/rules/dice.ts
   -> src/services/dice-random.ts
   -> src/views/dice/engine/dice-worker-client.ts
   -> src/types/dice.ts
+
+src/views/dice/components/DiceSettings.vue
+  -> reka-ui（SwitchRoot / SwitchThumb）
+
+src/stores/dice.ts
+  -> src/types/dice.ts（不保存总和、轨迹或浏览器资源）
+
+src/services/dice-audio.ts
+  -> Web Audio（unlock / play / stop / dispose；不在预渲染阶段初始化）
 
 src/views/dice/engine/*
   -> Three.js（渲染、骰面旋转）

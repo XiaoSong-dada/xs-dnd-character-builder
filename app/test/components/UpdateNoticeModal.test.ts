@@ -21,14 +21,15 @@ describe('UpdateNoticeModal', () => {
     await wrapper.vm.$nextTick()
     await wrapper.vm.$nextTick()
 
-    expect(document.body.textContent).toContain('已更新至 v1.1.4')
-    expect(document.body.textContent).toContain('迷踪步')
+    expect(document.body.textContent).toContain(`已更新至 v${__APP_VERSION__}`)
+    expect(store.notice?.items.length).toBeGreaterThan(0)
+    for (const item of store.notice?.items ?? []) expect(document.body.textContent).toContain(item)
     const confirm = Array.from(document.body.querySelectorAll('button')).find((button) => button.textContent?.trim() === '我知道了')!
     expect(document.activeElement).toBe(confirm)
     confirm.click()
     await wrapper.vm.$nextTick()
     expect(store.isOpen).toBe(false)
-    expect(localStorage.getItem(UPDATE_NOTICE_STORAGE_KEY)).toContain('1.1.4')
+    expect(localStorage.getItem(UPDATE_NOTICE_STORAGE_KEY)).toContain(__APP_VERSION__)
     wrapper.unmount()
   })
 
