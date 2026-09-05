@@ -299,6 +299,7 @@ src/stores/dice.ts
   -> src/types/dice.ts（不保存总和、轨迹或浏览器资源）
 
 src/services/dice-audio.ts
+  -> src/services/dice-audio/synthesis.ts（确定性 PCM 合成、包络与软压缩，供实时和离线试听共用）
   -> Web Audio（unlock / play / stop / dispose；不在预渲染阶段初始化）
 
 src/views/dice/engine/*
@@ -588,3 +589,8 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 `views/character-builder/steps.ts` 是车卡步骤顺序（`STEP_ORDER`）与友好文案（`STEP_META`，`eyebrow`/`title`）的公共常量模块，仅依赖 `types/character`（`DraftStep`）；`useCharacterBuilderPage`（步骤编排、`stepMeta`/`stepNumber`）与 `StartPanel`（首页角色条第三段信息）共用。`StartPanel` 的角色条信息分级展示：完成态（`sheet`）显示职业名（查询不到回退"角色完成"），进行中已选职业显示"职业 · 第N步"，未选职业显示"第N步 · 步骤名"，不再裸显 `currentStep` 英文 ID。
 
 `src/config/site.ts` 是站点与统计配置模块，为项目内**唯一**读取 `import.meta.env` 的入口（站点信息及 `VITE_UMAMI_SCRIPT_URL`/`VITE_UMAMI_WEBSITE_ID`/`VITE_UMAMI_DOMAINS`，空串归一化为 `undefined`，统计域名解析为列表），导出 `siteConfig`；`StartPanel` 消费站点信息渲染署名行，`main.ts` 在应用挂载后调用 `services/umami.ts`，由该服务校验当前域名并幂等加载 Umami 脚本。Umami 自行监听 History API，不额外注册 Router 页面访问钩子。其余业务模块一律不直接读取 `import.meta.env`。
+
+
+### 骰娘音效试听工具
+
+`app/scripts/render-dice-audio-previews.mjs` 经 Vite SSR 加载 `src/services/dice-audio/synthesis.ts`，使用与实时播放相同的 PCM 合成器导出 WAV；旧版通过原算法离线复现作为对照。输出在根目录已忽略的 `tmp/dice-audio-previews/`，不进入生产资源或 Git。运行时服务保持 services 内部单向依赖，不引用脚本或页面。

@@ -212,7 +212,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     if (disposed || checkDeadline()) return
     if (disposed || rollId !== activeRollId.value || status.value !== 'rolling' || soundedRollId === rollId) return
     soundedRollId = rollId
-    if (soundEnabled.value && !skipAnimation.value && !reducedMotion.value) audio.play(durationMs)
+    if (soundEnabled.value && !skipAnimation.value && !reducedMotion.value) audio.play(durationMs, physicalDiceCount.value)
   }
 
   function handleRendererUnavailable() {

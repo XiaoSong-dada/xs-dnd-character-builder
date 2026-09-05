@@ -34,23 +34,30 @@ defineEmits<{ skip: [value: boolean]; sound: [value: boolean] }>()
   &__switch {
     display: flex;
     align-items: center;
-    width: 54px;
+    width: 72px;
     height: 44px;
     padding: 8px;
     border: 0;
     border-radius: 22px;
     background: var(--color-text-muted);
+    flex-shrink: 0;
+    transition: background-color 160ms ease-out;
+    @media (prefers-reduced-motion: reduce) { transition: none; }
     cursor: pointer;
     &[data-state='checked'] { background: var(--color-primary); }
     &:disabled { opacity: 0.5; cursor: default; }
     &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
   }
   &__thumb {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: white;
-    &[data-state='checked'] { transform: translateX(14px); }
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
+    transition: transform 160ms ease-out;
+    @media (prefers-reduced-motion: reduce) { transition: none; }
+    &[data-state='checked'] { transform: translateX(28px); }
   }
   &__hint { margin: 0; color: var(--color-text-muted); font-size: 0.8rem; }
 }

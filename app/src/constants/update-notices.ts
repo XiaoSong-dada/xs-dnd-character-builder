@@ -3,6 +3,14 @@ import { normalizeVersion } from '@/utils/version'
 
 export const updateNotices: readonly UpdateNotice[] = [
   {
+    version: '1.2.1',
+    title: '版本更新公告',
+    items: [
+      '调整赛博骰娘投掷合成音效，加入落地、滚动与停稳层次，并按骰子数量调整触碰密度、限制叠加音量。',
+      '加宽「跳过动画」「投掷音效」开关，增大滑块，优化阴影与切换过渡，保留键盘操作和减少动态效果支持。',
+    ],
+  },
+  {
     version: '1.2.0',
     title: '版本更新公告',
     items: [

@@ -222,7 +222,7 @@ describe('dice audio coordination', () => {
     const id = page.presentation?.request.id ?? ''
     page.handlePlaybackStarted(id, 400)
     page.handlePlaybackStarted(id, 400)
-    expect(audio.play).toHaveBeenCalledExactlyOnceWith(400)
+    expect(audio.play).toHaveBeenCalledExactlyOnceWith(400, 1)
     page.setSkipAnimation(true)
     expect(page.skipAnimation).toBe(false)
     audio.stop.mockClear()
@@ -311,4 +311,19 @@ it('settles on visibility change and recreates the worker for the next roll', as
   expect(page.total).toBe(1)
   wrapper.unmount()
   now.mockRestore()
+})
+
+
+it('passes physical dice count to sound including the two percentile dice', async () => {
+  const audio = { unlock: vi.fn(), play: vi.fn(), stop: vi.fn(), dispose: vi.fn() }
+  const { wrapper } = mountDicePage(successResponse, createPinia(), audio)
+  const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+  page.addDie('d20')
+  page.addDie('d6')
+  page.addDie('d6')
+  page.addDie('d100')
+  await page.roll()
+  page.handlePlaybackStarted(page.presentation?.request.id ?? '', 1500)
+  expect(audio.play).toHaveBeenCalledExactlyOnceWith(1500, 5)
+  wrapper.unmount()
 })
