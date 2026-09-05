@@ -7,7 +7,7 @@ import type { AbilityKey } from '@/types/character'
 
 export const CHARACTER_SHEET_PDF_TEMPLATE_URL = `${baseUrl}templates/character-sheet-zh-plus.pdf`
 export const PDF_FONT_URL = `${baseUrl}templates/fonts/noto-sans-sc-subset.ttf`
-export const CHARACTER_SHEET_PDF_MAPPING_VERSION = 6
+export const CHARACTER_SHEET_PDF_MAPPING_VERSION = 7
 
 const TEXT_PADDING = 4
 const DEFAULT_LINE_HEIGHT_RATIO = 1.2
@@ -23,25 +23,27 @@ const ABILITY_FIELD_NAMES: Readonly<Record<AbilityKey, { readonly score: readonl
   cha: { score: ['CHA'], modifier: ['CHamod'], save: ['ST Charisma'], saveCheck: ['Check Box 22'] },
 }
 
+// The Chinese template reordered visible skill labels but retained the original English field names.
+// Map by the verified Chinese row, pairing its value widget and proficiency checkbox.
 const SKILL_FIELDS: Readonly<Record<string, { readonly value: readonly string[]; readonly check: readonly string[] }>> = {
-  'skill-acrobatics': { value: ['Acrobatics'], check: ['Check Box 23'] },
-  'skill-animal-handling': { value: ['Animal'], check: ['Check Box 24'] },
-  'skill-arcana': { value: ['Arcana'], check: ['Check Box 25'] },
-  'skill-athletics': { value: ['Athletics'], check: ['Check Box 26'] },
-  'skill-deception': { value: ['Deception '], check: ['Check Box 27'] },
+  'skill-athletics': { value: ['Acrobatics'], check: ['Check Box 23'] },
+  'skill-sleight-of-hand': { value: ['Animal'], check: ['Check Box 24'] },
+  'skill-stealth': { value: ['Arcana'], check: ['Check Box 25'] },
+  'skill-acrobatics': { value: ['Athletics'], check: ['Check Box 26'] },
+  'skill-investigation': { value: ['Deception '], check: ['Check Box 27'] },
   'skill-history': { value: ['History '], check: ['Check Box 28'] },
-  'skill-insight': { value: ['Insight'], check: ['Check Box 29'] },
-  'skill-intimidation': { value: ['Intimidation'], check: ['Check Box 30'] },
-  'skill-investigation': { value: ['Investigation '], check: ['Check Box 31'] },
-  'skill-medicine': { value: ['Medicine'], check: ['Check Box 32'] },
-  'skill-nature': { value: ['Nature'], check: ['Check Box 33'] },
-  'skill-perception': { value: ['Perception '], check: ['Check Box 34'] },
-  'skill-performance': { value: ['Performance'], check: ['Check Box 35'] },
-  'skill-persuasion': { value: ['Persuasion'], check: ['Check Box 36'] },
-  'skill-religion': { value: ['Religion'], check: ['Check Box 37'] },
-  'skill-sleight-of-hand': { value: ['SleightofHand'], check: ['Check Box 38'] },
-  'skill-stealth': { value: ['Stealth '], check: ['Check Box 39'] },
-  'skill-survival': { value: ['Survival'], check: ['Check Box 40'] },
+  'skill-arcana': { value: ['Insight'], check: ['Check Box 29'] },
+  'skill-nature': { value: ['Intimidation'], check: ['Check Box 30'] },
+  'skill-religion': { value: ['Investigation '], check: ['Check Box 31'] },
+  'skill-animal-handling': { value: ['Medicine'], check: ['Check Box 32'] },
+  'skill-insight': { value: ['Nature'], check: ['Check Box 33'] },
+  'skill-medicine': { value: ['Perception '], check: ['Check Box 34'] },
+  'skill-perception': { value: ['Performance'], check: ['Check Box 35'] },
+  'skill-survival': { value: ['Persuasion'], check: ['Check Box 36'] },
+  'skill-deception': { value: ['Religion'], check: ['Check Box 37'] },
+  'skill-intimidation': { value: ['SleightofHand'], check: ['Check Box 38'] },
+  'skill-performance': { value: ['Stealth '], check: ['Check Box 39'] },
+  'skill-persuasion': { value: ['Survival'], check: ['Check Box 40'] },
 }
 
 const ATTACK_FIELDS = [

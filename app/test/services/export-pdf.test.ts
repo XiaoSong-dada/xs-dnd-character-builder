@@ -51,14 +51,14 @@ const REQUIRED_FIRST_PAGE_FIELDS = [
 ] as const
 const REQUIRED_PROFILE_FIELDS = ['CharacterName 2', 'Backstory', 'Feat+Traits', 'Treasure'] as const
 
-describe('export-pdf v6 国内 5E 术语版表单适配器', () => {
+describe('export-pdf v7 国内 5E 术语版表单适配器', () => {
   it('运行时瘦身模板完整保留源模板页面、字段和 Widget 结构', async () => {
     expect(await templateStructure(template())).toEqual(await templateStructure(baselineTemplate()))
     expect(template().byteLength).toBeLessThanOrEqual(5 * 1024 * 1024)
   })
 
   it('目标模板为三页 AcroForm 且包含基础页和人物资料页必需字段', async () => {
-    expect(CHARACTER_SHEET_PDF_MAPPING_VERSION).toBe(6)
+    expect(CHARACTER_SHEET_PDF_MAPPING_VERSION).toBe(7)
     const { PDFDocument } = await import('pdf-lib')
     const document = await PDFDocument.load(template())
     expect(document.getPageCount()).toBe(3)

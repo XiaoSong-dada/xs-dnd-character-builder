@@ -3,6 +3,14 @@ import { normalizeVersion } from '@/utils/version'
 
 export const updateNotices: readonly UpdateNotice[] = [
   {
+    version: '1.2.2',
+    title: '版本更新公告',
+    items: [
+      '修复 PDF 角色卡导出：此前部分技能的加值与熟练/专精标记会显示到其他技能行（如「调查 +8」出现在错误行），现已按模板实际中文技能行重新对应全部 18 项技能，数值与标记和技能名同行一致。',
+      '六项豁免不受影响，合法的 0 加值正常显示；重新导出 PDF 即生效，已下载的旧 PDF 不会自动更新。',
+    ],
+  },
+  {
     version: '1.2.1',
     title: '版本更新公告',
     items: [
