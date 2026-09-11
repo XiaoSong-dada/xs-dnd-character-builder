@@ -83,7 +83,7 @@ export function useCharacterBuilderPage() {
     if (!draft?.classId) return false
     const classRule = rulesRepository.getClass(draft.classId)
     if (classRule?.status !== 'implemented') return true
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
     return timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       return (selection?.optionIds.length ?? 0) >= checkpoint.minSelections
@@ -294,7 +294,7 @@ export function useCharacterBuilderPage() {
       setStep('setup')
       return
     }
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
     const hasInvalidated = draft.selections.some((selection) => Boolean(selection.invalidatedAt))
     const hasIncompleteCheckpoint = timeline.some((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
@@ -435,7 +435,7 @@ export function useCharacterBuilderPage() {
     store.saveSelection(checkpointId, optionIds)
     const draft = activeDraft.value
     if (!draft?.classId) return
-    const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections })
+    const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
       .find((item) => item.id === checkpointId)
     if (checkpoint?.kind === 'subclass') {
       store.updateDraft({ subclassId: optionIds[0] })

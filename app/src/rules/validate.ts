@@ -1,9 +1,14 @@
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import { deriveAbilities } from '@/rules/derive'
 import {
+  classHasFightingStyle,
+  collectArmorTrainings,
+  collectFeatSkillSelections,
   decodeAbilityImprovement,
   getAbilityImprovementEligibility,
   getFeatEligibility,
+  listFeatGrants,
+  type FeatGrant,
 } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abilities'
 import { getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
@@ -13,9 +18,10 @@ import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rule
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { isSourceEnabled } from '@/rules/source-books'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
-import type { CharacterDraft, ValidationIssue } from '@/types/character'
+import type { AbilityKey, CharacterDraft, ValidationIssue } from '@/types/character'
 
 export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[] {
+  const repository = getRulesRepository(draft.ruleset)
   const issues: ValidationIssue[] = []
   const requireEnabled = (
     id: string,
@@ -23,7 +29,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     label: string,
     rule: { readonly sourceIds: readonly string[] } | undefined,
   ): void => {
-    if (rule && !isSourceEnabled(rule.sourceIds, draft.enabledSourceIds)) {
+    if (rule && !isSourceEnabled(rule.sourceIds, draft.enabledSourceIds, repository)) {
       issues.push({
         id: `source-disabled-${id}`,
         step,
@@ -33,20 +39,20 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       })
     }
   }
-  requireEnabled(draft.classId ?? 'class', 'class', `职业“${draft.classId ? rulesRepository.getClass(draft.classId)?.name ?? draft.classId : ''}”`, draft.classId ? rulesRepository.getClass(draft.classId) : undefined)
-  requireEnabled(draft.subclassId ?? 'subclass', 'timeline', `子职“${draft.subclassId ? rulesRepository.getSubclass(draft.subclassId)?.name ?? draft.subclassId : ''}”`, draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined)
-  requireEnabled(draft.raceId ?? 'race', 'origin', `种族“${draft.raceId ? rulesRepository.getRace(draft.raceId)?.name ?? draft.raceId : ''}”`, draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined)
-  requireEnabled(draft.subraceId ?? 'subrace', 'origin', `子种族“${draft.subraceId ? rulesRepository.getRace(draft.subraceId)?.name ?? draft.subraceId : ''}”`, draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined)
-  requireEnabled(draft.backgroundId ?? 'background', 'origin', `背景“${draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId)?.name ?? draft.backgroundId : ''}”`, draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined)
-  requireEnabled(draft.backgroundVariantId ?? 'background-variant', 'origin', `背景变体“${draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId)?.name ?? draft.backgroundVariantId : ''}”`, draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId) : undefined)
+  requireEnabled(draft.classId ?? 'class', 'class', `职业“${draft.classId ? repository.getClass(draft.classId)?.name ?? draft.classId : ''}”`, draft.classId ? repository.getClass(draft.classId) : undefined)
+  requireEnabled(draft.subclassId ?? 'subclass', 'timeline', `子职“${draft.subclassId ? repository.getSubclass(draft.subclassId)?.name ?? draft.subclassId : ''}”`, draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined)
+  requireEnabled(draft.raceId ?? 'race', 'origin', `种族“${draft.raceId ? repository.getRace(draft.raceId)?.name ?? draft.raceId : ''}”`, draft.raceId ? repository.getRace(draft.raceId) : undefined)
+  requireEnabled(draft.subraceId ?? 'subrace', 'origin', `子种族“${draft.subraceId ? repository.getRace(draft.subraceId)?.name ?? draft.subraceId : ''}”`, draft.subraceId ? repository.getRace(draft.subraceId) : undefined)
+  requireEnabled(draft.backgroundId ?? 'background', 'origin', `背景“${draft.backgroundId ? repository.getBackground(draft.backgroundId)?.name ?? draft.backgroundId : ''}”`, draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined)
+  requireEnabled(draft.backgroundVariantId ?? 'background-variant', 'origin', `背景变体“${draft.backgroundVariantId ? repository.getBackground(draft.backgroundVariantId)?.name ?? draft.backgroundVariantId : ''}”`, draft.backgroundVariantId ? repository.getBackground(draft.backgroundVariantId) : undefined)
   for (const selection of draft.selections.filter((item) => !item.invalidatedAt)) {
     for (const optionId of selection.optionIds) {
-      const option = rulesRepository.getOption(optionId) ?? rulesRepository.getFeat(optionId)
+      const option = repository.getOption(optionId) ?? repository.getFeat(optionId)
       requireEnabled(`${selection.checkpointId}-${optionId}`, 'timeline', `选择“${option?.name ?? optionId}”`, option)
     }
   }
   for (const entry of draft.inventory) {
-    const item = rulesRepository.getEquipment(entry.itemId)
+    const item = repository.getEquipment(entry.itemId)
     requireEnabled(`item-${entry.id}`, 'equipment', `物品“${item?.name ?? entry.itemId}”`, item)
   }
   if (!draft.classId) issues.push({ id: 'class-required', step: 'class', severity: 'error', message: '尚未选择职业。', resolution: '返回职业步骤选择一个职业。' })
@@ -71,7 +77,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     })
   }
   if (draft.inventory.some((entry) =>
-    (entry.sourceKind !== 'adventure' && !rulesRepository.getEquipment(entry.itemId))
+    (entry.sourceKind !== 'adventure' && !repository.getEquipment(entry.itemId))
     || entry.quantity < 1
     || entry.equippedQuantity < 0
     || entry.equippedQuantity > entry.quantity,
@@ -89,7 +95,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     issues.push({ id: 'inventory-entry-duplicate', step: 'equipment', severity: 'error', message: '物品栏来源记录发生重复。', resolution: '返回装备步骤重新确认装备。' })
   }
   const infusionActive = draft.classId === 'class-2014-artificer'
-    && Boolean(isSourceEnabled(rulesRepository.getClass(draft.classId)?.sourceIds ?? [], draft.enabledSourceIds))
+    && Boolean(isSourceEnabled(repository.getClass(draft.classId)?.sourceIds ?? [], draft.enabledSourceIds, repository))
   const infusionAssignments = draft.infusionAssignments ?? []
   if (infusionAssignments.length > 0 && !infusionActive) {
     issues.push({ id: 'infusions-inactive', step: 'equipment', severity: 'warning', message: '奇械师灌注绑定已保留，但当前职业或来源不允许它们生效。', resolution: '重新选择奇械师并启用 ERftLW 或 TCoE 后会自动恢复。' })
@@ -108,7 +114,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     for (const assignment of infusionAssignments) {
       const infusion = artificerInfusions2014.find((item) => item.id === assignment.infusionId)
       const entry = draft.inventory.find((item) => item.id === assignment.inventoryEntryId)
-      const item = entry ? rulesRepository.getEquipment(entry.itemId) : undefined
+      const item = entry ? repository.getEquipment(entry.itemId) : undefined
       if (!infusion || !knownIds.has(assignment.infusionId)) {
         issues.push({ id: `infusion-not-known-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: `灌注“${infusion?.name ?? assignment.infusionId}”尚未掌握或因降级失效。`, resolution: '返回时间线检查已知灌注。' })
       } else if (infusion.minimumLevel > draft.targetLevel) {
@@ -165,8 +171,8 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     })
   }
 
-  const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+  const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
+  const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
   if (race?.requiresSubrace && !subrace) {
     issues.push({ id: 'subrace-required', step: 'origin', severity: 'error', message: `${race.name}需要选择子种族。`, resolution: '在种族卡片下选择一个子种族。' })
   }
@@ -191,7 +197,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       resolution: '半精灵的两项自选属性不能再次选择魅力。',
     })
   }
-  const background = draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
+  const background = draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
   if (
     background
     && (draft.languages.length !== background.languageChoices || new Set(draft.languages).size !== draft.languages.length)
@@ -206,7 +212,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
   }
 
   if (draft.classId) {
-    const classRule = rulesRepository.getClass(draft.classId)
+    const classRule = repository.getClass(draft.classId)
     if (classRule?.status === 'index-only') {
       issues.push({
         id: 'class-index-only',
@@ -271,7 +277,13 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         issues.push({ id: 'spellbook-transcription-invalid', step: 'spells', severity: 'error', message: '抄录记录包含不在法术书中或当前不可用的法术。', resolution: '返回角色卡法术页签检查抄录记录。' })
       }
     }
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+    const checkpointLevels = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint.level]))
+    const isV2024 = repository.ruleset === '5e-2024'
+    const armorTrainings = isV2024 ? collectArmorTrainings(draft, repository) : undefined
+    const hasFightingStyle = isV2024
+      ? classHasFightingStyle(repository, draft.classId, draft.targetLevel)
+      : undefined
     for (const checkpoint of timeline) {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const count = selection?.optionIds.length ?? 0
@@ -284,24 +296,30 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
           resolution: `需要选择${checkpoint.minSelections === checkpoint.maxSelections ? checkpoint.minSelections : `${checkpoint.minSelections}—${checkpoint.maxSelections}`}项。`,
         })
       }
+      // 2024：前置按获得节点校验，不使用最终属性。
+      const abilitiesBefore = isV2024
+        ? deriveAbilities(draft, checkpoint.id, { belowLevel: checkpoint.level, checkpointLevels })
+        : deriveAbilities(draft, checkpoint.id)
       for (const optionId of selection?.optionIds ?? []) {
-        const option = rulesRepository.getOption(optionId)
-        const featBonus = /^feat-bonus-(str|dex|con|int|wis|cha)-1$/.exec(optionId)
+        const option = repository.getOption(optionId) ?? repository.getFeat(optionId)
+        const featBonus = /^feat-bonus-(str|dex|con|int|wis|cha)-([12])$/.exec(optionId)
         if (featBonus) {
           const ability = featBonus[1] as keyof ReturnType<typeof deriveAbilities>
-          if (deriveAbilities(draft, checkpoint.id)[ability] >= 20) {
+          const amount = Number(featBonus[2])
+          const abilityCap = checkpoint.abilityCap ?? 20
+          if (abilitiesBefore[ability] + amount > abilityCap) {
             issues.push({
               id: `feat-ability-cap-${checkpoint.id}-${optionId}`,
               step: checkpoint.step,
               severity: 'error',
               message: `${checkpoint.level}级「${option?.name ?? optionId}」无法应用。`,
-              resolution: '专长属性提高后会超过20。',
+              resolution: `专长属性提高后会超过${abilityCap}。`,
             })
           }
         }
         const abilityImprovement = decodeAbilityImprovement(optionId)
         if (abilityImprovement) {
-          const eligibility = getAbilityImprovementEligibility(deriveAbilities(draft, checkpoint.id), optionId)
+          const eligibility = getAbilityImprovementEligibility(abilitiesBefore, optionId, checkpoint.abilityCap ?? 20)
           if (!eligibility.available) {
             issues.push({
               id: `ability-improvement-${checkpoint.id}-${optionId}`,
@@ -312,15 +330,16 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
             })
           }
         }
-        const selectedFeat = rulesRepository.getFeat(optionId)
+        const selectedFeat = repository.getFeat(optionId)
         if (selectedFeat && draft.classId) {
           const spellcasting = getSpellcastingConfig(draft)
           const eligibility = getFeatEligibility(selectedFeat, {
-            abilities: deriveAbilities(draft, checkpoint.id),
+            abilities: abilitiesBefore,
             classId: draft.classId,
             canCastSpells: Boolean(spellcasting && checkpoint.level >= spellcasting.startsAtLevel),
             raceId: draft.raceId,
             subraceId: draft.subraceId,
+            ...(isV2024 ? { level: checkpoint.level, hasFightingStyle, armorTrainings } : {}),
           })
           if (!eligibility.available) {
             issues.push({
@@ -329,6 +348,19 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
               severity: 'error',
               message: `${checkpoint.level}级「${selectedFeat.name}」不满足前置条件。`,
               resolution: eligibility.reasons.join('；'),
+            })
+          }
+        }
+        if (isV2024 && checkpoint.grantSavingThrowProficiency) {
+          const saveMatch = /^feat-bonus-(str|dex|con|int|wis|cha)-1$/.exec(optionId)
+          const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
+          if (saveMatch && classRule?.savingThrowAbilities.includes(saveMatch[1] as AbilityKey)) {
+            issues.push({
+              id: `feat-save-proficiency-${checkpoint.id}-${optionId}`,
+              step: checkpoint.step,
+              severity: 'error',
+              message: `「${checkpoint.title}」不能选择已经拥有豁免熟练的属性。`,
+              resolution: '选择一项尚无豁免熟练的属性。',
             })
           }
         }
@@ -349,6 +381,29 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
             resolution: '结构化选择与可表达派生会自动处理，其余效果请参照来源摘要。',
           })
         }
+      }
+    }
+    if (isV2024) {
+      const byFeat = new Map<string, FeatGrant[]>()
+      for (const grant of listFeatGrants(draft, repository)) {
+        const list = byFeat.get(grant.featId) ?? []
+        list.push(grant)
+        byFeat.set(grant.featId, list)
+      }
+      const titleById = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint.title]))
+      for (const [featId, list] of byFeat) {
+        const feat = repository.getFeat(featId)
+        if (!feat || feat.repeatable || list.length <= 1) continue
+        const labels = list.map((grant) => grant.sourceKind === 'background'
+          ? `背景：${repository.getBackground(grant.sourceId)?.name ?? grant.sourceId}`
+          : titleById.get(grant.checkpointId ?? '') ?? grant.sourceId)
+        issues.push({
+          id: `feat-duplicate-${featId}`,
+          step: 'timeline',
+          severity: 'error',
+          message: `不可复选专长「${feat.name}」被重复取得（${labels.join('、')}）。`,
+          resolution: '更换其中一处来源；背景、物种与职业授予的同一专长只能取得一次。',
+        })
       }
     }
     for (const group of new Set(timeline.map((checkpoint) => checkpoint.uniqueGroup).filter((value): value is string => Boolean(value)))) {
@@ -390,6 +445,13 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       })
     }
     const proficientIds = new Set([...classSkillIds, ...draft.backgroundSkillIds, 'tool-thieves-tools'])
+    if (isV2024) {
+      const featSkills = collectFeatSkillSelections(draft, repository)
+      for (const skillId of featSkills.proficiencies) proficientIds.add(skillId)
+      if (featSkills.allSkills) {
+        for (const skillId of SKILL_IDS) proficientIds.add(skillId)
+      }
+    }
     if (expertiseIds.some((optionId) => !proficientIds.has(optionId))) {
       issues.push({
         id: 'expertise-without-proficiency',
@@ -407,11 +469,12 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
 
 /** 校验种族自选技能/工具熟练：数量、选项合法性、吉斯洋基技能/工具互斥。 */
 function validateRaceSkillChoices(draft: CharacterDraft): readonly ValidationIssue[] {
+  const repository = getRulesRepository(draft.ruleset)
   const issues: ValidationIssue[] = []
   const race = draft.subraceId
-    ? rulesRepository.getRace(draft.subraceId)
+    ? repository.getRace(draft.subraceId)
     : draft.raceId
-      ? rulesRepository.getRace(draft.raceId)
+      ? repository.getRace(draft.raceId)
       : undefined
   if (!race) return issues
   const isGithyanki = race.id === 'race-2014-gith-githyanki'
@@ -467,9 +530,10 @@ function validateRaceSkillChoices(draft: CharacterDraft): readonly ValidationIss
 }
 
 export function validateSubclassSelections(draft: CharacterDraft): readonly ValidationIssue[] {
+  const repository = getRulesRepository(draft.ruleset)
   const issues: ValidationIssue[] = []
   if (!draft.classId || !draft.subclassId) return issues
-  const subclass = rulesRepository.getSubclass(draft.subclassId)
+  const subclass = repository.getSubclass(draft.subclassId)
   if (!subclass) {
     issues.push({ id: 'subclass-unknown', step: 'timeline', severity: 'error', message: '所选子职不存在。', resolution: '返回时间线重新选择子职。' })
     return issues

@@ -1,5 +1,5 @@
-import { rulesRepository } from '@/rules/repository'
-import { applyAbilityImprovement, decodeAbilityImprovement } from '@/rules/feats'
+import { getRulesRepository } from '@/rules/repositories'
+import { applyAbilityImprovement, collectFeatSkillSelections, decodeAbilityImprovement, getFeatAbilityCap, listActiveFeats } from '@/rules/feats'
 import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
 import { isSourceEnabled } from '@/rules/source-books'
 import { artificerInfusions2014 } from '@/rules/data/artificer-2014'
@@ -27,14 +27,15 @@ export function proficiencyBonus(level: number): number {
 /**
  * 收集种族固定技能熟练与自选结果（沿 parentRaceId 链叠加，子种族不替换父种族）。
  */
-export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subraceId' | 'raceSkillChoices' | 'enabledSourceIds'>): readonly string[] {
+export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subraceId' | 'raceSkillChoices' | 'enabledSourceIds'> & { readonly ruleset?: CharacterDraft['ruleset'] }): readonly string[] {
+  const repository = getRulesRepository(draft.ruleset ?? '5e-2014')
   const ids: string[] = [...(draft.raceSkillChoices ?? [])]
   const visited = new Set<string>()
   const visit = (raceId: string | undefined): void => {
     if (!raceId || visited.has(raceId)) return
     visited.add(raceId)
-    const race = rulesRepository.getRace(raceId)
-    if (!race || !isSourceEnabled(race.sourceIds, draft.enabledSourceIds)) return
+    const race = repository.getRace(raceId)
+    if (!race || !isSourceEnabled(race.sourceIds, draft.enabledSourceIds, repository)) return
     if (race.parentRaceId) visit(race.parentRaceId)
     ids.push(...(race.skillProficiencies ?? []))
   }
@@ -44,12 +45,13 @@ export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subr
 
 /** 解析专长授予的豁免熟练：feat-child 子选择中带豁免授予语义的属性（如强健身心）。返回 属性 → 专长名。 */
 function collectFeatSavingThrowAbilities(draft: CharacterDraft): Readonly<Partial<Record<AbilityKey, string>>> {
+  const repository = getRulesRepository(draft.ruleset)
   const result: Partial<Record<AbilityKey, string>> = {}
   for (const selection of draft.selections) {
     if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:')) continue
     const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
-    const feat = featId ? rulesRepository.getFeat(featId) : undefined
-    if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds)) continue
+    const feat = featId ? repository.getFeat(featId) : undefined
+    if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
     const parentActive = draft.selections.some((item) => item.checkpointId === parentCheckpointId && !item.invalidatedAt && item.optionIds.includes(featId ?? ''))
     if (!parentActive) continue
     const choice = feat.choices?.find((item) => item.id === choiceId && item.grantSavingThrowProficiency)
@@ -102,10 +104,11 @@ export function getFlexibleBonusRule(race: RaceRule | undefined, subrace: RaceRu
 }
 
 export function getRaceAbilityBonuses(draft: CharacterDraft): Partial<AbilityScores> {
-  const selectedRace = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const selectedSubrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
-  const race = selectedRace && isSourceEnabled(selectedRace.sourceIds, draft.enabledSourceIds) ? selectedRace : undefined
-  const subrace = selectedSubrace && isSourceEnabled(selectedSubrace.sourceIds, draft.enabledSourceIds) ? selectedSubrace : undefined
+  const repository = getRulesRepository(draft.ruleset)
+  const selectedRace = draft.raceId ? repository.getRace(draft.raceId) : undefined
+  const selectedSubrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
+  const race = selectedRace && isSourceEnabled(selectedRace.sourceIds, draft.enabledSourceIds, repository) ? selectedRace : undefined
+  const subrace = selectedSubrace && isSourceEnabled(selectedSubrace.sourceIds, draft.enabledSourceIds, repository) ? selectedSubrace : undefined
   const baseBonuses = subrace?.replacesParentBonuses ? {} : race?.fixedAbilityBonuses ?? {}
   const fixedBonuses: Partial<Record<AbilityKey, number>> = { ...baseBonuses, ...subrace?.fixedAbilityBonuses }
   const flexibleRule = getFlexibleBonusRule(race, subrace)
@@ -127,31 +130,62 @@ export function getRaceAbilityBonuses(draft: CharacterDraft): Partial<AbilitySco
   return fixedBonuses
 }
 
+/** 获得时点校验范围：只计入等级严格小于 `belowLevel` 的检查点选择。 */
+export interface AbilityDerivationScope {
+  readonly belowLevel?: number
+  readonly checkpointLevels?: ReadonlyMap<string, number>
+}
+
+function selectionLevel(checkpointId: string, scope: AbilityDerivationScope): number | undefined {
+  const direct = scope.checkpointLevels?.get(checkpointId)
+  if (direct !== undefined) return direct
+  if (checkpointId.startsWith('feat-child:')) {
+    const parentCheckpointId = checkpointId.split(':')[1]
+    return parentCheckpointId ? scope.checkpointLevels?.get(parentCheckpointId) : undefined
+  }
+  return undefined
+}
+
 function applyAbilityImprovements(
   abilities: AbilityScores,
   draft: CharacterDraft,
   ignoredCheckpointId?: string,
+  scope: AbilityDerivationScope = {},
 ): AbilityScores {
+  const repository = getRulesRepository(draft.ruleset)
   let improved = { ...abilities }
 
   for (const selection of draft.selections) {
     if (selection.invalidatedAt || selection.checkpointId === ignoredCheckpointId) continue
+    if (scope.belowLevel !== undefined) {
+      const level = selectionLevel(selection.checkpointId, scope)
+      if (level !== undefined && level >= scope.belowLevel) continue
+    }
     if (selection.checkpointId.startsWith('feat-child:')) {
-      const [, parentCheckpointId, featId] = selection.checkpointId.split(':')
+      const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
       const parentActive = draft.selections.some((item) => item.checkpointId === parentCheckpointId && !item.invalidatedAt && item.optionIds.includes(featId ?? ''))
-      const feat = featId ? rulesRepository.getFeat(featId) : undefined
-      if (!parentActive || !feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds)) continue
+      const feat = featId ? repository.getFeat(featId) : undefined
+      if (!parentActive || !feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
+      const choice = feat.choices?.find((item) => item.id === choiceId)
+      const abilityCap = getFeatAbilityCap(feat, choice)
       for (const optionId of selection.optionIds) {
-        const match = /^feat-bonus-(str|dex|con|int|wis|cha)-1$/.exec(optionId)
-        const ability = match?.[1] as AbilityKey | undefined
-        if (ability) improved = { ...improved, [ability]: Math.min(20, improved[ability] + 1) }
+        const match = /^feat-bonus-(str|dex|con|int|wis|cha)-([12])$/.exec(optionId)
+        if (match) {
+          const ability = match[1] as AbilityKey
+          const amount = Number(match[2])
+          improved = { ...improved, [ability]: Math.min(abilityCap, improved[ability] + amount) }
+          continue
+        }
+        if (decodeAbilityImprovement(optionId)) {
+          improved = applyAbilityImprovement(improved, optionId, abilityCap)
+        }
       }
       continue
     }
     const improvementOptionId = selection.optionIds.find((optionId) => {
       if (!decodeAbilityImprovement(optionId)) return false
-      const option = rulesRepository.getOption(optionId) ?? rulesRepository.getFeat(optionId)
-      return !option || isSourceEnabled(option.sourceIds, draft.enabledSourceIds)
+      const option = repository.getOption(optionId) ?? repository.getFeat(optionId)
+      return !option || isSourceEnabled(option.sourceIds, draft.enabledSourceIds, repository)
     })
     if (improvementOptionId) improved = applyAbilityImprovement(improved, improvementOptionId)
   }
@@ -159,9 +193,13 @@ function applyAbilityImprovements(
   return improved
 }
 
-export function deriveAbilities(draft: CharacterDraft, ignoredCheckpointId?: string): AbilityScores {
+export function deriveAbilities(
+  draft: CharacterDraft,
+  ignoredCheckpointId?: string,
+  scope?: AbilityDerivationScope,
+): AbilityScores {
   const originAbilities = addAbilities(draft.baseAbilities, getRaceAbilityBonuses(draft))
-  return applyAbilityImprovements(originAbilities, draft, ignoredCheckpointId)
+  return applyAbilityImprovements(originAbilities, draft, ignoredCheckpointId, scope)
 }
 
 function derived(value: number, sources: readonly ValueSource[]): DerivedValue<number> {
@@ -179,6 +217,7 @@ function withManualAdjustment(value: DerivedValue<number>, adjustment: number | 
 }
 
 export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
+  const repository = getRulesRepository(draft.ruleset)
   const manual = normalizeManualEdits(draft.manualEdits)
   const systemAbilities = deriveAbilities(draft)
   const abilityKeys: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
@@ -186,23 +225,31 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const modifiers = Object.fromEntries(abilityKeys.map((key) => [key, abilityModifier(abilities[key])])) as Record<AbilityKey, number>
   const systemProficiency = proficiencyBonus(draft.targetLevel)
   const proficiency = systemProficiency + manual.proficiencyBonusAdjustment
-  const selectedClass = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
-  const classRule = selectedClass && isSourceEnabled(selectedClass.sourceIds, draft.enabledSourceIds) ? selectedClass : undefined
-  const selectedSubclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
-  const subclassId = selectedSubclass && isSourceEnabled(selectedSubclass.sourceIds, draft.enabledSourceIds) ? selectedSubclass.id : undefined
+  const selectedClass = draft.classId ? repository.getClass(draft.classId) : undefined
+  const classRule = selectedClass && isSourceEnabled(selectedClass.sourceIds, draft.enabledSourceIds, repository) ? selectedClass : undefined
+  const selectedSubclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  const subclassId = selectedSubclass && isSourceEnabled(selectedSubclass.sourceIds, draft.enabledSourceIds, repository) ? selectedSubclass.id : undefined
   const subclassEffects = getSubclassDerivedEffects(subclassId, draft.targetLevel)
-  const selectedRace = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const selectedSubrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
-  const race = selectedRace && isSourceEnabled(selectedRace.sourceIds, draft.enabledSourceIds) ? selectedRace : undefined
-  const subrace = selectedSubrace && isSourceEnabled(selectedSubrace.sourceIds, draft.enabledSourceIds) ? selectedSubrace : undefined
+  const selectedRace = draft.raceId ? repository.getRace(draft.raceId) : undefined
+  const selectedSubrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
+  const race = selectedRace && isSourceEnabled(selectedRace.sourceIds, draft.enabledSourceIds, repository) ? selectedRace : undefined
+  const subrace = selectedSubrace && isSourceEnabled(selectedSubrace.sourceIds, draft.enabledSourceIds, repository) ? selectedSubrace : undefined
+  const activeFeats = listActiveFeats(draft, repository)
+  const featHitPointBonus = activeFeats.reduce((sum, feat) => sum + (feat.hitPointBonusPerLevel ?? 0) * draft.targetLevel + (feat.hitPointBonus ?? 0), 0)
+  const featHitPointNames = activeFeats
+    .filter((feat) => (feat.hitPointBonusPerLevel ?? 0) > 0 || (feat.hitPointBonus ?? 0) > 0)
+    .map((feat) => feat.name)
+  const featSpeedBonus = activeFeats.reduce((sum, feat) => sum + (feat.speedBonus ?? 0), 0)
+  const featSpeedNames = activeFeats.filter((feat) => (feat.speedBonus ?? 0) > 0).map((feat) => feat.name)
   const hitDie = classRule?.hitDie ?? 8
   const hp = hitDie + modifiers.con
     + Math.max(0, draft.targetLevel - 1) * Math.max(1, Math.floor(hitDie / 2) + 1 + modifiers.con)
     + subclassEffects.hitPointBonus
+    + featHitPointBonus
   const equippedItems = draft.inventory
     .filter((entry) => entry.equippedQuantity > 0)
-    .map((entry) => rulesRepository.getEquipment(entry.itemId))
-    .filter((item) => Boolean(item && isSourceEnabled(item.sourceIds, draft.enabledSourceIds)))
+    .map((entry) => repository.getEquipment(entry.itemId))
+    .filter((item) => Boolean(item && isSourceEnabled(item.sourceIds, draft.enabledSourceIds, repository)))
   const equippedArmor = equippedItems
     .find((item) => item?.category === 'armor')
   const equippedShield = equippedItems
@@ -211,11 +258,11 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const activeInfusions = draft.classId === 'class-2014-artificer'
     ? (draft.infusionAssignments ?? []).flatMap((assignment) => {
       const entry = draft.inventory.find((item) => item.id === assignment.inventoryEntryId && item.equippedQuantity > 0)
-      const item = entry ? rulesRepository.getEquipment(entry.itemId) : undefined
+      const item = entry ? repository.getEquipment(entry.itemId) : undefined
       const infusion = artificerInfusions2014.find((candidate) => candidate.id === assignment.infusionId)
       const known = draft.selections.some((selection) => !selection.invalidatedAt && selection.optionIds.includes(assignment.infusionId))
       return entry && item && infusion && known && infusion.minimumLevel <= draft.targetLevel
-        && isSourceEnabled(infusion.sourceIds, draft.enabledSourceIds)
+        && isSourceEnabled(infusion.sourceIds, draft.enabledSourceIds, repository)
         && infusion.eligibleCategories.some((category) => category === item.category)
         ? [{ assignment, entry, item, infusion }]
         : []
@@ -245,8 +292,8 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
           : 10 + modifiers.dex
   const defenseStyle = draft.selections.some((item) => !item.invalidatedAt && item.optionIds.some((id) => {
     if (id !== 'style-defense') return false
-    const option = rulesRepository.getOption(id)
-    return !option || isSourceEnabled(option.sourceIds, draft.enabledSourceIds)
+    const option = repository.getOption(id)
+    return !option || isSourceEnabled(option.sourceIds, draft.enabledSourceIds, repository)
   }))
   const shieldBonus = equippedShield?.armorClassBonus ?? 0
   const armorInfusionBonus = infusionBonusFor(equippedArmor?.id) + infusionBonusFor(equippedShield?.id)
@@ -256,12 +303,27 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? [])
   // 种族熟练：沿父链收集固定项 + 自选结果（子种族不替换父种族熟练）。
   const raceSkillIds = collectRaceSkillIds(draft)
-  const background = draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
-  const backgroundSkillIds = background && isSourceEnabled(background.sourceIds, draft.enabledSourceIds) ? draft.backgroundSkillIds : []
-  const proficientSkillIds = new Set([...backgroundSkillIds, ...selectedClassSkillIds, ...raceSkillIds])
-  const expertiseIds = new Set((classRule?.checkpoints ?? [])
-    .filter((checkpoint) => checkpoint.kind === 'expertise')
-    .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? []))
+  const background = draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
+  const backgroundSkillIds = background && isSourceEnabled(background.sourceIds, draft.enabledSourceIds, repository) ? draft.backgroundSkillIds : []
+  const featSkillSelection = collectFeatSkillSelections(draft, repository)
+  const proficientSkillIds = new Set([...backgroundSkillIds, ...selectedClassSkillIds, ...raceSkillIds, ...featSkillSelection.proficiencies])
+  for (const skillId of featSkillSelection.conditional) {
+    if (proficientSkillIds.has(skillId)) {
+      featSkillSelection.expertise.add(skillId)
+    } else {
+      featSkillSelection.proficiencies.add(skillId)
+      proficientSkillIds.add(skillId)
+    }
+  }
+  if (featSkillSelection.allSkills) {
+    for (const skillId of SKILL_IDS) proficientSkillIds.add(skillId)
+  }
+  const expertiseIds = new Set([
+    ...(classRule?.checkpoints ?? [])
+      .filter((checkpoint) => checkpoint.kind === 'expertise')
+      .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? []),
+    ...featSkillSelection.expertise,
+  ])
   const featSavingThrowAbilities = collectFeatSavingThrowAbilities(draft)
   const skillAbilities: Readonly<Record<string, AbilityKey>> = {
     'skill-acrobatics': 'dex',
@@ -301,7 +363,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
         id: `${skillId}-proficiency`,
         label: '技能熟练',
         value: proficiency,
-        detail: backgroundSkillIds.includes(skillId) ? '来自背景' : raceSkillIds.includes(skillId) ? '来自种族' : '来自职业',
+        detail: featSkillSelection.proficiencies.has(skillId) ? '来自专长' : backgroundSkillIds.includes(skillId) ? '来自背景' : raceSkillIds.includes(skillId) ? '来自种族' : '来自职业',
       }] : []),
       ...(expertise ? [{
         id: `${skillId}-expertise`,
@@ -317,7 +379,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     : draft.classId === 'class-2014-monk' && !equippedArmor && !hasShield
       ? draft.targetLevel >= 18 ? 30 : draft.targetLevel >= 14 ? 25 : draft.targetLevel >= 10 ? 20 : draft.targetLevel >= 6 ? 15 : draft.targetLevel >= 2 ? 10 : 0
       : 0
-  const speed = raceSpeed + classSpeedBonus + subclassEffects.speedBonus
+  const speed = raceSpeed + classSpeedBonus + subclassEffects.speedBonus + featSpeedBonus
   const battleSmithMagicWeapon = subclassId === 'subclass-2014-artificer-battle-smith'
     && Boolean(equippedWeapon && ((equippedWeapon.magicBonus ?? 0) > 0 || infusionBonusFor(equippedWeapon.id) > 0))
   const attackAbility: AbilityKey = battleSmithMagicWeapon
@@ -335,7 +397,8 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const hitPoints = withManualAdjustment(derived(hp, [
     { id: 'class-hit-die', label: '职业生命骰', value: hitDie, detail: classRule?.name ?? '未选择职业' },
     { id: 'constitution', label: '体质调整值', value: modifiers.con * draft.targetLevel, detail: `体质 ${abilities.con}` },
-    ...(subclassEffects.hitPointBonus !== 0 ? [{ id: 'subclass-hit-points', label: '子职生命加成', value: subclassEffects.hitPointBonus, detail: draft.subclassId ? `${rulesRepository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
+    ...(subclassEffects.hitPointBonus !== 0 ? [{ id: 'subclass-hit-points', label: '子职生命加成', value: subclassEffects.hitPointBonus, detail: draft.subclassId ? `${repository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
+    ...(featHitPointBonus !== 0 ? [{ id: 'feat-hit-points', label: '专长生命加成', value: featHitPointBonus, detail: featHitPointNames.join('、') }] : []),
   ]), manual.derivedAdjustments.hitPoints, 'hit-points')
   const armorClassValue = withManualAdjustment(derived(armorClass, [
     {
@@ -355,7 +418,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: '已装备' }] : []),
     ...(defenseStyle && equippedArmor ? [{ id: 'defense-style', label: '防御战斗风格', value: 1, detail: '穿着护甲时生效' }] : []),
     ...(armorInfusionBonus ? [{ id: 'artificer-enhanced-defense', label: '奇械师灌注', value: armorInfusionBonus, detail: '已绑定并装备的强化防御物品' }] : []),
-    ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${rulesRepository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
+    ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${repository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
   ]), manual.derivedAdjustments.armorClass, 'armor-class')
   const initiativeValue = withManualAdjustment(derived(modifiers.dex, [{ id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` }]), manual.derivedAdjustments.initiative, 'initiative')
   const attackValue = withManualAdjustment(derived(proficiency + modifiers[attackAbility] + weaponMagicBonus + subclassEffects.attackBonus, [
@@ -372,7 +435,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   }, ...(weaponMagicBonus ? [{ id: 'magic-weapon-damage', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []), ...(subclassEffects.damageBonus !== 0 ? [{ id: 'subclass-damage', label: '子职伤害加成', value: subclassEffects.damageBonus, detail: '来自子职特性' }] : [])]), manual.derivedAdjustments.attackDamageBonus, 'damage')
   const speedValue = withManualAdjustment(derived(speed, [{
     id: 'race-speed', label: '种族速度', value: raceSpeed, detail: subrace?.speed ? subrace.name : race?.name ?? '默认',
-  }, ...(classSpeedBonus ? [{ id: 'class-speed', label: '职业移动加值', value: classSpeedBonus, detail: classRule?.name ?? '' }] : []), ...(subclassEffects.speedBonus !== 0 ? [{ id: 'subclass-speed', label: '子职移动加值', value: subclassEffects.speedBonus, detail: '来自子职特性' }] : [])]), manual.derivedAdjustments.speed, 'speed')
+  }, ...(classSpeedBonus ? [{ id: 'class-speed', label: '职业移动加值', value: classSpeedBonus, detail: classRule?.name ?? '' }] : []), ...(subclassEffects.speedBonus !== 0 ? [{ id: 'subclass-speed', label: '子职移动加值', value: subclassEffects.speedBonus, detail: '来自子职特性' }] : []), ...(featSpeedBonus !== 0 ? [{ id: 'feat-speed', label: '专长移动加值', value: featSpeedBonus, detail: featSpeedNames.join('、') }] : [])]), manual.derivedAdjustments.speed, 'speed')
   const passivePerception = withManualAdjustment(derived(10 + (skills['skill-perception']?.value ?? 0), [
     { id: 'passive-base', label: '被动基础', value: 10, detail: '固定基础值' },
     { id: 'passive-perception-skill', label: '察觉加值', value: skills['skill-perception']?.value ?? 0, detail: '来自察觉技能' },
@@ -414,10 +477,11 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
 }
 
 export function deriveCharacterSummary(draft: CharacterDraft): DerivedCharacterSummary {
+  const repository = getRulesRepository(draft.ruleset)
   const values = deriveCharacter(draft)
   return {
     level: draft.targetLevel,
-    className: draft.classId ? rulesRepository.getClass(draft.classId)?.name : undefined,
+    className: draft.classId ? repository.getClass(draft.classId)?.name : undefined,
     proficiencyBonus: `+${values.proficiencyBonus.value}`,
     hitPoints: values.hitPoints.value,
     armorClass: values.armorClass.value,

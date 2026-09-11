@@ -84,7 +84,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
   const completion = computed(() => {
     const draft = activeDraft.value
     if (!draft) return 0
-    const timeline = draft.classId ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections }) : []
+    const timeline = draft.classId ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId }) : []
     const timelineComplete = timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const count = selection?.optionIds.length ?? 0

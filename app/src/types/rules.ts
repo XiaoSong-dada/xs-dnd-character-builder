@@ -9,7 +9,14 @@ export type CheckpointKind =
   | 'expertise'
   | 'class-choice'
   | 'feat-feature'
+  | 'feat'
   | 'infusion'
+
+/** 2024 专长类别：决定授予来源与候选池；2014 条目可省略。 */
+export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon'
+
+/** 护甲训练类别；2024 前置与熟练均以此为口径。 */
+export type ArmorTraining = 'light' | 'medium' | 'heavy' | 'shield'
 
 /**
  * 玩法标签：描述职业/子职的常见玩法定位，供推荐引擎做偏好匹配。
@@ -45,7 +52,16 @@ export interface FeatPrerequisite {
     readonly anyOf: readonly AbilityKey[]
     readonly score: number
   }
-  readonly requiredCapability?: 'armor-light' | 'armor-medium' | 'armor-heavy' | 'spellcasting'
+  /** 获得节点等级下限（2024 通用专长 4、传奇恩惠 19）；2014 条目省略。 */
+  readonly minimumLevel?: number
+  readonly requiredCapability?:
+    | 'armor-light'
+    | 'armor-medium'
+    | 'armor-heavy'
+    | 'shield'
+    | 'fighting-style'
+    | 'spellcasting'
+    | 'spellcasting-or-pact'
   readonly requiredRaceIds?: readonly string[]
   readonly requiredSubraceIds?: readonly string[]
 }
@@ -62,17 +78,33 @@ export interface FeatChoiceSpec {
   readonly uniqueGroup?: string
   /** 所选属性同时获得豁免熟练（如专长强健身心；选项需为属性 +1 选项）。 */
   readonly grantSavingThrowProficiency?: boolean
+  /** 属性提升上限（2024 通用专长 20、传奇恩惠 30）；省略时按 20 处理。 */
+  readonly abilityCap?: number
+  /** 所选技能未熟练则获得熟练、已熟练则获得专精（如敏锐心灵、观察力）。 */
+  readonly expertiseIfProficient?: boolean
 }
 
 export interface FeatRule extends RuleOption {
   readonly ruleset: RulesetId
   readonly englishName: string
   readonly tags: readonly string[]
+  /** 2024 专长类别；2014 条目省略。 */
+  readonly category?: FeatCategory
   readonly prerequisite?: FeatPrerequisite
   /** 原创中文详细效果（展开区展示）：触发时机、资源与恢复、数值/范围、前置条件重申。 */
   readonly detail: string
   readonly choices?: readonly FeatChoiceSpec[]
   readonly repeatable?: boolean
+  /** 无条件派生效果：每级最大生命值加成（如健壮 +2/级）。 */
+  readonly hitPointBonusPerLevel?: number
+  /** 无条件派生效果：固定最大生命值加成（如超凡强韧之恩惠 +40）。 */
+  readonly hitPointBonus?: number
+  /** 无条件派生效果：速度加值（尺，如飙速跑者 +10、神行无拘之恩惠 +30）。 */
+  readonly speedBonus?: number
+  /** 无条件授予的护甲训练；用于前置判定与后续装备接入。 */
+  readonly armorTraining?: readonly ArmorTraining[]
+  /** 获得全部 18 项技能熟练（博学多才之恩惠）。 */
+  readonly grantsAllSkillProficiencies?: boolean
 }
 
 export interface ChoiceCheckpoint {
@@ -96,8 +128,12 @@ export interface ChoiceCheckpoint {
   readonly parentOptionId?: string
   /** 子选择向对应属性提供的固定加值（半专长等）。 */
   readonly abilityBonus?: number
+  /** 属性提升上限（2024 通用专长 20、传奇恩惠 30）；省略时按 20 处理。 */
+  readonly abilityCap?: number
   /** 所选属性同时获得豁免熟练（专长子选择，如强健身心）。 */
   readonly grantSavingThrowProficiency?: boolean
+  /** 专长授予检查点：按类别展开候选池（2024 通用／战斗风格／传奇恩惠）；2014 职业检查点省略。 */
+  readonly featCategories?: readonly FeatCategory[]
 }
 
 /** 动态候选池：检查点选项随草稿状态（等级、法术书）由规则层生成。 */
@@ -159,6 +195,8 @@ export interface ClassRule {
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
   readonly checkpoints: readonly ChoiceCheckpoint[]
+  /** 职业授予的护甲训练（2024）；2014 职业省略并使用专长层的兼容映射。 */
+  readonly armorTraining?: readonly ArmorTraining[]
   readonly spellcasting?: SpellcastingConfig
   /** 职业等级特性（含升级增强项，每条独立登记）；由 class-features-2014 挂载。 */
   readonly features?: readonly ClassFeature[]
@@ -286,6 +324,8 @@ export interface RaceRule {
   /** 灵活加值分组（如费兹本龙裔：第一项 +2、第二项 +1）；与 flexibleBonusCount/Value 二选一。 */
   readonly flexibleBonusGroups?: readonly { readonly count: number; readonly value: number }[]
   readonly excludedFlexibleAbilityKeys?: readonly AbilityKey[]
+  /** 2024 物种额外授予的起源专长选择（如人类 Versatile）；2014 与待接入数据省略。 */
+  readonly originFeatChoices?: { readonly count: number; readonly categories: readonly FeatCategory[] }
   readonly recommendedClassIds: readonly string[]
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
@@ -305,6 +345,8 @@ export interface BackgroundRule {
   readonly toolIds: readonly string[]
   readonly languageChoices: number
   readonly featureName: string
+  /** 2024 背景固定授予的起源专长；2014 背景与待接入数据省略。 */
+  readonly originFeatId?: string
   readonly recommendedClassIds: readonly string[]
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]

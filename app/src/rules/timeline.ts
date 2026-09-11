@@ -1,10 +1,11 @@
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import { FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
 import { getPlayerSubclassIds2014 } from '@/rules/data/subclasses-2014'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
+import { getFeatPool } from '@/rules/feats'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { ChoiceCheckpoint } from '@/types/rules'
-import type { ChoiceSelection } from '@/types/character'
+import type { ChoiceCheckpoint, RulesRepository } from '@/types/rules'
+import type { ChoiceSelection, RulesetId } from '@/types/character'
 import { SKILL_IDS } from '@/rules/derive'
 
 const variantHumanCheckpoint: ChoiceCheckpoint = {
@@ -26,6 +27,10 @@ export interface TimelineContext {
   readonly subclassId?: string
   readonly enabledSourceIds?: readonly string[]
   readonly selections?: readonly ChoiceSelection[]
+  /** 草稿规则版本；省略时按 2014 解析，保持既有调用方行为。 */
+  readonly ruleset?: RulesetId
+  /** 已选物种：用于展开物种授予的起源专长（如人类 Versatile）。 */
+  readonly raceId?: string
 }
 
 const subclassTitles: Readonly<Record<string, string>> = {
@@ -52,13 +57,17 @@ function inferredUniqueGroup(checkpoint: ChoiceCheckpoint): string | undefined {
   return undefined
 }
 
-function buildSubclassCheckpoint(classId: string, enabledSourceIds?: readonly string[]): ChoiceCheckpoint | undefined {
+function buildSubclassCheckpoint(
+  classId: string,
+  repository: RulesRepository,
+  enabledSourceIds?: readonly string[],
+): ChoiceCheckpoint | undefined {
   const optionIds = getPlayerSubclassIds2014(classId).filter((id) => {
-    const subclass = rulesRepository.getSubclass(id)
-    return Boolean(subclass && (enabledSourceIds === undefined || isSourceEnabled(subclass.sourceIds, enabledSourceIds)))
+    const subclass = repository.getSubclass(id)
+    return Boolean(subclass && (enabledSourceIds === undefined || isSourceEnabled(subclass.sourceIds, enabledSourceIds, repository)))
   })
   if (optionIds.length === 0) return undefined
-  const firstSubclass = rulesRepository.getSubclass(optionIds[0] ?? '')
+  const firstSubclass = repository.getSubclass(optionIds[0] ?? '')
   if (!firstSubclass) return undefined
   return {
     id: `${classId}-subclass-${firstSubclass.selectionLevel}`,
@@ -75,7 +84,11 @@ function buildSubclassCheckpoint(classId: string, enabledSourceIds?: readonly st
 }
 
 /** 子职特性选择检查点：由 `requiresChoice` 且带选项的特性生成（按特性多选规格）。 */
-function buildSubclassFeatureCheckpoints(subclassId: string, enabledSourceIds?: readonly string[]): readonly ChoiceCheckpoint[] {
+function buildSubclassFeatureCheckpoints(
+  subclassId: string,
+  repository: RulesRepository,
+  enabledSourceIds?: readonly string[],
+): readonly ChoiceCheckpoint[] {
   return getSubclassFeatures2014(subclassId)
     .filter((feature) =>
       feature.requiresChoice
@@ -92,20 +105,46 @@ function buildSubclassFeatureCheckpoints(subclassId: string, enabledSourceIds?: 
       minSelections: feature.minSelections ?? 1,
       maxSelections: feature.maxSelections ?? 1,
       optionIds: (feature.optionIds ?? []).filter((id) => {
-        const option = rulesRepository.getOption(id)
-        return !option || enabledSourceIds === undefined || isSourceEnabled(option.sourceIds, enabledSourceIds)
+        const option = repository.getOption(id)
+        return !option || enabledSourceIds === undefined || isSourceEnabled(option.sourceIds, enabledSourceIds, repository)
       }),
       uniqueGroup: feature.optionIds?.length && feature.id.includes('arcane-shot') ? 'arcane-archer-shots' : undefined,
     }))
 }
 
+/** 物种授予的起源专长检查点（2024 人类 Versatile）；候选池按类别与来源展开。 */
+function buildSpeciesFeatCheckpoints(
+  raceId: string,
+  repository: RulesRepository,
+  enabledSourceIds?: readonly string[],
+): readonly ChoiceCheckpoint[] {
+  const race = repository.getRace(raceId)
+  const choices = race?.originFeatChoices
+  if (!race || !choices || choices.count <= 0) return []
+  const optionIds = getFeatPool(repository, choices.categories, { enabledSourceIds }).map((feat) => feat.id)
+  if (optionIds.length === 0) return []
+  return [{
+    id: `${race.id}-origin-feat`,
+    level: 1,
+    step: 'timeline',
+    kind: 'feat',
+    title: '选择额外起源专长',
+    description: `${race.name}授予 ${choices.count} 项额外起源专长。`,
+    required: true,
+    minSelections: choices.count,
+    maxSelections: choices.count,
+    optionIds,
+  }]
+}
+
 function buildFeatChoiceCheckpoints(
   parentCheckpoints: readonly ChoiceCheckpoint[],
   selections: readonly ChoiceSelection[],
+  repository: RulesRepository,
 ): readonly ChoiceCheckpoint[] {
   return parentCheckpoints.flatMap((parent) => {
     const selected = selections.find((item) => item.checkpointId === parent.id && !item.invalidatedAt)
-    const feat = selected?.optionIds.flatMap((id) => rulesRepository.getFeat(id) ?? [])[0]
+    const feat = selected?.optionIds.flatMap((id) => repository.getFeat(id) ?? [])[0]
     if (!feat?.choices?.length) return []
     return feat.choices.map((choice) => ({
       id: `feat-child:${parent.id}:${feat.id}:${choice.id}`,
@@ -117,42 +156,59 @@ function buildFeatChoiceCheckpoints(
       required: true,
       minSelections: choice.minSelections,
       maxSelections: choice.maxSelections,
-      optionIds: choice.optionIds.length > 0 ? choice.optionIds : SKILL_IDS,
+      optionIds: choice.optionIds.length > 0
+        ? choice.optionIds
+        : choice.candidateKind === 'all-skills' || choice.candidateKind === 'proficient-skills'
+          ? SKILL_IDS
+          : [],
       uniqueGroup: choice.uniqueGroup,
       parentCheckpointId: parent.id,
       parentOptionId: feat.id,
       abilityBonus: choice.abilityBonus,
+      abilityCap: choice.abilityCap,
       grantSavingThrowProficiency: choice.grantSavingThrowProficiency,
     }))
   })
 }
 
 export function buildTimeline(classId: string, targetLevel: number, context: TimelineContext = {}): readonly ChoiceCheckpoint[] {
-  const classRule = rulesRepository.getClass(classId)
+  const repository = getRulesRepository(context.ruleset ?? '5e-2014')
+  const classRule = repository.getClass(classId)
   if (!classRule) return []
-  const subclassCheckpoint = buildSubclassCheckpoint(classId, context.enabledSourceIds)
-  const classCheckpoints = classRule.checkpoints.map((checkpoint) =>
-    checkpoint.kind === 'subclass' && subclassCheckpoint
+  const subclassCheckpoint = buildSubclassCheckpoint(classId, repository, context.enabledSourceIds)
+  const classCheckpoints = classRule.checkpoints.map((checkpoint) => {
+    const resolved = checkpoint.kind === 'subclass' && subclassCheckpoint
       ? { ...checkpoint, optionIds: subclassCheckpoint.optionIds }
-      : checkpoint,
-  )
+      : checkpoint
+    if (resolved.featCategories?.length) {
+      return {
+        ...resolved,
+        optionIds: getFeatPool(repository, resolved.featCategories, {
+          level: resolved.level,
+          enabledSourceIds: context.enabledSourceIds,
+        }).map((feat) => feat.id),
+      }
+    }
+    return resolved
+  })
   if (subclassCheckpoint && !classCheckpoints.some((checkpoint) => checkpoint.kind === 'subclass')) {
     classCheckpoints.push(subclassCheckpoint)
   }
   const baseTimeline = [
     ...(context.subraceId === 'race-2014-human-variant' ? [variantHumanCheckpoint] : []),
+    ...(context.raceId ? buildSpeciesFeatCheckpoints(context.raceId, repository, context.enabledSourceIds) : []),
     ...classCheckpoints,
-    ...(context.subclassId ? buildSubclassFeatureCheckpoints(context.subclassId, context.enabledSourceIds) : []),
+    ...(context.subclassId ? buildSubclassFeatureCheckpoints(context.subclassId, repository, context.enabledSourceIds) : []),
   ]
     .filter((checkpoint) => checkpoint.level <= targetLevel)
     .map((checkpoint) => ({
       ...checkpoint,
       uniqueGroup: inferredUniqueGroup(checkpoint),
       optionIds: checkpoint.optionIds.filter((id) => {
-        const option = rulesRepository.getOption(id) ?? rulesRepository.getFeat(id)
-        return !option || context.enabledSourceIds === undefined || isSourceEnabled(option.sourceIds, context.enabledSourceIds)
+        const option = repository.getOption(id) ?? repository.getFeat(id)
+        return !option || context.enabledSourceIds === undefined || isSourceEnabled(option.sourceIds, context.enabledSourceIds, repository)
       }),
     }))
-  return [...baseTimeline, ...buildFeatChoiceCheckpoints(baseTimeline, context.selections ?? [])]
+  return [...baseTimeline, ...buildFeatChoiceCheckpoints(baseTimeline, context.selections ?? [], repository)]
     .sort((left, right) => left.level - right.level)
 }

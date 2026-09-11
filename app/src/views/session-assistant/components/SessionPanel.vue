@@ -196,7 +196,7 @@ const backgroundFeatures = computed(() => {
 const featAndAsiEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
   const entries: { id: string; level: number; label: string; detail?: string }[] = []
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue

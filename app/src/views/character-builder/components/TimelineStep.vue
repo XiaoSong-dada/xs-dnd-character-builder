@@ -26,7 +26,7 @@ const props = defineProps<{
 const emit = defineEmits<{ select: [checkpointId: string, optionIds: readonly string[]] }>()
 const expandedCheckpointId = ref<string>()
 
-const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId, enabledSourceIds: props.draft.enabledSourceIds, selections: props.draft.selections }))
+const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId, enabledSourceIds: props.draft.enabledSourceIds, selections: props.draft.selections, ruleset: props.draft.ruleset, raceId: props.draft.raceId }))
 
 /** 当前已熟练的技能与盗贼工具：职业技能选择 + 背景技能。与 validate.ts 的专精校验口径一致。 */
 const proficientSkillIds = computed(() => {
