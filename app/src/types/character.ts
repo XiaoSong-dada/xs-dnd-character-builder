@@ -137,14 +137,14 @@ export interface CharacterMedia {
 }
 
 export interface CharacterDraft {
-  readonly schemaVersion: 7
+  readonly schemaVersion: 8
   readonly id: string
-  readonly ruleset: '5e-2014'
+  readonly ruleset: RulesetId
   readonly createdAt: string
   readonly updatedAt: string
   readonly targetLevel: number
   readonly abilityMethod: AbilityMethod
-  /** 当前角色允许使用的可选 2014 来源；Basic Rules 与 PHB 始终启用，不写入此数组。 */
+  /** 当前角色允许使用的可选来源；Basic Rules 与 PHB 始终启用，不写入此数组；按草稿规则版本分别解释。 */
   readonly enabledSourceIds: readonly string[]
   readonly classId?: string
   readonly subclassId?: string

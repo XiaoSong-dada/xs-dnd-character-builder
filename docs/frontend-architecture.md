@@ -479,9 +479,9 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
   -> src/types/character
 ```
 
-### 8.6.1 schema v6 与有效角色数据
+### 8.6.1 schema v8 与有效角色数据
 
-`CharacterDraft` schema v7 在 v6 的 `CharacterManualEdits` 基础上新增可选 `media` 引用。v2—v6 草稿与 JSON 导入统一经过 `draft-storage` 的 v7 迁移入口；v7 localStorage key 与旧 key 并存读取，保存只写 v7。图片 Blob 保存在 IndexedDB，普通 JSON 导出移除 `media`，ZIP 完整角色包负责跨设备迁移角色与图片。JSON 仍保存差值和人工法术来源，不降格为不可重算的绝对最终值。
+`CharacterDraft` schema v8 在 v7 的 `media` 引用基础上把 `ruleset` 升级为 `RulesetId`（`5e-2014`／`5e-2024`），两版草稿存于同一 `drafts:v8` 数组并以记录内 `ruleset` 区分。v2—v7 草稿与 JSON 导入统一经过 `draft-storage` 的 v8 迁移入口；v8 localStorage key 与旧 key 并存读取（旧键原文保留不删），保存只写 v8。当前键中无法解析、缺少版本、未知版本或非法 ID 的条目移入 `drafts:unsupported:v1` 隔离区原样保留，不进入草稿列表。产品入口通过 `rules/repositories.ts` 的 `OPEN_RULESETS`／`isRulesetOpen` 判断已开放版本（当前仅 2014），未开放版本的 JSON／ZIP 导入由 store 拦截并给出中文原因。图片 Blob 保存在 IndexedDB，普通 JSON 导出移除 `media`，ZIP 完整角色包负责跨设备迁移角色与图片。JSON 仍保存差值和人工法术来源，不降格为不可重算的绝对最终值。
 
 `rules/derive.ts` 是有效属性、熟练、技能、豁免与派生战斗数值的唯一规则出口；`rules/manual-edits.ts` 负责人工数据归一化和字段差值换算；`rules/spellcasting.ts` 负责有效环位及有效法术集合；`rules/weapon-attacks.ts` 将公共人工武器调整应用到每件可计算武器。角色卡、摘要、跑团助手和导出模型均消费这些有效结果。
 

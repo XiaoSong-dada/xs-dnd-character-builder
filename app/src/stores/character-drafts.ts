@@ -7,14 +7,15 @@ import { validateDraft } from '@/rules/validate'
 import { validateSpellSelections } from '@/rules/spellcasting'
 import { EMPTY_CURRENCY, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { getDefaultEnabledSourceIds } from '@/rules/source-books'
+import { isRulesetOpen } from '@/rules/repositories'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { getEffectiveSpellSlots } from '@/rules/spellcasting'
 import { reconcileSessionLimits } from '@/rules/session-state'
 import { SessionStateStorageService } from '@/services/session-state-storage'
-import { CharacterJsonService } from '@/services/character-json'
+import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { DraftStorageService } from '@/services/draft-storage'
 import { CharacterMediaStorageService } from '@/services/character-media-storage'
-import { CharacterPackageService } from '@/services/character-package'
+import { CharacterPackageError, CharacterPackageService } from '@/services/character-package'
 import type {
   AbilityScores,
   CharacterManualEdits,
@@ -22,25 +23,29 @@ import type {
   ChoiceSelection,
   DraftStep,
   LegacyDraftRecord,
+  RulesetId,
 } from '@/types/character'
 
 const DEFAULT_ABILITIES: AbilityScores = { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 }
+
+/** 未完成验收的规则版本不进入产品入口；数据层仍可创建与往返。 */
+const UNOPENED_RULESET_MESSAGE = '2024 角色尚未开放，暂不能导入。'
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `draft-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-function createCharacterDraft(): CharacterDraft {
+function createCharacterDraft(ruleset: RulesetId): CharacterDraft {
   const now = new Date().toISOString()
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
     id: newId(),
-    ruleset: '5e-2014',
+    ruleset,
     createdAt: now,
     updatedAt: now,
     targetLevel: 10,
     abilityMethod: 'standard-array',
-    enabledSourceIds: getDefaultEnabledSourceIds(),
+    enabledSourceIds: ruleset === '5e-2014' ? getDefaultEnabledSourceIds() : [],
     raceAbilityChoices: [],
     backgroundSkillIds: [],
     backgroundToolIds: [],
@@ -106,8 +111,8 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
 
   watch(drafts, (value) => DraftStorageService.saveAll(value), { deep: true })
 
-  function createDraft(): CharacterDraft {
-    const draft = createCharacterDraft()
+  function createDraft(ruleset: RulesetId = '5e-2014'): CharacterDraft {
+    const draft = createCharacterDraft(ruleset)
     drafts.value.push(draft)
     activeDraftId.value = draft.id
     return draft
@@ -198,6 +203,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
 
   function importDraft(raw: string): CharacterDraft {
     const imported = CharacterJsonService.importDraft(raw)
+    if (!isRulesetOpen(imported.ruleset)) throw new CharacterImportError('ruleset-mismatch', UNOPENED_RULESET_MESSAGE)
     const draft = { ...imported, id: newId(), updatedAt: new Date().toISOString() }
     drafts.value.push(draft)
     activeDraftId.value = draft.id
@@ -206,6 +212,11 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
 
   async function importPackage(file: Blob): Promise<CharacterDraft> {
     const draft = await CharacterPackageService.import(file)
+    if (!isRulesetOpen(draft.ruleset)) {
+      const mediaIds = CharacterPackageService.mediaIds(draft.media)
+      if (mediaIds.length > 0) void CharacterMediaStorageService.removeMany(mediaIds).catch(() => undefined)
+      throw new CharacterPackageError(UNOPENED_RULESET_MESSAGE)
+    }
     drafts.value.push(draft)
     activeDraftId.value = draft.id
     return draft

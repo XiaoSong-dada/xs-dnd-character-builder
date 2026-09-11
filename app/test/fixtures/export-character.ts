@@ -3,7 +3,7 @@ import { deriveCharacter } from '@/rules/derive'
 import type { CharacterDraft } from '@/types/character'
 
 export const fighterDraft: CharacterDraft = {
-  schemaVersion: 4, id: 'export-data-fixture', ruleset: '5e-2014', createdAt: '', updatedAt: '', targetLevel: 4,
+  schemaVersion: 8, id: 'export-data-fixture', ruleset: '5e-2014', createdAt: '', updatedAt: '', targetLevel: 4,
   abilityMethod: 'standard-array', preferences: [], classId: 'class-2014-fighter', backgroundId: 'background-2014-soldier',
   raceId: 'race-2014-half-orc', raceAbilityChoices: [], backgroundSkillIds: ['skill-athletics', 'skill-intimidation'],
   backgroundToolIds: [], languages: ['兽人语', '精灵语'], proficiencyReplacements: [],

@@ -3,14 +3,31 @@ import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
 import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { rulesRepository } from '@/rules/repository'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
+import { isRulesetId } from '@/rules/repositories'
 
-const STORAGE_KEY = 'dnd-character-builder:drafts:v7'
+const STORAGE_KEY = 'dnd-character-builder:drafts:v8'
+/** 无法解析的当前键条目隔离区；与草稿键分开，避免被 saveAll 覆盖。 */
+const QUARANTINE_KEY = 'dnd-character-builder:drafts:unsupported:v1'
+const V7_STORAGE_KEY = 'dnd-character-builder:drafts:v7'
 const V6_STORAGE_KEY = 'dnd-character-builder:drafts:v6'
 const V5_STORAGE_KEY = 'dnd-character-builder:drafts:v5'
 const V4_STORAGE_KEY = 'dnd-character-builder:drafts:v4'
 const V3_STORAGE_KEY = 'dnd-character-builder:drafts:v3'
 const V2_STORAGE_KEY = 'dnd-character-builder:drafts:v2'
 const LEGACY_STORAGE_KEY = 'dnd-character-builder:drafts:v1'
+
+const SUPPORTED_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8])
+const MIGRATABLE_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7])
+
+interface QuarantinedDraftRecord {
+  readonly fingerprint: string
+  readonly raw: unknown
+  readonly reason: string
+  readonly detectedAt: string
+}
+
+/** 隔离区写入失败时的暂存条目；saveAll 会回写当前键，避免静默丢失。 */
+let pendingRejections: readonly unknown[] = []
 
 function emptySpellSelections(): SpellSelections {
   return {
@@ -25,7 +42,7 @@ function emptySpellSelections(): SpellSelections {
 function isDraft(value: unknown): value is CharacterDraft {
   if (!value || typeof value !== 'object') return false
   const draft = value as Partial<CharacterDraft>
-  return draft.schemaVersion === 7 && draft.ruleset === '5e-2014' && typeof draft.id === 'string'
+  return draft.schemaVersion === 8 && isRulesetId(draft.ruleset) && typeof draft.id === 'string'
 }
 
 function normalizeMedia(value: unknown): CharacterMedia | undefined {
@@ -50,10 +67,16 @@ function normalizeMedia(value: unknown): CharacterMedia | undefined {
   return avatar || portrait ? { avatar, portrait } : undefined
 }
 
+/** 2014 只保留本版可选来源；2024 来源规则由 B06 接入，当前只去重、不套用 2014 白名单。 */
+function normalizeDraftSourceIds(draft: CharacterDraft): readonly string[] {
+  if (draft.ruleset === '5e-2014') return normalizeEnabledSourceIds(draft.enabledSourceIds)
+  return [...new Set(draft.enabledSourceIds ?? [])]
+}
+
 function normalizeDraft(draft: CharacterDraft): CharacterDraft {
   return {
     ...draft,
-    enabledSourceIds: normalizeEnabledSourceIds(draft.enabledSourceIds),
+    enabledSourceIds: normalizeDraftSourceIds(draft),
     raceAbilityChoices: draft.raceAbilityChoices ?? [],
     backgroundSkillIds: draft.backgroundSkillIds ?? [],
     backgroundToolIds: draft.backgroundToolIds ?? [],
@@ -73,12 +96,12 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
   }
 }
 
-/** v2—v7 统一迁移入口；旧玩法偏好不再进入当前草稿。 */
-export function migrateDraftToV7(value: unknown): CharacterDraft | undefined {
+/** v2—v7 统一迁移入口；旧格式均为 2014 草稿，无法识别的记录返回 undefined。 */
+export function migrateDraftToV8(value: unknown): CharacterDraft | undefined {
   if (!value || typeof value !== 'object') return undefined
   const draft = value as Record<string, unknown>
-  if (![2, 3, 4, 5, 6, 7].includes(Number(draft.schemaVersion)) || draft.ruleset !== '5e-2014' || typeof draft.id !== 'string') return undefined
   const oldVersion = Number(draft.schemaVersion)
+  if (!MIGRATABLE_SCHEMA_VERSIONS.has(oldVersion) || draft.ruleset !== '5e-2014' || typeof draft.id !== 'string') return undefined
   const inventoryItemIds = oldVersion === 2 && Array.isArray(draft.inventoryItemIds)
     ? draft.inventoryItemIds.filter((item): item is string => typeof item === 'string')
     : []
@@ -106,7 +129,7 @@ export function migrateDraftToV7(value: unknown): CharacterDraft | undefined {
   const { preferences: _preferences, inventoryItemIds: _inventoryItemIds, equippedItemIds: _equippedItemIds, ...rest } = draft
   return normalizeDraft({
     ...rest,
-    schemaVersion: 7,
+    schemaVersion: 8,
     currentStep: draft.currentStep === 'preferences' ? 'sources' : draft.currentStep,
     enabledSourceIds,
     startingEquipmentSelections: oldVersion === 2 ? [] : draft.startingEquipmentSelections,
@@ -120,9 +143,66 @@ export function migrateDraftToV7(value: unknown): CharacterDraft | undefined {
   } as unknown as CharacterDraft)
 }
 
-/** 兼容旧调用名；统一返回当前 v7 草稿。 */
-export const migrateDraftToV6 = migrateDraftToV7
-export const migrateDraftToV5 = migrateDraftToV7
+/** 当前键与导入共用的解析入口：v8 记录规范化，v2—v7 记录迁移；其余返回 undefined。 */
+export function parseCharacterDraft(value: unknown): CharacterDraft | undefined {
+  if (isDraft(value)) return normalizeDraft(value)
+  return migrateDraftToV8(value)
+}
+
+/** 兼容旧调用名；统一返回当前 v8 草稿。 */
+export const migrateDraftToV7 = migrateDraftToV8
+export const migrateDraftToV6 = migrateDraftToV8
+export const migrateDraftToV5 = migrateDraftToV8
+
+/** 无法解析条目的中文原因；与 JSON 导入提示保持一致。 */
+function draftFailureReason(value: unknown): string {
+  if (!value || typeof value !== 'object') return '角色数据不是有效对象。'
+  const candidate = value as Record<string, unknown>
+  const schemaVersion = Number(candidate.schemaVersion)
+  if (!SUPPORTED_SCHEMA_VERSIONS.has(schemaVersion)) return '角色文件版本不受支持。'
+  const ruleset = candidate.ruleset
+  if (typeof ruleset !== 'string' || ruleset.length === 0) return '角色文件缺少有效的规则版本。'
+  if (!isRulesetId(ruleset)) return `不支持的规则版本：${ruleset}。`
+  if (schemaVersion < 8 && ruleset === '5e-2024') return '该文件是旧版 2024 草稿格式，暂不支持导入；请保留原文件作为备份。'
+  return '角色文件缺少必要字段。'
+}
+
+function isQuarantinedRecord(value: unknown): value is QuarantinedDraftRecord {
+  if (!value || typeof value !== 'object') return false
+  const record = value as Partial<QuarantinedDraftRecord>
+  return typeof record.fingerprint === 'string'
+    && typeof record.reason === 'string'
+    && typeof record.detectedAt === 'string'
+    && 'raw' in record
+}
+
+function fingerprintOf(value: unknown): string {
+  try {
+    return JSON.stringify(value) ?? String(value)
+  } catch {
+    return String(value)
+  }
+}
+
+/** 隔离保留无法解析的当前键条目；写入失败时留在内存，由 saveAll 回写当前键。 */
+function quarantineRejected(entries: readonly unknown[]): void {
+  if (entries.length === 0) return
+  try {
+    const stored = readArray(QUARANTINE_KEY).filter(isQuarantinedRecord)
+    const fingerprints = new Set(stored.map((record) => record.fingerprint))
+    const detectedAt = new Date().toISOString()
+    const additions = entries.flatMap((raw) => {
+      const fingerprint = fingerprintOf(raw)
+      if (fingerprints.has(fingerprint)) return []
+      fingerprints.add(fingerprint)
+      return [{ fingerprint, raw, reason: draftFailureReason(raw), detectedAt }]
+    })
+    if (additions.length > 0) localStorage.setItem(QUARANTINE_KEY, JSON.stringify([...stored, ...additions]))
+    pendingRejections = []
+  } catch {
+    pendingRejections = entries
+  }
+}
 
 function readArray(key: string): readonly unknown[] {
   try {
@@ -137,14 +217,22 @@ function readArray(key: string): readonly unknown[] {
 
 export const DraftStorageService = {
   loadAll(): readonly CharacterDraft[] {
-    const current = readArray(STORAGE_KEY).filter(isDraft).map(normalizeDraft)
+    const current: CharacterDraft[] = []
+    const rejected: unknown[] = []
+    for (const entry of readArray(STORAGE_KEY)) {
+      const draft = parseCharacterDraft(entry)
+      if (draft) current.push(draft)
+      else rejected.push(entry)
+    }
+    quarantineRejected(rejected)
     const seenIds = new Set(current.map((draft) => draft.id))
     const migrated = [
-      ...readArray(V6_STORAGE_KEY).map(migrateDraftToV7),
-      ...readArray(V5_STORAGE_KEY).map(migrateDraftToV7),
-      ...readArray(V4_STORAGE_KEY).map(migrateDraftToV5),
-      ...readArray(V3_STORAGE_KEY).map(migrateDraftToV5),
-      ...readArray(V2_STORAGE_KEY).map(migrateDraftToV5),
+      ...readArray(V7_STORAGE_KEY).map(migrateDraftToV8),
+      ...readArray(V6_STORAGE_KEY).map(migrateDraftToV8),
+      ...readArray(V5_STORAGE_KEY).map(migrateDraftToV8),
+      ...readArray(V4_STORAGE_KEY).map(migrateDraftToV8),
+      ...readArray(V3_STORAGE_KEY).map(migrateDraftToV8),
+      ...readArray(V2_STORAGE_KEY).map(migrateDraftToV8),
     ]
       .filter((draft): draft is CharacterDraft => {
         if (!draft || seenIds.has(draft.id)) return false
@@ -168,7 +256,8 @@ export const DraftStorageService = {
     })
   },
   saveAll(drafts: readonly CharacterDraft[]): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts))
+    const payload: readonly unknown[] = pendingRejections.length > 0 ? [...drafts, ...pendingRejections] : drafts
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   },
   clear(): void {
     localStorage.removeItem(STORAGE_KEY)

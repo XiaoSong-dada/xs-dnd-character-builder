@@ -43,6 +43,13 @@ export function isRulesetId(value: unknown): value is RulesetId {
   return value === '5e-2014' || value === '5e-2024'
 }
 
+/** 已通过产品验收、允许进入用户流程的规则版本；按 B00-06 分批开放，后续批次扩展。 */
+export const OPEN_RULESETS: readonly RulesetId[] = ['5e-2014']
+
+export function isRulesetOpen(value: unknown): value is RulesetId {
+  return isRulesetId(value) && OPEN_RULESETS.includes(value)
+}
+
 /** 外部输入必须经过此入口解析；缺失或未知版本不会回退到 2014。 */
 export function getRulesRepository(ruleset: unknown): RulesRepository {
   if (!isRulesetId(ruleset)) throw new UnsupportedRulesetError(ruleset)

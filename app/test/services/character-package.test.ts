@@ -8,11 +8,11 @@ import { CharacterMediaStorageService } from '@/services/character-media-storage
 import { CharacterPackageService } from '@/services/character-package'
 import type { CharacterDraft } from '@/types/character'
 
-function draftWith(media?: CharacterDraft['media']): CharacterDraft {
+function draftWith(media?: CharacterDraft['media'], ruleset: CharacterDraft['ruleset'] = '5e-2014'): CharacterDraft {
   return CharacterJsonService.importDraft(JSON.stringify({
-    schemaVersion: 7,
+    schemaVersion: 8,
     id: 'package-character',
-    ruleset: '5e-2014',
+    ruleset,
     name: '包内角色',
     baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
     selections: [],
@@ -64,6 +64,15 @@ describe('完整角色包', () => {
     const imported = await CharacterPackageService.import(new Blob([bytes as BlobPart], { type: 'application/zip' }))
     expect(imported.name).toBe('包内角色')
     expect(imported.media).toBeUndefined()
+  })
+
+  it('2024 角色包往返保留规则版本', async () => {
+    const draft = draftWith(undefined, '5e-2024')
+    const bytes = await CharacterPackageService.build(draft)
+    const imported = await CharacterPackageService.import(new Blob([bytes as BlobPart], { type: 'application/zip' }))
+    expect(imported.ruleset).toBe('5e-2024')
+    expect(imported.schemaVersion).toBe(8)
+    expect(imported.enabledSourceIds).toEqual([])
   })
 
   it('区分损坏 ZIP 与缺少 character.json', async () => {

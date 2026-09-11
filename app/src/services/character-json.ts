@@ -1,7 +1,10 @@
 import type { CharacterDraft } from '@/types/character'
-import { migrateDraftToV7 } from '@/services/draft-storage'
+import { parseCharacterDraft } from '@/services/draft-storage'
+import { isRulesetId } from '@/rules/repositories'
 
 export type ImportErrorCode = 'invalid-json' | 'unsupported-schema' | 'ruleset-mismatch' | 'incomplete-data'
+
+const SUPPORTED_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8])
 
 export class CharacterImportError extends Error {
   constructor(
@@ -27,18 +30,25 @@ export const CharacterJsonService = {
     if (!value || typeof value !== 'object') {
       throw new CharacterImportError('incomplete-data', '文件中没有角色数据。')
     }
-    const schemaVersion = (value as { schemaVersion?: unknown }).schemaVersion
-    const draft = value as Partial<CharacterDraft>
-    if (![2, 3, 4, 5, 6, 7].includes(Number(schemaVersion))) {
+    const schemaVersion = Number((value as { schemaVersion?: unknown }).schemaVersion)
+    if (!SUPPORTED_SCHEMA_VERSIONS.has(schemaVersion)) {
       throw new CharacterImportError('unsupported-schema', '角色文件版本不受支持。')
     }
-    if (draft.ruleset !== '5e-2014') {
-      throw new CharacterImportError('ruleset-mismatch', '当前仅支持 5e-2014 角色文件；旧版草稿请保留为备份。')
+    const draft = value as Partial<CharacterDraft>
+    const ruleset = draft.ruleset
+    if (typeof ruleset !== 'string' || ruleset.length === 0) {
+      throw new CharacterImportError('ruleset-mismatch', '角色文件缺少有效的规则版本。')
+    }
+    if (!isRulesetId(ruleset)) {
+      throw new CharacterImportError('ruleset-mismatch', `不支持的规则版本：${ruleset}。`)
+    }
+    if (schemaVersion < 8 && ruleset === '5e-2024') {
+      throw new CharacterImportError('ruleset-mismatch', '该文件是旧版 2024 草稿格式，暂不支持导入；请保留原文件作为备份。')
     }
     if (!draft.id || !draft.baseAbilities || !Array.isArray(draft.selections)) {
       throw new CharacterImportError('incomplete-data', '角色文件缺少必要字段。')
     }
-    const migrated = migrateDraftToV7(value)
+    const migrated = parseCharacterDraft(value)
     if (!migrated) throw new CharacterImportError('incomplete-data', '角色文件无法迁移到当前版本。')
     return options.preserveMedia ? migrated : { ...migrated, media: undefined }
   },

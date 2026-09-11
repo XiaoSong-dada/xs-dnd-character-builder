@@ -3,16 +3,20 @@ import { describe, expect, it } from 'vitest'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 
 describe('CharacterJsonService', () => {
-  it('区分无效JSON和规则版本不匹配', () => {
+  it('区分无效 JSON、未知数据版本与旧版 2024 格式', () => {
     expect(() => CharacterJsonService.importDraft('{')).toThrowError(CharacterImportError)
     expect(() => CharacterJsonService.importDraft(JSON.stringify({ schemaVersion: 1, ruleset: '5e-2024' }))).toThrowError('版本不受支持')
+    expect(() => CharacterJsonService.importDraft(JSON.stringify({ schemaVersion: 2, ruleset: '5e-2024' }))).toThrowError('旧版 2024 草稿格式')
+    expect(() => CharacterJsonService.importDraft(JSON.stringify({ schemaVersion: 7, ruleset: '5e-2024' }))).toThrowError('旧版 2024 草稿格式')
   })
 
-  it('拒绝未知数据版本', () => {
-    expect(() => CharacterJsonService.importDraft(JSON.stringify({ schemaVersion: 2, ruleset: '5e-2024' }))).toThrowError('当前仅支持 5e-2014')
+  it('缺少或未知规则版本给出中文原因', () => {
+    const base = { schemaVersion: 8, id: 'ruleset-check', baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 }, selections: [] }
+    expect(() => CharacterJsonService.importDraft(JSON.stringify(base))).toThrowError('角色文件缺少有效的规则版本')
+    expect(() => CharacterJsonService.importDraft(JSON.stringify({ ...base, ruleset: '5e-2025' }))).toThrowError('不支持的规则版本：5e-2025')
   })
 
-  it('imports a 2014 v2 draft as schema v6 without silently dropping equipment', () => {
+  it('imports a 2014 v2 draft as schema v8 without silently dropping equipment', () => {
     const imported = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 2,
       id: 'old-wizard',
@@ -23,7 +27,7 @@ describe('CharacterJsonService', () => {
       equippedItemIds: ['dagger'],
     }))
 
-    expect(imported.schemaVersion).toBe(7)
+    expect(imported.schemaVersion).toBe(8)
     expect(imported.equipmentNeedsReview).toBe(true)
     expect(imported.adventureGold).toBe(0)
     expect(imported.inventory.find((entry) => entry.itemId === 'dagger')).toMatchObject({
@@ -34,7 +38,7 @@ describe('CharacterJsonService', () => {
     expect(imported.manualEdits.addedSpells).toEqual([])
   })
 
-  it('v3 导入保留 adventureGold，缺省时兜底为 0，并升级为 v6 补全转录字段', () => {
+  it('v3 导入保留 adventureGold，缺省时兜底为 0，并升级为 v8 补全转录字段', () => {
     const withGold = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 3,
       id: 'v3-with-gold',
@@ -44,7 +48,7 @@ describe('CharacterJsonService', () => {
       adventureGold: 42,
     }))
     expect(withGold.adventureGold).toBe(42)
-    expect(withGold.schemaVersion).toBe(7)
+    expect(withGold.schemaVersion).toBe(8)
     expect(withGold.spellSelections.transcribedSpellIds).toEqual([])
 
     const withoutGold = CharacterJsonService.importDraft(JSON.stringify({
@@ -57,7 +61,7 @@ describe('CharacterJsonService', () => {
     expect(withoutGold.adventureGold).toBe(0)
   })
 
-  it('v4 导入升级到 v6，导出往返保留 transcribedSpellIds 与人工编辑', () => {
+  it('v4 导入升级到 v8，导出往返保留 transcribedSpellIds 与人工编辑', () => {
     const imported = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 4,
       id: 'v4-with-transcribed',
@@ -72,16 +76,34 @@ describe('CharacterJsonService', () => {
         transcribedSpellIds: ['spell-2014-magic-missile'],
       },
     }))
-    expect(imported.schemaVersion).toBe(7)
+    expect(imported.schemaVersion).toBe(8)
     expect(imported.spellSelections.transcribedSpellIds).toEqual(['spell-2014-magic-missile'])
     const roundTrip = CharacterJsonService.importDraft(CharacterJsonService.exportDraft(imported))
     expect(roundTrip.spellSelections.transcribedSpellIds).toEqual(['spell-2014-magic-missile'])
     expect(roundTrip.manualEdits).toEqual(imported.manualEdits)
   })
 
+  it('v8 2024 草稿导出往返保留规则版本与原始选择', () => {
+    const imported = CharacterJsonService.importDraft(JSON.stringify({
+      schemaVersion: 8,
+      id: 'v8-2024',
+      ruleset: '5e-2024',
+      baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 },
+      selections: [{ checkpointId: 'fighter-2024-style-1', optionIds: ['style-defense'], confirmedAt: '2026-09-11T00:00:00.000Z' }],
+      enabledSourceIds: ['source-2024-phb'],
+    }))
+    expect(imported.schemaVersion).toBe(8)
+    expect(imported.ruleset).toBe('5e-2024')
+    expect(imported.enabledSourceIds).toEqual(['source-2024-phb'])
+    const roundTrip = CharacterJsonService.importDraft(CharacterJsonService.exportDraft(imported))
+    expect(roundTrip.ruleset).toBe('5e-2024')
+    expect(roundTrip.selections).toEqual(imported.selections)
+    expect(roundTrip.enabledSourceIds).toEqual(['source-2024-phb'])
+  })
+
   it('普通 JSON 导出移除媒体引用，避免跨设备产生失效图片', () => {
     const draft = CharacterJsonService.importDraft(JSON.stringify({
-      schemaVersion: 7,
+      schemaVersion: 8,
       id: 'with-media',
       ruleset: '5e-2014',
       baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },

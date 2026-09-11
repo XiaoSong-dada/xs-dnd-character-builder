@@ -10,7 +10,7 @@ const mockConfig = vi.hoisted(() => ({
 vi.mock('@/config/site', () => mockConfig)
 
 const draft: CharacterDraft = {
-  schemaVersion: 7,
+  schemaVersion: 8,
   id: 'draft-delete-test',
   ruleset: '5e-2014',
   createdAt: '',
