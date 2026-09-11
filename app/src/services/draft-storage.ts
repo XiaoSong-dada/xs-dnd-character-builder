@@ -1,4 +1,4 @@
-import type { CharacterDraft, CharacterMedia, LegacyDraftRecord, SpellSelections } from '@/types/character'
+import type { AbilityKey, CharacterDraft, CharacterMedia, LegacyDraftRecord, SpellSelections } from '@/types/character'
 import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
 import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { rulesRepository } from '@/rules/repository'
@@ -73,10 +73,24 @@ function normalizeDraftSourceIds(draft: CharacterDraft): readonly string[] {
   return [...new Set(draft.enabledSourceIds ?? [])]
 }
 
+/** 2024 背景属性分配：只保留六项属性中 1／2 的整数值。 */
+function normalizeBackgroundAbilityAllocation(value: unknown): Readonly<Partial<Record<AbilityKey, number>>> {
+  if (!value || typeof value !== 'object') return {}
+  const source = value as Record<string, unknown>
+  const allocation: Partial<Record<AbilityKey, number>> = {}
+  for (const key of ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const) {
+    const amount = source[key]
+    if (amount === 1 || amount === 2) allocation[key] = amount
+  }
+  return allocation
+}
+
 function normalizeDraft(draft: CharacterDraft): CharacterDraft {
   return {
     ...draft,
     enabledSourceIds: normalizeDraftSourceIds(draft),
+    backgroundAbilityAllocation: normalizeBackgroundAbilityAllocation(draft.backgroundAbilityAllocation),
+    speciesSizeChoice: draft.speciesSizeChoice === 'small' || draft.speciesSizeChoice === 'medium' ? draft.speciesSizeChoice : undefined,
     raceAbilityChoices: draft.raceAbilityChoices ?? [],
     backgroundSkillIds: draft.backgroundSkillIds ?? [],
     backgroundToolIds: draft.backgroundToolIds ?? [],

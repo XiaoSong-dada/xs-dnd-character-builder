@@ -150,9 +150,11 @@ export function getDependencyImpact(draft: CharacterDraft, change: DraftChange):
   if (change.kind === 'race' || change.kind === 'subrace') {
     return {
       invalidated: draft.selections
-        .filter((item) => item.checkpointId.startsWith('race-2014-') || item.checkpointId.includes('-origin-feat'))
+        .filter((item) => item.checkpointId.startsWith('race-2014-') || item.checkpointId.includes('-origin-feat') || item.checkpointId.includes('-spellcasting-ability'))
         .map((item) => item.checkpointId),
-      review: ['种族属性加值', '专长前置条件', '生命值、护甲等级与攻击'],
+      review: draft.ruleset === '5e-2024'
+        ? ['物种体型与语言', '血统／传承法术', '专长前置条件', '生命值、护甲等级与攻击']
+        : ['种族属性加值', '专长前置条件', '生命值、护甲等级与攻击'],
       preserved: ['职业选择', '背景选择', '姓名与人物细节'],
     }
   }
@@ -160,7 +162,7 @@ export function getDependencyImpact(draft: CharacterDraft, change: DraftChange):
     return {
       invalidated: [],
       review: draft.ruleset === '5e-2024'
-        ? ['背景技能、工具与语言', '背景授予的起源专长与重复选择', '重复熟练替换']
+        ? ['背景属性加值', '背景技能、工具与语言', '背景授予的起源专长与重复选择', '重复熟练替换']
         : ['背景技能、工具与语言', '重复熟练替换'],
       preserved: ['职业选择', '种族选择', '等级时间线'],
     }

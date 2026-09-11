@@ -1,5 +1,6 @@
 import { getRulesRepository } from '@/rules/repositories'
 import { applyAbilityImprovement, collectFeatSkillSelections, decodeAbilityImprovement, getFeatAbilityCap, listActiveFeats } from '@/rules/feats'
+import { getBackgroundAbilityBonuses, getSpeciesHitPointBonus } from '@/rules/origins'
 import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
 import { isSourceEnabled } from '@/rules/source-books'
 import { artificerInfusions2014 } from '@/rules/data/artificer-2014'
@@ -198,7 +199,11 @@ export function deriveAbilities(
   ignoredCheckpointId?: string,
   scope?: AbilityDerivationScope,
 ): AbilityScores {
-  const originAbilities = addAbilities(draft.baseAbilities, getRaceAbilityBonuses(draft))
+  const repository = getRulesRepository(draft.ruleset)
+  const originAbilities = addAbilities(
+    addAbilities(draft.baseAbilities, getRaceAbilityBonuses(draft)),
+    getBackgroundAbilityBonuses(draft, repository),
+  )
   return applyAbilityImprovements(originAbilities, draft, ignoredCheckpointId, scope)
 }
 
@@ -236,6 +241,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const subrace = selectedSubrace && isSourceEnabled(selectedSubrace.sourceIds, draft.enabledSourceIds, repository) ? selectedSubrace : undefined
   const activeFeats = listActiveFeats(draft, repository)
   const featHitPointBonus = activeFeats.reduce((sum, feat) => sum + (feat.hitPointBonusPerLevel ?? 0) * draft.targetLevel + (feat.hitPointBonus ?? 0), 0)
+  const speciesHitPointBonus = getSpeciesHitPointBonus(draft, repository)
   const featHitPointNames = activeFeats
     .filter((feat) => (feat.hitPointBonusPerLevel ?? 0) > 0 || (feat.hitPointBonus ?? 0) > 0)
     .map((feat) => feat.name)
@@ -246,6 +252,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     + Math.max(0, draft.targetLevel - 1) * Math.max(1, Math.floor(hitDie / 2) + 1 + modifiers.con)
     + subclassEffects.hitPointBonus
     + featHitPointBonus
+    + speciesHitPointBonus
   const equippedItems = draft.inventory
     .filter((entry) => entry.equippedQuantity > 0)
     .map((entry) => repository.getEquipment(entry.itemId))
@@ -399,6 +406,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     { id: 'constitution', label: '体质调整值', value: modifiers.con * draft.targetLevel, detail: `体质 ${abilities.con}` },
     ...(subclassEffects.hitPointBonus !== 0 ? [{ id: 'subclass-hit-points', label: '子职生命加成', value: subclassEffects.hitPointBonus, detail: draft.subclassId ? `${repository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
     ...(featHitPointBonus !== 0 ? [{ id: 'feat-hit-points', label: '专长生命加成', value: featHitPointBonus, detail: featHitPointNames.join('、') }] : []),
+    ...(speciesHitPointBonus !== 0 ? [{ id: 'species-hit-points', label: '物种生命加成', value: speciesHitPointBonus, detail: '每级最大生命值增加' }] : []),
   ]), manual.derivedAdjustments.hitPoints, 'hit-points')
   const armorClassValue = withManualAdjustment(derived(armorClass, [
     {

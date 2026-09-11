@@ -8,6 +8,8 @@ type RepositoryData = Pick<
   | 'subclasses'
   | 'races'
   | 'backgrounds'
+  | 'raceFeatures'
+  | 'backgroundFeatures'
   | 'options'
   | 'feats'
   | 'equipment'
@@ -45,6 +47,12 @@ export function createRulesRepository(ruleset: RulesetId, data: RepositoryData):
     },
     getBackground(id) {
       return this.backgrounds.find((item) => item.id === id)
+    },
+    getRaceFeatures(raceId) {
+      return this.raceFeatures.filter((feature) => feature.raceId === raceId)
+    },
+    getBackgroundFeatures(backgroundId) {
+      return this.backgroundFeatures.filter((feature) => feature.backgroundId === backgroundId)
     },
     getEquipment(id) {
       return this.equipment.find((item) => item.id === id)

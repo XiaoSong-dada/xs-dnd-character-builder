@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, pointBuyCost, STANDARD_ARRAY } from '@/rules/abilities'
-import type { AbilityKey, AbilityMethod, AbilityScores } from '@/types/character'
+import type { AbilityKey, AbilityMethod, AbilityScores, RulesetId } from '@/types/character'
 
 const props = defineProps<{
   scores: AbilityScores
@@ -12,13 +12,14 @@ const props = defineProps<{
   flexibleChoices: readonly AbilityKey[]
   flexibleGroups?: readonly { count: number; value: number }[]
   excludedChoices?: readonly AbilityKey[]
+  ruleset?: RulesetId
 }>()
 const emit = defineEmits<{ change: [scores: AbilityScores]; choices: [choices: readonly AbilityKey[]] }>()
 const labels: Record<AbilityKey, string> = { str: '力量', dex: '敏捷', con: '体质', int: '智力', wis: '感知', cha: '魅力' }
 const keys: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
-const pointCost = computed(() => pointBuyCost(props.scores, '5e-2014'))
+const pointCost = computed(() => pointBuyCost(props.scores, props.ruleset ?? '5e-2014'))
 const methodValid = computed(() =>
-  areBaseAbilitiesValid(props.scores, props.method, '5e-2014')
+  areBaseAbilitiesValid(props.scores, props.method, props.ruleset ?? '5e-2014')
   && areOriginAbilitiesWithinCap(props.scores, props.bonuses),
 )
 
@@ -45,7 +46,8 @@ function minimumScore(): number {
 }
 
 function maximumScore(key: AbilityKey): number {
-  return props.method === 'point-buy' ? 20 - (props.bonuses[key] ?? 0) : 20
+  if (props.method !== 'point-buy') return 20
+  return props.ruleset === '5e-2024' ? 15 : 20 - (props.bonuses[key] ?? 0)
 }
 
 function canDecrease(key: AbilityKey): boolean {
@@ -56,7 +58,7 @@ function canIncrease(key: AbilityKey): boolean {
   if (props.scores[key] >= maximumScore(key)) return false
   if (props.method !== 'point-buy') return true
   const next = { ...props.scores, [key]: props.scores[key] + 1 }
-  return areBaseAbilitiesValid(next, 'point-buy', '5e-2014')
+  return areBaseAbilitiesValid(next, 'point-buy', props.ruleset ?? '5e-2014')
     && areOriginAbilitiesWithinCap(next, props.bonuses)
 }
 
@@ -85,13 +87,13 @@ function choiceDisabled(key: AbilityKey): boolean {
 
 <template>
   <section class="abilities-step">
-    <p>先填写基础属性，再应用2014种族与子种族加值。职业推荐不会限制分配。</p>
+    <p>{{ ruleset === '5e-2024' ? '先填写基础属性；属性加值来自背景三候选分配，物种不提供加值。' : '先填写基础属性，再应用2014种族与子种族加值。职业推荐不会限制分配。' }}</p>
     <aside :class="{ 'abilities-step__method--error': !methodValid }" class="abilities-step__method">
       <strong v-if="method === 'standard-array'">标准数组</strong>
       <strong v-else-if="method === 'point-buy'">27点购点：已使用 {{ pointCost }}/27</strong>
       <strong v-else>自定义属性</strong>
       <span v-if="method === 'standard-array'">将 15、14、13、12、10、8 分别分配给六项基础属性；这里不包含种族加成。选择已使用的数值时，两项属性会自动交换。</span>
-      <span v-else-if="method === 'point-buy'">基础值从8开始，每提高1点消耗1点；27点预算只计算本页基础值，不计种族加成和后续属性提升。所有加成后的最终值不能超过20。</span>
+      <span v-else-if="method === 'point-buy'">{{ ruleset === '5e-2024' ? '官方购点：基础值 8—15，每项 9—13 花费 1 点，14 与 15 各花费 2 点；预算 27 点。这里不计背景加值与后续属性提升。' : '基础值从8开始，每提高1点消耗1点；27点预算只计算本页基础值，不计种族加成和后续属性提升。所有加成后的最终值不能超过20。' }}</span>
       <span v-else>每项范围 3—20；自定义结果应由玩家与DM确认。</span>
     </aside>
     <div v-if="flexibleCount" class="abilities-step__choices">

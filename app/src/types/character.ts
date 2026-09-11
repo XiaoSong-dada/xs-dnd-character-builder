@@ -153,6 +153,10 @@ export interface CharacterDraft {
   readonly backgroundId?: string
   readonly backgroundVariantId?: string
   readonly raceAbilityChoices: readonly AbilityKey[]
+  /** 2024 背景三项候选属性的分配结果（+2/+1 或各 +1）；2014 草稿缺省。 */
+  readonly backgroundAbilityAllocation?: Readonly<Partial<Record<AbilityKey, number>>>
+  /** 2024 物种创建时选择的体型；固定体型的物种不需要。 */
+  readonly speciesSizeChoice?: 'small' | 'medium'
   /** 种族自选技能熟练结果（如半精灵 2 项、兽人 7 选 2）；旧草稿缺省为空。 */
   readonly raceSkillChoices?: readonly string[]
   /** 种族自选工具熟练结果（矮人/战俑/维达肯/吉斯洋基）；展示级，不参与派生。 */

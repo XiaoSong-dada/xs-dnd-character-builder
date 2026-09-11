@@ -16,8 +16,7 @@ import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
-import { getRaceFeatures2014 } from '@/rules/data/race-features-2014'
-import { getBackgroundFeatures2014 } from '@/rules/data/background-features-2014'
+import { getRulesRepository } from '@/rules/repositories'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
@@ -480,7 +479,7 @@ const raceInfo = computed(() => {
   if (!raceId) return undefined
   const race = rulesRepository.getRace(raceId)
   if (!race) return undefined
-  const features = getRaceFeatures2014(raceId)
+  const features = getRulesRepository(props.draft.ruleset).getRaceFeatures(raceId)
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { race, features }
 })
@@ -490,7 +489,7 @@ const subraceInfo = computed(() => {
   if (!subraceId || subraceId === props.draft.raceId) return undefined
   const race = rulesRepository.getRace(subraceId)
   if (!race) return undefined
-  const features = getRaceFeatures2014(subraceId)
+  const features = getRulesRepository(props.draft.ruleset).getRaceFeatures(subraceId)
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { race, features }
 })
@@ -501,7 +500,7 @@ const backgroundInfo = computed(() => {
   const background = rulesRepository.getBackground(backgroundId)
   if (!background) return undefined
   const ownerId = background.parentBackgroundId ?? backgroundId
-  const features = getBackgroundFeatures2014(ownerId)
+  const features = getRulesRepository(props.draft.ruleset).getBackgroundFeatures(ownerId)
   return { background, features }
 })
 /** 存在失效选择或未完成的时间线检查点时，角色卡标记为"待补全"。 */

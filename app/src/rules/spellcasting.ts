@@ -1,6 +1,7 @@
-import { abilityModifier, deriveAbilities } from '@/rules/derive'
+import { abilityModifier, deriveAbilities, proficiencyBonus } from '@/rules/derive'
 import { getFeatChosenAbility, listActiveFeats, listFeatGrants } from '@/rules/feats'
 import { normalizeManualEdits } from '@/rules/manual-edits'
+import { getDraftSpeciesRules } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
 import { abilityFromSpeciesSpellAbilityOption, classIdFromSpellListOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
@@ -238,22 +239,6 @@ function resolveSpellListClassId(
   return optionId ? classIdFromSpellListOption(optionId) : undefined
 }
 
-/** 角色物种链规则（子种族起沿 parentRaceId 叠加，来源关闭时跳过）。 */
-function draftSpeciesRules(draft: CharacterDraft, repository: RulesRepository): readonly RaceRule[] {
-  const rules: RaceRule[] = []
-  const visited = new Set<string>()
-  const visit = (raceId: string | undefined): void => {
-    if (!raceId || visited.has(raceId)) return
-    visited.add(raceId)
-    const race = repository.getRace(raceId)
-    if (!race || !isSourceEnabled(race.sourceIds, draft.enabledSourceIds, repository)) return
-    if (race.parentRaceId) visit(race.parentRaceId)
-    rules.push(race)
-  }
-  visit(draft.subraceId ?? draft.raceId)
-  return rules
-}
-
 /** 物种按等级授予的固定法术（纯函数，供派生与测试）。 */
 export function collectSpeciesSpellGrants(
   race: RaceRule | undefined,
@@ -312,7 +297,7 @@ export function getAlwaysPreparedSpellIds(draft: CharacterDraft): readonly strin
     }
   }
   // 物种授予（血统法术等，按获得等级生效）。
-  for (const race of draftSpeciesRules(draft, repository)) {
+  for (const race of getDraftSpeciesRules(draft, repository)) {
     for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel)) {
       if (grant.alwaysPrepared !== false) ids.add(grant.spellId)
     }
@@ -386,12 +371,18 @@ export function getSpellFreeCastings(draft: CharacterDraft): readonly FreeCastin
       push(spellId, selection.checkpointId, grant.freeCastings, grant.recovery ?? 'long-rest', grant.ability)
     }
   }
-  // 物种授予（血统法术的免费次数）。
-  for (const race of draftSpeciesRules(draft, repository)) {
-    const ability = getSpeciesSpellAbility(race, draft.selections)
+  // 物种授予（血统法术的免费次数）；施法属性从物种链上的属性选择解析。
+  const speciesRules = getDraftSpeciesRules(draft, repository)
+  const speciesAbility = speciesRules
+    .map((race) => getSpeciesSpellAbility(race, draft.selections))
+    .find((ability): ability is AbilityKey => Boolean(ability))
+  for (const race of speciesRules) {
     for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel)) {
-      if (!grant.freeCastings) continue
-      push(grant.spellId, race.id, grant.freeCastings, grant.recovery ?? 'long-rest', grant.ability ?? ability)
+      const count = grant.freeCastingsFrom === 'proficiency-bonus'
+        ? proficiencyBonus(draft.targetLevel)
+        : grant.freeCastings ?? 0
+      if (count <= 0) continue
+      push(grant.spellId, race.id, count, grant.recovery ?? 'long-rest', grant.ability ?? speciesAbility)
     }
   }
   return grants

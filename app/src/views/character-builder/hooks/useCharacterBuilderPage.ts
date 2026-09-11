@@ -3,6 +3,8 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 
 import { deriveCharacter, getFlexibleBonusRule, getRaceAbilityBonuses } from '@/rules/derive'
+import { getBackgroundAbilityBonuses } from '@/rules/origins'
+import { getRulesRepository } from '@/rules/repositories'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { rulesRepository } from '@/rules/repository'
@@ -51,7 +53,14 @@ export function useCharacterBuilderPage() {
     readonly apply: () => void
   }>()
   const derived = computed(() => activeDraft.value ? deriveCharacter(activeDraft.value) : undefined)
-  const raceAbilityBonuses = computed(() => activeDraft.value ? getRaceAbilityBonuses(activeDraft.value) : {})
+  const raceAbilityBonuses = computed(() => {
+    const draft = activeDraft.value
+    if (!draft) return {}
+    return {
+      ...getRaceAbilityBonuses(draft),
+      ...getBackgroundAbilityBonuses(draft, getRulesRepository(draft.ruleset)),
+    }
+  })
   const raceFlexibleCount = computed(() => {
     const draft = activeDraft.value
     if (!draft) return 0

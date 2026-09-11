@@ -93,6 +93,8 @@ export interface FixedSpellGrant {
   readonly spellId: string
   readonly alwaysPrepared?: boolean
   readonly freeCastings?: number
+  /** 免费次数随熟练加值变化（如森林侏儒动物交谈）。 */
+  readonly freeCastingsFrom?: 'proficiency-bonus'
   readonly recovery?: 'long-rest' | 'short-rest'
   readonly ability?: AbilityKey
 }
@@ -397,6 +399,16 @@ export interface RaceRule {
   readonly spellcastingAbilityChoices?: readonly AbilityKey[]
   /** 2024 物种随时间授予的固定法术（如血统法术）；2014 与待接入数据省略。 */
   readonly spellGrants?: readonly SpeciesSpellGrant[]
+  /** 2024 固定体型；与 sizeChoices 二选一。 */
+  readonly size?: 'small' | 'medium'
+  /** 2024 创建时可选的体型（阿斯莫、人类、提夫林）。 */
+  readonly sizeChoices?: readonly ('small' | 'medium')[]
+  /** 2024 黑暗视觉范围（尺）；无黑暗视觉省略。 */
+  readonly darkvision?: number
+  /** 2024 其他感官原创释义（如震颤感知、盲视）；展示用。 */
+  readonly senses?: readonly string[]
+  /** 无条件派生：每级最大生命值加成（如矮人坚韧 +1/级）。 */
+  readonly hitPointBonusPerLevel?: number
   readonly recommendedClassIds: readonly string[]
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
@@ -418,6 +430,14 @@ export interface BackgroundRule {
   readonly featureName: string
   /** 2024 背景固定授予的起源专长；2014 背景与待接入数据省略。 */
   readonly originFeatId?: string
+  /** 2024 背景的三项属性候选（+2/+1 或各 +1）；2014 背景省略。 */
+  readonly abilityChoices?: readonly AbilityKey[]
+  /** 2024 背景的可选工具规格（如工匠工具、乐器、赌具）。 */
+  readonly toolChoices?: { readonly count: number; readonly optionIds?: readonly string[] }
+  /** 2024 装备 A 的物品显示名；B07 建立装备库后转为稳定 ID 引用。 */
+  readonly startingEquipmentOptionA?: readonly string[]
+  /** 2024 装备 B 的金币数量（通常 50 GP）。 */
+  readonly startingEquipmentGold?: number
   readonly recommendedClassIds: readonly string[]
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
@@ -506,6 +526,10 @@ export interface RulesRepository {
   readonly subclasses: readonly SubclassRule[]
   readonly races: readonly RaceRule[]
   readonly backgrounds: readonly BackgroundRule[]
+  /** 种族／物种特性注册表（2014 种族特性、2024 物种特性）。 */
+  readonly raceFeatures: readonly RaceFeature[]
+  /** 背景特性注册表（2024 背景无 2014 式特性时为空）。 */
+  readonly backgroundFeatures: readonly BackgroundFeature[]
   readonly options: readonly RuleOption[]
   readonly feats: readonly FeatRule[]
   readonly equipment: readonly EquipmentRule[]
@@ -520,6 +544,8 @@ export interface RulesRepository {
   getFeat(id: string): FeatRule | undefined
   getRace(id: string): RaceRule | undefined
   getBackground(id: string): BackgroundRule | undefined
+  getRaceFeatures(raceId: string): readonly RaceFeature[]
+  getBackgroundFeatures(backgroundId: string): readonly BackgroundFeature[]
   getEquipment(id: string): EquipmentRule | undefined
   getClassStartingEquipment(classId: string): ClassStartingEquipmentRule | undefined
   getBackgroundStartingEquipment(backgroundId: string): BackgroundStartingEquipmentRule | undefined

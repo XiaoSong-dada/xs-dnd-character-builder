@@ -155,6 +155,7 @@ function updateMethod(value: AbilityMethod): void {
     />
     <OriginStep
       v-else-if="step === 'origin'"
+      :ruleset="activeDraft.ruleset"
       :class-id="activeDraft.classId"
       :race-id="activeDraft.raceId"
       :subrace-id="activeDraft.subraceId"
@@ -164,6 +165,8 @@ function updateMethod(value: AbilityMethod): void {
       :languages="activeDraft.languages"
       :race-skill-choices="activeDraft.raceSkillChoices ?? []"
       :race-tool-choice="activeDraft.raceToolChoice"
+      :size-choice="activeDraft.speciesSizeChoice"
+      :background-abilities="activeDraft.backgroundAbilityAllocation ?? {}"
       @race="selectRace"
       @subrace="selectSubrace"
       @background="selectBackground"
@@ -171,9 +174,12 @@ function updateMethod(value: AbilityMethod): void {
       @languages="updateDraft({ languages: $event })"
       @race-skills="updateDraft({ raceSkillChoices: $event })"
       @race-tool="updateDraft({ raceToolChoice: $event })"
+      @size="updateDraft({ speciesSizeChoice: $event })"
+      @background-abilities="updateDraft({ backgroundAbilityAllocation: $event })"
     />
     <AbilitiesStep
       v-else-if="step === 'abilities'"
+      :ruleset="activeDraft.ruleset"
       :scores="activeDraft.baseAbilities"
       :method="activeDraft.abilityMethod"
       :bonuses="raceAbilityBonuses"

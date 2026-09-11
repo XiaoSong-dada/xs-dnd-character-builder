@@ -18,6 +18,8 @@ import { fullCasterClasses2014 } from '@/rules/data/full-casters-2014'
 import { metamagicOptions2014 } from '@/rules/data/metamagic-2014'
 import { subclassChoiceOptions2014 } from '@/rules/data/subclass-choice-options-2014'
 import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
+import { raceFeatures2014 } from '@/rules/data/race-features-2014'
+import { backgroundFeatures2014 } from '@/rules/data/background-features-2014'
 import { backgroundStartingEquipment2014, classStartingEquipment2014 } from '@/rules/data/starting-equipment-2014'
 import { subclasses2014, subclassOptions2014 } from '@/rules/data/subclasses-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
@@ -40,6 +42,8 @@ export const rulesRepository2014: RulesRepository = {
   subclasses: subclasses2014,
   races: races2014,
   backgrounds: backgrounds2014,
+  raceFeatures: raceFeatures2014,
+  backgroundFeatures: backgroundFeatures2014,
   options: [
     ...abilityImprovementOptions2014,
     ...featChoiceOptions2014,
@@ -85,6 +89,12 @@ export const rulesRepository2014: RulesRepository = {
   },
   getBackground(id) {
     return this.backgrounds.find((item) => item.id === id)
+  },
+  getRaceFeatures(raceId) {
+    return this.raceFeatures.filter((feature) => feature.raceId === raceId)
+  },
+  getBackgroundFeatures(backgroundId) {
+    return this.backgroundFeatures.filter((feature) => feature.backgroundId === backgroundId)
   },
   getEquipment(id) {
     return this.equipment.find((item) => item.id === id)

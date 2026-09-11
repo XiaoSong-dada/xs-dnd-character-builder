@@ -1,13 +1,13 @@
 import { createRulesRepository } from '@/rules/repository-builder'
 import { rulesRepository2014 } from '@/rules/repository'
 import {
-  backgrounds2024Sample,
   classes2024Sample,
   equipment2024Sample,
-  races2024Sample,
   sources2024Sample,
   subclasses2024Sample,
 } from '@/rules/data/rules-2024-sample'
+import { backgrounds2024, races2024 } from '@/rules/data/origins-2024'
+import { speciesTraits2024 } from '@/rules/data/species-traits-2024'
 import { abilityImprovementOptions2024, feats2024 } from '@/rules/data/feats-2024'
 import { spellListOptions2024, speciesSpellAbilityOptions2024 } from '@/rules/data/spell-lists-2024'
 import { spells2024 } from '@/rules/data/spells-2024'
@@ -25,8 +25,10 @@ export const rulesRepository2024 = createRulesRepository('5e-2024', {
   sources: sources2024Sample,
   classes: classes2024Sample,
   subclasses: subclasses2024Sample,
-  races: races2024Sample,
-  backgrounds: backgrounds2024Sample,
+  races: races2024,
+  backgrounds: backgrounds2024,
+  raceFeatures: speciesTraits2024,
+  backgroundFeatures: [],
   options: [...abilityImprovementOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024],
   feats: feats2024,
   equipment: equipment2024Sample,

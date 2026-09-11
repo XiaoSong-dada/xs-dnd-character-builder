@@ -1,10 +1,8 @@
 import type {
-  BackgroundRule,
   ChoiceCheckpoint,
   ClassRule,
   EquipmentRule,
   FeatCategory,
-  RaceRule,
   SubclassRule,
 } from '@/types/rules'
 import type { RuleSource } from '@/types/character'
@@ -136,21 +134,6 @@ export const subclasses2024Sample: readonly SubclassRule[] = [
     summary: 'B00“塑能学派”对应的 B02 架构核验样例。', status: 'unavailable', sourceIds: ['source-2024-phb'], features: [],
   },
 ]
-
-export const races2024Sample: readonly RaceRule[] = [{
-  id: 'species-2024-human', ruleset: '5e-2024', name: '人类', englishName: 'Human',
-  summary: 'B02 起源隔离样例。', description: '完整物种选择与收益由 B06 接入。',
-  subraceIds: [], fixedAbilityBonuses: {}, recommendedClassIds: [], status: 'unavailable', sourceIds: ['source-2024-phb'],
-  originFeatChoices: { count: 1, categories: ['origin'] },
-}]
-
-export const backgrounds2024Sample: readonly BackgroundRule[] = [{
-  id: 'background-2024-sage', ruleset: '5e-2024', name: '贤者', englishName: 'Sage',
-  summary: 'B02 起源隔离样例。', description: '完整背景属性、专长及装备由 B06 接入。',
-  variantIds: [], skillIds: [], toolIds: [], languageChoices: 0, featureName: '待 B06 装配',
-  originFeatId: 'feat-2024-magic-initiate',
-  recommendedClassIds: [], status: 'unavailable', sourceIds: ['source-2024-phb'],
-}]
 
 export const equipment2024Sample: readonly EquipmentRule[] = [{
   id: 'equipment-2024-longsword', ruleset: '5e-2024', name: '长剑', englishName: 'Longsword',

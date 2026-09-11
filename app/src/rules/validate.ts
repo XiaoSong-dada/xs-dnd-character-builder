@@ -15,6 +15,8 @@ import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abil
 import { getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
+import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
+import { getBackgroundAllocationIssue, getDraftSpeciesRules } from '@/rules/origins'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { isSourceEnabled } from '@/rules/source-books'
@@ -198,18 +200,53 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       resolution: '半精灵的两项自选属性不能再次选择魅力。',
     })
   }
-  const background = draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
+  const requiredLanguages = getRequiredLanguageCount(draft, repository)
   if (
-    background
-    && (draft.languages.length !== background.languageChoices || new Set(draft.languages).size !== draft.languages.length)
+    requiredLanguages > 0
+    && (draft.languages.length !== requiredLanguages || new Set(draft.languages).size !== draft.languages.length)
   ) {
     issues.push({
       id: 'background-languages',
       step: 'origin',
       severity: 'error',
-      message: '背景语言选择尚未完成。',
-      resolution: `请选择${background.languageChoices}种不同的额外语言。`,
+      message: draft.ruleset === '5e-2024' ? '语言选择尚未完成。' : '背景语言选择尚未完成。',
+      resolution: `请选择${requiredLanguages}种不同的额外语言。`,
     })
+  }
+  if (draft.ruleset === '5e-2024') {
+    const languageOptions = new Set(getLanguageOptions('5e-2024'))
+    if (draft.languages.some((language) => !languageOptions.has(language))) {
+      issues.push({
+        id: 'language-invalid',
+        step: 'origin',
+        severity: 'error',
+        message: '语言选择包含标准表之外的选项。',
+        resolution: '从通用手语、龙语、矮人语、精灵语、巨人语、侏儒语、地精语、半身人语、兽人语中选择。',
+      })
+    }
+    const allocationIssue = getBackgroundAllocationIssue(draft, repository)
+    if (allocationIssue) {
+      issues.push({
+        id: 'background-ability-allocation',
+        step: 'abilities',
+        severity: 'error',
+        message: '背景属性加值分配不合法。',
+        resolution: allocationIssue,
+      })
+    }
+    const sizeRules = getDraftSpeciesRules(draft, repository).filter((race) => (race.sizeChoices?.length ?? 0) > 0)
+    if (sizeRules.length > 0) {
+      const size = draft.speciesSizeChoice
+      if (!size || !sizeRules.some((race) => race.sizeChoices?.includes(size))) {
+        issues.push({
+          id: 'species-size-required',
+          step: 'origin',
+          severity: 'error',
+          message: '物种需要选择体型。',
+          resolution: '选择小型或中型。',
+        })
+      }
+    }
   }
 
   if (draft.classId) {

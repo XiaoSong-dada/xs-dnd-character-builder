@@ -14,10 +14,9 @@ import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
-import { getRaceFeatures2014 } from '@/rules/data/race-features-2014'
-import { getBackgroundFeatures2014 } from '@/rules/data/background-features-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import { getAvailableSlotLevels } from '@/rules/session-state'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getEffectiveSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
@@ -169,7 +168,7 @@ const subclassFeatures = computed(() =>
 const raceName = computed(() => props.draft.raceId ? (rulesRepository.getRace(props.draft.raceId)?.name ?? '') : '')
 const raceFeatures = computed(() =>
   props.draft.raceId
-    ? getRaceFeatures2014(props.draft.raceId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? getRulesRepository(props.draft.ruleset).getRaceFeatures(props.draft.raceId).filter((feature) => feature.level <= props.draft.targetLevel)
     : [],
 )
 const subraceName = computed(() =>
@@ -179,7 +178,7 @@ const subraceName = computed(() =>
 )
 const subraceFeatures = computed(() =>
   props.draft.subraceId && props.draft.subraceId !== props.draft.raceId
-    ? getRaceFeatures2014(props.draft.subraceId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? getRulesRepository(props.draft.ruleset).getRaceFeatures(props.draft.subraceId).filter((feature) => feature.level <= props.draft.targetLevel)
     : [],
 )
 const backgroundName = computed(() => {
@@ -191,7 +190,7 @@ const backgroundFeatures = computed(() => {
   if (!id) return []
   const background = rulesRepository.getBackground(id)
   const ownerId = background?.parentBackgroundId ?? id
-  return getBackgroundFeatures2014(ownerId)
+  return getRulesRepository(props.draft.ruleset).getBackgroundFeatures(ownerId)
 })
 const featAndAsiEntries = computed(() => {
   const draft = props.draft
