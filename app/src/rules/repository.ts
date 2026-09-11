@@ -29,7 +29,8 @@ import type { CharacterDraft } from '@/types/character'
 const withoutLegacySubclassOptions = <T extends { readonly id: string }>(options: readonly T[]): readonly T[] =>
   options.filter((option) => !option.id.startsWith('subclass-2014-'))
 
-export const rulesRepository: RulesRepository = {
+export const rulesRepository2014: RulesRepository = {
+  ruleset: '5e-2014',
   sources: sources2014,
   classes: classPreviews2014.map((item) => {
     const classRule = [artificerClass2014, fighterRule, ...martialClasses2014, ...halfCasterClasses2014, ...arcaneCasterClasses2014, ...fullCasterClasses2014].find((classRule) => classRule.id === item.id)
@@ -103,3 +104,6 @@ export const rulesRepository: RulesRepository = {
     return this.spells.find((item) => item.id === id)
   },
 }
+
+/** B02 兼容入口：现有调用方在 B03 前继续固定使用 2014 仓库。 */
+export const rulesRepository = rulesRepository2014

@@ -154,7 +154,7 @@
 - 2024子职：[战斗大师](classes/subclasses/fighter/fighter-battle-master.md)、[勇士](classes/subclasses/fighter/fighter-champion.md)、[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)、[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md)
 - 旧版与扩展子职：[紫龙骑士](classes/subclasses/fighter/fighter-purple-dragon-knight.md)、[奥法射手](classes/subclasses/fighter/fighter-arcane-archer.md)、[骑兵](classes/subclasses/fighter/fighter-cavalier.md)、[武士](classes/subclasses/fighter/fighter-samurai.md)、[回音骑士](classes/subclasses/fighter/fighter-echo-knight.md)、[符文骑士](classes/subclasses/fighter/fighter-rune-knight.md)
 - 选择与校验：已记录技能、装备、战斗风格、武器精通、回气、动作如潮、不屈、额外攻击和旧版资源兼容边界
-- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-27
+- 来源与核验：首批战士／勇士已按项目内5e不全书复核；其他子职仍沿用既有参考来源；最后核验日期 2026-09-08
 
 ### 5.6 武僧 Monk
 
@@ -222,7 +222,7 @@
 - 2024子职：[防护师](classes/subclasses/wizard/wizard-abjurer.md)、[预言师](classes/subclasses/wizard/wizard-diviner.md)、[塑能师](classes/subclasses/wizard/wizard-evoker.md)、[幻术师](classes/subclasses/wizard/wizard-illusionist.md)
 - 旧版与扩展子职：[咒法学派](classes/subclasses/wizard/wizard-conjuration.md)、[附魔学派](classes/subclasses/wizard/wizard-enchantment.md)、[死灵学派](classes/subclasses/wizard/wizard-necromancy.md)、[变化学派](classes/subclasses/wizard/wizard-transmutation.md)、[剑咏](classes/subclasses/wizard/wizard-bladesinging.md)、[战争魔法](classes/subclasses/wizard/wizard-war-magic.md)、[时间魔法](classes/subclasses/wizard/wizard-chronurgy-magic.md)、[重力魔法](classes/subclasses/wizard/wizard-graviturgy-magic.md)、[书士会](classes/subclasses/wizard/wizard-order-of-scribes.md)
 - 选择与校验：已记录法术书、准备法术、抄录、仪式、奥术回想、法术精通、招牌法术和旧版2级特性映射
-- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-27
+- 来源与核验：首批法师／塑能师已按项目内5e不全书复核；其他子职仍沿用既有参考来源；最后核验日期 2026-09-08
 
 ## 6. 单项特性记录模板
 

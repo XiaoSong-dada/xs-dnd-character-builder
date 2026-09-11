@@ -16,9 +16,9 @@ const props = defineProps<{
 const emit = defineEmits<{ change: [scores: AbilityScores]; choices: [choices: readonly AbilityKey[]] }>()
 const labels: Record<AbilityKey, string> = { str: '力量', dex: '敏捷', con: '体质', int: '智力', wis: '感知', cha: '魅力' }
 const keys: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
-const pointCost = computed(() => pointBuyCost(props.scores))
+const pointCost = computed(() => pointBuyCost(props.scores, '5e-2014'))
 const methodValid = computed(() =>
-  areBaseAbilitiesValid(props.scores, props.method)
+  areBaseAbilitiesValid(props.scores, props.method, '5e-2014')
   && areOriginAbilitiesWithinCap(props.scores, props.bonuses),
 )
 
@@ -56,7 +56,7 @@ function canIncrease(key: AbilityKey): boolean {
   if (props.scores[key] >= maximumScore(key)) return false
   if (props.method !== 'point-buy') return true
   const next = { ...props.scores, [key]: props.scores[key] + 1 }
-  return areBaseAbilitiesValid(next, 'point-buy')
+  return areBaseAbilitiesValid(next, 'point-buy', '5e-2014')
     && areOriginAbilitiesWithinCap(next, props.bonuses)
 }
 

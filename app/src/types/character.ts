@@ -1,4 +1,4 @@
-export type RulesetId = '5e-2014'
+export type RulesetId = '5e-2014' | '5e-2024'
 export type CompatibilityStatus = 'implemented' | 'selectable' | 'index-only' | 'dm-only' | 'unavailable'
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 export type AbilityMethod = 'standard-array' | 'point-buy' | 'custom'

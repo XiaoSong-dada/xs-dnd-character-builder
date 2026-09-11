@@ -65,7 +65,7 @@ export interface FeatChoiceSpec {
 }
 
 export interface FeatRule extends RuleOption {
-  readonly ruleset: '5e-2014'
+  readonly ruleset: RulesetId
   readonly englishName: string
   readonly tags: readonly string[]
   readonly prerequisite?: FeatPrerequisite
@@ -314,7 +314,7 @@ export interface EquipmentRule {
   readonly id: string
   readonly name: string
   readonly englishName: string
-  readonly ruleset: RulesetId | '5e-2024'
+  readonly ruleset: RulesetId
   readonly status: CompatibilityStatus
   /** 展开区详情：护甲 AC/力量需求/隐蔽劣势、武器伤害与特性、魔法物品效果要点等（原创转述）。 */
   readonly description: string
@@ -387,6 +387,7 @@ export interface BackgroundStartingEquipmentRule {
 }
 
 export interface RulesRepository {
+  readonly ruleset: RulesetId
   readonly sources: readonly RuleSource[]
   readonly classes: readonly ClassRule[]
   readonly subclasses: readonly SubclassRule[]

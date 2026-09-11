@@ -106,7 +106,7 @@ export function useCharacterBuilderPage() {
     }
     if (step.value === 'abilities') {
       return draft.raceAbilityChoices.length === raceFlexibleCount.value
-        && areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod)
+        && areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod, draft.ruleset)
         && areOriginAbilitiesWithinCap(draft.baseAbilities, raceAbilityBonuses.value)
     }
     if (step.value === 'timeline') return timelineComplete.value
@@ -204,7 +204,7 @@ export function useCharacterBuilderPage() {
     const draft = activeDraft.value
     const abilityPatch = draft
       && abilityMethod === 'standard-array'
-      && !areBaseAbilitiesValid(draft.baseAbilities, 'standard-array')
+      && !areBaseAbilitiesValid(draft.baseAbilities, 'standard-array', draft.ruleset)
       ? { baseAbilities: STANDARD_ARRAY_DEFAULT }
       : {}
     if (!draft || targetLevel === draft.targetLevel) {

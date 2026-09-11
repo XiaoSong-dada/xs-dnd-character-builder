@@ -142,7 +142,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     }
   }
   const raceAbilityBonuses = getRaceAbilityBonuses(draft)
-  if (!areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod)) {
+  if (!areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod, draft.ruleset)) {
     issues.push({
       id: 'ability-method-invalid',
       step: 'abilities',
