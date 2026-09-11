@@ -137,6 +137,34 @@ function buildSpeciesFeatCheckpoints(
   }]
 }
 
+/** 物种法术施法属性检查点（2024 精灵、侏儒、提夫林等选择 INT／WIS／CHA）。 */
+function buildSpeciesAbilityCheckpoints(
+  raceIds: readonly (string | undefined)[],
+  repository: RulesRepository,
+): readonly ChoiceCheckpoint[] {
+  const checkpoints: ChoiceCheckpoint[] = []
+  const seen = new Set<string>()
+  for (const raceId of raceIds) {
+    if (!raceId || seen.has(raceId)) continue
+    seen.add(raceId)
+    const race = repository.getRace(raceId)
+    if (!race?.spellcastingAbilityChoices?.length) continue
+    checkpoints.push({
+      id: `${race.id}-spellcasting-ability`,
+      level: 1,
+      step: 'timeline',
+      kind: 'class-choice',
+      title: '选择物种法术施法属性',
+      description: `${race.name}的物种法术需要选择智力、感知或魅力作为施法属性。`,
+      required: true,
+      minSelections: 1,
+      maxSelections: 1,
+      optionIds: race.spellcastingAbilityChoices.map((ability) => `spell-ability-${ability}`),
+    })
+  }
+  return checkpoints
+}
+
 function buildFeatChoiceCheckpoints(
   parentCheckpoints: readonly ChoiceCheckpoint[],
   selections: readonly ChoiceSelection[],
@@ -167,6 +195,10 @@ function buildFeatChoiceCheckpoints(
       abilityBonus: choice.abilityBonus,
       abilityCap: choice.abilityCap,
       grantSavingThrowProficiency: choice.grantSavingThrowProficiency,
+      candidateKind: choice.candidateKind,
+      spellGrant: choice.spellGrant,
+      spellPool: choice.spellPool,
+      selectionCountFrom: choice.selectionCountFrom,
     }))
   })
 }
@@ -197,6 +229,7 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
   const baseTimeline = [
     ...(context.subraceId === 'race-2014-human-variant' ? [variantHumanCheckpoint] : []),
     ...(context.raceId ? buildSpeciesFeatCheckpoints(context.raceId, repository, context.enabledSourceIds) : []),
+    ...buildSpeciesAbilityCheckpoints([context.subraceId, context.raceId], repository),
     ...classCheckpoints,
     ...(context.subclassId ? buildSubclassFeatureCheckpoints(context.subclassId, repository, context.enabledSourceIds) : []),
   ]

@@ -6,7 +6,7 @@ import {
 import { ABILITY_IMPROVEMENT_OPTION_IDS_2024 } from '@/rules/data/feats-2024'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, AbilityScores, CharacterDraft, RulesetId } from '@/types/character'
-import type { ArmorTraining, FeatCategory, FeatChoiceSpec, FeatRule, RulesRepository } from '@/types/rules'
+import type { ArmorTraining, ChoiceCheckpoint, FeatCategory, FeatChoiceSpec, FeatRule, RulesRepository } from '@/types/rules'
 
 export type AbilityImprovementMode = 'single' | 'split'
 
@@ -299,4 +299,32 @@ export function classHasFightingStyle(
   if (!classId) return false
   const classRule = repository.getClass(classId)
   return Boolean(classRule?.checkpoints.some((checkpoint) => checkpoint.kind === 'fighting-style' && checkpoint.level <= level))
+}
+
+/** 检查点动态选择数量：默认取 min/max；声明按熟练加值时取当前熟练加值。 */
+export function getCheckpointSelectionBounds(
+  draft: CharacterDraft,
+  checkpoint: ChoiceCheckpoint,
+): { readonly min: number; readonly max: number } {
+  if (checkpoint.selectionCountFrom === 'proficiency-bonus') {
+    const bonus = 2 + Math.floor((Math.max(1, draft.targetLevel) - 1) / 4)
+    return { min: bonus, max: bonus }
+  }
+  return { min: checkpoint.minSelections, max: checkpoint.maxSelections }
+}
+
+/** 解析专长子选择中的属性提升选择（`feat-bonus-<ability>-1`），用于授予法术的施法属性。 */
+export function getFeatChosenAbility(
+  draft: CharacterDraft,
+  parentCheckpointId: string | undefined,
+  featId: string,
+): AbilityKey | undefined {
+  if (!parentCheckpointId) return undefined
+  const selection = draft.selections.find((item) =>
+    item.checkpointId === `feat-child:${parentCheckpointId}:${featId}:ability` && !item.invalidatedAt)
+  for (const optionId of selection?.optionIds ?? []) {
+    const match = /^feat-bonus-(str|dex|con|int|wis|cha)-[12]$/.exec(optionId)
+    if (match) return match[1] as AbilityKey
+  }
+  return undefined
 }

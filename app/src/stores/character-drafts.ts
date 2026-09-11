@@ -7,6 +7,7 @@ import { validateDraft } from '@/rules/validate'
 import { validateSpellSelections } from '@/rules/spellcasting'
 import { EMPTY_CURRENCY, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { getDefaultEnabledSourceIds } from '@/rules/source-books'
+import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { isRulesetOpen } from '@/rules/repositories'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { getEffectiveSpellSlots } from '@/rules/spellcasting'
@@ -88,7 +89,8 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     const timelineComplete = timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const count = selection?.optionIds.length ?? 0
-      return count >= checkpoint.minSelections && count <= checkpoint.maxSelections
+      const bounds = getCheckpointSelectionBounds(draft, checkpoint)
+      return count >= bounds.min && count <= bounds.max
     })
     const abilitiesValid = Object.values(draft.baseAbilities).every((score) => score >= 3 && score <= 20)
     const hasErrors = validationIssues.value.some((item) => item.severity === 'error')

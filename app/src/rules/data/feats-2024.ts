@@ -1,10 +1,12 @@
 import { ABILITY_KEYS, ABILITY_LABELS } from '@/rules/data/feats-2014'
+import { SPELL_LIST_OPTION_IDS } from '@/rules/data/spell-lists-2024'
 import type { AbilityKey } from '@/types/character'
 import type {
   FeatCategory,
   FeatChoiceSpec,
   FeatRule,
   RuleOption,
+  SpellPoolSpec,
 } from '@/types/rules'
 
 /**
@@ -86,6 +88,20 @@ function skillChoice(
   }
 }
 
+function spellChoice(spellPool: SpellPoolSpec, extra: Partial<FeatChoiceSpec> = {}): FeatChoiceSpec {
+  return {
+    id: 'spell',
+    title: '选择法术',
+    description: '从符合条件的法术中选择。',
+    minSelections: 1,
+    maxSelections: 1,
+    optionIds: [],
+    candidateKind: 'spell-pool',
+    spellPool,
+    ...extra,
+  }
+}
+
 const asiChoice: FeatChoiceSpec = {
   id: 'ability-score',
   title: '属性值提升',
@@ -155,7 +171,12 @@ const originFeats: readonly FeatRule[] = [
   feat('magic-initiate', '魔法学徒', 'Magic Initiate', 'origin',
     '从牧师、德鲁伊或法师表获得法术。',
     '选择一个法术表，从其戏法中选 2 道、一环法术中选 1 道，施法属性为智力、感知或魅力；一环法术始终准备，长休可免费施放 1 次，也可用法术位施放；升级时可替换 1 道同环同表法术；复选必须更换法术表。',
-    { repeatable: true }),
+    { repeatable: true, choices: [
+      abilityChoice(['int', 'wis', 'cha'], { description: '选择本专长法术的施法属性（智力、感知或魅力）。' }),
+      { id: 'list', title: '选择法术表', description: '从牧师、德鲁伊或法师法术表中选一。', minSelections: 1, maxSelections: 1, optionIds: SPELL_LIST_OPTION_IDS },
+      spellChoice({ level: 0, fromListChoiceId: 'list' }, { id: 'cantrips', title: '选择戏法', minSelections: 2, maxSelections: 2, description: '从所选法术表选择 2 道戏法。' }),
+      spellChoice({ level: 1, fromListChoiceId: 'list' }, { id: 'spell', description: '从所选法术表选择 1 道一环法术；始终准备且长休免费 1 次。', spellGrant: { alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest' } }),
+    ] }),
   feat('musician', '音乐家', 'Musician', 'origin',
     '乐器熟练与英雄激励。',
     '选择 3 种乐器熟练；短休或长休结束时用熟练乐器演奏，至多熟练加值名听见的盟友获得英雄激励；不增加英雄激励的持有上限。',
@@ -226,7 +247,7 @@ const generalFeats: readonly FeatRule[] = [
   feat('fey-touched', '妖精触碰', 'Fey-Touched', 'general',
     '获得预言或惑控法术与迷踪步。',
     '智力、感知或魅力 +1（上限 20）。选择一道一环预言或惑控法术，另获得迷踪步；两者始终准备，各可长休免费施放 1 次，也可用法术位施放；施法属性为本专长提升的属性。',
-    { prerequisite: generalPrerequisite, choices: [abilityChoice(['int', 'wis', 'cha'])] }),
+    { prerequisite: generalPrerequisite, choices: [abilityChoice(['int', 'wis', 'cha']), spellChoice({ level: 1, schools: ['预言', '惑控'] }, { description: '从一环预言或惑控法术中选择；始终准备且长休免费 1 次。', spellGrant: { alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest' } })], grantedSpells: [{ spellId: 'spell-2024-misty-step', alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest' }] }),
   feat('grappler', '擒抱者', 'Grappler', 'general',
     '强化擒抱与对擒抱目标攻击。',
     '力量或敏捷 +1（上限 20）。攻击动作徒手命中后每回合一次可同时造成伤害并擒抱；攻击自己擒抱的生物有优势；搬运同体型或更小擒抱者不花额外移动。',
@@ -298,7 +319,7 @@ const generalFeats: readonly FeatRule[] = [
   feat('ritual-caster', '仪式施法者', 'Ritual Caster', 'general',
     '获得仪式法术。',
     '智力、感知或魅力 +1（上限 20）。选择熟练加值数量的一环仪式法术，始终准备，以所提升属性施法且可用法术位施放；熟练加值提升时再选择 1 道；快速仪式可长休进行 1 次。',
-    { prerequisite: { minimumLevel: 4, abilityMinimum: { anyOf: ['int', 'wis', 'cha'], score: 13 } }, choices: [abilityChoice(['int', 'wis', 'cha'])] }),
+    { prerequisite: { minimumLevel: 4, abilityMinimum: { anyOf: ['int', 'wis', 'cha'], score: 13 } }, choices: [abilityChoice(['int', 'wis', 'cha']), spellChoice({ level: 1, ritualOnly: true }, { id: 'rituals', title: '选择仪式法术', description: '选择熟练加值数量的一环仪式法术，全部始终准备。', minSelections: 1, maxSelections: 1, selectionCountFrom: 'proficiency-bonus', spellGrant: { alwaysPrepared: true } })] }),
   feat('sentinel', '哨兵', 'Sentinel', 'general',
     '强化借机攻击与牵制。',
     '力量或敏捷 +1（上限 20）。5 尺内生物撤离或攻击自己以外的目标时，可立即发动借机攻击；借机命中令其本回合速度变为 0；照常消耗反应。',
@@ -306,7 +327,7 @@ const generalFeats: readonly FeatRule[] = [
   feat('shadow-touched', '影界触碰', 'Shadow Touched', 'general',
     '获得幻术或死灵法术与隐形术。',
     '智力、感知或魅力 +1（上限 20）。选择一道一环幻术或死灵法术，另获得隐形术；两者始终准备，各可长休免费施放 1 次，也可用法术位施放；施法属性为本专长提升的属性。',
-    { prerequisite: generalPrerequisite, choices: [abilityChoice(['int', 'wis', 'cha'])] }),
+    { prerequisite: generalPrerequisite, choices: [abilityChoice(['int', 'wis', 'cha']), spellChoice({ level: 1, schools: ['幻术', '死灵'] }, { description: '从一环幻术或死灵法术中选择；始终准备且长休免费 1 次。', spellGrant: { alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest' } })], grantedSpells: [{ spellId: 'spell-2024-invisibility', alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest' }] }),
   feat('sharpshooter', '神射手', 'Sharpshooter', 'general',
     '远程武器精准射击。',
     '敏捷 +1（上限 20）。远程武器攻击忽略半掩护与四分之三掩护；5 尺内有敌人或处于远射程时不产生劣势；不增加旧版固定伤害。',
@@ -342,7 +363,7 @@ const generalFeats: readonly FeatRule[] = [
   feat('telepathic', '心灵感应', 'Telepathic', 'general',
     '心灵沟通与侦测思想。',
     '智力、感知或魅力 +1（上限 20）。可与 60 尺内可见且共享语言的生物单向传心；侦测思想始终准备，长休可免费免成分施放 1 次，也可用法术位施放；施法属性为本专长提升的属性。',
-    { prerequisite: generalPrerequisite, choices: [abilityChoice(['int', 'wis', 'cha'])] }),
+    { prerequisite: generalPrerequisite, choices: [abilityChoice(['int', 'wis', 'cha'])], grantedSpells: [{ spellId: 'spell-2024-detect-thoughts', alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest' }] }),
   feat('war-caster', '战地施法者', 'War Caster', 'general',
     '专注与借机施法强化。',
     '智力、感知或魅力 +1（上限 20）。维持专注的体质豁免有优势；敌人离开触及触发借机攻击时，可用反应改施一道施法时间为 1 动作且只以该生物为目标的法术；持武器或盾牌时仍可满足姿势成分。',

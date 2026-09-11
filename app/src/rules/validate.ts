@@ -6,6 +6,7 @@ import {
   collectFeatSkillSelections,
   decodeAbilityImprovement,
   getAbilityImprovementEligibility,
+  getCheckpointSelectionBounds,
   getFeatEligibility,
   listFeatGrants,
   type FeatGrant,
@@ -13,7 +14,7 @@ import {
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abilities'
 import { getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
-import { getAvailableSpells, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
+import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { isSourceEnabled } from '@/rules/source-books'
@@ -287,14 +288,28 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     for (const checkpoint of timeline) {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const count = selection?.optionIds.length ?? 0
-      if (checkpoint.required && (count < checkpoint.minSelections || count > checkpoint.maxSelections)) {
+      const bounds = getCheckpointSelectionBounds(draft, checkpoint)
+      if (checkpoint.required && (count < bounds.min || count > bounds.max)) {
         issues.push({
           id: `checkpoint-${checkpoint.id}`,
           step: checkpoint.step,
           severity: 'error',
           message: `${checkpoint.level}级「${checkpoint.title}」尚未完成。`,
-          resolution: `需要选择${checkpoint.minSelections === checkpoint.maxSelections ? checkpoint.minSelections : `${checkpoint.minSelections}—${checkpoint.maxSelections}`}项。`,
+          resolution: `需要选择${bounds.min === bounds.max ? bounds.min : `${bounds.min}—${bounds.max}`}项。`,
         })
+      }
+      if (isV2024 && checkpoint.candidateKind && selection) {
+        const candidates = new Set(getCheckpointCandidates(draft, checkpoint))
+        for (const optionId of selection.optionIds) {
+          if (candidates.has(optionId)) continue
+          issues.push({
+            id: `checkpoint-candidate-${checkpoint.id}-${optionId}`,
+            step: checkpoint.step,
+            severity: 'error',
+            message: `${checkpoint.level}级「${checkpoint.title}」包含当前不可选的条目。`,
+            resolution: '移除该条目并重新从候选池选择。',
+          })
+        }
       }
       // 2024：前置按获得节点校验，不使用最终属性。
       const abilitiesBefore = isV2024

@@ -66,6 +66,42 @@ export interface FeatPrerequisite {
   readonly requiredSubraceIds?: readonly string[]
 }
 
+/** 检查点或专长子选择声明的法术授予语义（始终准备、免费次数与恢复）。 */
+export interface SpellGrantSpec {
+  /** 所选法术始终准备，不占职业准备上限。 */
+  readonly alwaysPrepared?: boolean
+  /** 每个休息周期的免费施放次数；缺省或 0 表示无免费次数。 */
+  readonly freeCastings?: number
+  /** 免费次数恢复时机。 */
+  readonly recovery?: 'long-rest' | 'short-rest'
+  /** 施法属性；缺省跟随授予来源（专长提升属性或职业施法属性）。 */
+  readonly ability?: AbilityKey
+}
+
+/** 专长候选法术池：按环级、学派、仪式标签与所选法术表过滤。 */
+export interface SpellPoolSpec {
+  readonly level: number
+  /** 学派中文名（如“预言”“惑控”）。 */
+  readonly schools?: readonly string[]
+  readonly ritualOnly?: boolean
+  /** 依赖同一专长的另一个子选择（选项 ID 形如 `spell-list-<职业>`）确定法术表。 */
+  readonly fromListChoiceId?: string
+}
+
+/** 专长固定授予的法术（不可选择，随专长生效）。 */
+export interface FixedSpellGrant {
+  readonly spellId: string
+  readonly alwaysPrepared?: boolean
+  readonly freeCastings?: number
+  readonly recovery?: 'long-rest' | 'short-rest'
+  readonly ability?: AbilityKey
+}
+
+/** 物种授予的固定法术：按获得等级生效；施法属性由物种选择（若声明）。 */
+export interface SpeciesSpellGrant extends FixedSpellGrant {
+  readonly minimumLevel: number
+}
+
 export interface FeatChoiceSpec {
   readonly id: string
   readonly title: string
@@ -82,6 +118,12 @@ export interface FeatChoiceSpec {
   readonly abilityCap?: number
   /** 所选技能未熟练则获得熟练、已熟练则获得专精（如敏锐心灵、观察力）。 */
   readonly expertiseIfProficient?: boolean
+  /** 带法术专长的子选择声明始终准备、免费次数与施法属性。 */
+  readonly spellGrant?: SpellGrantSpec
+  /** 候选法术池（与 `candidateKind: 'spell-pool'` 配合）。 */
+  readonly spellPool?: SpellPoolSpec
+  /** 选择数量随熟练加值变化（如仪式施法者）。 */
+  readonly selectionCountFrom?: 'proficiency-bonus'
 }
 
 export interface FeatRule extends RuleOption {
@@ -95,6 +137,8 @@ export interface FeatRule extends RuleOption {
   readonly detail: string
   readonly choices?: readonly FeatChoiceSpec[]
   readonly repeatable?: boolean
+  /** 固定授予的法术（随专长自动生效，不需选择）。 */
+  readonly grantedSpells?: readonly FixedSpellGrant[]
   /** 无条件派生效果：每级最大生命值加成（如健壮 +2/级）。 */
   readonly hitPointBonusPerLevel?: number
   /** 无条件派生效果：固定最大生命值加成（如超凡强韧之恩惠 +40）。 */
@@ -134,6 +178,12 @@ export interface ChoiceCheckpoint {
   readonly grantSavingThrowProficiency?: boolean
   /** 专长授予检查点：按类别展开候选池（2024 通用／战斗风格／传奇恩惠）；2014 职业检查点省略。 */
   readonly featCategories?: readonly FeatCategory[]
+  /** 检查点选择声明的法术授予语义（法术精通、招牌法术、物种／专长授予）。 */
+  readonly spellGrant?: SpellGrantSpec
+  /** 候选法术池（与 `candidateKind: 'spell-pool'` 配合）。 */
+  readonly spellPool?: SpellPoolSpec
+  /** 选择数量随熟练加值变化（如仪式施法者）。 */
+  readonly selectionCountFrom?: 'proficiency-bonus'
 }
 
 /** 动态候选池：检查点选项随草稿状态（等级、法术书）由规则层生成。 */
@@ -142,6 +192,7 @@ export type CheckpointCandidateKind =
   | 'spellbook-level-1'
   | 'spellbook-level-2'
   | 'spellbook-level-3'
+  | 'spell-pool'
   | 'all-skills'
   | 'proficient-skills'
   | 'artificer-infusions'
@@ -160,9 +211,13 @@ export interface SpellcastingConfig {
   /** 契约法术位表（1—20 级各一项，每项 [法术位数量, 契约环级]）；仅 mode: 'pact' 使用。 */
   readonly pactSlotsByClassLevel?: readonly (readonly [number, number])[]
   readonly classSpellIds: readonly string[]
+  /** 表定准备数量表（2024 职业按等级表）；提供时优先于 preparedFormula。 */
+  readonly preparedCountByLevel?: readonly number[]
   readonly spellbookSpellsByLevel?: readonly number[]
   /** 达到对应等级后始终准备，且不计入准备上限的法术。 */
   readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
+  /** 可从法术书直接施展仪式，无需准备（2024 法师仪式学家）。 */
+  readonly ritualCastingFromBook?: boolean
 }
 
 export interface SpellRule {
@@ -180,6 +235,18 @@ export interface SpellRule {
   readonly description: string
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
+  /** 法术学派（2024 录入；2014 条目省略）。 */
+  readonly school?: string
+  /** 施法时间原文（如“动作”“1 分钟”）；仪式标签另由 ritual 表示。 */
+  readonly castingTime?: string
+  /** 射程原文（如“60 尺”“触碰”“自身”）。 */
+  readonly range?: string
+  /** 成分原文（如“V、S、M（一点磷）”）。 */
+  readonly components?: string
+  /** 持续时间原文（如“立即”“1 分钟”）。 */
+  readonly duration?: string
+  /** 是否需要专注。 */
+  readonly concentration?: boolean
 }
 
 export interface ClassRule {
@@ -326,6 +393,10 @@ export interface RaceRule {
   readonly excludedFlexibleAbilityKeys?: readonly AbilityKey[]
   /** 2024 物种额外授予的起源专长选择（如人类 Versatile）；2014 与待接入数据省略。 */
   readonly originFeatChoices?: { readonly count: number; readonly categories: readonly FeatCategory[] }
+  /** 2024 物种法术的施法属性候选（如精灵、侏儒、提夫林）；选择结果存于时间线检查点。 */
+  readonly spellcastingAbilityChoices?: readonly AbilityKey[]
+  /** 2024 物种随时间授予的固定法术（如血统法术）；2014 与待接入数据省略。 */
+  readonly spellGrants?: readonly SpeciesSpellGrant[]
   readonly recommendedClassIds: readonly string[]
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]

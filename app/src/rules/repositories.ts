@@ -6,10 +6,11 @@ import {
   equipment2024Sample,
   races2024Sample,
   sources2024Sample,
-  spells2024Sample,
   subclasses2024Sample,
 } from '@/rules/data/rules-2024-sample'
 import { abilityImprovementOptions2024, feats2024 } from '@/rules/data/feats-2024'
+import { spellListOptions2024, speciesSpellAbilityOptions2024 } from '@/rules/data/spell-lists-2024'
+import { spells2024 } from '@/rules/data/spells-2024'
 import type { RulesetId } from '@/types/character'
 import type { RulesRepository } from '@/types/rules'
 
@@ -26,12 +27,12 @@ export const rulesRepository2024 = createRulesRepository('5e-2024', {
   subclasses: subclasses2024Sample,
   races: races2024Sample,
   backgrounds: backgrounds2024Sample,
-  options: [...abilityImprovementOptions2024, ...feats2024],
+  options: [...abilityImprovementOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024],
   feats: feats2024,
   equipment: equipment2024Sample,
   classStartingEquipment: [],
   backgroundStartingEquipment: [],
-  spells: spells2024Sample,
+  spells: spells2024,
 })
 
 const repositories: Readonly<Record<RulesetId, RulesRepository>> = {

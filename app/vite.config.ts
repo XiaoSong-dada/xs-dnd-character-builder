@@ -94,6 +94,8 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'happy-dom',
       include: ['test/**/*.test.ts'],
+      // 2024 法术目录（391 条）进入模块图后，满核并行会让 PDF 字体／导出测试超时；限制 worker 保证全量稳定。
+      maxWorkers: 4,
     },
   }
 })

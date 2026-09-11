@@ -1,9 +1,13 @@
 import { abilityModifier, deriveAbilities } from '@/rules/derive'
+import { getFeatChosenAbility, listActiveFeats, listFeatGrants } from '@/rules/feats'
 import { normalizeManualEdits } from '@/rules/manual-edits'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
+import { abilityFromSpeciesSpellAbilityOption, classIdFromSpellListOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { CharacterDraft } from '@/types/character'
-import type { ChoiceCheckpoint, SpellcastingConfig } from '@/types/rules'
+import type { AbilityKey, CharacterDraft, ChoiceSelection } from '@/types/character'
+import type { ChoiceCheckpoint, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant } from '@/types/rules'
+
+type SpellcraftDraft = Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds' | 'ruleset'>
 
 function abilityScoreAfterOrigin(draft: CharacterDraft, ability: SpellcastingConfig['ability']): number {
   return deriveAbilities(draft)[ability] + (normalizeManualEdits(draft.manualEdits).abilityAdjustments[ability] ?? 0)
@@ -50,11 +54,12 @@ export function getEffectiveSpellSlots(draft: CharacterDraft): readonly SpellSlo
 
 /** 页面、跑团与导出共用：正常已选法术与人工添加法术按 ID 去重。 */
 export function getEffectiveSelectedSpellIds(draft: CharacterDraft): readonly string[] {
+  const repository = getRulesRepository(draft.ruleset)
   const config = getSpellcastingConfig(draft)
   const normal = config ? getSelectedSpellIds(draft, config) : []
   const manual = normalizeManualEdits(draft.manualEdits).addedSpells
     .filter((item) => {
-      const level = rulesRepository.getSpell(item.spellId)?.level
+      const level = repository.getSpell(item.spellId)?.level
       return level === 0
         || item.prepared
         || item.destination === 'known'
@@ -67,15 +72,17 @@ export function getEffectiveSelectedSpellIds(draft: CharacterDraft): readonly st
 
 /** 人工加入准备列表/法术书、但尚未准备的有环法术。 */
 export function getUnpreparedManualSpellIds(draft: CharacterDraft): readonly string[] {
+  const repository = getRulesRepository(draft.ruleset)
   return normalizeManualEdits(draft.manualEdits).addedSpells
     .filter((item) => !item.prepared && (item.destination === 'prepared-list' || item.destination === 'spellbook'))
-    .filter((item) => (rulesRepository.getSpell(item.spellId)?.level ?? 0) > 0)
+    .filter((item) => (repository.getSpell(item.spellId)?.level ?? 0) > 0)
     .map((item) => item.spellId)
 }
 
 export function getRequiredSpellCount(draft: CharacterDraft, config: SpellcastingConfig): number {
   if (draft.targetLevel < config.startsAtLevel) return 0
   if (config.mode === 'known' || config.mode === 'pact') return config.spellsKnownByLevel?.[draft.targetLevel - 1] ?? 0
+  if (config.preparedCountByLevel) return config.preparedCountByLevel[draft.targetLevel - 1] ?? 0
   if (config.preparedFormula === 'ability-plus-half-level') {
     return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + Math.floor(draft.targetLevel / 2))
   }
@@ -135,13 +142,14 @@ export function getSpellCandidates(draft: CharacterDraft, config: SpellcastingCo
 }
 
 export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingConfig) {
+  const repository = getRulesRepository(draft.ruleset)
   const maximumLevel = getMaximumSpellLevel(config, draft.targetLevel)
   return config.classSpellIds
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.getSpell(id))
     .filter((spell): spell is NonNullable<typeof spell> => Boolean(
       spell
       && spell.level <= maximumLevel
-      && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds),
+      && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds, repository),
     ))
 }
 
@@ -154,19 +162,35 @@ export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingCo
 export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: ChoiceCheckpoint): readonly string[] {
   if (checkpoint.optionIds.length > 0) return checkpoint.optionIds
   if (!checkpoint.candidateKind) return []
+  const repository = getRulesRepository(draft.ruleset)
+  if (checkpoint.candidateKind === 'spell-pool') {
+    const pool = checkpoint.spellPool
+    if (!pool) return []
+    const classId = pool.fromListChoiceId
+      ? resolveSpellListClassId(draft, checkpoint, pool.fromListChoiceId)
+      : undefined
+    if (pool.fromListChoiceId && !classId) return []
+    return repository.spells
+      .filter((spell) => spell.level === pool.level)
+      .filter((spell) => !pool.schools || (spell.school !== undefined && pool.schools.includes(spell.school)))
+      .filter((spell) => !pool.ritualOnly || spell.ritual)
+      .filter((spell) => !classId || spell.classIds.includes(classId))
+      .filter((spell) => isSourceEnabled(spell.sourceIds, draft.enabledSourceIds, repository))
+      .map((spell) => spell.id)
+  }
   if (checkpoint.candidateKind === 'all-spells') {
     const config = getSpellcastingConfig(draft)
     if (!config || draft.targetLevel < config.startsAtLevel) return []
     const maximumLevel = getMaximumSpellLevel(config, draft.targetLevel)
-    return rulesRepository.spells
-      .filter((spell) => spell.level >= 1 && spell.level <= maximumLevel && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds))
+    return repository.spells
+      .filter((spell) => spell.level >= 1 && spell.level <= maximumLevel && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds, repository))
       .map((spell) => spell.id)
   }
   const targetLevel = checkpoint.candidateKind === 'spellbook-level-1' ? 1
     : checkpoint.candidateKind === 'spellbook-level-2' ? 2
       : 3
   return draft.spellSelections.spellbookSpellIds
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.getSpell(id))
     .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell && spell.level === targetLevel))
     .map((spell) => spell.id)
 }
@@ -181,25 +205,196 @@ export function getMagicalSecretsSpellIds(draft: CharacterDraft): readonly strin
 
 /**
  * 解析角色当前施法配置：子职级施法（奥法骑士、诡术师）优先，否则回退职业级。
+ * 按草稿规则版本选择仓库；2014 草稿与既有行为等价。
  */
-export function getSpellcastingConfig(draft: Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds'>): SpellcastingConfig | undefined {
-  const subclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
-  if (subclass && !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds)) return undefined
-  const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
-  if (classRule && !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds)) return undefined
-  return rulesRepository.getSpellcastingConfig(draft)
+export function getSpellcastingConfig(draft: SpellcraftDraft): SpellcastingConfig | undefined {
+  const repository = getRulesRepository(draft.ruleset ?? '5e-2014')
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  if (subclass && !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)) return undefined
+  const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
+  if (classRule && !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds, repository)) return undefined
+  return repository.getSpellcastingConfig(draft)
+}
+
+function findClassCheckpoint(repository: RulesRepository, checkpointId: string): ChoiceCheckpoint | undefined {
+  for (const classRule of repository.classes) {
+    const found = classRule.checkpoints.find((checkpoint) => checkpoint.id === checkpointId)
+    if (found) return found
+  }
+  return undefined
+}
+
+/** 从同一专长的法术表选择中解析出职业 ID；未选择或非法时返回 undefined。 */
+function resolveSpellListClassId(
+  draft: CharacterDraft,
+  checkpoint: ChoiceCheckpoint,
+  listChoiceId: string,
+): string | undefined {
+  const [, parentCheckpointId, featId] = checkpoint.id.split(':')
+  if (!parentCheckpointId || !featId) return undefined
+  const selection = draft.selections.find((item) =>
+    item.checkpointId === `feat-child:${parentCheckpointId}:${featId}:${listChoiceId}` && !item.invalidatedAt)
+  const optionId = selection?.optionIds[0]
+  return optionId ? classIdFromSpellListOption(optionId) : undefined
+}
+
+/** 角色物种链规则（子种族起沿 parentRaceId 叠加，来源关闭时跳过）。 */
+function draftSpeciesRules(draft: CharacterDraft, repository: RulesRepository): readonly RaceRule[] {
+  const rules: RaceRule[] = []
+  const visited = new Set<string>()
+  const visit = (raceId: string | undefined): void => {
+    if (!raceId || visited.has(raceId)) return
+    visited.add(raceId)
+    const race = repository.getRace(raceId)
+    if (!race || !isSourceEnabled(race.sourceIds, draft.enabledSourceIds, repository)) return
+    if (race.parentRaceId) visit(race.parentRaceId)
+    rules.push(race)
+  }
+  visit(draft.subraceId ?? draft.raceId)
+  return rules
+}
+
+/** 物种按等级授予的固定法术（纯函数，供派生与测试）。 */
+export function collectSpeciesSpellGrants(
+  race: RaceRule | undefined,
+  targetLevel: number,
+): readonly SpeciesSpellGrant[] {
+  return (race?.spellGrants ?? []).filter((grant) => grant.minimumLevel <= targetLevel)
+}
+
+/** 物种法术施法属性：从 `spell-ability-*` 时间线选择解析。 */
+export function getSpeciesSpellAbility(
+  race: RaceRule,
+  selections: readonly ChoiceSelection[],
+): AbilityKey | undefined {
+  const selection = selections.find((item) => !item.invalidatedAt && item.checkpointId === `${race.id}-spellcasting-ability`)
+  return abilityFromSpeciesSpellAbilityOption(selection?.optionIds[0])
+}
+
+/** 检查点或专长子选择声明的始终准备法术（法术精通、招牌法术、专长授予等）。 */
+function selectionAlwaysPreparedSpellIds(draft: CharacterDraft, repository: RulesRepository): readonly string[] {
+  const ids: string[] = []
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt) continue
+    if (selection.checkpointId.startsWith('feat-child:')) {
+      const [, , featId, choiceId] = selection.checkpointId.split(':')
+      const choice = featId ? repository.getFeat(featId)?.choices?.find((item) => item.id === choiceId) : undefined
+      if (choice?.spellGrant?.alwaysPrepared) ids.push(...selection.optionIds)
+      continue
+    }
+    const checkpoint = findClassCheckpoint(repository, selection.checkpointId)
+    if (checkpoint?.spellGrant?.alwaysPrepared) ids.push(...selection.optionIds)
+  }
+  return ids
 }
 
 export function getAlwaysPreparedSpellIds(draft: CharacterDraft): readonly string[] {
-  const subclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
-  if (!subclass || !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds)) return []
-  return [...new Set(Object.entries(subclass.alwaysPreparedSpellIdsByLevel ?? {})
-    .filter(([level]) => Number(level) <= draft.targetLevel)
-    .flatMap(([, ids]) => ids)
-    .filter((id) => {
-      const spell = rulesRepository.getSpell(id)
-      return Boolean(spell && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds))
-    }))]
+  const repository = getRulesRepository(draft.ruleset)
+  const ids = new Set<string>()
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  if (subclass && isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)) {
+    for (const [level, spellIds] of Object.entries(subclass.alwaysPreparedSpellIdsByLevel ?? {})) {
+      if (Number(level) > draft.targetLevel) continue
+      for (const id of spellIds) ids.add(id)
+    }
+  }
+  const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
+  if (classRule && isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds, repository)) {
+    for (const [level, spellIds] of Object.entries(classRule.spellcasting?.alwaysPreparedSpellIdsByLevel ?? {})) {
+      if (Number(level) > draft.targetLevel) continue
+      for (const id of spellIds) ids.add(id)
+    }
+  }
+  // 专长固定授予（如迷踪步、隐形术、侦测思想）。
+  for (const feat of listActiveFeats(draft, repository)) {
+    for (const grant of feat.grantedSpells ?? []) {
+      if (grant.alwaysPrepared !== false) ids.add(grant.spellId)
+    }
+  }
+  // 物种授予（血统法术等，按获得等级生效）。
+  for (const race of draftSpeciesRules(draft, repository)) {
+    for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel)) {
+      if (grant.alwaysPrepared !== false) ids.add(grant.spellId)
+    }
+  }
+  for (const id of selectionAlwaysPreparedSpellIds(draft, repository)) {
+    const spell = repository.getSpell(id)
+    if (spell && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds, repository)) ids.add(id)
+  }
+  return [...ids]
+}
+
+/** 免费施法资源（每休息次数）：来自专长／检查点声明；消耗与恢复操作由跑团批次接入。 */
+export interface FreeCastingGrant {
+  readonly spellId: string
+  readonly sourceId: string
+  readonly count: number
+  readonly recovery: 'long-rest' | 'short-rest'
+  readonly ability?: AbilityKey
+}
+
+export function getSpellFreeCastings(draft: CharacterDraft): readonly FreeCastingGrant[] {
+  const repository = getRulesRepository(draft.ruleset)
+  const grants: FreeCastingGrant[] = []
+  const seen = new Set<string>()
+  const push = (
+    spellId: string,
+    sourceId: string,
+    count: number,
+    recovery: 'long-rest' | 'short-rest',
+    ability?: AbilityKey,
+  ): void => {
+    const key = `${sourceId}:${spellId}`
+    if (seen.has(key)) return
+    if (!repository.getSpell(spellId)) return
+    seen.add(key)
+    grants.push({ spellId, sourceId, count, recovery, ability })
+  }
+  // 专长固定授予
+  for (const featGrant of listFeatGrants(draft, repository)) {
+    const feat = repository.getFeat(featGrant.featId)
+    for (const granted of feat?.grantedSpells ?? []) {
+      if (!granted.freeCastings) continue
+      push(
+        granted.spellId,
+        `${featGrant.sourceId}:${featGrant.featId}`,
+        granted.freeCastings,
+        granted.recovery ?? 'long-rest',
+        granted.ability ?? getFeatChosenAbility(draft, featGrant.checkpointId, featGrant.featId),
+      )
+    }
+  }
+  // 专长子选择授予（所选法术）
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:')) continue
+    const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
+    const choice = featId ? repository.getFeat(featId)?.choices?.find((item) => item.id === choiceId) : undefined
+    const grant = choice?.spellGrant
+    if (!grant?.freeCastings || grant.freeCastings <= 0) continue
+    const ability = grant.ability ?? (featId ? getFeatChosenAbility(draft, parentCheckpointId, featId) : undefined)
+    for (const spellId of selection.optionIds) {
+      push(spellId, selection.checkpointId, grant.freeCastings, grant.recovery ?? 'long-rest', ability)
+    }
+  }
+  // 检查点授予（法术精通、招牌法术等）
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt || selection.checkpointId.startsWith('feat-child:')) continue
+    const checkpoint = findClassCheckpoint(repository, selection.checkpointId)
+    const grant = checkpoint?.spellGrant
+    if (!grant?.freeCastings || grant.freeCastings <= 0) continue
+    for (const spellId of selection.optionIds) {
+      push(spellId, selection.checkpointId, grant.freeCastings, grant.recovery ?? 'long-rest', grant.ability)
+    }
+  }
+  // 物种授予（血统法术的免费次数）。
+  for (const race of draftSpeciesRules(draft, repository)) {
+    const ability = getSpeciesSpellAbility(race, draft.selections)
+    for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel)) {
+      if (!grant.freeCastings) continue
+      push(grant.spellId, race.id, grant.freeCastings, grant.recovery ?? 'long-rest', grant.ability ?? ability)
+    }
+  }
+  return grants
 }
 
 export function validateSpellSelections(draft: CharacterDraft): boolean {

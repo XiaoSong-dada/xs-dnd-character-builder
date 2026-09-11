@@ -5,10 +5,10 @@ import type {
   EquipmentRule,
   FeatCategory,
   RaceRule,
-  SpellRule,
   SubclassRule,
 } from '@/types/rules'
 import type { RuleSource } from '@/types/character'
+import { spells2024 } from '@/rules/data/spells-2024'
 
 export const sources2024Sample: readonly RuleSource[] = [{
   id: 'source-2024-phb',
@@ -53,6 +53,38 @@ const fighterStyleCheckpoint: ChoiceCheckpoint = {
 const fighterFeatLevels = [4, 6, 8, 12, 14, 16] as const
 const wizardFeatLevels = [4, 8, 12, 16] as const
 
+// 2024 法师施法表（B01 CF-019 核对）：不复用 2014 常量，按版本独立登记。
+const wizardPreparedCounts2024 = [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 18, 19, 21, 22, 23, 24, 25] as const
+const wizardCantrips2024 = [3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5] as const
+const wizardSpellbookCounts2024 = Array.from({ length: 20 }, (_, index) => 6 + index * 2)
+const wizardMaxSpellLevels2024 = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9, 9] as const
+const wizardSpellSlots2024 = [
+  [2],
+  [3],
+  [4, 2],
+  [4, 3],
+  [4, 3, 2],
+  [4, 3, 3],
+  [4, 3, 3, 1],
+  [4, 3, 3, 2],
+  [4, 3, 3, 3, 1],
+  [4, 3, 3, 3, 2],
+  [4, 3, 3, 3, 2, 1],
+  [4, 3, 3, 3, 2, 1],
+  [4, 3, 3, 3, 2, 1, 1],
+  [4, 3, 3, 3, 2, 1, 1],
+  [4, 3, 3, 3, 2, 1, 1, 1],
+  [4, 3, 3, 3, 2, 1, 1, 1],
+  [4, 3, 3, 3, 2, 1, 1, 1, 1],
+  [4, 3, 3, 3, 3, 1, 1, 1, 1],
+  [4, 3, 3, 3, 3, 2, 1, 1, 1],
+  [4, 3, 3, 3, 3, 2, 2, 1, 1],
+] as const
+
+const wizardClassSpellIds2024 = spells2024
+  .filter((spell) => spell.classIds.includes('class-2024-wizard'))
+  .map((spell) => spell.id)
+
 export const classes2024Sample: readonly ClassRule[] = [
   {
     id: 'class-2024-fighter', ruleset: '5e-2024', name: '战士', englishName: 'Fighter',
@@ -76,6 +108,19 @@ export const classes2024Sample: readonly ClassRule[] = [
       ...wizardFeatLevels.map((level) => featChoiceCheckpoint('class-2024-wizard', level, ['general'])),
       featChoiceCheckpoint('class-2024-wizard', 19, ['general', 'epic-boon']),
     ],
+    spellcasting: {
+      ruleset: '5e-2024',
+      mode: 'spellbook',
+      ability: 'int',
+      startsAtLevel: 1,
+      preparedCountByLevel: wizardPreparedCounts2024,
+      cantripsKnownByLevel: wizardCantrips2024,
+      spellbookSpellsByLevel: wizardSpellbookCounts2024,
+      maxSpellLevelByClassLevel: wizardMaxSpellLevels2024,
+      slotsByClassLevel: wizardSpellSlots2024,
+      classSpellIds: wizardClassSpellIds2024,
+      ritualCastingFromBook: true,
+    },
   },
 ]
 
@@ -105,12 +150,6 @@ export const backgrounds2024Sample: readonly BackgroundRule[] = [{
   variantIds: [], skillIds: [], toolIds: [], languageChoices: 0, featureName: '待 B06 装配',
   originFeatId: 'feat-2024-magic-initiate',
   recommendedClassIds: [], status: 'unavailable', sourceIds: ['source-2024-phb'],
-}]
-
-export const spells2024Sample: readonly SpellRule[] = [{
-  id: 'spell-2024-magic-missile', ruleset: '5e-2024', name: '魔法飞弹', englishName: 'Magic Missile',
-  level: 1, ritual: false, classIds: ['class-2024-wizard'], summary: '1环法术；B02隔离样例。',
-  description: '完整参数和效果由 B05 接入。', status: 'unavailable', sourceIds: ['source-2024-phb'],
 }]
 
 export const equipment2024Sample: readonly EquipmentRule[] = [{
