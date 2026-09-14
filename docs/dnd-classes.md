@@ -6,7 +6,7 @@
 
 本文档是**选择性加载资料**，不属于项目每次开发前的必读文档。仅在任务涉及职业、子职、职业特性、职业等级或相关规则数据时读取；目标职业明确时，只需读取通用约定和对应职业章节。
 
-- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士与法师／塑能师（B08-01／B08-02），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
+- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士、法师／塑能师与野蛮人／4 道途（B08-01—B08-03），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
 
 ## 2. 资料边界
 
@@ -73,7 +73,7 @@
 
 | ID | 中文名 | 英文名 | 职业资料 | 子职资料 | 核验状态 |
 |---|---|---|---|---|---|
-| `barbarian` | 野蛮人 | Barbarian | [野蛮人详细资料](classes/subclasses/barbarian/barbarian.md) | [狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)<br>[狂野之心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)<br>[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)<br>[狂信者道途](classes/subclasses/barbarian/barbarian-zealot.md) | 基础资料已核验 |
+| `barbarian` | 野蛮人 | Barbarian | [野蛮人详细资料](classes/subclasses/barbarian/barbarian.md) | [狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)<br>[兽心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)<br>[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)<br>[狂热者道途](classes/subclasses/barbarian/barbarian-zealot.md) | 基础职业与 4 个核心道途已接入运行时（B08-03） |
 | `bard` | 吟游诗人 | Bard | [吟游诗人详细资料](classes/subclasses/bard/bard.md) | [舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)<br>[魅惑学院](classes/subclasses/bard/bard-college-of-glamour.md)<br>[博闻学院](classes/subclasses/bard/bard-college-of-lore.md)<br>[勇气学院](classes/subclasses/bard/bard-college-of-valor.md) | 基础资料已核验 |
 | `cleric` | 牧师 | Cleric | [牧师详细资料](classes/subclasses/cleric/cleric.md) | [生命领域](classes/subclasses/cleric/cleric-life-domain.md)<br>[光明领域](classes/subclasses/cleric/cleric-light-domain.md)<br>[诡术领域](classes/subclasses/cleric/cleric-trickery-domain.md)<br>[战争领域](classes/subclasses/cleric/cleric-war-domain.md) | 基础资料已核验 |
 | `druid` | 德鲁伊 | Druid | [德鲁伊详细资料](classes/subclasses/druid/druid.md) | [大地结社](classes/subclasses/druid/druid-circle-of-the-land.md)<br>[月亮结社](classes/subclasses/druid/druid-circle-of-the-moon.md)<br>[海洋结社](classes/subclasses/druid/druid-circle-of-the-sea.md)<br>[星辰结社](classes/subclasses/druid/druid-circle-of-the-stars.md) | 基础资料已核验 |
@@ -115,10 +115,10 @@
 
 - 职业 ID：`barbarian`
 - 职业基础与等级特性：[野蛮人详细资料](classes/subclasses/barbarian/barbarian.md)
-- 2024 子职：[狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)、[狂野之心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)、[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)、[狂信者道途](classes/subclasses/barbarian/barbarian-zealot.md)
+- 2024 子职：[狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)、[兽心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)（旧稿：狂野之心道途）、[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)、[狂热者道途](classes/subclasses/barbarian/barbarian-zealot.md)（旧稿：狂信者道途）
 - 旧版与扩展子职：[图腾武者道途](classes/subclasses/barbarian/barbarian-totem-warrior.md)、[战狂道途](classes/subclasses/barbarian/barbarian-battlerager.md)、[先祖守卫道途](classes/subclasses/barbarian/barbarian-ancestral-guardian.md)、[风暴先驱道途](classes/subclasses/barbarian/barbarian-storm-herald.md)、[狂野魔法道途](classes/subclasses/barbarian/barbarian-wild-magic.md)、[野兽道途](classes/subclasses/barbarian/barbarian-beast.md)、[巨人道途](classes/subclasses/barbarian/barbarian-giant.md)
-- 选择与校验：已记录技能、装备、武器精通、狂暴、AC、子职等级和旧版兼容边界
-- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-27
+- 选择与校验：已记录技能、装备、武器精通（近战限定）、狂暴次数、无甲防御 AC、子职等级和旧版兼容边界
+- 来源与核验：基础职业与 4 个核心道途已由 B08-03 按项目内 5e 不全书接入运行时；旧版与扩展子职仍沿用既有参考来源；最后核验日期 2026-09-14
 
 ### 5.2 吟游诗人 Bard
 

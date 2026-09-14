@@ -196,7 +196,9 @@ export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: Choic
   if (checkpoint.optionIds.length > 0) return checkpoint.optionIds
   if (!checkpoint.candidateKind) return []
   const repository = getRulesRepository(draft.ruleset)
-  if (checkpoint.candidateKind === 'weapon-mastery') return getWeaponMasteryCandidates(repository).map((item) => item.id)
+  if (checkpoint.candidateKind === 'weapon-mastery') return getWeaponMasteryCandidates(repository)
+    .filter((item) => checkpoint.weaponMasteryFilter !== 'melee' || item.weaponKind?.endsWith('melee'))
+    .map((item) => item.id)
   if (checkpoint.candidateKind === 'spell-pool') {
     const pool = checkpoint.spellPool
     if (!pool) return []

@@ -356,9 +356,9 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         })
       }
       if (isV2024 && checkpoint.candidateKind === 'weapon-mastery' && selection) {
-        // 武器精通：候选与数量由 B07-A 纯函数校验；计数问题已由通用检查点检查覆盖，此处不重复报告。
+        // 武器精通：非法候选由通用候选检查处理（含近战限定）；此处只补充重复选择校验。
         const masteryIssues = validateWeaponMasterySelection(repository, selection, bounds.min)
-          .filter((message) => message !== `需要选择${bounds.min}种武器精通。`)
+          .filter((message) => message === '同一种武器不能重复选择。')
         for (const message of masteryIssues) {
           issues.push({
             id: `weapon-mastery-${checkpoint.id}`,
@@ -369,7 +369,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
           })
         }
       }
-      if (isV2024 && checkpoint.candidateKind && checkpoint.candidateKind !== 'weapon-mastery' && selection) {
+      if (isV2024 && checkpoint.candidateKind && selection) {
         const candidates = new Set(getCheckpointCandidates(draft, checkpoint))
         for (const optionId of selection.optionIds) {
           if (candidates.has(optionId)) continue

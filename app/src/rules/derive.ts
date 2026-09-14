@@ -284,19 +284,22 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   }
   const hasHeavyArmor = equippedArmor?.id === 'chain-mail'
   const hasShield = Boolean(equippedShield)
+  const unarmoredDefense = classRule?.unarmoredDefense
   const barbarianUnarmored = draft.classId === 'class-2014-barbarian' && !equippedArmor
   const monkUnarmored = draft.classId === 'class-2014-monk' && !equippedArmor && !hasShield
   const baseArmor = equippedArmor
     ? (equippedArmor.armorBase ?? 10) + (equippedArmor.addsDexterityToArmor
       ? Math.min(modifiers.dex, equippedArmor.armorDexterityCap ?? Number.POSITIVE_INFINITY)
       : 0)
-    : barbarianUnarmored
-      ? 10 + modifiers.dex + modifiers.con
-      : monkUnarmored
-        ? 10 + modifiers.dex + modifiers.wis
-        : subclassEffects.armorClassBase
-          ? subclassEffects.armorClassBase + modifiers.dex
-          : 10 + modifiers.dex
+    : unarmoredDefense && !equippedArmor && (unarmoredDefense.allowsShield || !hasShield)
+      ? 10 + modifiers.dex + modifiers[unarmoredDefense.ability]
+      : barbarianUnarmored
+        ? 10 + modifiers.dex + modifiers.con
+        : monkUnarmored
+          ? 10 + modifiers.dex + modifiers.wis
+          : subclassEffects.armorClassBase
+            ? subclassEffects.armorClassBase + modifiers.dex
+            : 10 + modifiers.dex
   const defenseStyle = draft.selections.some((item) => !item.invalidatedAt && item.optionIds.some((id) => {
     if (id !== 'style-defense') return false
     const option = repository.getOption(id)
@@ -411,17 +414,19 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const armorClassValue = withManualAdjustment(derived(armorClass, [
     {
       id: 'armor-base',
-      label: equippedArmor?.name ?? (barbarianUnarmored ? '野蛮人无甲防御' : monkUnarmored ? '武僧无甲防御' : subclassEffects.armorClassBase ? '子职护甲公式' : '基础护甲'),
+      label: equippedArmor?.name ?? (unarmoredDefense ? `${classRule?.name ?? ''}无甲防御` : barbarianUnarmored ? '野蛮人无甲防御' : monkUnarmored ? '武僧无甲防御' : subclassEffects.armorClassBase ? '子职护甲公式' : '基础护甲'),
       value: baseArmor,
       detail: equippedArmor
         ? equippedArmor.description
-        : barbarianUnarmored
-          ? '10 + 敏捷调整值 + 体质调整值'
-          : monkUnarmored
-            ? '10 + 敏捷调整值 + 感知调整值'
-            : subclassEffects.armorClassBase
-              ? `${subclassEffects.armorClassBase} + 敏捷调整值`
-              : '10 + 敏捷调整值',
+        : unarmoredDefense && !equippedArmor && (unarmoredDefense.allowsShield || !hasShield)
+          ? `10 + 敏捷调整值 + ${unarmoredDefense.ability.toUpperCase()}调整值`
+          : barbarianUnarmored
+            ? '10 + 敏捷调整值 + 体质调整值'
+            : monkUnarmored
+              ? '10 + 敏捷调整值 + 感知调整值'
+              : subclassEffects.armorClassBase
+                ? `${subclassEffects.armorClassBase} + 敏捷调整值`
+                : '10 + 敏捷调整值',
     },
     ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: '已装备' }] : []),
     ...(defenseStyle && equippedArmor ? [{ id: 'defense-style', label: '防御战斗风格', value: 1, detail: '穿着护甲时生效' }] : []),

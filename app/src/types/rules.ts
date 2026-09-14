@@ -25,6 +25,13 @@ export interface WeaponTraining {
   readonly itemIds?: readonly string[]
 }
 
+/** 无甲防御规则（2024 职业数据）：未着甲时以 10＋敏捷＋指定属性计算基础 AC。 */
+export interface UnarmoredDefenseRule {
+  readonly ability: AbilityKey
+  /** 持盾时是否仍受益（2024 野蛮人 true，2024 武僧 false）。 */
+  readonly allowsShield: boolean
+}
+
 /** 职业／子职资源（B08 登记，B10 结算）：简单计数池的上限与恢复。 */
 export interface ClassResource {
   /** 1—20 级上限；索引 = 等级−1；0 表示该等级尚未获得。 */
@@ -208,6 +215,8 @@ export interface ChoiceCheckpoint {
   readonly selectionCountByLevel?: readonly number[]
   /** 法术级候选的施法时间过滤（如法术精通只允许“动作”）；与 candidateKind 配合。 */
   readonly spellCastingTime?: string
+  /** 武器精通候选范围（缺省任意；近战限定用 `melee`，如 2024 野蛮人）。 */
+  readonly weaponMasteryFilter?: 'melee' | 'any'
 }
 
 /** 动态候选池：检查点选项随草稿状态（等级、法术书）由规则层生成。 */
@@ -291,6 +300,8 @@ export interface ClassRule {
   readonly armorTraining?: readonly ArmorTraining[]
   /** 职业授予的武器训练（2024）；2014 职业省略并回退 2014 兼容映射。 */
   readonly weaponTraining?: WeaponTraining
+  /** 职业的无甲防御规则（2024）；2014 职业沿用 derive 内的兼容分支。 */
+  readonly unarmoredDefense?: UnarmoredDefenseRule
   readonly spellcasting?: SpellcastingConfig
   /** 职业等级特性（含升级增强项，每条独立登记）；由 class-features-2014 挂载。 */
   readonly features?: readonly ClassFeature[]

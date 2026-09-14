@@ -143,7 +143,7 @@ describe('2024 战士武器精通与勇士校验（B08-01）', () => {
     const invalid = draft2024({
       selections: fighterBaseSelections(['equipment-2024-wand', 'equipment-2024-dagger', 'equipment-2024-mace', 'equipment-2024-battleaxe']),
     })
-    expect(validateDraft(invalid).some((issue) => issue.id.startsWith('weapon-mastery-'))).toBe(true)
+    expect(issueIds(invalid)).toContain('checkpoint-candidate-class-2024-fighter-mastery-1-equipment-2024-wand')
   })
 
   it('精通数量按等级校验（10 级需要 5 种）', () => {
@@ -237,5 +237,52 @@ describe('2024 法师学者与法术选择（B08-02）', () => {
       },
     })
     expect(issueIds(draft)).toContain('spellbook-extra-invalid')
+  })
+})
+
+describe('2024 野蛮人校验（B08-03）', () => {
+  it('原初学识不能与 1 级技能重复', () => {
+    const duplicate = draft2024({
+      classId: 'class-2024-barbarian',
+      targetLevel: 3,
+      selections: [
+        selection('class-2024-barbarian-skills-1', ['skill-athletics', 'skill-perception']),
+        selection('class-2024-barbarian-primal-knowledge-3', ['skill-athletics']),
+      ],
+    })
+    expect(issueIds(duplicate)).toContain('duplicate-option-group-barbarian-skills')
+
+    const distinct = draft2024({
+      classId: 'class-2024-barbarian',
+      targetLevel: 3,
+      selections: [
+        selection('class-2024-barbarian-skills-1', ['skill-athletics', 'skill-perception']),
+        selection('class-2024-barbarian-primal-knowledge-3', ['skill-survival']),
+      ],
+    })
+    expect(issueIds(distinct)).not.toContain('duplicate-option-group-barbarian-skills')
+  })
+
+  it('野蛮人武器精通只允许近战武器，数量按等级校验', () => {
+    const ranged = draft2024({
+      classId: 'class-2024-barbarian',
+      targetLevel: 1,
+      selections: [selection('class-2024-barbarian-mastery-1', ['equipment-2024-longbow', 'equipment-2024-dagger'])],
+    })
+    expect(issueIds(ranged)).toContain('checkpoint-candidate-class-2024-barbarian-mastery-1-equipment-2024-longbow')
+
+    const levelTen = draft2024({
+      classId: 'class-2024-barbarian',
+      targetLevel: 10,
+      selections: [selection('class-2024-barbarian-mastery-1', ['equipment-2024-longsword', 'equipment-2024-dagger', 'equipment-2024-mace'])],
+    })
+    expect(issueIds(levelTen)).toContain('checkpoint-class-2024-barbarian-mastery-1')
+
+    const levelTenFull = draft2024({
+      classId: 'class-2024-barbarian',
+      targetLevel: 10,
+      selections: [selection('class-2024-barbarian-mastery-1', ['equipment-2024-longsword', 'equipment-2024-dagger', 'equipment-2024-mace', 'equipment-2024-battleaxe'])],
+    })
+    expect(issueIds(levelTenFull)).not.toContain('checkpoint-class-2024-barbarian-mastery-1')
   })
 })

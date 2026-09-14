@@ -92,4 +92,33 @@ describe('2024 职业时间线（B08-01）', () => {
     expect(signature?.minSelections).toBe(2)
     expect(signature?.spellGrant).toEqual({ alwaysPrepared: true, freeCastings: 1, recovery: 'short-rest' })
   })
+
+  it('野蛮人时间线展开技能、武器精通、原初学识与道途', () => {
+    const levelOne = buildTimeline('class-2024-barbarian', 1, { ruleset: '5e-2024' })
+    expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-barbarian-skills-1',
+      'class-2024-barbarian-mastery-1',
+    ])
+
+    const levelThree = buildTimeline('class-2024-barbarian', 3, { ruleset: '5e-2024' })
+    expect(levelThree.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-barbarian-skills-1',
+      'class-2024-barbarian-mastery-1',
+      'class-2024-barbarian-primal-knowledge-3',
+      'class-2024-barbarian-subclass-3',
+    ])
+    expect(levelThree.find((checkpoint) => checkpoint.kind === 'subclass')?.optionIds).toHaveLength(4)
+
+    const levelTwenty = buildTimeline('class-2024-barbarian', 20, { ruleset: '5e-2024' })
+    expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-barbarian-feat-4',
+      'class-2024-barbarian-feat-8',
+      'class-2024-barbarian-feat-12',
+      'class-2024-barbarian-feat-16',
+      'class-2024-barbarian-feat-19',
+    ])
+    const mastery = levelTwenty.find((checkpoint) => checkpoint.candidateKind === 'weapon-mastery')
+    expect(mastery?.weaponMasteryFilter).toBe('melee')
+    expect(getCheckpointSelectionBounds(draft2024({ targetLevel: 20 }), mastery!).max).toBe(4)
+  })
 })
