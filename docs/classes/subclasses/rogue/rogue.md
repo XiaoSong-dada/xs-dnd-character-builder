@@ -54,7 +54,9 @@
 
 ## 子职索引
 
-2024：[奥法骗徒](rogue-arcane-trickster.md)、[刺客](rogue-assassin.md)、[魂刃](rogue-soulknife.md)、[盗贼](rogue-thief.md)。
+2024：[诡术师](rogue-arcane-trickster.md)、[刺客](rogue-assassin.md)、[魂刃](rogue-soulknife.md)、[盗贼](rogue-thief.md)。
+
+> 运行时采用 5e 不全书译名（反射闪避、进阶诡诈打击、凶狡打击、传奇恩惠、诡术师）；本页早期的旧译名（闪避、精进诡诈打击、卑鄙打击、史诗恩惠、奥法骗徒）仅作对照。
 
 2014扩展：[审判官](rogue-inquisitive.md)、[策士](rogue-mastermind.md)、[斥候](rogue-scout.md)、[游荡剑客](rogue-swashbuckler.md)、[鬼魅](rogue-phantom.md)。
 
@@ -62,5 +64,5 @@
 
 - [2024 Free Rules](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes)
 - [SRD 5.2.1](https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf)
-- 开放子职整理到实现级；商业子职不复制规则正文。最后核验：2026-07-24。
+- 开放子职整理到实现级；商业子职不复制规则正文。基础职业与 4 个核心子职已由 B08-04 接入运行时（`app/src/rules/data/rogue-2024.ts`）。最后核验：2026-09-14。
 

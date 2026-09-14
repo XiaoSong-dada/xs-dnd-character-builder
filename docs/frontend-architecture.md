@@ -491,7 +491,7 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 
 ```text
 src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-expansions-2014,magic-items-xgte-tcoe-2014,generated/magic-items-catalog-index-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
-src/rules/repositories.ts        -> src/rules/data/{classes-2024,sources-2024,subclasses-2024,skill-options-2024,barbarian-2024,feats-2024,spells-2024,origins-2024,species-traits-2024,equipment-2024,equipment-packs-2024,starting-equipment-2024,weapon-masteries-2024} + src/rules/repository（双版本仓库注册、未知版本拒绝与已开放版本判断）
+src/rules/repositories.ts        -> src/rules/data/{classes-2024,sources-2024,subclasses-2024,skill-options-2024,barbarian-2024,fighter-2024,rogue-2024,wizard-2024,feats-2024,spells-2024,origins-2024,species-traits-2024,equipment-2024,equipment-packs-2024,starting-equipment-2024,weapon-masteries-2024} + src/rules/repository（双版本仓库注册、未知版本拒绝与已开放版本判断）
 src/rules/item-catalog-loader.ts  -> src/rules/data/generated/magic-items-catalog-2014（动态 import；模块级 Promise 缓存 + 失败重试）
 src/rules/derive.ts              -> src/rules/{repositories,feats,origins,subclass-effects}
 src/rules/validate.ts            -> src/rules/{repositories,derive,feats,abilities,timeline,spellcasting,starting-equipment,weapon-mastery}
@@ -501,8 +501,9 @@ src/rules/spellcasting.ts        -> src/rules/{repositories,derive,origins}（�
 src/rules/spellbook.ts           -> src/rules/{repositories,spellcasting}（抄录候选池、双费率费用、金币校验与抄录应用纯函数）
 src/rules/starting-equipment.ts  -> src/rules/{repositories,repository,currency}（按草稿版本解析；无版本兼容入口固定 2014）
 src/rules/weapon-mastery.ts      -> src/types/rules（2024 精通候选与选择校验纯函数）
-src/rules/weapon-attacks.ts      -> src/rules/repositories（按草稿版本解析职业武器训练；2014 回退兼容映射）
-src/rules/resources.ts           （无依赖，纯函数：资源上限与恢复文本）
+src/rules/weapon-training.ts     （无依赖，纯函数：武器类别与训练覆盖判定，含词条覆盖的军用武器）
+src/rules/weapon-attacks.ts      -> src/rules/{repositories,weapon-training}（按草稿版本解析职业武器训练；2014 回退兼容映射）
+src/rules/resources.ts           （无依赖，纯函数：资源上限／恢复文本与骰池文本）
 src/rules/feats.ts               -> src/rules/{repositories,source-books} + src/rules/data/{feats-2014,feats-2024}（双版本专长能力：授予、候选池、前置、复选、属性上限与护甲训练）
 src/rules/origins.ts             -> src/rules/{repositories,source-books}（物种链、背景属性分配与校验、物种生命值）
 src/rules/languages.ts           （无 rules 内部依赖，纯函数：2024 标准语言表与 2014 候选）
@@ -522,9 +523,10 @@ feats-2024             <- feats-2014（ABILITY_KEYS/LABELS）；由 repositories
 spells-2024            <- wizard-2024（法师职业池 classSpellIds，经 repositories 挂载）；由 scripts/build-spell-catalog-2024.mjs 从 B01 分环矩阵生成
 fighter-2024           （战士职业／17 条职业特性／勇士子职，特性内联；经 classes-2024、subclasses-2024 挂载）
 barbarian-2024         （野蛮人职业／19 条职业特性／4 道途／兽心形貌选项，特性内联；经 classes-2024、subclasses-2024 挂载）
+rogue-2024             （游荡者职业／17 条职业特性／4 子职／诡术师三分之一施法配置，特性内联；经 classes-2024、subclasses-2024 挂载）
 wizard-2024            （法师 9 条职业特性、学者专精与塑能师额外入书规则，经 classes-2024、subclasses-2024 挂载）
-classes-2024           <- {barbarian-2024, fighter-2024, wizard-2024}（职业装配列表）
-subclasses-2024        <- {barbarian-2024, fighter-2024, wizard-2024}（子职装配与子职选项投影）
+classes-2024           <- {barbarian-2024, fighter-2024, rogue-2024, wizard-2024}（职业装配列表）
+subclasses-2024        <- {barbarian-2024, fighter-2024, rogue-2024, wizard-2024}（子职装配与子职选项投影）
 origins-2024           （16 背景、10 物种、8 血统／传承；含物种 `spellGrants`，经 repositories 挂载）
 species-traits-2024    （物种特性注册表，按 raceId 关联 origins-2024）
 subclass-features-2014 <- {martials-2014, fighter, arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（子职特性）

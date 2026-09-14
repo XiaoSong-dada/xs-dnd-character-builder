@@ -19,10 +19,25 @@ export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon'
 /** 护甲训练类别；2024 前置与熟练均以此为口径。 */
 export type ArmorTraining = 'light' | 'medium' | 'heavy' | 'shield'
 
-/** 武器训练：类别（简易／军用）与指定武器 ID；2024 职业以此判定武器熟练。 */
+/** 武器训练：类别（简易／军用）、指定武器 ID，以及按词条覆盖的军用武器（如游荡者的灵巧／轻型军用）。 */
 export interface WeaponTraining {
   readonly categories?: readonly ('simple' | 'martial')[]
+  /** 具备其中任一属性的军用武器同样熟练（如 2024 游荡者的 finesse／light）。 */
+  readonly martialProperties?: readonly string[]
   readonly itemIds?: readonly string[]
+}
+
+/** 骰池派生数据（偷袭、武艺、灵能骰等）：按等级变化的骰数／骰面，与消耗池分开。 */
+export interface DicePoolRule {
+  /** 1—20 级骰数（索引 = 等级−1；0 表示尚未获得）。 */
+  readonly diceByLevel: readonly number[]
+  /** 固定骰面（如偷袭 d6）；与 dieByLevel 二选一。 */
+  readonly die?: string
+  /** 按等级变化的骰面（如魂刃灵能骰 d6→d8→d10→d12）；与 die 二选一。 */
+  readonly dieByLevel?: readonly string[]
+  /** 骰池恢复方式（缺省 none，表示不是可消耗池）。 */
+  readonly recovery?: 'short-rest' | 'long-rest' | 'none' | 'special'
+  readonly note?: string
 }
 
 /** 无甲防御规则（2024 职业数据）：未着甲时以 10＋敏捷＋指定属性计算基础 AC。 */
@@ -215,8 +230,8 @@ export interface ChoiceCheckpoint {
   readonly selectionCountByLevel?: readonly number[]
   /** 法术级候选的施法时间过滤（如法术精通只允许“动作”）；与 candidateKind 配合。 */
   readonly spellCastingTime?: string
-  /** 武器精通候选范围（缺省任意；近战限定用 `melee`，如 2024 野蛮人）。 */
-  readonly weaponMasteryFilter?: 'melee' | 'any'
+  /** 武器精通候选范围（缺省任意；`melee` 近战限定，`proficient` 限职业熟练武器）。 */
+  readonly weaponMasteryFilter?: 'melee' | 'proficient' | 'any'
 }
 
 /** 动态候选池：检查点选项随草稿状态（等级、法术书）由规则层生成。 */
@@ -395,6 +410,8 @@ export interface SubclassFeature {
   readonly maxSelections?: number
   /** 简单计数池资源（B08 登记展示，B10 结算）。 */
   readonly resource?: ClassResource
+  /** 骰池派生数据（按等级变化的骰数与骰面；与消耗池分开）。 */
+  readonly dicePool?: DicePoolRule
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }
@@ -415,6 +432,8 @@ export interface ClassFeature {
   readonly checkpointIds?: readonly string[]
   /** 简单计数池资源（B08 登记展示，B10 结算）。 */
   readonly resource?: ClassResource
+  /** 骰池派生数据（按等级变化的骰数与骰面；与消耗池分开）。 */
+  readonly dicePool?: DicePoolRule
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }

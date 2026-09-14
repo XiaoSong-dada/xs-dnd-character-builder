@@ -1,4 +1,5 @@
 import { getRulesRepository } from '@/rules/repositories'
+import { isWeaponTrainingCovered } from '@/rules/weapon-training'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
 import type { EquipmentRule, WeaponTraining } from '@/types/rules'
 
@@ -31,20 +32,13 @@ const CLASS_WEAPON_PROFICIENCIES: Readonly<Record<string, WeaponTraining>> = {
   'class-2014-wizard': { itemIds: ['dagger', 'dart', 'sling', 'quarterstaff', 'light-crossbow'] },
 }
 
-function weaponCategory(equipment: EquipmentRule): 'simple' | 'martial' | undefined {
-  if (equipment.weaponKind?.startsWith('simple')) return 'simple'
-  if (equipment.weaponKind?.startsWith('martial')) return 'martial'
-  return undefined
-}
-
 function isProficient(draft: CharacterDraft, equipment: EquipmentRule): boolean {
   const repository = getRulesRepository(draft.ruleset)
   const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
-  const category = weaponCategory(equipment)
   // 2024 使用职业数据中的武器训练；2014 回退兼容映射。
   const training = classRule?.weaponTraining
     ?? (draft.classId ? CLASS_WEAPON_PROFICIENCIES[draft.classId] : undefined)
-  if (training?.itemIds?.includes(equipment.id) || (category && training?.categories?.includes(category))) return true
+  if (isWeaponTrainingCovered(training, equipment)) return true
   const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
   const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
   return [race, subrace].some((item) => item?.weaponArmorProficiencies?.includes(equipment.id))

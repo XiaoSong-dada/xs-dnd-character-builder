@@ -286,3 +286,37 @@ describe('2024 野蛮人校验（B08-03）', () => {
     expect(issueIds(levelTenFull)).not.toContain('checkpoint-class-2024-barbarian-mastery-1')
   })
 })
+
+describe('2024 游荡者校验（B08-04）', () => {
+  it('专精只能选择已熟练技能，且两次专精不能重复', () => {
+    const notProficient = draft2024({
+      classId: 'class-2024-rogue',
+      targetLevel: 1,
+      selections: [
+        selection('class-2024-rogue-skills-1', ['skill-athletics', 'skill-deception', 'skill-perception', 'skill-stealth']),
+        selection('class-2024-rogue-expertise-1', ['skill-arcana']),
+      ],
+    })
+    expect(issueIds(notProficient)).toContain('expertise-without-proficiency')
+
+    const duplicate = draft2024({
+      classId: 'class-2024-rogue',
+      targetLevel: 6,
+      selections: [
+        selection('class-2024-rogue-skills-1', ['skill-athletics', 'skill-deception', 'skill-perception', 'skill-stealth']),
+        selection('class-2024-rogue-expertise-1', ['skill-stealth', 'skill-perception']),
+        selection('class-2024-rogue-expertise-6', ['skill-stealth', 'skill-deception']),
+      ],
+    })
+    expect(issueIds(duplicate)).toContain('duplicate-expertise')
+  })
+
+  it('武器精通只允许熟练武器', () => {
+    const draft = draft2024({
+      classId: 'class-2024-rogue',
+      targetLevel: 1,
+      selections: [selection('class-2024-rogue-mastery-1', ['equipment-2024-longsword', 'equipment-2024-dagger'])],
+    })
+    expect(issueIds(draft)).toContain('checkpoint-candidate-class-2024-rogue-mastery-1-equipment-2024-longsword')
+  })
+})
