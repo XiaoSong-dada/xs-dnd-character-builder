@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { buildTimeline } from '@/rules/timeline'
 import { validateDraft } from '@/rules/validate'
-import { draft2024, selection } from '../fixtures/draft-2024'
+import { draft2024, emptySpellSelections, selection } from '../fixtures/draft-2024'
 
 function issueIds(draft: Parameters<typeof validateDraft>[0]): readonly string[] {
   return validateDraft(draft).map((issue) => issue.id)
@@ -183,5 +183,59 @@ describe('2024 战士武器精通与勇士校验（B08-01）', () => {
       ],
     })
     expect(issueIds(draft)).toContain(`checkpoint-${CHAMPION_SUBCLASS_FEATURE}`)
+  })
+})
+
+describe('2024 法师学者与法术选择（B08-02）', () => {
+  it('学者专精只能选择已熟练的知识技能', () => {
+    const unproficient = draft2024({
+      classId: 'class-2024-wizard',
+      subclassId: 'subclass-2024-wizard-evoker',
+      targetLevel: 2,
+      selections: [
+        selection('class-2024-wizard-skills-1', ['skill-history', 'skill-insight']),
+        selection('class-2024-wizard-scholar-2', ['skill-arcana']),
+      ],
+    })
+    expect(issueIds(unproficient)).toContain('expertise-without-proficiency')
+
+    const proficient = draft2024({
+      classId: 'class-2024-wizard',
+      subclassId: 'subclass-2024-wizard-evoker',
+      targetLevel: 2,
+      selections: [
+        selection('class-2024-wizard-skills-1', ['skill-arcana', 'skill-insight']),
+        selection('class-2024-wizard-scholar-2', ['skill-arcana']),
+      ],
+    })
+    expect(issueIds(proficient)).not.toContain('expertise-without-proficiency')
+  })
+
+  it('法术精通候选不含反应施法的护盾术', () => {
+    const draft = draft2024({
+      classId: 'class-2024-wizard',
+      subclassId: 'subclass-2024-wizard-evoker',
+      targetLevel: 18,
+      spellSelections: {
+        ...emptySpellSelections(),
+        spellbookSpellIds: ['spell-2024-magic-missile', 'spell-2024-shield'],
+      },
+      selections: [selection('class-2024-wizard-spell-mastery-1', ['spell-2024-shield'])],
+    })
+    expect(issueIds(draft)).toContain('checkpoint-candidate-class-2024-wizard-spell-mastery-1-spell-2024-shield')
+  })
+
+  it('塑能额外入书超出名额或学派不符时报告问题', () => {
+    const draft = draft2024({
+      classId: 'class-2024-wizard',
+      subclassId: 'subclass-2024-wizard-evoker',
+      targetLevel: 3,
+      spellSelections: {
+        ...emptySpellSelections(),
+        spellbookSpellIds: ['spell-2024-shield'],
+        spellbookExtraSpellIds: ['spell-2024-shield'],
+      },
+    })
+    expect(issueIds(draft)).toContain('spellbook-extra-invalid')
   })
 })

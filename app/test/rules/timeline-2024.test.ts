@@ -70,8 +70,26 @@ describe('2024 职业时间线（B08-01）', () => {
     }
   })
 
-  it('尚未接入的 2024 子职不进入候选（塑能师保持 unavailable）', () => {
-    const timeline = buildTimeline('class-2024-wizard', 3, { ruleset: '5e-2024' })
-    expect(timeline.some((checkpoint) => checkpoint.kind === 'subclass')).toBe(false)
+  it('法师时间线展开技能、学者、子职与高等级法术选择', () => {
+    const levelThree = buildTimeline('class-2024-wizard', 3, { ruleset: '5e-2024' })
+    expect(levelThree.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-wizard-skills-1',
+      'class-2024-wizard-scholar-2',
+      'class-2024-wizard-subclass-3',
+    ])
+    expect(levelThree.find((checkpoint) => checkpoint.kind === 'subclass')?.optionIds).toEqual(['subclass-2024-wizard-evoker'])
+
+    const levelTwo = buildTimeline('class-2024-wizard', 2, { ruleset: '5e-2024' })
+    expect(levelTwo.some((checkpoint) => checkpoint.kind === 'subclass')).toBe(false)
+
+    const levelTwenty = buildTimeline('class-2024-wizard', 20, { ruleset: '5e-2024' })
+    const mastery = levelTwenty.filter((checkpoint) => checkpoint.id.startsWith('class-2024-wizard-spell-mastery-'))
+    expect(mastery.map((checkpoint) => checkpoint.candidateKind)).toEqual(['spellbook-level-1', 'spellbook-level-2'])
+    expect(mastery.every((checkpoint) => checkpoint.spellCastingTime === '动作' && checkpoint.spellGrant?.alwaysPrepared)).toBe(true)
+
+    const signature = levelTwenty.find((checkpoint) => checkpoint.id === 'class-2024-wizard-signature-spells-20')
+    expect(signature?.candidateKind).toBe('spellbook-level-3')
+    expect(signature?.minSelections).toBe(2)
+    expect(signature?.spellGrant).toEqual({ alwaysPrepared: true, freeCastings: 1, recovery: 'short-rest' })
   })
 })

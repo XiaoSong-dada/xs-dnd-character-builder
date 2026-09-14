@@ -64,4 +64,4 @@
 
 - 项目规则依据：[《5e 不全书》2024 法师](../../../../.chm_output/DND五版不全书v2025.11.8/markdown/玩家手册2024_角色职业_法师_法师.md)。
 - 外部 [2024 Free Rules](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes) 与 [SRD 5.2.1](https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf)只作补充出处和差异记录。
-- 当前只核验首批法师资料，运行时规则数据尚未接入。最后核验：2026-09-08。
+- 当前只核验首批法师资料；运行时规则数据已由 B08-02 接入（法师基础职业与塑能师），其余 2024 法师子职待 B08-13。最后核验：2026-09-14。

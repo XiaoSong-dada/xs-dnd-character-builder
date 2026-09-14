@@ -36,6 +36,7 @@ function emptySpellSelections(): SpellSelections {
     preparedSpellIds: [],
     spellbookSpellIds: [],
     transcribedSpellIds: [],
+    spellbookExtraSpellIds: [],
   }
 }
 
@@ -103,7 +104,11 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     adventureGold: draft.adventureGold ?? 0,
     equipmentNeedsReview: draft.equipmentNeedsReview ?? false,
     spellSelections: draft.spellSelections
-      ? { ...draft.spellSelections, transcribedSpellIds: draft.spellSelections.transcribedSpellIds ?? [] }
+      ? {
+          ...draft.spellSelections,
+          transcribedSpellIds: draft.spellSelections.transcribedSpellIds ?? [],
+          spellbookExtraSpellIds: draft.spellSelections.spellbookExtraSpellIds ?? [],
+        }
       : emptySpellSelections(),
     manualEdits: normalizeManualEdits(draft.manualEdits),
     media: normalizeMedia(draft.media),

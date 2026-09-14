@@ -6,7 +6,7 @@
 
 本文档是**选择性加载资料**，不属于项目每次开发前的必读文档。仅在任务涉及职业、子职、职业特性、职业等级或相关规则数据时读取；目标职业明确时，只需读取通用约定和对应职业章节。
 
-- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士与勇士（B08-01），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
+- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士与法师／塑能师（B08-01／B08-02），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
 
 ## 2. 资料边界
 
@@ -84,7 +84,7 @@
 | `rogue` | 游荡者 | Rogue | [游荡者详细资料](classes/subclasses/rogue/rogue.md) | [奥法骗徒](classes/subclasses/rogue/rogue-arcane-trickster.md)<br>[刺客](classes/subclasses/rogue/rogue-assassin.md)<br>[魂刃](classes/subclasses/rogue/rogue-soulknife.md)<br>[盗贼](classes/subclasses/rogue/rogue-thief.md) | 基础职业与盗贼已核验 |
 | `sorcerer` | 术士 | Sorcerer | [术士详细资料](classes/subclasses/sorcerer/sorcerer.md) | [异怪术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)<br>[机关术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)<br>[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)<br>[狂野魔法术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md) | 基础职业与龙族术法已核验 |
 | `warlock` | 邪术师 | Warlock | [邪术师详细资料](classes/subclasses/warlock/warlock.md) | [至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)<br>[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)<br>[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)<br>[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md) | 基础职业与邪魔宗主已核验 |
-| `wizard` | 法师 | Wizard | [法师详细资料](classes/subclasses/wizard/wizard.md) | [防护师](classes/subclasses/wizard/wizard-abjurer.md)<br>[预言师](classes/subclasses/wizard/wizard-diviner.md)<br>[塑能师](classes/subclasses/wizard/wizard-evoker.md)<br>[幻术师](classes/subclasses/wizard/wizard-illusionist.md) | 基础职业与塑能师已核验 |
+| `wizard` | 法师 | Wizard | [法师详细资料](classes/subclasses/wizard/wizard.md) | [防护师](classes/subclasses/wizard/wizard-abjurer.md)<br>[预言师](classes/subclasses/wizard/wizard-diviner.md)<br>[塑能师](classes/subclasses/wizard/wizard-evoker.md)<br>[幻术师](classes/subclasses/wizard/wizard-illusionist.md) | 基础职业与塑能师已接入运行时（B08-02） |
 
 ## 4.1 官方旧版与扩展子职索引
 
@@ -222,7 +222,7 @@
 - 2024子职：[防护师](classes/subclasses/wizard/wizard-abjurer.md)、[预言师](classes/subclasses/wizard/wizard-diviner.md)、[塑能师](classes/subclasses/wizard/wizard-evoker.md)、[幻术师](classes/subclasses/wizard/wizard-illusionist.md)
 - 旧版与扩展子职：[咒法学派](classes/subclasses/wizard/wizard-conjuration.md)、[附魔学派](classes/subclasses/wizard/wizard-enchantment.md)、[死灵学派](classes/subclasses/wizard/wizard-necromancy.md)、[变化学派](classes/subclasses/wizard/wizard-transmutation.md)、[剑咏](classes/subclasses/wizard/wizard-bladesinging.md)、[战争魔法](classes/subclasses/wizard/wizard-war-magic.md)、[时间魔法](classes/subclasses/wizard/wizard-chronurgy-magic.md)、[重力魔法](classes/subclasses/wizard/wizard-graviturgy-magic.md)、[书士会](classes/subclasses/wizard/wizard-order-of-scribes.md)
 - 选择与校验：已记录法术书、准备法术、抄录、仪式、奥术回想、法术精通、招牌法术和旧版2级特性映射
-- 来源与核验：首批法师／塑能师已按项目内5e不全书复核；其他子职仍沿用既有参考来源；最后核验日期 2026-09-08
+- 来源与核验：首批法师／塑能师已按项目内5e不全书复核，且职业、塑能师特性、学者专精、法术精通／招牌法术与额外入书已由 B08-02 接入运行时（其余子职待 B08-13）；其他子职仍沿用既有参考来源；最后核验日期 2026-09-14
 
 ## 6. 单项特性记录模板
 

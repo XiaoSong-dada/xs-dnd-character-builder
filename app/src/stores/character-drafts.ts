@@ -66,6 +66,7 @@ function createCharacterDraft(ruleset: RulesetId): CharacterDraft {
       preparedSpellIds: [],
       spellbookSpellIds: [],
       transcribedSpellIds: [],
+      spellbookExtraSpellIds: [],
     },
     manualEdits: EMPTY_MANUAL_EDITS,
     name: '',

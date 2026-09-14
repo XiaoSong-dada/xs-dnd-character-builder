@@ -7,7 +7,7 @@ import { getWeaponMasteryCandidates } from '@/rules/weapon-mastery'
 import { abilityFromSpeciesSpellAbilityOption, classIdFromSpellListOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, CharacterDraft, ChoiceSelection } from '@/types/character'
-import type { ChoiceCheckpoint, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant } from '@/types/rules'
+import type { ChoiceCheckpoint, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant, SpellRule } from '@/types/rules'
 
 type SpellcraftDraft = Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds' | 'ruleset'>
 
@@ -105,6 +105,37 @@ export function getRequiredSpellbookCount(draft: CharacterDraft, config: Spellca
   return config.spellbookSpellsByLevel?.[draft.targetLevel - 1] ?? 0
 }
 
+/** 子职额外入书规则（如 2024 塑能学者）；未选择子职或子职未声明时返回 undefined。 */
+export function getSpellbookExtraRule(draft: CharacterDraft): { readonly base: number; readonly perNewSpellLevel: number; readonly schools: readonly string[]; readonly startsAtLevel: number } | undefined {
+  if (!draft.subclassId) return undefined
+  const repository = getRulesRepository(draft.ruleset)
+  const subclass = repository.getSubclass(draft.subclassId)
+  const rule = subclass?.spellbookExtraSpells
+  if (!subclass || !rule) return undefined
+  if (!isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)) return undefined
+  return { ...rule, startsAtLevel: subclass.selectionLevel }
+}
+
+/** 额外入书名额：基础名额＋子职获得后每个新法术环位追加名额。 */
+export function getSpellbookExtraAllowance(draft: CharacterDraft, config: SpellcastingConfig): number {
+  const extra = getSpellbookExtraRule(draft)
+  if (!extra || config.mode !== 'spellbook' || draft.targetLevel < extra.startsAtLevel) return 0
+  const maximumLevels = config.maxSpellLevelByClassLevel ?? []
+  let gained = 0
+  for (let level = extra.startsAtLevel + 1; level <= draft.targetLevel; level += 1) {
+    if ((maximumLevels[level - 1] ?? 0) > (maximumLevels[level - 2] ?? 0)) gained += 1
+  }
+  return extra.base + gained * extra.perNewSpellLevel
+}
+
+/** 额外入书候选：当前可用法术中学派匹配的部分（含已在书中的条目，供界面标记状态）。 */
+export function getSpellbookExtraCandidates(draft: CharacterDraft, config: SpellcastingConfig): readonly SpellRule[] {
+  const extra = getSpellbookExtraRule(draft)
+  if (!extra) return []
+  return getAvailableSpells(draft, config)
+    .filter((spell) => spell.level > 0 && spell.school !== undefined && extra.schools.includes(spell.school))
+}
+
 export function getSelectedSpellIds(draft: CharacterDraft, config: SpellcastingConfig): readonly string[] {
   if (config.mode === 'known') return draft.spellSelections.knownSpellIds
   if (config.mode === 'prepared') return draft.spellSelections.preparedSpellIds
@@ -177,6 +208,7 @@ export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: Choic
       .filter((spell) => spell.level === pool.level)
       .filter((spell) => !pool.schools || (spell.school !== undefined && pool.schools.includes(spell.school)))
       .filter((spell) => !pool.ritualOnly || spell.ritual)
+      .filter((spell) => !checkpoint.spellCastingTime || spell.castingTime === checkpoint.spellCastingTime)
       .filter((spell) => !classId || spell.classIds.includes(classId))
       .filter((spell) => isSourceEnabled(spell.sourceIds, draft.enabledSourceIds, repository))
       .map((spell) => spell.id)
@@ -194,7 +226,11 @@ export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: Choic
       : 3
   return draft.spellSelections.spellbookSpellIds
     .map((id) => repository.getSpell(id))
-    .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell && spell.level === targetLevel))
+    .filter((spell): spell is NonNullable<typeof spell> => Boolean(
+      spell
+      && spell.level === targetLevel
+      && (!checkpoint.spellCastingTime || spell.castingTime === checkpoint.spellCastingTime),
+    ))
     .map((spell) => spell.id)
 }
 
@@ -402,17 +438,26 @@ export function validateSpellSelections(draft: CharacterDraft): boolean {
     || (draft.spellSelections.cantripIds.length === requiredCantrips
       && draft.spellSelections.cantripIds.length === new Set(draft.spellSelections.cantripIds).size
       && draft.spellSelections.cantripIds.every((id) => cantripIds.has(id)))
-  // 法术书校验：抄录所得的法术（transcribedSpellIds）不计入升级名额，
-  // 升级名额（非抄录法术）至少达到 requiredSpellbookCount（抄录可超出总数）。
+  // 法术书校验：抄录所得与子职额外入书的法术不计入升级名额，
+  // 升级名额（非抄录、非额外）至少达到 requiredSpellbookCount（抄录与额外可超出总数）。
   const spellbookSpells = draft.spellSelections.spellbookSpellIds
   const transcribed = draft.spellSelections.transcribedSpellIds
+  const extras = draft.spellSelections.spellbookExtraSpellIds ?? []
+  const extraAllowance = getSpellbookExtraAllowance(draft, config)
+  const normalBookCount = spellbookSpells.filter((id) => !transcribed.includes(id) && !extras.includes(id)).length
+  const extraCandidates = new Set(getSpellbookExtraCandidates(draft, config).map((spell) => spell.id))
+  const extrasValid = config.mode !== 'spellbook'
+    || (extras.length <= extraAllowance
+      && extras.length === new Set(extras).size
+      && extras.every((id) => spellbookSpells.includes(id) && extraCandidates.has(id) && !transcribed.includes(id)))
   const spellbookValid = config.mode !== 'spellbook'
-    || (spellbookSpells.filter((id) => !transcribed.includes(id)).length >= getRequiredSpellbookCount(draft, config)
+    || (normalBookCount >= getRequiredSpellbookCount(draft, config)
       && spellbookSpells.length === new Set(spellbookSpells).size
       && spellbookSpells.every((id) => availableIds.has(id))
       && selected.every((id) => spellbookSpells.includes(id)))
   return cantripsValid
     && spellbookValid
+    && extrasValid
     && selected.length === getRequiredSpellCount(draft, config)
     && selected.length === new Set(selected).size
     && selected.every((id) => availableIds.has(id))

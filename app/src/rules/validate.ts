@@ -14,7 +14,7 @@ import {
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abilities'
 import { getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
-import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
+import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellbookExtraAllowance, getSpellbookExtraCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
 import { getBackgroundAllocationIssue, getDraftSpeciesRules } from '@/rules/origins'
 import { validateWeaponMasterySelection } from '@/rules/weapon-mastery'
@@ -293,9 +293,11 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       ) {
         issues.push({ id: 'cantrip-count', step: 'spells', severity: 'error', message: '戏法选择尚未完成或包含不可用项。', resolution: `需要选择${requiredCantrips}个当前职业戏法。` })
       }
-      // 抄录所得的法术不计入升级名额：非抄录法术至少达到 requiredSpellbook。
+      // 抄录与子职额外入书的法术不计入升级名额：非抄录、非额外法术至少达到 requiredSpellbook。
+      const transcribedBookIds = draft.spellSelections.transcribedSpellIds
+      const extraBookIds = draft.spellSelections.spellbookExtraSpellIds ?? []
       const nonTranscribedBookCount = draft.spellSelections.spellbookSpellIds
-        .filter((id) => !draft.spellSelections.transcribedSpellIds.includes(id)).length
+        .filter((id) => !transcribedBookIds.includes(id) && !extraBookIds.includes(id)).length
       if (
         spellcasting.mode === 'spellbook'
         && (
@@ -304,7 +306,25 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
           || selectedSpellIds.some((id) => !draft.spellSelections.spellbookSpellIds.includes(id))
         )
       ) {
-        issues.push({ id: 'spellbook-count', step: 'spells', severity: 'error', message: '法术书内容尚未完成，或准备了不在书中的法术。', resolution: `法术书需要包含至少${requiredSpellbook}个当前可用法师法术（抄录所得不计入）。` })
+        issues.push({ id: 'spellbook-count', step: 'spells', severity: 'error', message: '法术书内容尚未完成，或准备了不在书中的法术。', resolution: `法术书需要包含至少${requiredSpellbook}个当前可用法师法术（抄录与额外入书不计入）。` })
+      }
+      if (spellcasting.mode === 'spellbook') {
+        const extraAllowance = getSpellbookExtraAllowance(draft, spellcasting)
+        const extraCandidates = new Set(getSpellbookExtraCandidates(draft, spellcasting).map((spell) => spell.id))
+        const invalidExtras = extraBookIds.filter((id) =>
+          !draft.spellSelections.spellbookSpellIds.includes(id)
+          || !extraCandidates.has(id)
+          || transcribedBookIds.includes(id),
+        )
+        if (extraBookIds.length > extraAllowance || invalidExtras.length > 0) {
+          issues.push({
+            id: 'spellbook-extra-invalid',
+            step: 'spells',
+            severity: 'error',
+            message: '子职额外入书选择不符合规则。',
+            resolution: `最多可额外入书${extraAllowance}道限定学派的法师法术，且必须同时在法术书中。`,
+          })
+        }
       }
       if (
         spellcasting.mode === 'spellbook'

@@ -521,7 +521,7 @@ feats-2014             <- {martials-2014, fighter, arcane-casters-2014, half-cas
 feats-2024             <- feats-2014（ABILITY_KEYS/LABELS）；由 repositories 挂载到 2024 仓库，内容独立于 2014
 spells-2024            <- wizard-2024（法师职业池 classSpellIds，经 repositories 挂载）；由 scripts/build-spell-catalog-2024.mjs 从 B01 分环矩阵生成
 fighter-2024           （战士职业／17 条职业特性／勇士子职，特性内联；经 classes-2024、subclasses-2024 挂载）
-wizard-2024            （法师施法配置样例；B08-02 补齐职业特性与塑能师）
+wizard-2024            （法师 9 条职业特性、学者专精与塑能师额外入书规则，经 classes-2024、subclasses-2024 挂载）
 classes-2024           <- {fighter-2024, wizard-2024}（职业装配列表）
 subclasses-2024        <- {fighter-2024, wizard-2024}（子职装配与子职选项投影）
 origins-2024           （16 背景、10 物种、8 血统／传承；含物种 `spellGrants`，经 repositories 挂载）

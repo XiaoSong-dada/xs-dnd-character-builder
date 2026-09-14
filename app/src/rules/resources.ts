@@ -14,9 +14,9 @@ export function getResourceMax(resource: ClassResource, level: number): number {
   return Math.max(0, resource.maxByLevel[index] ?? 0)
 }
 
-/** 资源展示文本：`2 次 · 短休恢复`；上限为 0 时返回空串。 */
+/** 资源展示文本：`2 次 · 短休恢复`（单位缺省为“次”）；上限为 0 时返回空串。 */
 export function formatResourceText(resource: ClassResource, level: number): string {
   const max = getResourceMax(resource, level)
   if (max <= 0) return ''
-  return `${max} 次 · ${RECOVERY_LABELS[resource.recovery]}`
+  return `${max} ${resource.unit ?? '次'} · ${RECOVERY_LABELS[resource.recovery]}`
 }

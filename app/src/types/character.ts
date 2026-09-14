@@ -69,6 +69,8 @@ export interface SpellSelections {
   readonly spellbookSpellIds: readonly string[]
   /** 通过抄录写入法术书的法术 ID（spellbookSpellIds 的子集）；升级自动获得的不在此列。 */
   readonly transcribedSpellIds: readonly string[]
+  /** 通过子职额外入书规则写入法术书的法术 ID（spellbookSpellIds 的子集，如 2024 塑能学者）。 */
+  readonly spellbookExtraSpellIds?: readonly string[]
 }
 
 export interface ManualAddedSpell {

@@ -164,6 +164,10 @@ const spellbookSpells = computed(() => {
 const requiredCantripCount = computed(() => (spellcastingConfig.value ? getRequiredCantripCount(props.draft, spellcastingConfig.value) : 0))
 const requiredSpellCount = computed(() => (spellcastingConfig.value ? getRequiredSpellCount(props.draft, spellcastingConfig.value) : 0))
 const requiredSpellbookCount = computed(() => (spellcastingConfig.value ? getRequiredSpellbookCount(props.draft, spellcastingConfig.value) : 0))
+const spellbookExtraIds = computed(() => props.draft.spellSelections.spellbookExtraSpellIds ?? [])
+/** 升级名额内的法术数：排除抄录与子职额外入书。 */
+const normalSpellbookCount = computed(() => props.draft.spellSelections.spellbookSpellIds
+  .filter((id) => !props.draft.spellSelections.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
 /** 已准备 / 已掌握法术按环级分组（戏法由 cantripSpells 单独展示）。 */
 const spellGroups = computed(() => {
   const config = spellcastingConfig.value
@@ -907,7 +911,7 @@ function handleExportPdf(): void {
         </section>
         <section v-if="spellbookSpells.length" class="character-sheet__spell-section">
           <div class="character-sheet__spell-section-header">
-            <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.filter((id) => !draft.spellSelections.transcribedSpellIds.includes(id)).length }} / {{ requiredSpellbookCount }}{{ draft.spellSelections.transcribedSpellIds.length ? `（抄录 ${draft.spellSelections.transcribedSpellIds.length}）` : '' }}</h4>
+            <h4>法术书 · {{ normalSpellbookCount }} / {{ requiredSpellbookCount }}{{ draft.spellSelections.transcribedSpellIds.length ? `（抄录 ${draft.spellSelections.transcribedSpellIds.length}）` : '' }}{{ spellbookExtraIds.length ? `（子职额外 ${spellbookExtraIds.length}）` : '' }}</h4>
             <button v-if="spellcastingConfig?.mode === 'spellbook'" type="button" class="character-sheet__spell-action" aria-label="抄录法术书" @click="openTranscribe()">抄录法术</button>
           </div>
           <ListShell>

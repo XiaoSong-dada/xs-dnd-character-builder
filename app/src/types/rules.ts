@@ -32,6 +32,8 @@ export interface ClassResource {
   readonly recovery: 'short-rest' | 'long-rest' | 'none' | 'special'
   /** 复杂条件或额外说明（如每回合一次、失败不消耗）。 */
   readonly note?: string
+  /** 数值单位（缺省“次”，如奥术回想为“环级”）。 */
+  readonly unit?: string
 }
 
 /**
@@ -204,6 +206,8 @@ export interface ChoiceCheckpoint {
   readonly selectionCountFrom?: 'proficiency-bonus'
   /** 选择数量按等级表变化（索引 = 等级−1）；如 2024 战士武器精通 3／4／5／6。 */
   readonly selectionCountByLevel?: readonly number[]
+  /** 法术级候选的施法时间过滤（如法术精通只允许“动作”）；与 candidateKind 配合。 */
+  readonly spellCastingTime?: string
 }
 
 /** 动态候选池：检查点选项随草稿状态（等级、法术书）由规则层生成。 */
@@ -308,6 +312,8 @@ export interface SubclassRule {
   readonly spellcasting?: SpellcastingConfig
   /** 子职在特定职业等级授予的始终准备法术，不占准备上限。 */
   readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
+  /** 子职授予的额外入书规则（如 2024 塑能学者的塑能法术额外入书）。 */
+  readonly spellbookExtraSpells?: SpellbookExtraRule
 }
 
 export type SubclassFeatureKind =
@@ -317,6 +323,16 @@ export type SubclassFeatureKind =
   | 'action'
   | 'bonus-action'
   | 'reaction'
+
+/** 子职额外入书规则：基础名额＋每获得新法术环位追加名额，并限定法术学派。 */
+export interface SpellbookExtraRule {
+  /** 获得子职时立即获得的额外入书名额（如塑能学者 3 级的 2 道）。 */
+  readonly base: number
+  /** 此后每获得一个新的法术环位追加的名额（如每新环位 1 道）。 */
+  readonly perNewSpellLevel: number
+  /** 允许的学派中文名（与法术数据 `school` 对应，如“塑能”）。 */
+  readonly schools: readonly string[]
+}
 
 /** 种族特性（2014）。常驻或按等级自动获得，不建立时间线检查点。 */
 export interface RaceFeature {

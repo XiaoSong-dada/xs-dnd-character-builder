@@ -101,6 +101,42 @@ describe('CharacterJsonService', () => {
     expect(roundTrip.enabledSourceIds).toEqual(['source-2024-phb'])
   })
 
+  it('v8 导入为缺失的子职额外入书字段补默认值，并保留已有选择', () => {
+    const withoutField = CharacterJsonService.importDraft(JSON.stringify({
+      schemaVersion: 8,
+      id: 'v8-no-extra',
+      ruleset: '5e-2024',
+      baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 },
+      selections: [],
+      spellSelections: {
+        cantripIds: [],
+        knownSpellIds: [],
+        preparedSpellIds: [],
+        spellbookSpellIds: [],
+        transcribedSpellIds: [],
+      },
+    }))
+    expect(withoutField.spellSelections.spellbookExtraSpellIds).toEqual([])
+
+    const withExtras = CharacterJsonService.importDraft(JSON.stringify({
+      schemaVersion: 8,
+      id: 'v8-with-extra',
+      ruleset: '5e-2024',
+      baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 },
+      selections: [],
+      spellSelections: {
+        cantripIds: [],
+        knownSpellIds: [],
+        preparedSpellIds: [],
+        spellbookSpellIds: ['spell-2024-scorching-ray'],
+        transcribedSpellIds: [],
+        spellbookExtraSpellIds: ['spell-2024-scorching-ray'],
+      },
+    }))
+    const roundTrip = CharacterJsonService.importDraft(CharacterJsonService.exportDraft(withExtras))
+    expect(roundTrip.spellSelections.spellbookExtraSpellIds).toEqual(['spell-2024-scorching-ray'])
+  })
+
   it('普通 JSON 导出移除媒体引用，避免跨设备产生失效图片', () => {
     const draft = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 8,
