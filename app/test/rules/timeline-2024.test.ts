@@ -1,0 +1,77 @@
+import { describe, expect, it } from 'vitest'
+
+import { getCheckpointSelectionBounds } from '@/rules/feats'
+import { buildTimeline } from '@/rules/timeline'
+import { draft2024 } from '../fixtures/draft-2024'
+
+const fighterTimeline = (level: number, subclassId?: string) =>
+  buildTimeline('class-2024-fighter', level, { ruleset: '5e-2024', subclassId })
+
+describe('2024 职业时间线（B08-01）', () => {
+  it('1 级展开技能、战斗风格与武器精通', () => {
+    const timeline = fighterTimeline(1)
+    expect(timeline.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-fighter-skills-1',
+      'class-2024-fighter-style-1',
+      'class-2024-fighter-mastery-1',
+    ])
+  })
+
+  it('子职检查点由仓库提供勇士候选，标题按 2024 口径生成', () => {
+    const timeline = fighterTimeline(3)
+    const subclass = timeline.find((checkpoint) => checkpoint.kind === 'subclass')
+    expect(subclass?.id).toBe('class-2024-fighter-subclass-3')
+    expect(subclass?.title).toBe('选择战士子职')
+    expect(subclass?.optionIds).toEqual(['subclass-2024-fighter-champion'])
+  })
+
+  it('属性提升检查点按 4／6／8／12／14／16／19 级展开', () => {
+    const timeline = fighterTimeline(19)
+    expect(timeline.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-fighter-feat-4',
+      'class-2024-fighter-feat-6',
+      'class-2024-fighter-feat-8',
+      'class-2024-fighter-feat-12',
+      'class-2024-fighter-feat-14',
+      'class-2024-fighter-feat-16',
+      'class-2024-fighter-feat-19',
+    ])
+    expect(timeline.find((checkpoint) => checkpoint.id === 'class-2024-fighter-feat-19')?.optionIds).toContain('feat-2024-boon-of-fate')
+  })
+
+  it('武器精通数量随等级 3／4／5／6，且为动态候选', () => {
+    const checkpoint = fighterTimeline(16).find((item) => item.candidateKind === 'weapon-mastery')
+    if (!checkpoint) throw new Error('缺少武器精通检查点')
+    const boundsAt = (level: number) => getCheckpointSelectionBounds({ ...draft2024(), targetLevel: level }, checkpoint)
+    expect([1, 4, 10, 16, 20].map((level) => boundsAt(level).max)).toEqual([3, 4, 5, 6, 6])
+    expect(checkpoint.optionIds).toEqual([])
+  })
+
+  it('勇士子职特性检查点按等级展开，额外战斗风格候选为战斗风格专长', () => {
+    const atSix = fighterTimeline(6, 'subclass-2024-fighter-champion')
+    expect(atSix.some((checkpoint) => checkpoint.id === 'subclass-feature-fighter-2024-champion-additional-fighting-style')).toBe(false)
+    // 被动特性不生成选择检查点，6 级没有需要选择的子职特性。
+    expect(atSix.filter((checkpoint) => checkpoint.id.startsWith('subclass-feature-'))).toEqual([])
+    const atSeven = fighterTimeline(7, 'subclass-2024-fighter-champion')
+    const additional = atSeven.find((checkpoint) => checkpoint.id === 'subclass-feature-fighter-2024-champion-additional-fighting-style')
+    expect(additional?.optionIds).toHaveLength(10)
+    expect(additional?.optionIds).toContain('feat-2024-archery')
+    const atEighteen = fighterTimeline(18, 'subclass-2024-fighter-champion')
+    expect(atEighteen.filter((checkpoint) => checkpoint.id.startsWith('subclass-feature-')).map((checkpoint) => checkpoint.id)).toEqual([
+      'subclass-feature-fighter-2024-champion-additional-fighting-style',
+    ])
+  })
+
+  it('直建 20 级包含逐级升级的全部检查点', () => {
+    const levelTwenty = fighterTimeline(20)
+    for (let level = 1; level <= 20; level += 1) {
+      const ids = fighterTimeline(level).map((checkpoint) => checkpoint.id)
+      expect(ids.every((id) => levelTwenty.some((checkpoint) => checkpoint.id === id))).toBe(true)
+    }
+  })
+
+  it('尚未接入的 2024 子职不进入候选（塑能师保持 unavailable）', () => {
+    const timeline = buildTimeline('class-2024-wizard', 3, { ruleset: '5e-2024' })
+    expect(timeline.some((checkpoint) => checkpoint.kind === 'subclass')).toBe(false)
+  })
+})

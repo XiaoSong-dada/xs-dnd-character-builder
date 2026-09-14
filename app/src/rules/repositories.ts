@@ -1,10 +1,9 @@
 import { createRulesRepository } from '@/rules/repository-builder'
 import { rulesRepository2014 } from '@/rules/repository'
-import {
-  classes2024Sample,
-  sources2024Sample,
-  subclasses2024Sample,
-} from '@/rules/data/rules-2024-sample'
+import { classes2024 } from '@/rules/data/classes-2024'
+import { sources2024 } from '@/rules/data/sources-2024'
+import { subclassOptions2024, subclasses2024 } from '@/rules/data/subclasses-2024'
+import { skillOptions2024 } from '@/rules/data/skill-options-2024'
 import { equipmentWithPacks2024 } from '@/rules/data/equipment-packs-2024'
 import { classStartingEquipment2024, backgroundStartingEquipment2024 } from '@/rules/data/starting-equipment-2024'
 import { weaponMasteries2024 } from '@/rules/data/weapon-masteries-2024'
@@ -24,14 +23,14 @@ export class UnsupportedRulesetError extends Error {
 }
 
 export const rulesRepository2024 = createRulesRepository('5e-2024', {
-  sources: sources2024Sample,
-  classes: classes2024Sample,
-  subclasses: subclasses2024Sample,
+  sources: sources2024,
+  classes: classes2024,
+  subclasses: subclasses2024,
   races: races2024,
   backgrounds: backgrounds2024,
   raceFeatures: speciesTraits2024,
   backgroundFeatures: [],
-  options: [...abilityImprovementOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024],
+  options: [...abilityImprovementOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024, ...skillOptions2024, ...subclassOptions2024],
   feats: feats2024,
   equipment: equipmentWithPacks2024,
   classStartingEquipment: classStartingEquipment2024,

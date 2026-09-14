@@ -3,6 +3,7 @@ import type { AbilityKey, CharacterDraft, CompatibilityStatus, CurrencyWallet, D
 export type CheckpointKind =
   | 'skills'
   | 'fighting-style'
+  | 'weapon-mastery'
   | 'subclass'
   | 'subclass-feature'
   | 'ability-improvement'
@@ -17,6 +18,21 @@ export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon'
 
 /** 护甲训练类别；2024 前置与熟练均以此为口径。 */
 export type ArmorTraining = 'light' | 'medium' | 'heavy' | 'shield'
+
+/** 武器训练：类别（简易／军用）与指定武器 ID；2024 职业以此判定武器熟练。 */
+export interface WeaponTraining {
+  readonly categories?: readonly ('simple' | 'martial')[]
+  readonly itemIds?: readonly string[]
+}
+
+/** 职业／子职资源（B08 登记，B10 结算）：简单计数池的上限与恢复。 */
+export interface ClassResource {
+  /** 1—20 级上限；索引 = 等级−1；0 表示该等级尚未获得。 */
+  readonly maxByLevel: readonly number[]
+  readonly recovery: 'short-rest' | 'long-rest' | 'none' | 'special'
+  /** 复杂条件或额外说明（如每回合一次、失败不消耗）。 */
+  readonly note?: string
+}
 
 /**
  * 玩法标签：描述职业/子职的常见玩法定位，供推荐引擎做偏好匹配。
@@ -186,6 +202,8 @@ export interface ChoiceCheckpoint {
   readonly spellPool?: SpellPoolSpec
   /** 选择数量随熟练加值变化（如仪式施法者）。 */
   readonly selectionCountFrom?: 'proficiency-bonus'
+  /** 选择数量按等级表变化（索引 = 等级−1）；如 2024 战士武器精通 3／4／5／6。 */
+  readonly selectionCountByLevel?: readonly number[]
 }
 
 /** 动态候选池：检查点选项随草稿状态（等级、法术书）由规则层生成。 */
@@ -267,6 +285,8 @@ export interface ClassRule {
   readonly checkpoints: readonly ChoiceCheckpoint[]
   /** 职业授予的护甲训练（2024）；2014 职业省略并使用专长层的兼容映射。 */
   readonly armorTraining?: readonly ArmorTraining[]
+  /** 职业授予的武器训练（2024）；2014 职业省略并回退 2014 兼容映射。 */
+  readonly weaponTraining?: WeaponTraining
   readonly spellcasting?: SpellcastingConfig
   /** 职业等级特性（含升级增强项，每条独立登记）；由 class-features-2014 挂载。 */
   readonly features?: readonly ClassFeature[]
@@ -339,11 +359,15 @@ export interface SubclassFeature {
   readonly kind: SubclassFeatureKind
   readonly requiresChoice?: boolean
   readonly optionIds?: readonly string[]
+  /** 按专长类别展开候选池（如 2024 勇士 7 级额外战斗风格）。 */
+  readonly featCategories?: readonly FeatCategory[]
   /** 选项 id → 中文名（用于子职特性选择检查点的界面渲染）。 */
   readonly optionLabels?: Readonly<Record<string, string>>
   /** 选择检查点的最少/最多选择数（缺省 1/1；多选特性如战斗大师战技填写 3/3）。 */
   readonly minSelections?: number
   readonly maxSelections?: number
+  /** 简单计数池资源（B08 登记展示，B10 结算）。 */
+  readonly resource?: ClassResource
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }
@@ -362,6 +386,8 @@ export interface ClassFeature {
   readonly requiresChoice?: boolean
   /** 关联的时间线检查点 id：用于角色卡展示选择完成度（如超魔 3/10/17 级检查点）。 */
   readonly checkpointIds?: readonly string[]
+  /** 简单计数池资源（B08 登记展示，B10 结算）。 */
+  readonly resource?: ClassResource
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }

@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
+import { rulesRepository2024 } from '@/rules/repositories'
 import type { EquipmentRule } from '@/types/rules'
 import { fighterDraft } from '../fixtures/export-character'
+import { draft2024 } from '../fixtures/draft-2024'
 
 function weapon(overrides: Partial<EquipmentRule>): EquipmentRule {
   return { id: 'test-weapon', ruleset: '5e-2014', name: '测试武器', summary: '', description: '', category: 'weapon', equippable: true, status: 'implemented', sourceIds: [], weaponKind: 'martial-melee', damageDice: '1d8', damageType: '穿刺', ...overrides }
@@ -25,5 +27,21 @@ describe('逐武器攻击派生', () => {
     expect(normal.proficient).toBe(true)
     expect(magic.attackBonus).toBe(normal.attackBonus + 2)
     expect(magic.damageBonus).toBe(normal.damageBonus + 2)
+  })
+
+  it('2024 职业武器训练决定熟练（战士简易＋军用，法师简易）', () => {
+    const longsword = rulesRepository2024.getEquipment('equipment-2024-longsword')
+    const dagger = rulesRepository2024.getEquipment('equipment-2024-dagger')
+    if (!longsword || !dagger) throw new Error('缺少 2024 武器数据')
+
+    const fighter = draft2024({ targetLevel: 1 })
+    const fighterDerived = deriveCharacter(fighter)
+    expect(deriveWeaponAttack(fighter, fighterDerived, longsword)?.proficient).toBe(true)
+    expect(deriveWeaponAttack(fighter, fighterDerived, dagger)?.proficient).toBe(true)
+
+    const wizard = draft2024({ targetLevel: 1, classId: 'class-2024-wizard' })
+    const wizardDerived = deriveCharacter(wizard)
+    expect(deriveWeaponAttack(wizard, wizardDerived, longsword)?.proficient).toBe(false)
+    expect(deriveWeaponAttack(wizard, wizardDerived, dagger)?.proficient).toBe(true)
   })
 })

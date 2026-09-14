@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { deriveCharacter, getFlexibleBonusRule, getRaceAbilityBonuses } from '@/rules/derive'
 import { getBackgroundAbilityBonuses } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
+import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { rulesRepository } from '@/rules/repository'
@@ -90,12 +91,14 @@ export function useCharacterBuilderPage() {
   const timelineComplete = computed(() => {
     const draft = activeDraft.value
     if (!draft?.classId) return false
-    const classRule = rulesRepository.getClass(draft.classId)
+    const classRule = getRulesRepository(draft.ruleset).getClass(draft.classId)
     if (classRule?.status !== 'implemented') return true
     const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
     return timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
-      return (selection?.optionIds.length ?? 0) >= checkpoint.minSelections
+      const bounds = getCheckpointSelectionBounds(draft, checkpoint)
+      const count = selection?.optionIds.length ?? 0
+      return count >= bounds.min && count <= bounds.max
     })
   })
   const canContinue = computed(() => {
@@ -307,7 +310,9 @@ export function useCharacterBuilderPage() {
     const hasInvalidated = draft.selections.some((selection) => Boolean(selection.invalidatedAt))
     const hasIncompleteCheckpoint = timeline.some((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
-      return (selection?.optionIds.length ?? 0) < checkpoint.minSelections
+      const bounds = getCheckpointSelectionBounds(draft, checkpoint)
+      const count = selection?.optionIds.length ?? 0
+      return count < bounds.min || count > bounds.max
     })
     if (hasInvalidated || hasIncompleteCheckpoint) {
       setStep('timeline')

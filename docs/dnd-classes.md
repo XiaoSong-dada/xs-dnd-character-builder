@@ -6,7 +6,7 @@
 
 本文档是**选择性加载资料**，不属于项目每次开发前的必读文档。仅在任务涉及职业、子职、职业特性、职业等级或相关规则数据时读取；目标职业明确时，只需读取通用约定和对应职业章节。
 
-- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
+- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士与勇士（B08-01），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
 
 ## 2. 资料边界
 
@@ -18,7 +18,7 @@
 - 未经官方资料核验的内容标记为“待核验”，不得直接进入规则数据。
 - 子职英文名以官方2024目录为准；当前中文名是项目暂译，后续取得可靠的官方中文译名时再统一替换。
 - 对非开放商业内容只记录必要的索引、来源和项目内兼容说明，不复制完整规则正文。
-- 现有 2024 文件作为未来独立规则集资料保留，不进入当前注册表。扩展子职目录仅表示“已建立资料入口”，不表示车卡程序已经实现。
+- 现有 2024 文件按 B08 逐批接入 2024 仓库（职业数据、特性、检查点与子职）；未接入条目仍只作资料入口，不得当作可选项。产品入口继续由 `OPEN_RULESETS` 控制，当前仅 2014 开放。
 - 当前实现说明见 [2014 战士](classes/subclasses/fighter/fighter-2014.md)、[2014 战斗大师](classes/subclasses/fighter/fighter-battle-master-2014.md)、[2014 野蛮人](classes/subclasses/barbarian/barbarian-2014.md)、[2014 武僧](classes/subclasses/monk/monk-2014.md)、[2014 游荡者](classes/subclasses/rogue/rogue-2014.md)、[2014 圣武士](classes/subclasses/paladin/paladin-2014.md)、[2014 游侠](classes/subclasses/ranger/ranger-2014.md)、[2014 法师](classes/subclasses/wizard/wizard-2014.md)与[2014 邪术师](classes/subclasses/warlock/warlock-2014.md)。
 - 职业基础等级特性：12 个 2014 基础职业已全量登记于 `app/src/rules/data/class-features-2014.ts`（升级增强项每个等级各登记一条；需玩家选择的特性标记 `requiresChoice`，角色卡展示“需选择”并沿用既有检查点入口），经 `repository` 挂载到 `ClassRule.features`，角色卡“能力”页签与时间线首个职业检查点展示。
 - 子职覆盖：112 个玩家可用子职已按纵向切片接入车卡（等级特性注册表 `app/src/rules/data/subclass-features-2014.ts`、子职选择与互斥校验、子职派生钩子）；死亡领域与破誓者仍为 DM 专用索引。未核验的具体效果保持 `index-only`，不参与自动计算。
@@ -77,7 +77,7 @@
 | `bard` | 吟游诗人 | Bard | [吟游诗人详细资料](classes/subclasses/bard/bard.md) | [舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)<br>[魅惑学院](classes/subclasses/bard/bard-college-of-glamour.md)<br>[博闻学院](classes/subclasses/bard/bard-college-of-lore.md)<br>[勇气学院](classes/subclasses/bard/bard-college-of-valor.md) | 基础资料已核验 |
 | `cleric` | 牧师 | Cleric | [牧师详细资料](classes/subclasses/cleric/cleric.md) | [生命领域](classes/subclasses/cleric/cleric-life-domain.md)<br>[光明领域](classes/subclasses/cleric/cleric-light-domain.md)<br>[诡术领域](classes/subclasses/cleric/cleric-trickery-domain.md)<br>[战争领域](classes/subclasses/cleric/cleric-war-domain.md) | 基础资料已核验 |
 | `druid` | 德鲁伊 | Druid | [德鲁伊详细资料](classes/subclasses/druid/druid.md) | [大地结社](classes/subclasses/druid/druid-circle-of-the-land.md)<br>[月亮结社](classes/subclasses/druid/druid-circle-of-the-moon.md)<br>[海洋结社](classes/subclasses/druid/druid-circle-of-the-sea.md)<br>[星辰结社](classes/subclasses/druid/druid-circle-of-the-stars.md) | 基础资料已核验 |
-| `fighter` | 战士 | Fighter | [战士详细资料](classes/subclasses/fighter/fighter.md) | [战斗大师](classes/subclasses/fighter/fighter-battle-master.md)<br>[勇士](classes/subclasses/fighter/fighter-champion.md)<br>[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)<br>[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md) | 基础职业与勇士已核验 |
+| `fighter` | 战士 | Fighter | [战士详细资料](classes/subclasses/fighter/fighter.md) | [战斗大师](classes/subclasses/fighter/fighter-battle-master.md)<br>[勇士](classes/subclasses/fighter/fighter-champion.md)<br>[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)<br>[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md) | 基础职业与勇士已接入运行时（B08-01） |
 | `monk` | 武僧 | Monk | [武僧详细资料](classes/subclasses/monk/monk.md) | [慈悲宗](classes/subclasses/monk/monk-mercy.md)<br>[暗影宗](classes/subclasses/monk/monk-shadow.md)<br>[元素宗](classes/subclasses/monk/monk-elements.md)<br>[敞手宗](classes/subclasses/monk/monk-open-hand.md) | 基础职业与敞手宗已核验 |
 | `paladin` | 圣武士 | Paladin | [圣武士详细资料](classes/subclasses/paladin/paladin.md) | [奉献之誓](classes/subclasses/paladin/paladin-oath-of-devotion.md)<br>[荣耀之誓](classes/subclasses/paladin/paladin-oath-of-glory.md)<br>[古贤之誓](classes/subclasses/paladin/paladin-oath-of-the-ancients.md)<br>[复仇之誓](classes/subclasses/paladin/paladin-oath-of-vengeance.md) | 基础职业与奉献之誓已核验 |
 | `ranger` | 游侠 | Ranger | [游侠详细资料](classes/subclasses/ranger/ranger.md) | [驯兽师](classes/subclasses/ranger/ranger-beast-master.md)<br>[妖精漫游者](classes/subclasses/ranger/ranger-fey-wanderer.md)<br>[幽域追猎者](classes/subclasses/ranger/ranger-gloom-stalker.md)<br>[猎人](classes/subclasses/ranger/ranger-hunter.md) | 基础职业与猎人已核验 |
@@ -154,7 +154,7 @@
 - 2024子职：[战斗大师](classes/subclasses/fighter/fighter-battle-master.md)、[勇士](classes/subclasses/fighter/fighter-champion.md)、[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)、[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md)
 - 旧版与扩展子职：[紫龙骑士](classes/subclasses/fighter/fighter-purple-dragon-knight.md)、[奥法射手](classes/subclasses/fighter/fighter-arcane-archer.md)、[骑兵](classes/subclasses/fighter/fighter-cavalier.md)、[武士](classes/subclasses/fighter/fighter-samurai.md)、[回音骑士](classes/subclasses/fighter/fighter-echo-knight.md)、[符文骑士](classes/subclasses/fighter/fighter-rune-knight.md)
 - 选择与校验：已记录技能、装备、战斗风格、武器精通、回气、动作如潮、不屈、额外攻击和旧版资源兼容边界
-- 来源与核验：首批战士／勇士已按项目内5e不全书复核；其他子职仍沿用既有参考来源；最后核验日期 2026-09-08
+- 来源与核验：首批战士／勇士已按项目内5e不全书复核，且职业、勇士特性、武器精通与检查点已由 B08-01 接入运行时（其余子职待 B08-13）；其他子职仍沿用既有参考来源；最后核验日期 2026-09-14
 
 ### 5.6 武僧 Monk
 

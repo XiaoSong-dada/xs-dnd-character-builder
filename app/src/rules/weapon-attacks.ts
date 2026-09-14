@@ -1,6 +1,6 @@
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
-import type { EquipmentRule } from '@/types/rules'
+import type { EquipmentRule, WeaponTraining } from '@/types/rules'
 
 export interface WeaponAttackResult {
   readonly itemId: string
@@ -15,12 +15,8 @@ export interface WeaponAttackResult {
   readonly range?: readonly [number, number]
 }
 
-interface WeaponProficiencyRule {
-  readonly categories?: readonly ('simple' | 'martial')[]
-  readonly itemIds?: readonly string[]
-}
-
-const CLASS_WEAPON_PROFICIENCIES: Readonly<Record<string, WeaponProficiencyRule>> = {
+/** 2014 职业武器熟练映射；2024 改用 `ClassRule.weaponTraining`，此表仅作 2014 回退。 */
+const CLASS_WEAPON_PROFICIENCIES: Readonly<Record<string, WeaponTraining>> = {
   'class-2014-barbarian': { categories: ['simple', 'martial'] },
   'class-2014-bard': { categories: ['simple'], itemIds: ['hand-crossbow', 'longsword', 'rapier', 'shortsword'] },
   'class-2014-cleric': { categories: ['simple'] },
@@ -42,11 +38,15 @@ function weaponCategory(equipment: EquipmentRule): 'simple' | 'martial' | undefi
 }
 
 function isProficient(draft: CharacterDraft, equipment: EquipmentRule): boolean {
-  const classRule = draft.classId ? CLASS_WEAPON_PROFICIENCIES[draft.classId] : undefined
+  const repository = getRulesRepository(draft.ruleset)
+  const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
   const category = weaponCategory(equipment)
-  if (classRule?.itemIds?.includes(equipment.id) || (category && classRule?.categories?.includes(category))) return true
-  const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+  // 2024 使用职业数据中的武器训练；2014 回退兼容映射。
+  const training = classRule?.weaponTraining
+    ?? (draft.classId ? CLASS_WEAPON_PROFICIENCIES[draft.classId] : undefined)
+  if (training?.itemIds?.includes(equipment.id) || (category && training?.categories?.includes(category))) return true
+  const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
+  const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
   return [race, subrace].some((item) => item?.weaponArmorProficiencies?.includes(equipment.id))
 }
 

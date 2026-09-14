@@ -17,8 +17,8 @@ import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
 import { getBackgroundAllocationIssue, getDraftSpeciesRules } from '@/rules/origins'
+import { validateWeaponMasterySelection } from '@/rules/weapon-mastery'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
-import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { isSourceEnabled } from '@/rules/source-books'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
 import type { AbilityKey, CharacterDraft, ValidationIssue } from '@/types/character'
@@ -335,7 +335,21 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
           resolution: `需要选择${bounds.min === bounds.max ? bounds.min : `${bounds.min}—${bounds.max}`}项。`,
         })
       }
-      if (isV2024 && checkpoint.candidateKind && selection) {
+      if (isV2024 && checkpoint.candidateKind === 'weapon-mastery' && selection) {
+        // 武器精通：候选与数量由 B07-A 纯函数校验；计数问题已由通用检查点检查覆盖，此处不重复报告。
+        const masteryIssues = validateWeaponMasterySelection(repository, selection, bounds.min)
+          .filter((message) => message !== `需要选择${bounds.min}种武器精通。`)
+        for (const message of masteryIssues) {
+          issues.push({
+            id: `weapon-mastery-${checkpoint.id}`,
+            step: checkpoint.step,
+            severity: 'error',
+            message,
+            resolution: '从当前规则版本的武器中重新选择武器精通。',
+          })
+        }
+      }
+      if (isV2024 && checkpoint.candidateKind && checkpoint.candidateKind !== 'weapon-mastery' && selection) {
         const candidates = new Set(getCheckpointCandidates(draft, checkpoint))
         for (const optionId of selection.optionIds) {
           if (candidates.has(optionId)) continue
@@ -597,11 +611,11 @@ export function validateSubclassSelections(draft: CharacterDraft): readonly Vali
     issues.push({ id: 'subclass-level-too-early', step: 'timeline', severity: 'error', message: `“${subclass.name}”需要在${subclass.selectionLevel}级才能选择。`, resolution: '提高目标等级或移除子职选择。' })
   }
   if (subclass.status === 'index-only') {
-    issues.push({ id: 'subclass-index-only', step: 'timeline', severity: 'warning', message: `“${subclass.name}”目前只有2014规则索引。`, resolution: '可以继续生成预览草稿，但不能标记为资料完整角色。' })
+    issues.push({ id: 'subclass-index-only', step: 'timeline', severity: 'warning', message: `“${subclass.name}”目前只有规则索引。`, resolution: '可以继续生成预览草稿，但不能标记为资料完整角色。' })
   }
-  const features = getSubclassFeatures2014(draft.subclassId)
+  const features = repository.getSubclass(draft.subclassId)?.features ?? []
   for (const feature of features) {
-    if (!feature.requiresChoice || !feature.optionIds?.length) continue
+    if (!feature.requiresChoice || ((feature.optionIds?.length ?? 0) === 0 && (feature.featCategories?.length ?? 0) === 0)) continue
     // 未解锁等级的特性不校验（与时间线检查点按等级过滤一致）。
     if (feature.level > draft.targetLevel) continue
     const min = feature.minSelections ?? 1

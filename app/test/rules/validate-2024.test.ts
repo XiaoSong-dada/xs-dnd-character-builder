@@ -112,3 +112,76 @@ describe('2024 专长校验', () => {
     expect(issueIds(draft).some((id) => id.startsWith('feat-ability-cap-'))).toBe(false)
   })
 })
+
+const FIGHTER_SKILLS = ['skill-athletics', 'skill-perception'] as const
+const CHAMPION_SUBCLASS_FEATURE = 'subclass-feature-fighter-2024-champion-additional-fighting-style'
+
+function fighterBaseSelections(masteryIds: readonly string[]) {
+  return [
+    selection('class-2024-fighter-skills-1', FIGHTER_SKILLS),
+    selection('class-2024-fighter-style-1', ['feat-2024-archery']),
+    selection('class-2024-fighter-mastery-1', masteryIds),
+  ]
+}
+
+describe('2024 战士武器精通与勇士校验（B08-01）', () => {
+  it('合法精通选择不报错', () => {
+    const draft = draft2024({
+      selections: fighterBaseSelections(['equipment-2024-longsword', 'equipment-2024-dagger', 'equipment-2024-mace', 'equipment-2024-battleaxe']),
+    })
+    const ids = issueIds(draft)
+    expect(ids).not.toContain('checkpoint-class-2024-fighter-mastery-1')
+    expect(ids.some((id) => id.startsWith('weapon-mastery-'))).toBe(false)
+  })
+
+  it('重复武器与非武器候选分别报错', () => {
+    const duplicate = draft2024({
+      selections: fighterBaseSelections(['equipment-2024-longsword', 'equipment-2024-longsword', 'equipment-2024-mace', 'equipment-2024-battleaxe']),
+    })
+    expect(validateDraft(duplicate).some((issue) => issue.message === '同一种武器不能重复选择。')).toBe(true)
+
+    const invalid = draft2024({
+      selections: fighterBaseSelections(['equipment-2024-wand', 'equipment-2024-dagger', 'equipment-2024-mace', 'equipment-2024-battleaxe']),
+    })
+    expect(validateDraft(invalid).some((issue) => issue.id.startsWith('weapon-mastery-'))).toBe(true)
+  })
+
+  it('精通数量按等级校验（10 级需要 5 种）', () => {
+    const four = draft2024({
+      targetLevel: 10,
+      selections: fighterBaseSelections(['equipment-2024-longsword', 'equipment-2024-dagger', 'equipment-2024-mace', 'equipment-2024-battleaxe']),
+    })
+    expect(issueIds(four)).toContain('checkpoint-class-2024-fighter-mastery-1')
+
+    const five = draft2024({
+      targetLevel: 10,
+      selections: fighterBaseSelections(['equipment-2024-longsword', 'equipment-2024-dagger', 'equipment-2024-mace', 'equipment-2024-battleaxe', 'equipment-2024-greataxe']),
+    })
+    expect(issueIds(five)).not.toContain('checkpoint-class-2024-fighter-mastery-1')
+  })
+
+  it('勇士 7 级额外战斗风格不能重复已选风格', () => {
+    const draft = draft2024({
+      targetLevel: 7,
+      subclassId: 'subclass-2024-fighter-champion',
+      selections: [
+        ...fighterBaseSelections(['equipment-2024-longsword', 'equipment-2024-dagger', 'equipment-2024-mace', 'equipment-2024-battleaxe']),
+        selection('class-2024-fighter-subclass-3', ['subclass-2024-fighter-champion']),
+        selection('subclass-feature-fighter-2024-champion-additional-fighting-style', ['feat-2024-archery']),
+      ],
+    })
+    expect(issueIds(draft)).toContain('feat-duplicate-feat-2024-archery')
+  })
+
+  it('勇士 7 级未完成额外战斗风格时提示补选', () => {
+    const draft = draft2024({
+      targetLevel: 7,
+      subclassId: 'subclass-2024-fighter-champion',
+      selections: [
+        ...fighterBaseSelections(['equipment-2024-longsword', 'equipment-2024-dagger', 'equipment-2024-mace', 'equipment-2024-battleaxe']),
+        selection('class-2024-fighter-subclass-3', ['subclass-2024-fighter-champion']),
+      ],
+    })
+    expect(issueIds(draft)).toContain(`checkpoint-${CHAMPION_SUBCLASS_FEATURE}`)
+  })
+})

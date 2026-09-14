@@ -14,13 +14,11 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-media'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
-import { decodeAbilityImprovement } from '@/rules/feats'
+import { decodeAbilityImprovement, getCheckpointSelectionBounds } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { getRulesRepository } from '@/rules/repositories'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
-import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
-import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { buildTimeline } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
 import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, DerivedCharacter, InventoryEntry, ManualAddedSpell, SpellSelections } from '@/types/character'
@@ -93,7 +91,7 @@ function abilityLabel(key: string): string {
   return ABILITY_LABELS[key as AbilityKey] ?? key
 }
 function skillLabel(skillId: string): string {
-  return rulesRepository.getOption(skillId)?.name ?? skillId
+  return getRulesRepository(props.draft.ruleset).getOption(skillId)?.name ?? skillId
 }
 function sourceNote(sources: DerivedCharacter['armorClass']['sources']): string {
   return sources.map((source) => `${source.label} ${source.value >= 0 ? '+' : ''}${source.value}`).join(' · ')
@@ -309,13 +307,14 @@ const selectedOptionEntries = computed(() => {
   for (const checkpointId of choiceCheckpointIds) {
     if (!timeline.some((item) => item.id === checkpointId)) continue
     const selection = draft.selections.find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)
+    const repository = getRulesRepository(draft.ruleset)
     for (const optionId of selection?.optionIds ?? []) {
-      const spell = rulesRepository.getSpell(optionId)
+      const spell = repository.getSpell(optionId)
       if (spell) {
         entries.push({ id: optionId, name: spell.name, caption: formatSpellLabel(spell), detail: spell.description, expandedLabel: '法术效果' })
         continue
       }
-      const option = rulesRepository.getOption(optionId)
+      const option = repository.getOption(optionId)
       if (option) {
         entries.push({
           id: optionId,
@@ -323,6 +322,19 @@ const selectedOptionEntries = computed(() => {
           caption: option.englishName ?? '',
           detail: option.description,
           expandedLabel: optionId.startsWith('metamagic-') ? '超魔效果' : '选项详情',
+        })
+        continue
+      }
+      // 武器精通等选择保存的是装备 ID：显示武器名与精通词条。
+      const equipment = repository.getEquipment(optionId)
+      if (equipment) {
+        const mastery = equipment.masteryId ? repository.getWeaponMastery(equipment.masteryId) : undefined
+        entries.push({
+          id: optionId,
+          name: equipment.name,
+          caption: mastery?.name ?? equipment.englishName,
+          detail: mastery ? `${mastery.name}（${mastery.englishName}）：${mastery.summary}` : equipment.description,
+          expandedLabel: '物品详情',
         })
       }
     }
@@ -340,7 +352,7 @@ function featureChoiceLabel(feature: ClassFeature): string {
   const unlocked = checkpointIds
     .map((checkpointId) => timeline.find((item) => item.id === checkpointId))
     .filter((checkpoint): checkpoint is NonNullable<typeof checkpoint> => Boolean(checkpoint))
-  const total = unlocked.reduce((sum, checkpoint) => sum + checkpoint.minSelections, 0)
+  const total = unlocked.reduce((sum, checkpoint) => sum + getCheckpointSelectionBounds(draft, checkpoint).min, 0)
   const done = unlocked.reduce((sum, checkpoint) => sum
     + (draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds.length ?? 0), 0)
   return total === 0 ? '需选择' : done >= total ? `已选择 ${total} 项` : `需选择 ${done}/${total}`
@@ -424,10 +436,10 @@ function applyCurrency(mode: 'add' | 'set' | 'decrease'): void {
 const classInfo = computed(() => {
   const classId = props.draft.classId
   if (!classId) return undefined
-  const classRule = rulesRepository.getClass(classId)
+  const classRule = getRulesRepository(props.draft.ruleset).getClass(classId)
   if (!classRule) return undefined
   // 角色卡只展示当前等级已解锁的特性（更高等级的特性不显示）。
-  const features = getClassFeatures2014(classId)
+  const features = (classRule.features ?? [])
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { classRule, features }
 })
@@ -447,7 +459,7 @@ const featAndAsiEntries = computed(() => {
     const checkpoint = timeline.find((item) => item.id === selection.checkpointId)
     for (const optionId of selection.optionIds) {
       if (optionId.startsWith('feat-')) {
-        const feat = rulesRepository.feats.find((item) => item.id === optionId)
+        const feat = getRulesRepository(props.draft.ruleset).feats.find((item) => item.id === optionId)
         if (feat) {
           entries.push({ id: feat.id, level: checkpoint?.level ?? 1, label: `${feat.name} · ${feat.englishName}`, detail: feat.detail })
         }
@@ -466,10 +478,10 @@ const featAndAsiEntries = computed(() => {
 const subclassInfo = computed(() => {
   const subclassId = props.draft.subclassId
   if (!subclassId) return undefined
-  const subclass = rulesRepository.getSubclass(subclassId)
+  const subclass = getRulesRepository(props.draft.ruleset).getSubclass(subclassId)
   if (!subclass) return undefined
   // 角色卡只展示当前等级已解锁的特性（更高等级的特性不显示）。
-  const features = getSubclassFeatures2014(subclassId)
+  const features = subclass.features
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { subclass, features }
 })

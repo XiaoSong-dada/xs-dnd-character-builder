@@ -14,15 +14,16 @@ describe('versioned rules repositories', () => {
     expect(getRulesRepository('5e-2014')).toBe(rulesRepository)
   })
 
-  it('resolves the isolated 2024 architecture samples', () => {
+  it('resolves the versioned 2024 repository', () => {
     const repository = getRulesRepository('5e-2024')
     expect(repository).toBe(rulesRepository2024)
     expect(repository.ruleset).toBe('5e-2024')
-    expect(repository.getClass('class-2024-fighter')?.status).toBe('unavailable')
+    expect(repository.getClass('class-2024-fighter')?.status).toBe('implemented')
+    expect(repository.getClass('class-2024-wizard')?.status).toBe('unavailable')
     expect(repository.getClass('class-2024-fighter')?.hitDie).toBe(10)
     expect(repository.getClass('class-2024-wizard')?.primaryAbilities).toEqual(['int'])
     expect(repository.getClass('class-2024-wizard')?.sourceIds).toContain('source-2024-phb')
-    expect(repository.getSubclass('subclass-2024-fighter-champion')).toBeDefined()
+    expect(repository.getSubclass('subclass-2024-fighter-champion')?.status).toBe('implemented')
     expect(repository.getSubclass('subclass-2024-wizard-evoker')).toBeDefined()
     expect(repository.getRace('species-2024-human')).toBeDefined()
     expect(repository.getBackground('background-2024-sage')).toBeDefined()

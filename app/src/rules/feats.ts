@@ -310,6 +310,11 @@ export function getCheckpointSelectionBounds(
     const bonus = 2 + Math.floor((Math.max(1, draft.targetLevel) - 1) / 4)
     return { min: bonus, max: bonus }
   }
+  if (checkpoint.selectionCountByLevel?.length) {
+    const level = Math.min(Math.max(1, Math.trunc(draft.targetLevel)), checkpoint.selectionCountByLevel.length)
+    const count = Math.max(0, checkpoint.selectionCountByLevel[level - 1] ?? 0)
+    return { min: count, max: count }
+  }
   return { min: checkpoint.minSelections, max: checkpoint.maxSelections }
 }
 

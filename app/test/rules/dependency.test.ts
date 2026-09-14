@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { getDependencyImpact } from '@/rules/dependency'
 import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft } from '@/types/character'
+import { draft2024, selection } from '../fixtures/draft-2024'
 
 function makeFighterDraft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
@@ -426,5 +427,26 @@ describe('getDependencyImpact target-level 升级与降级', () => {
       { checkpointId: 'wizard-2014-spell-mastery-1', title: '18级 · 选择1个1环法术精通' },
       { checkpointId: 'wizard-2014-spell-mastery-2', title: '18级 · 选择1个2环法术精通' },
     ])
+  })
+})
+
+describe('2024 战士降级复查（B08-01）', () => {
+  it('武器精通数量减少时提示移除多余精通，并按仓库解析子职特性数量', () => {
+    const draft = draft2024({
+      targetLevel: 10,
+      subclassId: 'subclass-2024-fighter-champion',
+      selections: [
+        selection('class-2024-fighter-skills-1', ['skill-athletics', 'skill-perception']),
+        selection('class-2024-fighter-style-1', ['feat-2024-archery']),
+        selection('class-2024-fighter-mastery-1', [
+          'equipment-2024-longsword', 'equipment-2024-dagger', 'equipment-2024-mace', 'equipment-2024-battleaxe', 'equipment-2024-greataxe',
+        ]),
+        selection('class-2024-fighter-subclass-3', ['subclass-2024-fighter-champion']),
+        selection('subclass-feature-fighter-2024-champion-additional-fighting-style', ['feat-2024-defense']),
+      ],
+    })
+    const impact = getDependencyImpact(draft, { kind: 'target-level', value: 3 })
+    expect(impact.reviews).toContain('武器精通数量由 5 项减少为 3 项，需移除多余精通')
+    expect(impact.reviews).toContain('子职特性由 4 项减少为 2 项（更高等级的特性不再生效）')
   })
 })

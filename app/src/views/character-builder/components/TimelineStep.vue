@@ -6,13 +6,13 @@ import OptionCard from '@/components/ui/OptionCard.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
+import { getCheckpointSelectionBounds } from '@/rules/feats'
+import { formatResourceText } from '@/rules/resources'
 import { buildTimeline } from '@/rules/timeline'
 import { getCheckpointCandidates } from '@/rules/spellcasting'
-import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
-import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
-import type { ChoiceCheckpoint, SpellRule, SubclassFeature } from '@/types/rules'
+import type { ChoiceCheckpoint, ClassResource, SpellRule, SubclassFeature } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{
@@ -25,6 +25,9 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ select: [checkpointId: string, optionIds: readonly string[]] }>()
 const expandedCheckpointId = ref<string>()
+
+/** 当前草稿规则版本的仓库：职业、子职、专长与装备名称一律由它解析。 */
+const rulesRepository = computed(() => getRulesRepository(props.draft.ruleset))
 
 const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId, enabledSourceIds: props.draft.enabledSourceIds, selections: props.draft.selections, ruleset: props.draft.ruleset, raceId: props.draft.raceId }))
 
@@ -40,9 +43,9 @@ const selectedSubclassId = computed(() => {
   const subclassCheckpoint = checkpoints.value.find((checkpoint) => checkpoint.kind === 'subclass')
   return subclassCheckpoint ? selectedIds(subclassCheckpoint.id)[0] : undefined
 })
-const subclassFeatures = computed(() => selectedSubclassId.value ? getSubclassFeatures2014(selectedSubclassId.value) : [])
+const subclassFeatures = computed(() => selectedSubclassId.value ? rulesRepository.value.getSubclass(selectedSubclassId.value)?.features ?? [] : [])
 /** 职业基础特性（只读展示）：只列自动获得项，需玩家选择的特性已在对应检查点提供选择入口。 */
-const classFeatures = computed(() => getClassFeatures2014(props.classId).filter((feature) => !feature.requiresChoice))
+const classFeatures = computed(() => (rulesRepository.value.getClass(props.classId)?.features ?? []).filter((feature) => !feature.requiresChoice))
 const firstClassCheckpointId = computed(() => checkpoints.value.find((checkpoint) => checkpoint.kind !== 'subclass-feature')?.id)
 const featureByCheckpointId = computed(() => {
   const map = new Map<string, SubclassFeature>()
@@ -126,18 +129,41 @@ function checkpointCandidates(checkpoint: ChoiceCheckpoint): readonly string[] {
   return getCheckpointCandidates(props.draft, checkpoint)
 }
 
+/** 检查点数量：支持按等级变化的武器精通与固定数量。 */
+function checkpointBounds(checkpoint: ChoiceCheckpoint): { readonly min: number; readonly max: number } {
+  return getCheckpointSelectionBounds(props.draft, checkpoint)
+}
+
+/** 资源展示文本（B08 结构化登记，B10 结算）。 */
+function featureResourceText(feature: { readonly resource?: ClassResource }): string {
+  return feature.resource ? formatResourceText(feature.resource, props.targetLevel) : ''
+}
+
+function masteryItemDescription(itemId: string): string {
+  const item = rulesRepository.value.getEquipment(itemId)
+  const mastery = item?.masteryId ? rulesRepository.value.getWeaponMastery(item.masteryId) : undefined
+  const damage = item?.damageDice ? `${item.damageDice} ${item.damageType}伤害` : ''
+  return [damage, mastery?.name].filter(Boolean).join(' · ')
+}
+
+function masteryEffect(itemId: string): string {
+  const item = rulesRepository.value.getEquipment(itemId)
+  const mastery = item?.masteryId ? rulesRepository.value.getWeaponMastery(item.masteryId) : undefined
+  return mastery ? `${mastery.name}（${mastery.englishName}）：${mastery.summary}` : '该武器没有精通词条。'
+}
+
 /** 法术级候选按环级分组并应用搜索过滤（魔法奥秘、法术精通、招牌法术）。 */
 function spellCandidateGroups(checkpoint: ChoiceCheckpoint): ReadonlyArray<{
   readonly level: number
-  readonly spells: readonly NonNullable<ReturnType<typeof rulesRepository.getSpell>>[]
+  readonly spells: readonly SpellRule[]
 }> {
   if (!checkpoint.candidateKind) return []
   const query = spellCandidateSearch.value.trim().toLocaleLowerCase('zh-CN')
   const spells = checkpointCandidates(checkpoint)
-    .map((id) => rulesRepository.getSpell(id))
-    .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell))
+    .map((id) => rulesRepository.value.getSpell(id))
+    .filter((spell): spell is SpellRule => Boolean(spell))
     .filter((spell) => !query || spell.name.toLocaleLowerCase('zh-CN').includes(query))
-  const byLevel = new Map<number, NonNullable<ReturnType<typeof rulesRepository.getSpell>>[]>()
+  const byLevel = new Map<number, SpellRule[]>()
   for (const spell of spells) {
     const list = byLevel.get(spell.level) ?? []
     list.push(spell)
@@ -168,8 +194,8 @@ function spellCandidateDescription(spell: SpellRule): string {
       >
         <span>{{ checkpoint.level }}级</span>
         <div><strong>{{ checkpoint.title }}</strong><small>{{ checkpoint.description }}</small></div>
-        <UiBadge :tone="selectedIds(checkpoint.id).length >= checkpoint.minSelections ? 'success' : 'warning'">
-          {{ selectedIds(checkpoint.id).length }}/{{ checkpoint.maxSelections }}
+        <UiBadge :tone="selectedIds(checkpoint.id).length >= checkpointBounds(checkpoint).min ? 'success' : 'warning'">
+          {{ selectedIds(checkpoint.id).length }}/{{ checkpointBounds(checkpoint).max }}
         </UiBadge>
       </button>
       <div v-if="currentCheckpointId === checkpoint.id" class="timeline-step__options">
@@ -204,7 +230,7 @@ function spellCandidateDescription(spell: SpellRule): string {
                 : isExpertiseLocked(checkpoint.id, optionId)
                   ? '需先获得该技能熟练（职业技能或背景）'
                   : ''"
-            @select="toggle(checkpoint.id, optionId, checkpoint.maxSelections)"
+            @select="toggle(checkpoint.id, optionId, checkpointBounds(checkpoint).max)"
           >
             <template #suffix>
               <UiBadge v-if="rulesRepository.getOption(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
@@ -212,6 +238,24 @@ function spellCandidateDescription(spell: SpellRule): string {
             </template>
           </OptionCard>
         </ListShell>
+        <div v-else-if="checkpoint.candidateKind === 'weapon-mastery'" class="timeline-step__mastery-candidates">
+          <ListShell :count="`${selectedIds(checkpoint.id).length}/${checkpointBounds(checkpoint).max}`" count-label="已选 ">
+            <ExpandableOptionCard
+              v-for="itemId in checkpointCandidates(checkpoint)"
+              :key="itemId"
+              :title="rulesRepository.getEquipment(itemId)?.name ?? itemId"
+              :description="masteryItemDescription(itemId)"
+              expanded-label="精通词条"
+              :state="selectedIds(checkpoint.id).includes(itemId) ? 'selected' : 'default'"
+              @select="toggle(checkpoint.id, itemId, checkpointBounds(checkpoint).max)"
+            >
+              <template #suffix>
+                <UiBadge v-if="selectedIds(checkpoint.id).includes(itemId)" tone="success">已选</UiBadge>
+              </template>
+              <template #expanded>{{ masteryEffect(itemId) }}</template>
+            </ExpandableOptionCard>
+          </ListShell>
+        </div>
         <div v-else-if="checkpoint.candidateKind" class="timeline-step__spell-candidates">
           <label class="timeline-step__spell-search">
             <input v-model="spellCandidateSearch" type="search" placeholder="搜索法术名称" aria-label="搜索法术名称">
@@ -225,7 +269,7 @@ function spellCandidateDescription(spell: SpellRule): string {
                 :title="spell.name"
                 :description="spellCandidateDescription(spell)"
                 :state="selectedIds(checkpoint.id).includes(spell.id) ? 'selected' : 'default'"
-                @select="toggle(checkpoint.id, spell.id, checkpoint.maxSelections)"
+                @select="toggle(checkpoint.id, spell.id, checkpointBounds(checkpoint).max)"
               >
                 <template #suffix>
                   <UiBadge v-if="selectedIds(checkpoint.id).includes(spell.id)" tone="success">已选</UiBadge>
@@ -241,7 +285,7 @@ function spellCandidateDescription(spell: SpellRule): string {
             v-for="feature in subclassFeatures"
             :key="feature.id"
             :title="feature.name"
-            :description="`${feature.level}级 · ${feature.englishName}`"
+            :description="[`${feature.level}级 · ${feature.englishName}`, featureResourceText(feature)].filter(Boolean).join(' · ')"
             expanded-label="特性详情"
           >
             <template #suffix>
@@ -257,7 +301,7 @@ function spellCandidateDescription(spell: SpellRule): string {
             v-for="feature in classFeatures"
             :key="feature.id"
             :title="feature.name"
-            :description="`${feature.level}级 · ${feature.englishName}`"
+            :description="[`${feature.level}级 · ${feature.englishName}`, featureResourceText(feature)].filter(Boolean).join(' · ')"
             expanded-label="特性详情"
           >
             <template #suffix>
@@ -303,6 +347,7 @@ function spellCandidateDescription(spell: SpellRule): string {
   &__options { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
 
   &__spell-candidates { display: grid; gap: 0.75rem; }
+  &__mastery-candidates { display: grid; gap: 0.5rem; }
   &__spell-search input {
     width: 100%;
     min-height: 2.5rem;

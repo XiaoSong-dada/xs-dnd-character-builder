@@ -1,7 +1,5 @@
 import { getRulesRepository } from '@/rules/repositories'
 import { FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
-import { getPlayerSubclassIds2014 } from '@/rules/data/subclasses-2014'
-import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { getFeatPool } from '@/rules/feats'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { ChoiceCheckpoint, RulesRepository } from '@/types/rules'
@@ -62,20 +60,26 @@ function buildSubclassCheckpoint(
   repository: RulesRepository,
   enabledSourceIds?: readonly string[],
 ): ChoiceCheckpoint | undefined {
-  const optionIds = getPlayerSubclassIds2014(classId).filter((id) => {
-    const subclass = repository.getSubclass(id)
-    return Boolean(subclass && (enabledSourceIds === undefined || isSourceEnabled(subclass.sourceIds, enabledSourceIds, repository)))
-  })
+  // 子职候选由当前规则集仓库提供；DM 专用与未接入（unavailable）条目不进入普通车卡。
+  const candidates = repository.subclasses.filter((subclass) =>
+    subclass.classId === classId
+    && subclass.availability !== 'dm-only'
+    && subclass.status !== 'unavailable'
+    && (enabledSourceIds === undefined || isSourceEnabled(subclass.sourceIds, enabledSourceIds, repository)))
+  const optionIds = candidates.map((subclass) => subclass.id)
   if (optionIds.length === 0) return undefined
-  const firstSubclass = repository.getSubclass(optionIds[0] ?? '')
+  const firstSubclass = candidates[0]
   if (!firstSubclass) return undefined
+  const className = repository.getClass(classId)?.name ?? '职业'
   return {
     id: `${classId}-subclass-${firstSubclass.selectionLevel}`,
     level: firstSubclass.selectionLevel,
     step: 'timeline',
     kind: 'subclass',
-    title: subclassTitles[classId] ?? '选择子职业',
-    description: '浏览当前项目登记的全部 2014 子职业；仅索引内容会明确标注，DM 专用选项不在普通车卡中开放。',
+    title: subclassTitles[classId] ?? (repository.ruleset === '5e-2024' ? `选择${className}子职` : '选择子职业'),
+    description: repository.ruleset === '5e-2024'
+      ? `子职在 ${firstSubclass.selectionLevel} 级确定，未接入的子职不会出现在候选中。`
+      : '浏览当前项目登记的全部 2014 子职业；仅索引内容会明确标注，DM 专用选项不在普通车卡中开放。',
     required: true,
     minSelections: 1,
     maxSelections: 1,
@@ -89,10 +93,10 @@ function buildSubclassFeatureCheckpoints(
   repository: RulesRepository,
   enabledSourceIds?: readonly string[],
 ): readonly ChoiceCheckpoint[] {
-  return getSubclassFeatures2014(subclassId)
+  return (repository.getSubclass(subclassId)?.features ?? [])
     .filter((feature) =>
       feature.requiresChoice
-      && (feature.optionIds?.length ?? 0) > 0,
+      && ((feature.optionIds?.length ?? 0) > 0 || (feature.featCategories?.length ?? 0) > 0),
     )
     .map((feature) => ({
       id: `subclass-feature-${feature.id}`,
@@ -104,10 +108,14 @@ function buildSubclassFeatureCheckpoints(
       required: true,
       minSelections: feature.minSelections ?? 1,
       maxSelections: feature.maxSelections ?? 1,
-      optionIds: (feature.optionIds ?? []).filter((id) => {
-        const option = repository.getOption(id)
-        return !option || enabledSourceIds === undefined || isSourceEnabled(option.sourceIds, enabledSourceIds, repository)
-      }),
+      optionIds: feature.optionIds?.length
+        ? feature.optionIds.filter((id) => {
+            const option = repository.getOption(id)
+            return !option || enabledSourceIds === undefined || isSourceEnabled(option.sourceIds, enabledSourceIds, repository)
+          })
+        : feature.featCategories?.length
+          ? getFeatPool(repository, feature.featCategories, { level: feature.level, enabledSourceIds }).map((feat) => feat.id)
+          : [],
       uniqueGroup: feature.optionIds?.length && feature.id.includes('arcane-shot') ? 'arcane-archer-shots' : undefined,
     }))
 }

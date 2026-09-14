@@ -1,8 +1,9 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import TimelineStep from '@/views/character-builder/components/TimelineStep.vue'
 import type { CharacterDraft } from '@/types/character'
+import { draft2024, selection } from '../fixtures/draft-2024'
 
 function bardDraft(): CharacterDraft {
   return {
@@ -201,5 +202,41 @@ describe('TimelineStep 魔法奥秘动态候选池', () => {
     await fireball?.trigger('click')
 
     expect(wrapper.emitted('select')?.[0]).toEqual(['bard-2014-magical-secrets-10', ['spell-2014-fireball']])
+  })
+})
+
+describe('TimelineStep 2024 武器精通', () => {
+  function fighter2024Draft(): CharacterDraft {
+    return draft2024({
+      targetLevel: 1,
+      selections: [
+        selection('class-2024-fighter-skills-1', ['skill-athletics', 'skill-perception']),
+        selection('class-2024-fighter-style-1', ['feat-2024-archery']),
+      ],
+    })
+  }
+
+  function masteryCard(wrapper: ReturnType<typeof mountStep>, name: string) {
+    return wrapper.findAll('.expandable-option-card__main').find((card) => card.text().includes(name))
+  }
+
+  it('显示武器名称、精通词条与按等级数量', () => {
+    const wrapper = mountStep(fighter2024Draft())
+    const mastery = wrapper.find('.timeline-step__mastery-candidates')
+    expect(mastery.exists()).toBe(true)
+    expect(mastery.text()).toContain('长剑')
+    expect(mastery.text()).toContain('削弱')
+    expect(mastery.text()).toContain('0/3')
+  })
+
+  it('点击武器写入精通选择', async () => {
+    vi.useFakeTimers()
+    const wrapper = mountStep(fighter2024Draft())
+    masteryCard(wrapper, '长剑')?.trigger('click')
+    await vi.advanceTimersByTimeAsync(300)
+    vi.useRealTimers()
+    const emitted = wrapper.emitted('select') ?? []
+    expect(emitted.some(([checkpointId, optionIds]) =>
+      checkpointId === 'class-2024-fighter-mastery-1' && (optionIds as readonly string[]).includes('equipment-2024-longsword'))).toBe(true)
   })
 })
