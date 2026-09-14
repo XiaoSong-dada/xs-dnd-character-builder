@@ -65,6 +65,7 @@ export const rulesRepository2014: RulesRepository = {
   classStartingEquipment: classStartingEquipment2014,
   backgroundStartingEquipment: backgroundStartingEquipment2014,
   spells: spells2014,
+  weaponMasteries: [],
   getClass(id) {
     return this.classes.find((item) => item.id === id)
   },
@@ -112,6 +113,9 @@ export const rulesRepository2014: RulesRepository = {
   },
   getSpell(id) {
     return this.spells.find((item) => item.id === id)
+  },
+  getWeaponMastery() {
+    return undefined
   },
 }
 

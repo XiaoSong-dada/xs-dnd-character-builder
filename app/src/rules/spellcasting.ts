@@ -3,6 +3,7 @@ import { getFeatChosenAbility, listActiveFeats, listFeatGrants } from '@/rules/f
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getDraftSpeciesRules } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
+import { getWeaponMasteryCandidates } from '@/rules/weapon-mastery'
 import { abilityFromSpeciesSpellAbilityOption, classIdFromSpellListOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, CharacterDraft, ChoiceSelection } from '@/types/character'
@@ -164,6 +165,7 @@ export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: Choic
   if (checkpoint.optionIds.length > 0) return checkpoint.optionIds
   if (!checkpoint.candidateKind) return []
   const repository = getRulesRepository(draft.ruleset)
+  if (checkpoint.candidateKind === 'weapon-mastery') return getWeaponMasteryCandidates(repository).map((item) => item.id)
   if (checkpoint.candidateKind === 'spell-pool') {
     const pool = checkpoint.spellPool
     if (!pool) return []

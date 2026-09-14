@@ -1,7 +1,6 @@
 import type {
   ChoiceCheckpoint,
   ClassRule,
-  EquipmentRule,
   FeatCategory,
   SubclassRule,
 } from '@/types/rules'
@@ -134,11 +133,3 @@ export const subclasses2024Sample: readonly SubclassRule[] = [
     summary: 'B00“塑能学派”对应的 B02 架构核验样例。', status: 'unavailable', sourceIds: ['source-2024-phb'], features: [],
   },
 ]
-
-export const equipment2024Sample: readonly EquipmentRule[] = [{
-  id: 'equipment-2024-longsword', ruleset: '5e-2024', name: '长剑', englishName: 'Longsword',
-  status: 'unavailable', description: 'B02 普通装备隔离样例。', classIds: ['class-2024-fighter'],
-  equippable: true, weaponKind: 'martial-melee', damageDice: '1d8', damageType: '挥砍',
-  weaponProperties: ['versatile'], versatileDamageDice: '1d10', category: 'weapon', attunement: 'none',
-  sourceIds: ['source-2024-phb'],
-}]

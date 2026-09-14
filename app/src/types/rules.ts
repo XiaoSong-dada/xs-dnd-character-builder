@@ -1,4 +1,4 @@
-import type { AbilityKey, CharacterDraft, CompatibilityStatus, DraftStep, RuleSource, RulesetId, SpellcastingMode } from '@/types/character'
+import type { AbilityKey, CharacterDraft, CompatibilityStatus, CurrencyWallet, DraftStep, RuleSource, RulesetId, SpellcastingMode } from '@/types/character'
 
 export type CheckpointKind =
   | 'skills'
@@ -194,6 +194,7 @@ export type CheckpointCandidateKind =
   | 'spellbook-level-1'
   | 'spellbook-level-2'
   | 'spellbook-level-3'
+  | 'weapon-mastery'
   | 'spell-pool'
   | 'all-skills'
   | 'proficient-skills'
@@ -481,6 +482,30 @@ export interface EquipmentRule {
   /** 魔法加值（+1/+2/+3）：供命中/AC/伤害派生计算；仅魔法物品使用。 */
   readonly magicBonus?: number
   readonly sourceIds: readonly string[]
+  readonly priceCp?: number
+  readonly weightLb?: number
+  readonly masteryId?: WeaponMasteryId
+  readonly strengthRequirement?: number
+  readonly stealthDisadvantage?: boolean
+  readonly toolAbility?: AbilityKey
+  readonly toolCheckHints?: readonly ToolCheckHint[]
+  readonly craftableItemIds?: readonly string[]
+}
+
+export type WeaponMasteryId = `mastery-2024-${'cleave' | 'graze' | 'nick' | 'push' | 'sap' | 'slow' | 'topple' | 'vex'}`
+
+export interface ToolCheckHint { readonly label: string; readonly dc: number }
+
+export interface WeaponMasteryRule {
+  readonly id: WeaponMasteryId
+  readonly ruleset: '5e-2024'
+  readonly name: string
+  readonly englishName: string
+  readonly summary: string
+  readonly trigger: 'hit' | 'miss' | 'attack'
+  readonly oncePerTurn: boolean
+  readonly status: CompatibilityStatus
+  readonly sourceIds: readonly string[]
 }
 
 export interface EquipmentGrant {
@@ -499,6 +524,7 @@ export interface StartingEquipmentOption {
   readonly label: string
   readonly grants: readonly EquipmentGrant[]
   readonly pick?: EquipmentPickRule
+  readonly currency?: Partial<CurrencyWallet>
 }
 
 export interface StartingEquipmentGroup {
@@ -515,8 +541,9 @@ export interface ClassStartingEquipmentRule {
 
 export interface BackgroundStartingEquipmentRule {
   readonly backgroundId: string
-  readonly grants: readonly EquipmentGrant[]
-  readonly gp: number
+  readonly grants?: readonly EquipmentGrant[]
+  readonly gp?: number
+  readonly groups?: readonly StartingEquipmentGroup[]
 }
 
 export interface RulesRepository {
@@ -536,6 +563,7 @@ export interface RulesRepository {
   readonly classStartingEquipment: readonly ClassStartingEquipmentRule[]
   readonly backgroundStartingEquipment: readonly BackgroundStartingEquipmentRule[]
   readonly spells: readonly SpellRule[]
+  readonly weaponMasteries: readonly WeaponMasteryRule[]
   getClass(id: string): ClassRule | undefined
   getSubclass(id: string): SubclassRule | undefined
   /** 解析角色当前施法配置：子职级（奥法骑士、诡术师）优先，否则回退职业级。 */
@@ -550,6 +578,7 @@ export interface RulesRepository {
   getClassStartingEquipment(classId: string): ClassStartingEquipmentRule | undefined
   getBackgroundStartingEquipment(backgroundId: string): BackgroundStartingEquipmentRule | undefined
   getSpell(id: string): SpellRule | undefined
+  getWeaponMastery(id: WeaponMasteryId): WeaponMasteryRule | undefined
 }
 
 /** 推荐原因：text 为玩家可读的解释，weight 为该原因对分数的贡献。 */

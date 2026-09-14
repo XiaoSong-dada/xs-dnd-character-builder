@@ -16,6 +16,7 @@ type RepositoryData = Pick<
   | 'classStartingEquipment'
   | 'backgroundStartingEquipment'
   | 'spells'
+  | 'weaponMasteries'
 >
 
 /** 由某一规则集的独立数据构造只读查询仓库。 */
@@ -70,6 +71,9 @@ export function createRulesRepository(ruleset: RulesetId, data: RepositoryData):
     },
     getSpell(id) {
       return this.spells.find((item) => item.id === id)
+    },
+    getWeaponMastery(id) {
+      return this.weaponMasteries.find((item) => item.id === id)
     },
   }
 }

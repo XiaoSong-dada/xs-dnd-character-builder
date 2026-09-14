@@ -1,4 +1,5 @@
 import type { BackgroundRule, RaceRule } from '@/types/rules'
+import { backgroundEquipmentA2024 } from '@/rules/data/starting-equipment-2024'
 
 /**
  * 2024 核心起源：16 背景、10 主物种与 8 血统／传承。
@@ -10,6 +11,10 @@ import type { BackgroundRule, RaceRule } from '@/types/rules'
  */
 
 const sourceIds = ['source-2024-phb'] as const
+const artisanToolIds = ['alchemist-s-supplies','brewer-s-supplies','calligrapher-s-supplies','carpenter-s-tools','cartographer-s-tools','cobbler-s-tools','cook-s-utensils','glassblower-s-tools','jeweler-s-tools','leatherworker-s-tools','mason-s-tools','painter-s-supplies','potter-s-tools','smith-s-tools','tinker-s-tools','weaver-s-tools','woodcarver-s-tools'].map((id) => `equipment-2024-${id}`)
+const gamingToolIds = ['dice','dragonchess','playing-cards','three-dragon-ante'].map((id) => `equipment-2024-${id}`)
+const musicalToolIds = ['bagpipes','drum','dulcimer','flute','horn','lute','lyre','pan-flute','shawm','viol'].map((id) => `equipment-2024-${id}`)
+const fixedToolIds: Readonly<Record<string, string>> = { 'tool-2024-calligrapher': 'equipment-2024-calligrapher-s-supplies', 'tool-2024-forgery': 'equipment-2024-forgery-kit', 'tool-2024-thieves-tools': 'equipment-2024-thieves-tools', 'tool-2024-carpenter': 'equipment-2024-carpenter-s-tools', 'tool-cartographer': 'equipment-2024-cartographer-s-tools', 'tool-2024-herbalism': 'equipment-2024-herbalism-kit', 'tool-2024-navigator': 'equipment-2024-navigator-s-tools' }
 
 const background = (
   slug: string,
@@ -19,7 +24,7 @@ const background = (
   originFeatId: string,
   skillIds: readonly string[],
   tool: { readonly id?: string; readonly choices?: boolean },
-  equipment: readonly string[],
+  _equipment: readonly string[],
   summary: string,
   description: string,
   status: BackgroundRule['status'] = 'selectable',
@@ -32,13 +37,13 @@ const background = (
   description,
   variantIds: [],
   skillIds,
-  toolIds: tool.id ? [tool.id] : [],
-  ...(tool.choices ? { toolChoices: { count: 1 } } : {}),
+  toolIds: tool.id ? [fixedToolIds[tool.id] ?? tool.id] : [],
+  ...(tool.choices ? { toolChoices: { count: 1, optionIds: slug === 'artisan' ? artisanToolIds : slug === 'entertainer' ? musicalToolIds : gamingToolIds } } : {}),
   languageChoices: 0,
   featureName: '',
   originFeatId,
   abilityChoices,
-  startingEquipmentOptionA: equipment,
+  startingEquipmentOptionA: (backgroundEquipmentA2024[slug] ?? []).map((grant) => grant.itemId),
   startingEquipmentGold: 50,
   recommendedClassIds: [],
   status,

@@ -491,7 +491,7 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 
 ```text
 src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-expansions-2014,magic-items-xgte-tcoe-2014,generated/magic-items-catalog-index-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
-src/rules/repositories.ts        -> src/rules/data/{rules-2024-sample,feats-2024,spells-2024,origins-2024,species-traits-2024} + src/rules/repository（双版本仓库注册、未知版本拒绝与已开放版本判断）
+src/rules/repositories.ts        -> src/rules/data/{rules-2024-sample,feats-2024,spells-2024,origins-2024,species-traits-2024,equipment-2024,equipment-packs-2024,starting-equipment-2024,weapon-masteries-2024} + src/rules/repository（双版本仓库注册、未知版本拒绝与已开放版本判断）
 src/rules/item-catalog-loader.ts  -> src/rules/data/generated/magic-items-catalog-2014（动态 import；模块级 Promise 缓存 + 失败重试）
 src/rules/derive.ts              -> src/rules/{repositories,feats,origins,subclass-effects}
 src/rules/validate.ts            -> src/rules/{repositories,derive,feats,abilities,timeline,spellcasting,starting-equipment} + src/rules/data/subclass-features-2014
@@ -499,7 +499,8 @@ src/rules/dependency.ts          -> src/rules/{derive,repositories,timeline} + s
 src/rules/timeline.ts            -> src/rules/{repositories,feats} + src/rules/data/{feats-2014,subclasses-2014,subclass-features-2014}
 src/rules/spellcasting.ts        -> src/rules/{repositories,derive,origins}（双版本施法配置、表定准备数、始终准备与免费施法来源解析）
 src/rules/spellbook.ts           -> src/rules/{repositories,spellcasting}（抄录候选池、双费率费用、金币校验与抄录应用纯函数）
-src/rules/starting-equipment.ts  -> src/rules/repository
+src/rules/starting-equipment.ts  -> src/rules/{repositories,repository,currency}（按草稿版本解析；无版本兼容入口固定 2014）
+src/rules/weapon-mastery.ts      -> src/types/rules（2024 精通候选与选择校验纯函数）
 src/rules/feats.ts               -> src/rules/{repositories,source-books} + src/rules/data/{feats-2014,feats-2024}（双版本专长能力：授予、候选池、前置、复选、属性上限与护甲训练）
 src/rules/origins.ts             -> src/rules/{repositories,source-books}（物种链、背景属性分配与校验、物种生命值）
 src/rules/languages.ts           （无 rules 内部依赖，纯函数：2024 标准语言表与 2014 候选）

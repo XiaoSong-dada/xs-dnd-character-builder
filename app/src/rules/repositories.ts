@@ -2,10 +2,12 @@ import { createRulesRepository } from '@/rules/repository-builder'
 import { rulesRepository2014 } from '@/rules/repository'
 import {
   classes2024Sample,
-  equipment2024Sample,
   sources2024Sample,
   subclasses2024Sample,
 } from '@/rules/data/rules-2024-sample'
+import { equipmentWithPacks2024 } from '@/rules/data/equipment-packs-2024'
+import { classStartingEquipment2024, backgroundStartingEquipment2024 } from '@/rules/data/starting-equipment-2024'
+import { weaponMasteries2024 } from '@/rules/data/weapon-masteries-2024'
 import { backgrounds2024, races2024 } from '@/rules/data/origins-2024'
 import { speciesTraits2024 } from '@/rules/data/species-traits-2024'
 import { abilityImprovementOptions2024, feats2024 } from '@/rules/data/feats-2024'
@@ -31,10 +33,11 @@ export const rulesRepository2024 = createRulesRepository('5e-2024', {
   backgroundFeatures: [],
   options: [...abilityImprovementOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024],
   feats: feats2024,
-  equipment: equipment2024Sample,
-  classStartingEquipment: [],
-  backgroundStartingEquipment: [],
+  equipment: equipmentWithPacks2024,
+  classStartingEquipment: classStartingEquipment2024,
+  backgroundStartingEquipment: backgroundStartingEquipment2024,
   spells: spells2024,
+  weaponMasteries: weaponMasteries2024,
 })
 
 const repositories: Readonly<Record<RulesetId, RulesRepository>> = {
