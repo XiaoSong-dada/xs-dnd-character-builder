@@ -7,7 +7,7 @@ withDefaults(defineProps<{
   targetLevel: number
   abilityMethod: AbilityMethod
   ruleset?: RulesetId
-  /** 已有构筑选择时锁定版本（B00-04：不原地转换，另建流程见 B09-03）。 */
+  /** 已有构筑选择时不能原地改版；点击另一版本将触发另建确认（B00-04）。 */
   rulesetLocked?: boolean
   /** 记忆版本尚未开放而回退时传入，用于内联说明（Q-B09-1）。 */
   rulesetFallback?: RulesetId
@@ -31,10 +31,11 @@ const RULESETS = [
       :key="option.id"
       :title="option.title"
       :description="option.description"
-      :state="rulesetLocked && ruleset !== option.id ? 'locked' : ruleset === option.id ? 'selected' : 'default'"
-      :disabled-reason="rulesetLocked && ruleset !== option.id ? '已有构筑选择，改用另一版本会另建角色，不能原地转换。' : ''"
+      :state="ruleset === option.id ? 'selected' : 'default'"
+      :disabled-reason="rulesetLocked && ruleset !== option.id ? '已有构筑：选择它将另建一张新角色卡，当前角色保持原样。' : ''"
       @select="emit('ruleset', option.id)"
     />
+    <p v-if="rulesetLocked" class="step-stack__note">已有构筑选择：改用另一版本会另建角色，不会原地转换或修改当前卡。</p>
     <label class="field">
       <span>目标等级 <b>{{ targetLevel }}级</b></span>
       <input type="range" min="1" max="20" :value="targetLevel" @input="$emit('level', Number(($event.target as HTMLInputElement).value))">

@@ -8,6 +8,7 @@ import { getRulesRepository } from '@/rules/repositories'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
+import { hasBuildChoices } from '@/rules/draft-progress'
 import { isSourceEnabled, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { buildTimeline } from '@/rules/timeline'
 import { validateSpellSelections } from '@/rules/spellcasting'
@@ -50,6 +51,8 @@ export function useCharacterBuilderPage() {
   const defaultRuleset = ref<RulesetId>(resolveInitialRuleset().ruleset)
   /** 记忆版本尚未开放时的回退说明（Q-B09-1：第一页内联提示）。 */
   const rulesetFallbackNotice = ref<RulesetId>()
+  /** 已有构筑时改用另一版本的待确认目标（B00-04：另建，不原地转换）。 */
+  const rulesetRebuild = ref<RulesetId>()
   /** 按草稿版本取仓库（B09-02）：绑定、名称与校验均不得使用固定 2014 仓库。 */
   const repositoryFor = (draft: { readonly ruleset: RulesetId } | undefined) => getRulesRepository(draft?.ruleset ?? defaultRuleset.value)
   const exportingFormat = ref<'pdf' | 'xlsx' | 'zip'>()
@@ -149,14 +152,35 @@ export function useCharacterBuilderPage() {
     rulesetFallbackNotice.value = resolved.fellBack ? resolved.preferred : undefined
   }
 
-  /** 第一页显式选择版本（B00-02）：只在本设备偏好中记忆；已有构筑不原地转换（B00-04，另建流程归 B09-03）。 */
+  /** 第一页显式选择版本（B00-02）：无构筑可直接改；已有构筑走另建确认（B00-04）。 */
   function updateRuleset(value: RulesetId): void {
     const draft = store.activeDraft
     if (!draft || draft.ruleset === value) return
+    if (hasBuildChoices(draft)) {
+      rulesetRebuild.value = value
+      return
+    }
     if (!store.changeRuleset(value)) return
     RulesetPreferenceService.savePreferredRuleset(value)
     defaultRuleset.value = value
     rulesetFallbackNotice.value = undefined
+  }
+
+  /** 确认另建：新建目标版本角色并切换；原卡完整保留，不复制版本相关选择（Q-B09-2）。 */
+  function confirmRulesetRebuild(): void {
+    const value = rulesetRebuild.value
+    if (!value) return
+    rulesetRebuild.value = undefined
+    const draft = store.duplicateAsRuleset(value)
+    if (!draft) return
+    RulesetPreferenceService.savePreferredRuleset(value)
+    defaultRuleset.value = value
+    rulesetFallbackNotice.value = undefined
+    syncRoute(draft)
+  }
+
+  function cancelRulesetRebuild(): void {
+    rulesetRebuild.value = undefined
   }
 
   function dismissRulesetFallbackNotice(): void {
@@ -353,6 +377,7 @@ export function useCharacterBuilderPage() {
     const draft = activeDraft.value
     if (!draft || draft.classId === classId) return
     const change = { kind: 'class', value: classId } as const
+    const hadSpells = Object.values(draft.spellSelections).some((ids) => ids.length > 0)
     requestChange(change, '更换职业', () => {
       const impact = getDependencyImpact(draft, change)
       store.invalidateSelections(impact.invalidated, '更换职业后需要重新确认')
@@ -365,8 +390,20 @@ export function useCharacterBuilderPage() {
         inventory: equipment.inventory,
         currency: equipment.currency,
         equipmentNeedsReview: false,
+        // 法术候选随职业变化：旧选择不再适用，清空并由法术步骤重新选择（保留人工添加）。
+        spellSelections: {
+          cantripIds: [],
+          knownSpellIds: [],
+          preparedSpellIds: [],
+          spellbookSpellIds: [],
+          transcribedSpellIds: [],
+          spellbookExtraSpellIds: [],
+        },
       })
-    }, draft.inventory.some((entry) => entry.sourceKind === 'class') ? ['职业起始装备'] : [])
+    }, [
+      ...(draft.inventory.some((entry) => entry.sourceKind === 'class') ? ['职业起始装备'] : []),
+      ...(hadSpells ? ['法术选择（将清空并重新选择）'] : []),
+    ])
   }
 
   function sourceChangeAffectedContent(draft: CharacterDraft, enabledSourceIds: readonly string[]): readonly string[] {
@@ -655,8 +692,11 @@ export function useCharacterBuilderPage() {
     createDraft,
     defaultRuleset,
     rulesetFallbackNotice,
+    rulesetRebuild,
     dismissRulesetFallbackNotice,
     updateRuleset,
+    confirmRulesetRebuild,
+    cancelRulesetRebuild,
     openDraft,
     returnToStart,
     deleteDraft,

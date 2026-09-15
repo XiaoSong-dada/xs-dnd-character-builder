@@ -122,6 +122,27 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     return draft
   }
 
+  /**
+   * 改用另一版本时另建角色（B00-04）：不原地转换；原卡完整保留，
+   * 只复制与规则版本无关的资料（角色名、图片），构筑字段全部留空。
+   */
+  function duplicateAsRuleset(ruleset: RulesetId): CharacterDraft | undefined {
+    const current = activeDraft.value
+    if (!current || current.ruleset === ruleset) return undefined
+    const now = new Date().toISOString()
+    const draft: CharacterDraft = {
+      ...createCharacterDraft(ruleset),
+      id: newId(),
+      name: current.name,
+      createdAt: now,
+      updatedAt: now,
+      ...(current.media ? { media: current.media } : {}),
+    }
+    drafts.value.push(draft)
+    activeDraftId.value = draft.id
+    return draft
+  }
+
   function activateDraft(id: string): boolean {
     if (!drafts.value.some((draft) => draft.id === id)) return false
     activeDraftId.value = id
@@ -264,6 +285,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     completion,
     createDraft,
     changeRuleset,
+    duplicateAsRuleset,
     activateDraft,
     closeActiveDraft,
     deleteDraft,

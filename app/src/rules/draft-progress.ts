@@ -27,15 +27,15 @@ export function hasBuildChoices(draft: Pick<CharacterDraft,
   if (draft.selections.some((selection) => !selection.invalidatedAt)) return true
   const spells = draft.spellSelections
   if (
-    spells.cantripIds.length > 0
-    || spells.knownSpellIds.length > 0
-    || spells.preparedSpellIds.length > 0
-    || spells.spellbookSpellIds.length > 0
+    (spells?.cantripIds?.length ?? 0) > 0
+    || (spells?.knownSpellIds?.length ?? 0) > 0
+    || (spells?.preparedSpellIds?.length ?? 0) > 0
+    || (spells?.spellbookSpellIds?.length ?? 0) > 0
   ) return true
-  if (draft.startingEquipmentSelections.length > 0 || draft.inventory.length > 0) return true
-  if (draft.infusionAssignments.length > 0) return true
+  if ((draft.startingEquipmentSelections?.length ?? 0) > 0 || (draft.inventory?.length ?? 0) > 0) return true
+  if ((draft.infusionAssignments?.length ?? 0) > 0) return true
   if ((draft.raceSkillChoices?.length ?? 0) > 0 || draft.raceToolChoice) return true
-  if (draft.backgroundSkillIds.length > 0 || draft.backgroundToolIds.length > 0) return true
-  if (draft.languages.length > 0) return true
+  if ((draft.backgroundSkillIds?.length ?? 0) > 0 || (draft.backgroundToolIds?.length ?? 0) > 0) return true
+  if ((draft.languages?.length ?? 0) > 0) return true
   return false
 }

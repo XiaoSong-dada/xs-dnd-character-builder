@@ -48,7 +48,10 @@ const {
   createDraft,
   defaultRuleset,
   rulesetFallbackNotice,
+  rulesetRebuild,
   updateRuleset,
+  confirmRulesetRebuild,
+  cancelRulesetRebuild,
   openDraft,
   returnToStart,
   deleteDraft,
@@ -286,6 +289,31 @@ function updateMethod(value: AbilityMethod): void {
     <template #footer>
       <BaseButton variant="secondary" @click="cancelPendingChange">取消</BaseButton>
       <BaseButton variant="danger" @click="confirmPendingChange">确认调整</BaseButton>
+    </template>
+  </UiModal>
+  <UiModal
+    :open="Boolean(rulesetRebuild)"
+    title="改用另一版本？"
+    @close="cancelRulesetRebuild"
+  >
+    <p>已有构筑的角色不会原地转换。确认后将另建一张 {{ rulesetRebuild === '5e-2024' ? '2024' : '2014' }} 角色卡：</p>
+    <section class="builder-impact">
+      <h4>保留</h4>
+      <ul>
+        <li>原角色卡（{{ activeDraft?.name || '未命名角色' }}）及其全部选择</li>
+        <li>复制到新卡的资料：角色名与图片</li>
+      </ul>
+    </section>
+    <section class="builder-impact">
+      <h4>新卡从空白开始</h4>
+      <ul>
+        <li>等级、属性、起源、职业、法术、装备等构筑选择不复制</li>
+        <li>版本相关选择不复制，需在对应步骤重新完成</li>
+      </ul>
+    </section>
+    <template #footer>
+      <BaseButton variant="secondary" @click="cancelRulesetRebuild">取消</BaseButton>
+      <BaseButton @click="confirmRulesetRebuild">另建角色</BaseButton>
     </template>
   </UiModal>
   <LevelAdjustModal

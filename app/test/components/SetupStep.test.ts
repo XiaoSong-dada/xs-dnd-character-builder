@@ -62,14 +62,14 @@ describe('SetupStep 规则版本选择（B09-01）', () => {
     expect(wrapper.emitted('method')).toBeUndefined()
   })
 
-  it('已有构筑时锁定另一版本并说明原因', async () => {
+  it('已有构筑时点击另一版本触发另建（不锁定卡片）并给出说明', async () => {
     const wrapper = mount(SetupStep, { props: { targetLevel: 4, abilityMethod: 'standard-array', ruleset: '5e-2014', rulesetLocked: true } })
 
     const modern = rulesetCard(wrapper, '2024 核心规则')!
-    expect(modern.classes()).toContain('option-card--locked')
-    expect(modern.text()).toContain('已有构筑选择')
+    expect(modern.classes()).not.toContain('option-card--locked')
+    expect(wrapper.text()).toContain('已有构筑选择：改用另一版本会另建角色')
     await modern.trigger('click')
-    expect(wrapper.emitted('ruleset')).toBeUndefined()
+    expect(wrapper.emitted('ruleset')).toEqual([['5e-2024']])
   })
 
   it('记忆版本未开放时给出回退说明', () => {

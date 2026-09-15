@@ -10,6 +10,7 @@ vi.mock('vue-router', () => ({
 }))
 
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
+import { RulesetPreferenceService } from '@/services/ruleset-preference'
 import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft } from '@/types/character'
 import { useCharacterBuilderPage } from '@/views/character-builder/hooks/useCharacterBuilderPage'
@@ -269,5 +270,88 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
 
     expect(store.activeDraft?.targetLevel).toBe(3)
     expect(page.step.value).toBe('timeline')
+  })
+})
+
+describe('useCharacterBuilderPage 改版与改职业的数据保护（B09-03）', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    routerReplace.mockClear()
+  })
+
+  /** 无构筑选择的草稿：只保留版本与等级参数。 */
+  function makeEmptyDraft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
+    return makeFighterDraft({
+      id: 'test-empty',
+      classId: undefined,
+      subclassId: undefined,
+      raceId: undefined,
+      backgroundId: undefined,
+      selections: [],
+      inventory: [],
+      ...overrides,
+    })
+  }
+
+  it('无构筑时直接改版并写记忆偏好', async () => {
+    const { page, store } = await setupPage(makeEmptyDraft())
+
+    page.updateRuleset('5e-2024')
+
+    expect(store.activeDraft?.ruleset).toBe('5e-2024')
+    expect(page.rulesetRebuild.value).toBeUndefined()
+    expect(RulesetPreferenceService.loadPreferredRuleset()).toBe('5e-2024')
+  })
+
+  it('已有构筑时改版进入另建确认，确认后原卡保留且新卡从空白开始', async () => {
+    const { page, store } = await setupPage(makeFighterDraft({ name: '旧版战士' }))
+    const originalId = store.activeDraftId
+
+    page.updateRuleset('5e-2024')
+    expect(page.rulesetRebuild.value).toBe('5e-2024')
+    expect(store.activeDraft?.ruleset).toBe('5e-2014')
+
+    page.cancelRulesetRebuild()
+    expect(store.drafts).toHaveLength(1)
+
+    page.updateRuleset('5e-2024')
+    page.confirmRulesetRebuild()
+
+    expect(page.rulesetRebuild.value).toBeUndefined()
+    expect(store.drafts).toHaveLength(2)
+    const original = store.drafts.find((draft) => draft.id === originalId)
+    expect(original?.ruleset).toBe('5e-2014')
+    expect(original?.classId).toBe('class-2014-fighter')
+    const rebuilt = store.activeDraft!
+    expect(rebuilt.ruleset).toBe('5e-2024')
+    expect(rebuilt.name).toBe('旧版战士')
+    expect(rebuilt.classId).toBeUndefined()
+    expect(rebuilt.selections).toEqual([])
+    expect(rebuilt.spellSelections.cantripIds).toEqual([])
+    expect(RulesetPreferenceService.loadPreferredRuleset()).toBe('5e-2024')
+  })
+
+  it('更换职业会清空法术选择并在确认中列出影响', async () => {
+    const { page, store } = await setupPage(makeSorcererDraft())
+
+    page.selectClass('class-2014-wizard')
+
+    expect(page.pendingChange.value?.affected).toContain('法术选择（将清空并重新选择）')
+    page.confirmPendingChange()
+
+    expect(store.activeDraft?.classId).toBe('class-2014-wizard')
+    expect(store.activeDraft?.spellSelections.cantripIds).toEqual([])
+    expect(store.activeDraft?.spellSelections.knownSpellIds).toEqual([])
+  })
+
+  it('取消改职业不产生任何修改', async () => {
+    const { page, store } = await setupPage(makeSorcererDraft())
+    const before = JSON.stringify(store.activeDraft)
+
+    page.selectClass('class-2014-wizard')
+    page.cancelPendingChange()
+
+    expect(JSON.stringify(store.activeDraft)).toBe(before)
   })
 })
