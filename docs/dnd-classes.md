@@ -6,7 +6,7 @@
 
 本文档是**选择性加载资料**，不属于项目每次开发前的必读文档。仅在任务涉及职业、子职、职业特性、职业等级或相关规则数据时读取；目标职业明确时，只需读取通用约定和对应职业章节。
 
-- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士、法师／塑能师、野蛮人／4 道途、游荡者／4 子职、武僧／4 子职、牧师／4 领域与德鲁伊／4 结社（B08-01—B08-07），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
+- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士、法师／塑能师、野蛮人／4 道途、游荡者／4 子职、武僧／4 子职、牧师／4 领域、德鲁伊／4 结社、吟游诗人／4 学院与术士／4 术法（B08-01—B08-09），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
 
 ## 2. 资料边界
 
@@ -74,7 +74,7 @@
 | ID | 中文名 | 英文名 | 职业资料 | 子职资料 | 核验状态 |
 |---|---|---|---|---|---|
 | `barbarian` | 野蛮人 | Barbarian | [野蛮人详细资料](classes/subclasses/barbarian/barbarian.md) | [狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)<br>[兽心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)<br>[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)<br>[狂热者道途](classes/subclasses/barbarian/barbarian-zealot.md) | 基础职业与 4 个核心道途已接入运行时（B08-03） |
-| `bard` | 吟游诗人 | Bard | [吟游诗人详细资料](classes/subclasses/bard/bard.md) | [舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)<br>[魅惑学院](classes/subclasses/bard/bard-college-of-glamour.md)<br>[博闻学院](classes/subclasses/bard/bard-college-of-lore.md)<br>[勇气学院](classes/subclasses/bard/bard-college-of-valor.md) | 基础资料已核验 |
+| `bard` | 吟游诗人 | Bard | [吟游诗人详细资料](classes/subclasses/bard/bard.md) | [舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)<br>[魅心学院](classes/subclasses/bard/bard-college-of-glamour.md)<br>[逸闻学院](classes/subclasses/bard/bard-college-of-lore.md)<br>[勇气学院](classes/subclasses/bard/bard-college-of-valor.md) | 基础职业与 4 个学院已接入运行时（B08-08） |
 | `cleric` | 牧师 | Cleric | [牧师详细资料](classes/subclasses/cleric/cleric.md) | [生命领域](classes/subclasses/cleric/cleric-life-domain.md)<br>[光明领域](classes/subclasses/cleric/cleric-light-domain.md)<br>[诡术领域](classes/subclasses/cleric/cleric-trickery-domain.md)<br>[战争领域](classes/subclasses/cleric/cleric-war-domain.md) | 基础职业与 4 个领域已接入运行时（B08-06） |
 | `druid` | 德鲁伊 | Druid | [德鲁伊详细资料](classes/subclasses/druid/druid.md) | [大地结社](classes/subclasses/druid/druid-circle-of-the-land.md)<br>[月亮结社](classes/subclasses/druid/druid-circle-of-the-moon.md)<br>[海洋结社](classes/subclasses/druid/druid-circle-of-the-sea.md)<br>[星辰结社](classes/subclasses/druid/druid-circle-of-the-stars.md) | 基础职业与 4 个结社已接入运行时（B08-07） |
 | `fighter` | 战士 | Fighter | [战士详细资料](classes/subclasses/fighter/fighter.md) | [战斗大师](classes/subclasses/fighter/fighter-battle-master.md)<br>[勇士](classes/subclasses/fighter/fighter-champion.md)<br>[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)<br>[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md) | 基础职业与勇士已接入运行时（B08-01） |
@@ -82,7 +82,7 @@
 | `paladin` | 圣武士 | Paladin | [圣武士详细资料](classes/subclasses/paladin/paladin.md) | [奉献之誓](classes/subclasses/paladin/paladin-oath-of-devotion.md)<br>[荣耀之誓](classes/subclasses/paladin/paladin-oath-of-glory.md)<br>[古贤之誓](classes/subclasses/paladin/paladin-oath-of-the-ancients.md)<br>[复仇之誓](classes/subclasses/paladin/paladin-oath-of-vengeance.md) | 基础职业与奉献之誓已核验 |
 | `ranger` | 游侠 | Ranger | [游侠详细资料](classes/subclasses/ranger/ranger.md) | [驯兽师](classes/subclasses/ranger/ranger-beast-master.md)<br>[妖精漫游者](classes/subclasses/ranger/ranger-fey-wanderer.md)<br>[幽域追猎者](classes/subclasses/ranger/ranger-gloom-stalker.md)<br>[猎人](classes/subclasses/ranger/ranger-hunter.md) | 基础职业与猎人已核验 |
 | `rogue` | 游荡者 | Rogue | [游荡者详细资料](classes/subclasses/rogue/rogue.md) | [诡术师](classes/subclasses/rogue/rogue-arcane-trickster.md)<br>[刺客](classes/subclasses/rogue/rogue-assassin.md)<br>[魂刃](classes/subclasses/rogue/rogue-soulknife.md)<br>[盗贼](classes/subclasses/rogue/rogue-thief.md) | 基础职业与 4 个子职已接入运行时（B08-04） |
-| `sorcerer` | 术士 | Sorcerer | [术士详细资料](classes/subclasses/sorcerer/sorcerer.md) | [异怪术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)<br>[机关术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)<br>[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)<br>[狂野魔法术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md) | 基础职业与龙族术法已核验 |
+| `sorcerer` | 术士 | Sorcerer | [术士详细资料](classes/subclasses/sorcerer/sorcerer.md) | [畸变术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)<br>[时械术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)<br>[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)<br>[狂野术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md) | 基础职业与 4 个术法已接入运行时（B08-09） |
 | `warlock` | 邪术师 | Warlock | [邪术师详细资料](classes/subclasses/warlock/warlock.md) | [至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)<br>[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)<br>[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)<br>[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md) | 基础职业与邪魔宗主已核验 |
 | `wizard` | 法师 | Wizard | [法师详细资料](classes/subclasses/wizard/wizard.md) | [防护师](classes/subclasses/wizard/wizard-abjurer.md)<br>[预言师](classes/subclasses/wizard/wizard-diviner.md)<br>[塑能师](classes/subclasses/wizard/wizard-evoker.md)<br>[幻术师](classes/subclasses/wizard/wizard-illusionist.md) | 基础职业与塑能师已接入运行时（B08-02） |
 
@@ -124,10 +124,10 @@
 
 - 职业 ID：`bard`
 - 职业基础与等级特性：[吟游诗人详细资料](classes/subclasses/bard/bard.md)
-- 2024 子职：[舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)、[魅惑学院](classes/subclasses/bard/bard-college-of-glamour.md)、[博闻学院](classes/subclasses/bard/bard-college-of-lore.md)、[勇气学院](classes/subclasses/bard/bard-college-of-valor.md)
+- 2024 子职：[舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)、[魅心学院](classes/subclasses/bard/bard-college-of-glamour.md)（旧稿：魅惑学院）、[逸闻学院](classes/subclasses/bard/bard-college-of-lore.md)（旧稿：博闻学院）、[勇气学院](classes/subclasses/bard/bard-college-of-valor.md)
 - 旧版与扩展子职：[剑舞学院](classes/subclasses/bard/bard-college-of-swords.md)、[低语学院](classes/subclasses/bard/bard-college-of-whispers.md)、[创造学院](classes/subclasses/bard/bard-college-of-creation.md)、[雄辩学院](classes/subclasses/bard/bard-college-of-eloquence.md)、[精魂学院](classes/subclasses/bard/bard-college-of-spirits.md)
-- 选择与校验：已记录技能、乐器、装备、戏法与法术准备、诗人激励、魔法奥秘、子职等级和旧版兼容边界
-- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-27
+- 选择与校验：已记录技能（任选 3）、乐器（任选 3，10 种候选）、装备、戏法与准备法术、吟游诗人激励（次数＝魅力调整值，骰型 d6→d12）、两次专精（2／9 级）、魔法奥秘扩展法术池与子职等级；运行时的激励资源、乐器选择与魔法奥秘扩展已接入
+- 来源与核验：基础职业与 4 个核心学院已由 B08-08 按项目内 5e 不全书接入运行时；旧版与扩展学院仍沿用既有参考来源；最后核验日期 2026-09-15
 
 ### 5.3 牧师 Cleric
 
@@ -199,10 +199,10 @@
 - 职业 ID：`sorcerer`
 - 职业基础与等级特性：[术士详细资料](classes/subclasses/sorcerer/sorcerer.md)
 - **2014 规则（当前车卡基线）**：[2014 术士](classes/subclasses/sorcerer/sorcerer-2014.md)（3 级获得超魔法，10/17 级强化；超魔选项 10 项登记于 `app/src/rules/data/metamagic-2014.ts`，选择链路与 2024 资料隔离）
-- 2024子职：[异怪术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)、[机关术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)、[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)、[狂野魔法术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md)
+- 2024子职：[畸变术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)（旧稿：异怪术法）、[时械术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)（旧稿：机关术法）、[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)、[狂野术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md)（旧稿：狂野魔法术法）
 - 旧版与扩展子职：[神圣之魂](classes/subclasses/sorcerer/sorcerer-divine-soul.md)、[幽影魔法](classes/subclasses/sorcerer/sorcerer-shadow-magic.md)、[风暴术法](classes/subclasses/sorcerer/sorcerer-storm-sorcery.md)、[月之术法](classes/subclasses/sorcerer/sorcerer-lunar-sorcery.md)
-- 选择与校验：已记录施法、天生术法、术法点、超魔法、法术位转换、常备法术和旧版首特性等级映射
-- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-27
+- 选择与校验：已记录施法、先天术法、术法点、2024 超魔法（2／10／17 级各选 2 项，不可重复）、法术位转换、常备法术与子职等级；运行时的术法点、2024 超魔选项与子职法术已接入
+- 来源与核验：基础职业与 4 个核心术法已由 B08-09 按项目内 5e 不全书接入运行时；旧版与扩展子职仍沿用既有参考来源；最后核验日期 2026-09-15
 
 ### 5.11 邪术师 Warlock
 

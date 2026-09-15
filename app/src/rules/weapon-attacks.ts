@@ -46,6 +46,12 @@ function isProficient(draft: CharacterDraft, equipment: EquipmentRule): boolean 
       if (isWeaponTrainingCovered(repository.getOption(optionId)?.weaponTraining, equipment)) return true
     }
   }
+  // 子职特性可授予武器训练（如 2024 勇气学院·战争训练）。
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  for (const feature of subclass?.features ?? []) {
+    if (feature.level > draft.targetLevel) continue
+    if (isWeaponTrainingCovered(feature.weaponTraining, equipment)) return true
+  }
   const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
   const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
   return [race, subrace].some((item) => item?.weaponArmorProficiencies?.includes(equipment.id))

@@ -294,6 +294,12 @@ export function collectArmorTrainings(draft: CharacterDraft, repository: RulesRe
       for (const training of repository.getOption(optionId)?.armorTraining ?? []) trainings.add(training)
     }
   }
+  // 子职特性可授予训练（如 2024 勇气学院·战争训练）。
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  for (const feature of subclass?.features ?? []) {
+    if (feature.level > draft.targetLevel) continue
+    for (const training of feature.armorTraining ?? []) trainings.add(training)
+  }
   return [...trainings]
 }
 

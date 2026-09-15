@@ -96,7 +96,7 @@ function buildSubclassFeatureCheckpoints(
   return (repository.getSubclass(subclassId)?.features ?? [])
     .filter((feature) =>
       feature.requiresChoice
-      && ((feature.optionIds?.length ?? 0) > 0 || (feature.featCategories?.length ?? 0) > 0),
+      && ((feature.optionIds?.length ?? 0) > 0 || (feature.featCategories?.length ?? 0) > 0 || Boolean(feature.candidateKind)),
     )
     .map((feature) => ({
       id: `subclass-feature-${feature.id}`,
@@ -116,6 +116,10 @@ function buildSubclassFeatureCheckpoints(
         : feature.featCategories?.length
           ? getFeatPool(repository, feature.featCategories, { level: feature.level, enabledSourceIds }).map((feat) => feat.id)
           : [],
+      candidateKind: feature.candidateKind,
+      spellPool: feature.spellPool,
+      spellGrant: feature.spellGrant,
+      spellCastingTime: feature.spellCastingTime,
       uniqueGroup: feature.optionIds?.length && feature.id.includes('arcane-shot') ? 'arcane-archer-shots' : undefined,
     }))
 }

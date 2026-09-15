@@ -7,6 +7,7 @@ import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
 import { getRulesRepository } from '@/rules/repositories'
+import { abilityModifier, deriveAbilities } from '@/rules/derive'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { formatResourceText } from '@/rules/resources'
 import { buildTimeline } from '@/rules/timeline'
@@ -134,9 +135,13 @@ function checkpointBounds(checkpoint: ChoiceCheckpoint): { readonly min: number;
   return getCheckpointSelectionBounds(props.draft, checkpoint)
 }
 
-/** 资源展示文本（B08 结构化登记，B10 结算）。 */
+/** 资源展示文本（B08 结构化登记，B10 结算）；属性型资源按当前属性调整值显示上限。 */
 function featureResourceText(feature: { readonly resource?: ClassResource }): string {
-  return feature.resource ? formatResourceText(feature.resource, props.targetLevel) : ''
+  const resource = feature.resource
+  if (!resource) return ''
+  const ability = resource.maxFromAbility?.ability
+  const modifier = ability ? abilityModifier(deriveAbilities(props.draft)[ability]) : 0
+  return formatResourceText(resource, props.targetLevel, modifier)
 }
 
 function masteryItemDescription(itemId: string): string {

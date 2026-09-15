@@ -284,7 +284,9 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   }
   const hasHeavyArmor = equippedArmor?.id === 'chain-mail'
   const hasShield = Boolean(equippedShield)
-  const unarmoredDefense = classRule?.unarmoredDefense
+  const subclassRule = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  const unarmoredDefense = classRule?.unarmoredDefense ?? subclassRule?.unarmoredDefense
+  const unarmoredDefenseSourceName = classRule?.unarmoredDefense ? classRule.name : subclassRule?.unarmoredDefense ? subclassRule.name : undefined
   const barbarianUnarmored = draft.classId === 'class-2014-barbarian' && !equippedArmor
   const monkUnarmored = draft.classId === 'class-2014-monk' && !equippedArmor && !hasShield
   const baseArmor = equippedArmor
@@ -414,7 +416,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const armorClassValue = withManualAdjustment(derived(armorClass, [
     {
       id: 'armor-base',
-      label: equippedArmor?.name ?? (unarmoredDefense ? `${classRule?.name ?? ''}无甲防御` : barbarianUnarmored ? '野蛮人无甲防御' : monkUnarmored ? '武僧无甲防御' : subclassEffects.armorClassBase ? '子职护甲公式' : '基础护甲'),
+      label: equippedArmor?.name ?? (unarmoredDefense ? `${unarmoredDefenseSourceName ?? ''}无甲防御` : barbarianUnarmored ? '野蛮人无甲防御' : monkUnarmored ? '武僧无甲防御' : subclassEffects.armorClassBase ? '子职护甲公式' : '基础护甲'),
       value: baseArmor,
       detail: equippedArmor
         ? equippedArmor.description

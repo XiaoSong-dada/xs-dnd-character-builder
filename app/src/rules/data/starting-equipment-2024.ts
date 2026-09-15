@@ -1,4 +1,5 @@
 import type { BackgroundStartingEquipmentRule, ClassStartingEquipmentRule, EquipmentGrant, StartingEquipmentOption } from '@/types/rules'
+import { BARD_INSTRUMENT_ITEM_IDS } from '@/rules/data/bard-2024'
 import { MONK_TOOL_ITEM_IDS } from '@/rules/data/monk-2024'
 
 const g = (itemId: string, quantity = 1): EquipmentGrant => ({ itemId, quantity })
@@ -29,6 +30,10 @@ export const classStartingEquipment2024: readonly ClassStartingEquipmentRule[] =
     gear('barbarian-2024-a', [g('equipment-2024-greataxe'), g('equipment-2024-handaxe', 4), g('equipment-2024-explorer-s-pack')], 15),
     gold('barbarian-2024-b', 75),
   ] }] },
+  { classId: 'class-2024-bard', fixedGrants: [], groups: [{ id: 'bard-2024-starting', title: '选择职业初始装备或金币', options: [
+    { ...gear('bard-2024-a', [g('equipment-2024-leather-armor'), g('equipment-2024-dagger', 2), g('equipment-2024-entertainer-s-pack')], 19), pick: { count: 1, allowedItemIds: BARD_INSTRUMENT_ITEM_IDS } },
+    gold('bard-2024-b', 90),
+  ] }] },
   { classId: 'class-2024-cleric', fixedGrants: [], groups: [{ id: 'cleric-2024-starting', title: '选择职业初始装备或金币', options: [
     gear('cleric-2024-a', [g('equipment-2024-chain-shirt'), g('equipment-2024-shield'), g('equipment-2024-mace'), g('equipment-2024-holy-symbol'), g('equipment-2024-priest-s-pack')], 7),
     gold('cleric-2024-b', 110),
@@ -48,6 +53,10 @@ export const classStartingEquipment2024: readonly ClassStartingEquipmentRule[] =
   { classId: 'class-2024-rogue', fixedGrants: [], groups: [{ id: 'rogue-2024-starting', title: '选择职业初始装备或金币', options: [
     gear('rogue-2024-a', [g('equipment-2024-leather-armor'), g('equipment-2024-dagger', 2), g('equipment-2024-shortsword'), g('equipment-2024-shortbow'), g('equipment-2024-ammunition', 20), g('equipment-2024-quiver'), g('equipment-2024-thieves-tools'), g('equipment-2024-burglar-s-pack')], 8),
     gold('rogue-2024-b', 100),
+  ] }] },
+  { classId: 'class-2024-sorcerer', fixedGrants: [], groups: [{ id: 'sorcerer-2024-starting', title: '选择职业初始装备或金币', options: [
+    gear('sorcerer-2024-a', [g('equipment-2024-spear'), g('equipment-2024-dagger', 2), g('equipment-2024-crystal'), g('equipment-2024-dungeoneer-s-pack')], 28),
+    gold('sorcerer-2024-b', 50),
   ] }] },
   { classId: 'class-2024-wizard', fixedGrants: [], groups: [{ id: 'wizard-2024-starting', title: '选择职业初始装备或金币', options: [
     gear('wizard-2024-a', [g('equipment-2024-dagger', 2), g('equipment-2024-arcane-focus'), g('equipment-2024-robe'), g('equipment-2024-book'), g('equipment-2024-scholar-s-pack')], 5), gold('wizard-2024-b', 55),

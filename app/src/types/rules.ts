@@ -49,13 +49,15 @@ export interface UnarmoredDefenseRule {
 
 /** 职业／子职资源（B08 登记，B10 结算）：简单计数池的上限与恢复。 */
 export interface ClassResource {
-  /** 1—20 级上限；索引 = 等级−1；0 表示该等级尚未获得。 */
-  readonly maxByLevel: readonly number[]
+  /** 1—20 级上限；索引 = 等级−1；0 表示该等级尚未获得。使用 maxFromAbility 时省略。 */
+  readonly maxByLevel?: readonly number[]
   readonly recovery: 'short-rest' | 'long-rest' | 'none' | 'special'
   /** 复杂条件或额外说明（如每回合一次、失败不消耗）。 */
   readonly note?: string
   /** 数值单位（缺省“次”，如奥术回想为“环级”）。 */
   readonly unit?: string
+  /** 上限来自属性调整值（如 2024 诗人激励＝魅力调整值，至少 1 次）；提供时优先于 maxByLevel。 */
+  readonly maxFromAbility?: { readonly ability: AbilityKey; readonly minimum: number }
 }
 
 /**
@@ -87,6 +89,8 @@ export interface RuleOption {
   readonly weaponTraining?: WeaponTraining
   /** 选项授予的额外戏法数量（如 2024 牧师圣职·奇术使）。 */
   readonly cantripBonus?: number
+  /** 超魔选项的术法点消耗（2024 超魔数据；B10 结算输入）。 */
+  readonly sorceryPointCost?: number
   /** 选项授予的始终准备法术（如 2024 德鲁伊大地结社的地形法术，按德鲁伊等级生效）。 */
   readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
   /** 同一内容被重印时，当前规则实现采用的出版来源。 */
@@ -128,10 +132,15 @@ export interface SpellGrantSpec {
 
 /** 专长候选法术池：按环级、学派、仪式标签与所选法术表过滤。 */
 export interface SpellPoolSpec {
-  readonly level: number
+  /** 固定法术环级；省略时按施法配置取 0—当前最高可用环级（配合 includeCantrips）。 */
+  readonly level?: number
   /** 学派中文名（如“预言”“惑控”）。 */
   readonly schools?: readonly string[]
   readonly ritualOnly?: boolean
+  /** 限定这些职业的法术（如 2024 逸闻学院·魔法探秘限牧师／德鲁伊／法师）。 */
+  readonly classIds?: readonly string[]
+  /** 未指定 level 时是否包含戏法（环级 0）。 */
+  readonly includeCantrips?: boolean
   /** 依赖同一专长的另一个子选择（选项 ID 形如 `spell-list-<职业>`）确定法术表。 */
   readonly fromListChoiceId?: string
 }
@@ -273,6 +282,11 @@ export interface SpellcastingConfig {
   readonly spellbookSpellsByLevel?: readonly number[]
   /** 达到对应等级后始终准备，且不计入准备上限的法术。 */
   readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
+  /** 从某等级起追加的候选法术池（如 2024 诗人魔法奥秘：10 级起可从诗人／牧师／德鲁伊／法师列表准备）。 */
+  readonly expandedSpellPool?: {
+    readonly spellIds: readonly string[]
+    readonly startsAtLevel: number
+  }
   /** 可从法术书直接施展仪式，无需准备（2024 法师仪式学家）。 */
   readonly ritualCastingFromBook?: boolean
 }
@@ -346,6 +360,8 @@ export interface SubclassRule {
   readonly spellcasting?: SpellcastingConfig
   /** 子职在特定职业等级授予的始终准备法术，不占准备上限。 */
   readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
+  /** 子职提供的无甲防御公式（如 2024 舞蹈学院炫目舞步）；与职业公式共用版本化出口。 */
+  readonly unarmoredDefense?: UnarmoredDefenseRule
   /** 子职授予的额外入书规则（如 2024 塑能学者的塑能法术额外入书）。 */
   readonly spellbookExtraSpells?: SpellbookExtraRule
 }
@@ -416,6 +432,18 @@ export interface SubclassFeature {
   /** 选择检查点的最少/最多选择数（缺省 1/1；多选特性如战斗大师战技填写 3/3）。 */
   readonly minSelections?: number
   readonly maxSelections?: number
+  /** 动态候选池类型（如 2024 逸闻学院·魔法探秘的法术池）。 */
+  readonly candidateKind?: CheckpointCandidateKind
+  /** 候选法术池（与 `candidateKind: 'spell-pool'` 配合）。 */
+  readonly spellPool?: SpellPoolSpec
+  /** 检查点选择声明的法术授予语义（如始终准备）。 */
+  readonly spellGrant?: SpellGrantSpec
+  /** 法术级候选的施法时间过滤（与 candidateKind 配合）。 */
+  readonly spellCastingTime?: string
+  /** 子职特性授予的护甲训练（如 2024 勇气学院·战争训练）。 */
+  readonly armorTraining?: readonly ArmorTraining[]
+  /** 子职特性授予的武器训练（如 2024 勇气学院·战争训练）。 */
+  readonly weaponTraining?: WeaponTraining
   /** 简单计数池资源（B08 登记展示，B10 结算）。 */
   readonly resource?: ClassResource
   /** 骰池派生数据（按等级变化的骰数与骰面；与消耗池分开）。 */

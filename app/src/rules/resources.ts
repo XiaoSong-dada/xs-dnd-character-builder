@@ -7,16 +7,20 @@ const RECOVERY_LABELS: Readonly<Record<ClassResource['recovery'], string>> = {
   special: '特殊恢复',
 }
 
-/** 按角色等级取资源上限；越界等级按最近端点处理，未获得时返回 0。 */
-export function getResourceMax(resource: ClassResource, level: number): number {
-  if (resource.maxByLevel.length === 0) return 0
+/**
+ * 资源上限：属性型资源（如诗人激励＝魅力调整值）按 `maxFromAbility` 计算，
+ * 其余按等级表；越界等级按最近端点处理，未获得时返回 0。
+ */
+export function getResourceMax(resource: ClassResource, level: number, abilityModifier = 0): number {
+  if (resource.maxFromAbility) return Math.max(resource.maxFromAbility.minimum, abilityModifier)
+  if (!resource.maxByLevel?.length) return 0
   const index = Math.min(Math.max(1, Math.trunc(level)), resource.maxByLevel.length) - 1
   return Math.max(0, resource.maxByLevel[index] ?? 0)
 }
 
 /** 资源展示文本：`2 次 · 短休恢复`（单位缺省为“次”）；上限为 0 时返回空串。 */
-export function formatResourceText(resource: ClassResource, level: number): string {
-  const max = getResourceMax(resource, level)
+export function formatResourceText(resource: ClassResource, level: number, abilityModifier = 0): string {
+  const max = getResourceMax(resource, level, abilityModifier)
   if (max <= 0) return ''
   return `${max} ${resource.unit ?? '次'} · ${RECOVERY_LABELS[resource.recovery]}`
 }

@@ -368,6 +368,50 @@ describe('2024 德鲁伊校验（B08-07）', () => {
   })
 })
 
+describe('2024 吟游诗人校验（B08-08）', () => {
+  it('技能、乐器与专精未完成时提示补选', () => {
+    const incomplete = draft2024({ classId: 'class-2024-bard', targetLevel: 2 })
+    expect(issueIds(incomplete)).toContain('checkpoint-class-2024-bard-skills-1')
+    expect(issueIds(incomplete)).toContain('checkpoint-class-2024-bard-tools-1')
+    expect(issueIds(incomplete)).toContain('checkpoint-class-2024-bard-expertise-2')
+  })
+
+  it('技能与乐器选择完成后不再报告对应检查点', () => {
+    const complete = draft2024({
+      classId: 'class-2024-bard',
+      targetLevel: 1,
+      selections: [
+        selection('class-2024-bard-skills-1', ['skill-deception', 'skill-performance', 'skill-persuasion']),
+        selection('class-2024-bard-tools-1', ['bard-2024-instrument-lute', 'bard-2024-instrument-flute', 'bard-2024-instrument-drum']),
+      ],
+    })
+    const ids = issueIds(complete)
+    expect(ids).not.toContain('checkpoint-class-2024-bard-skills-1')
+    expect(ids).not.toContain('checkpoint-class-2024-bard-tools-1')
+  })
+})
+
+describe('2024 术士校验（B08-09）', () => {
+  it('技能与超魔未完成时提示补选', () => {
+    const incomplete = draft2024({ classId: 'class-2024-sorcerer', targetLevel: 2 })
+    expect(issueIds(incomplete)).toContain('checkpoint-class-2024-sorcerer-skills-1')
+    expect(issueIds(incomplete)).toContain('checkpoint-class-2024-sorcerer-metamagic-2')
+  })
+
+  it('超魔不可跨等级重复选择', () => {
+    const duplicate = draft2024({
+      classId: 'class-2024-sorcerer',
+      targetLevel: 10,
+      selections: [
+        selection('class-2024-sorcerer-skills-1', ['skill-arcana', 'skill-deception']),
+        selection('class-2024-sorcerer-metamagic-2', ['metamagic-2024-careful', 'metamagic-2024-distant']),
+        selection('class-2024-sorcerer-metamagic-10', ['metamagic-2024-careful', 'metamagic-2024-quickened']),
+      ],
+    })
+    expect(issueIds(duplicate)).toContain('duplicate-option-group-sorcerer-metamagic-2024')
+  })
+})
+
 describe('2024 游荡者校验（B08-04）', () => {
   it('专精只能选择已熟练技能，且两次专精不能重复', () => {
     const notProficient = draft2024({

@@ -39,6 +39,9 @@ export function getSubclassDerivedEffects(subclassId: string | undefined, target
     case 'subclass-2014-sorcerer-draconic-bloodline':
       // 龙族体魄（PHB 2014 / SRD 5.1）：未着甲时基础护甲 13 + 敏捷调整值；每个术士等级 +1 生命值。
       return { ...ZERO_SUBCLASS_EFFECTS, armorClassBase: 13, hitPointBonus: targetLevel }
+    case 'subclass-2024-sorcerer-draconic-sorcery':
+      // 龙族体魄（2024）：3 级起生命值上限 +3，此后每级 +1（等级 ≥3 时等于职业等级）；未着甲 AC 由 SubclassRule.unarmoredDefense 处理。
+      return { ...ZERO_SUBCLASS_EFFECTS, hitPointBonus: targetLevel >= 3 ? targetLevel : 0 }
     default:
       return ZERO_SUBCLASS_EFFECTS
   }

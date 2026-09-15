@@ -187,7 +187,10 @@ export function getSpellCandidates(draft: CharacterDraft, config: SpellcastingCo
 export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingConfig) {
   const repository = getRulesRepository(draft.ruleset)
   const maximumLevel = getMaximumSpellLevel(config, draft.targetLevel)
-  return config.classSpellIds
+  const expanded = config.expandedSpellPool && draft.targetLevel >= config.expandedSpellPool.startsAtLevel
+    ? config.expandedSpellPool.spellIds
+    : []
+  return [...new Set([...config.classSpellIds, ...expanded])]
     .map((id) => repository.getSpell(id))
     .filter((spell): spell is NonNullable<typeof spell> => Boolean(
       spell
@@ -221,12 +224,16 @@ export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: Choic
       ? resolveSpellListClassId(draft, checkpoint, pool.fromListChoiceId)
       : undefined
     if (pool.fromListChoiceId && !classId) return []
+    const config = getSpellcastingConfig(draft)
+    const maximumLevel = pool.level ?? (config ? getMaximumSpellLevel(config, draft.targetLevel) : 0)
+    const minimumLevel = pool.level === undefined && pool.includeCantrips ? 0 : 1
     return repository.spells
-      .filter((spell) => spell.level === pool.level)
+      .filter((spell) => pool.level !== undefined ? spell.level === pool.level : spell.level >= minimumLevel && spell.level <= maximumLevel)
       .filter((spell) => !pool.schools || (spell.school !== undefined && pool.schools.includes(spell.school)))
       .filter((spell) => !pool.ritualOnly || spell.ritual)
       .filter((spell) => !checkpoint.spellCastingTime || spell.castingTime === checkpoint.spellCastingTime)
       .filter((spell) => !classId || spell.classIds.includes(classId))
+      .filter((spell) => !pool.classIds || spell.classIds.some((id) => pool.classIds?.includes(id)))
       .filter((spell) => isSourceEnabled(spell.sourceIds, draft.enabledSourceIds, repository))
       .map((spell) => spell.id)
   }
@@ -314,6 +321,7 @@ export function getSpeciesSpellAbility(
 /** 检查点或专长子选择声明的始终准备法术（法术精通、招牌法术、专长授予等）。 */
 function selectionAlwaysPreparedSpellIds(draft: CharacterDraft, repository: RulesRepository): readonly string[] {
   const ids: string[] = []
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
     if (selection.checkpointId.startsWith('feat-child:')) {
@@ -323,7 +331,16 @@ function selectionAlwaysPreparedSpellIds(draft: CharacterDraft, repository: Rule
       continue
     }
     const checkpoint = findClassCheckpoint(repository, selection.checkpointId)
-    if (checkpoint?.spellGrant?.alwaysPrepared) ids.push(...selection.optionIds)
+    if (checkpoint?.spellGrant?.alwaysPrepared) {
+      ids.push(...selection.optionIds)
+      continue
+    }
+    // 子职特性检查点（如 2024 逸闻学院·魔法探秘的始终准备法术）。
+    if (subclass && selection.checkpointId.startsWith('subclass-feature-')) {
+      const featureId = selection.checkpointId.slice('subclass-feature-'.length)
+      const feature = subclass.features.find((item) => item.id === featureId)
+      if (feature?.spellGrant?.alwaysPrepared) ids.push(...selection.optionIds)
+    }
   }
   return ids
 }

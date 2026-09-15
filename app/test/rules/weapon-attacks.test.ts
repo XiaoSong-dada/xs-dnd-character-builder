@@ -71,6 +71,23 @@ describe('逐武器攻击派生', () => {
     expect(deriveWeaponAttack(monk, derived, greataxe)?.proficient).toBe(false)
   })
 
+  it('2024 吟游诗人勇气学院·战争训练授予军用武器熟练', () => {
+    const longsword = rulesRepository2024.getEquipment('equipment-2024-longsword')
+    const dagger = rulesRepository2024.getEquipment('equipment-2024-dagger')
+    if (!longsword || !dagger) throw new Error('缺少 2024 武器数据')
+
+    const plain = draft2024({ classId: 'class-2024-bard', targetLevel: 3 })
+    expect(deriveWeaponAttack(plain, deriveCharacter(plain), longsword)?.proficient).toBe(false)
+    expect(deriveWeaponAttack(plain, deriveCharacter(plain), dagger)?.proficient).toBe(true)
+
+    const valor = draft2024({
+      classId: 'class-2024-bard',
+      subclassId: 'subclass-2024-bard-college-of-valor',
+      targetLevel: 3,
+    })
+    expect(deriveWeaponAttack(valor, deriveCharacter(valor), longsword)?.proficient).toBe(true)
+  })
+
   it('2024 德鲁伊原初职能·卫士授予军用武器熟练', () => {
     const longsword = rulesRepository2024.getEquipment('equipment-2024-longsword')
     const sickle = rulesRepository2024.getEquipment('equipment-2024-sickle')

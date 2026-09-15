@@ -195,4 +195,46 @@ describe('2024 职业时间线（B08-01）', () => {
       'class-2024-druid-feat-19',
     ])
   })
+
+  it('吟游诗人时间线展开技能、乐器、两次专精、子职与属性提升', () => {
+    const levelOne = buildTimeline('class-2024-bard', 1, { ruleset: '5e-2024' })
+    expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-bard-skills-1',
+      'class-2024-bard-tools-1',
+    ])
+
+    const levelThree = buildTimeline('class-2024-bard', 3, { ruleset: '5e-2024' })
+    const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
+    expect(subclass?.id).toBe('class-2024-bard-subclass-3')
+    expect(subclass?.optionIds).toHaveLength(4)
+
+    const loreTimeline = buildTimeline('class-2024-bard', 6, { ruleset: '5e-2024', subclassId: 'subclass-2024-bard-college-of-lore' })
+    expect(loreTimeline.find((checkpoint) => checkpoint.id === 'subclass-feature-bard-2024-lore-magical-discoveries')?.candidateKind).toBe('spell-pool')
+
+    const levelTwenty = buildTimeline('class-2024-bard', 20, { ruleset: '5e-2024' })
+    expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'expertise').map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-bard-expertise-2',
+      'class-2024-bard-expertise-9',
+    ])
+  })
+
+  it('术士时间线展开技能、超魔、子职与属性提升', () => {
+    const levelTwo = buildTimeline('class-2024-sorcerer', 2, { ruleset: '5e-2024' })
+    expect(levelTwo.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-sorcerer-skills-1',
+      'class-2024-sorcerer-metamagic-2',
+    ])
+
+    const levelThree = buildTimeline('class-2024-sorcerer', 3, { ruleset: '5e-2024' })
+    const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
+    expect(subclass?.id).toBe('class-2024-sorcerer-subclass-3')
+    expect(subclass?.optionIds).toHaveLength(4)
+
+    const levelTwenty = buildTimeline('class-2024-sorcerer', 20, { ruleset: '5e-2024' })
+    expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'class-choice').map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-sorcerer-metamagic-2',
+      'class-2024-sorcerer-metamagic-10',
+      'class-2024-sorcerer-metamagic-17',
+    ])
+  })
 })
