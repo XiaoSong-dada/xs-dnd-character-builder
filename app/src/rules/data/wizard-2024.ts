@@ -226,6 +226,104 @@ export const wizardSubclassFeatures2024: readonly SubclassFeature[] = [
     kind: 'resource', status: 'implemented', sourceIds,
     resource: { maxByLevel: OVERCHANNEL_MAX, recovery: 'long-rest', note: '长休周期首次无副作用；重复使用按环级累积暗蚀反噬' },
   },
+
+  // ============ 幻术师 ============
+  {
+    id: 'wizard-2024-illusionist-illusion-savant', subclassId: 'subclass-2024-wizard-illusionist', name: '幻术学者', englishName: 'Illusion Savant', level: 3,
+    summary: '额外入书两道不高于二环的幻术系法师法术；此后每获得新环位再额外入书一道该环幻术法术。',
+    description: '选择两道不高于二环的幻术系法师法术，免费写入法术书（不占升级入书名额）；此后每当你首次获得一个新的法术环位，再把一道该环级的幻术系法师法术免费写入法术书。额外入书与升级名额、抄录所得分开计数。',
+    kind: 'choice', status: 'implemented', sourceIds,
+  },
+  {
+    id: 'wizard-2024-illusionist-improved-illusions', subclassId: 'subclass-2024-wizard-illusionist', name: '强化幻术', englishName: 'Improved Illusions', level: 3,
+    summary: '幻术法术施法距离+60 尺；幻术无须言语成分；可免费施展一次无声幻影。',
+    description: '你施展施法距离至少 10 尺的幻术系法师法术时，其射程提升 60 尺；你施展幻术系法师法术时可以忽略言语成分；此外，你始终准备着无声幻影，并可无需法术位施展一次（每次长休恢复）。',
+    kind: 'passive', status: 'implemented', sourceIds,
+  },
+  {
+    id: 'wizard-2024-illusionist-phantasmal-creatures', subclassId: 'subclass-2024-wizard-illusionist', name: '魅影生灵', englishName: 'Phantasmal Creatures', level: 6,
+    summary: '始终准备幻象生物类法术（如召唤幻影），并使其无需专注（依规则文本）。',
+    description: '你始终准备着召唤幻影等幻象生物类法术；具体召唤物与边界以规则文本为准，生物数据未装配时不生成数值。',
+    kind: 'passive', status: 'implemented', sourceIds,
+  },
+  {
+    id: 'wizard-2024-illusionist-illusory-self', subclassId: 'subclass-2024-wizard-illusionist', name: '幻影化形', englishName: 'Illusory Self', level: 10,
+    summary: '被攻击命中时可用反应创造幻影替身使攻击自动失手；每次短休或长休 1 次。',
+    description: '当一次攻击检定命中你时，你可以用反应创造一个你自己的幻影替身，使该次攻击自动失手。此特性每次短休或长休 1 次。',
+    kind: 'reaction', status: 'implemented', sourceIds,
+  },
+  {
+    id: 'wizard-2024-illusionist-illusory-reality', subclassId: 'subclass-2024-wizard-illusionist', name: '亦真亦幻', englishName: 'Illusory Reality', level: 14,
+    summary: '施展幻术时可将其中一个非生物、非物质物件化为真实物件 1 分钟。',
+    description: '当你施展一道幻术系法师法术时，可以选择法术中一个非魔法、非生物的物件，使其在法术持续时间内变为真实物件；该物件不能造成伤害或直接伤害他人。',
+    kind: 'passive', status: 'implemented', sourceIds,
+  },
+
+  // ============ 防护师 ============
+  {
+    id: 'wizard-2024-abjurer-abjuration-savant', subclassId: 'subclass-2024-wizard-abjurer', name: '防护学者', englishName: 'Abjuration Savant', level: 3,
+    summary: '额外入书两道不高于二环的防护系法师法术；此后每获得新环位再额外入书一道该环防护法术。',
+    description: '选择两道不高于二环的防护系法师法术，免费写入法术书（不占升级入书名额）；此后每当你首次获得一个新的法术环位，再把一道该环级的防护系法师法术免费写入法术书。额外入书与升级名额、抄录所得分开计数。',
+    kind: 'choice', status: 'implemented', sourceIds,
+  },
+  {
+    id: 'wizard-2024-abjurer-arcane-ward', subclassId: 'subclass-2024-wizard-abjurer', name: '奥术守御', englishName: 'Arcane Ward', level: 3,
+    summary: '消耗法术位施展防护法术时创造结界：生命值上限＝2×法师等级＋智力调整值；受伤时优先扣结界；防护法术与附赠动作可恢复（各次环级×2）。',
+    description: '当你消耗法术位施展一道防护系法术时，可以同时创造一个魔法结界，持续至长休；结界生命值上限等于法师等级的两倍加智力调整值。你受伤时结界先代你承伤并计算你的抗性与易伤；若伤害使结界降至 0，溢出伤害由你承受。每当消耗法术位施展防护系法术时，结界恢复环级×2 的生命；也可以附赠动作消耗一个法术位恢复环级×2。结界一经创建，直至长休前无法再次创建。',
+    kind: 'resource', status: 'implemented', sourceIds,
+    resource: { maxByLevel: Array.from({ length: 20 }, (_, index) => (index + 1) * 2), abilityBonus: 'int', recovery: 'long-rest', unit: '点结界生命', note: '消耗法术位施展防护法术或附赠动作消耗法术位恢复（环级×2）' },
+  },
+  {
+    id: 'wizard-2024-abjurer-projected-ward', subclassId: 'subclass-2024-wizard-abjurer', name: '投射守御', englishName: 'Projected Ward', level: 6,
+    summary: '反应让 30 尺内可见生物受到伤害时由奥术守御吸收；溢伤与抗性按规则处理。',
+    description: '当一个 30 尺内你可见的生物受到伤害时，你可以用反应让奥术守御吸收该伤害；若伤害使结界降至 0，被保护生物承受剩余伤害。被保护生物的抗性与易伤在计算结界承伤前先结算。',
+    kind: 'reaction', status: 'implemented', sourceIds,
+  },
+  {
+    id: 'wizard-2024-abjurer-spell-breaker', subclassId: 'subclass-2024-wizard-abjurer', name: '破法者', englishName: 'Spell Breaker', level: 10,
+    summary: '解除魔法或法术反制成功时，被解除法术的能量可恢复奥术守御等同环级×2 的生命。',
+    description: '当你以解除魔法或法术反制成功终止一个法术时，可以使该法术的魔力回流到奥术守御中，恢复等于该法术环级×2 的结界生命值。',
+    kind: 'passive', status: 'implemented', sourceIds,
+  },
+  {
+    id: 'wizard-2024-abjurer-spell-resistance', subclassId: 'subclass-2024-wizard-abjurer', name: '法术抗性', englishName: 'Spell Resistance', level: 14,
+    summary: '对抗法术的豁免具有优势；对法术伤害具有抗性。',
+    description: '你在对抗法术的豁免检定上具有优势；你具有对法术伤害的抗性。',
+    kind: 'passive', status: 'implemented', sourceIds,
+  },
+
+  // ============ 预言师 ============
+  {
+    id: 'wizard-2024-diviner-divination-savant', subclassId: 'subclass-2024-wizard-diviner', name: '预言学者', englishName: 'Divination Savant', level: 3,
+    summary: '额外入书两道不高于二环的预言系法师法术；此后每获得新环位再额外入书一道该环预言法术。',
+    description: '选择两道不高于二环的预言系法师法术，免费写入法术书（不占升级入书名额）；此后每当你首次获得一个新的法术环位，再把一道该环级的预言系法师法术免费写入法术书。额外入书与升级名额、抄录所得分开计数。',
+    kind: 'choice', status: 'implemented', sourceIds,
+  },
+  {
+    id: 'wizard-2024-diviner-portent', subclassId: 'subclass-2024-wizard-diviner', name: '预兆', englishName: 'Portent', level: 3,
+    summary: '每次长休后掷 2 个 d20 作为预兆骰；可用一颗替换你或可见生物的 d20 检定（每回合一次，掷前决定）。',
+    description: '预知未来的片段在你意识中闪过：每次长休后掷两次 d20 并记录为预兆骰。你可以用其中一颗替换你或你可见生物的 d20 检定；必须在检定前宣布，每回合只能替换一次，每颗预兆骰只能使用一次；长休时失去所有未使用的预兆骰。',
+    kind: 'resource', status: 'implemented', sourceIds,
+    resource: { maxByLevel: Array.from({ length: 20 }, () => 2), recovery: 'long-rest', note: '长休后掷 2 个 d20；每回合最多使用一次' },
+  },
+  {
+    id: 'wizard-2024-diviner-expert-divination', subclassId: 'subclass-2024-wizard-diviner', name: '专业预言', englishName: 'Expert Divination', level: 6,
+    summary: '以二环或更高法术位施展预言系法师法术时，可恢复一个低于该环级（不超过五环）的已消耗法术位。',
+    description: '当你消耗法术位施展一个环阶为二环或更高的预言系法师法术时，可以恢复一个已消耗的法术位：所恢复法术位的环级必须低于你正施展的法术，且不高于五环。',
+    kind: 'passive', status: 'implemented', sourceIds,
+  },
+  {
+    id: 'wizard-2024-diviner-the-third-eye', subclassId: 'subclass-2024-wizard-diviner', name: '天眼通', englishName: 'The Third Eye', level: 10,
+    summary: '附赠动作获得 60 尺黑暗视觉、识破隐形或读心之一，持续至短休或长休；每次短休或长休 1 次。',
+    description: '以一个附赠动作，你选择获得以下增益之一，持续 1 小时或直至你主动结束：黑暗视觉（60 尺）、识破隐形（10 尺内隐形生物可见）、读心（10 尺内生物的浅层思想可读）。每次短休或长休后可使用 1 次。',
+    kind: 'bonus-action', status: 'implemented', sourceIds,
+  },
+  {
+    id: 'wizard-2024-diviner-greater-portent', subclassId: 'subclass-2024-wizard-diviner', name: '高等预兆', englishName: 'Greater Portent', level: 14,
+    summary: '每次长休后掷 3 个预兆骰（而非 2 个）。',
+    description: '你的预兆能力增强：每次长休后掷三次 d20 并记录为预兆骰，使用规则与预兆相同。',
+    kind: 'passive', status: 'implemented', sourceIds,
+  },
 ]
 
 export const wizardSubclasses2024: readonly SubclassRule[] = [{
@@ -239,6 +337,45 @@ export const wizardSubclasses2024: readonly SubclassRule[] = [{
   status: 'implemented',
   availability: 'player',
   sourceIds,
-  features: wizardSubclassFeatures2024,
+  features: wizardSubclassFeatures2024.filter((feature) => feature.subclassId === 'subclass-2024-wizard-evoker'),
   spellbookExtraSpells: { base: 2, perNewSpellLevel: 1, schools: ['塑能'] },
+}, {
+  id: 'subclass-2024-wizard-illusionist',
+  classId: 'class-2024-wizard',
+  ruleset: '5e-2024',
+  name: '幻术师',
+  englishName: 'Illusionist',
+  selectionLevel: 3,
+  summary: '以幻术欺骗感官：额外入书幻术、强化幻术与幻影替身，高等级让幻象化为真实。',
+  status: 'implemented',
+  availability: 'player',
+  sourceIds,
+  features: wizardSubclassFeatures2024.filter((feature) => feature.subclassId === 'subclass-2024-wizard-illusionist'),
+  spellbookExtraSpells: { base: 2, perNewSpellLevel: 1, schools: ['幻术'] },
+}, {
+  id: 'subclass-2024-wizard-abjurer',
+  classId: 'class-2024-wizard',
+  ruleset: '5e-2024',
+  name: '防护师',
+  englishName: 'Abjurer',
+  selectionLevel: 3,
+  summary: '以奥术守御吸收伤害：额外入书防护法术、投射守御与破法者，高等级获得法术抗性。',
+  status: 'implemented',
+  availability: 'player',
+  sourceIds,
+  features: wizardSubclassFeatures2024.filter((feature) => feature.subclassId === 'subclass-2024-wizard-abjurer'),
+  spellbookExtraSpells: { base: 2, perNewSpellLevel: 1, schools: ['防护'] },
+}, {
+  id: 'subclass-2024-wizard-diviner',
+  classId: 'class-2024-wizard',
+  ruleset: '5e-2024',
+  name: '预言师',
+  englishName: 'Diviner',
+  selectionLevel: 3,
+  summary: '以预兆骰改写命运：额外入书预言法术、专业预言与天眼通，高等级增加预兆数量。',
+  status: 'implemented',
+  availability: 'player',
+  sourceIds,
+  features: wizardSubclassFeatures2024.filter((feature) => feature.subclassId === 'subclass-2024-wizard-diviner'),
+  spellbookExtraSpells: { base: 2, perNewSpellLevel: 1, schools: ['预言'] },
 }]

@@ -84,6 +84,9 @@ describe('2024 战士与勇士数据（B08-01）', () => {
     expect(skillCheckpoint?.optionIds.every((id) => rulesRepository2024.getOption(id)?.name)).toBe(true)
     expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-fighter').map((subclass) => subclass.id)).toEqual([
       'subclass-2024-fighter-champion',
+      'subclass-2024-fighter-eldritch-knight',
+      'subclass-2024-fighter-battle-master',
+      'subclass-2024-fighter-psi-warrior',
     ])
     expect(rulesRepository2024.getOption('subclass-2024-fighter-champion')?.name).toBe('勇士')
     const longsword = rulesRepository2024.getEquipment('equipment-2024-longsword')

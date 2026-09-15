@@ -22,7 +22,12 @@ describe('2024 职业时间线（B08-01）', () => {
     const subclass = timeline.find((checkpoint) => checkpoint.kind === 'subclass')
     expect(subclass?.id).toBe('class-2024-fighter-subclass-3')
     expect(subclass?.title).toBe('选择战士子职')
-    expect(subclass?.optionIds).toEqual(['subclass-2024-fighter-champion'])
+    expect(subclass?.optionIds).toEqual([
+      'subclass-2024-fighter-champion',
+      'subclass-2024-fighter-eldritch-knight',
+      'subclass-2024-fighter-battle-master',
+      'subclass-2024-fighter-psi-warrior',
+    ])
   })
 
   it('属性提升检查点按 4／6／8／12／14／16／19 级展开', () => {
@@ -77,7 +82,12 @@ describe('2024 职业时间线（B08-01）', () => {
       'class-2024-wizard-scholar-2',
       'class-2024-wizard-subclass-3',
     ])
-    expect(levelThree.find((checkpoint) => checkpoint.kind === 'subclass')?.optionIds).toEqual(['subclass-2024-wizard-evoker'])
+    expect(levelThree.find((checkpoint) => checkpoint.kind === 'subclass')?.optionIds).toEqual([
+      'subclass-2024-wizard-evoker',
+      'subclass-2024-wizard-illusionist',
+      'subclass-2024-wizard-abjurer',
+      'subclass-2024-wizard-diviner',
+    ])
 
     const levelTwo = buildTimeline('class-2024-wizard', 2, { ruleset: '5e-2024' })
     expect(levelTwo.some((checkpoint) => checkpoint.kind === 'subclass')).toBe(false)

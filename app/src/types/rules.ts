@@ -58,6 +58,8 @@ export interface ClassResource {
   readonly unit?: string
   /** 上限来自属性调整值（如 2024 诗人激励＝魅力调整值，至少 1 次）；提供时优先于 maxByLevel。 */
   readonly maxFromAbility?: { readonly ability: AbilityKey; readonly minimum: number }
+  /** 在等级表上限之外再加一项属性调整值（如防护师奥术守御＝2×等级＋智力调整值）。 */
+  readonly abilityBonus?: AbilityKey
 }
 
 /**

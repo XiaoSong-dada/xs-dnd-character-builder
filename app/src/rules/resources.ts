@@ -15,7 +15,8 @@ export function getResourceMax(resource: ClassResource, level: number, abilityMo
   if (resource.maxFromAbility) return Math.max(resource.maxFromAbility.minimum, abilityModifier)
   if (!resource.maxByLevel?.length) return 0
   const index = Math.min(Math.max(1, Math.trunc(level)), resource.maxByLevel.length) - 1
-  return Math.max(0, resource.maxByLevel[index] ?? 0)
+  const base = Math.max(0, resource.maxByLevel[index] ?? 0)
+  return resource.abilityBonus ? Math.max(0, base + abilityModifier) : base
 }
 
 /** 资源展示文本：`2 次 · 短休恢复`（单位缺省为“次”）；上限为 0 时返回空串。 */
