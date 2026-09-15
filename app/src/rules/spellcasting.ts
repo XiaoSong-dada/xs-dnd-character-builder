@@ -345,6 +345,17 @@ export function getAlwaysPreparedSpellIds(draft: CharacterDraft): readonly strin
       for (const id of spellIds) ids.add(id)
     }
   }
+  // 选择类选项授予的始终准备法术（如 2024 德鲁伊大地结社的地形法术）。
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt) continue
+    for (const optionId of selection.optionIds) {
+      const option = repository.getOption(optionId)
+      for (const [level, spellIds] of Object.entries(option?.alwaysPreparedSpellIdsByLevel ?? {})) {
+        if (Number(level) > draft.targetLevel) continue
+        for (const id of spellIds) ids.add(id)
+      }
+    }
+  }
   // 专长固定授予（如迷踪步、隐形术、侦测思想）。
   for (const feat of listActiveFeats(draft, repository)) {
     for (const grant of feat.grantedSpells ?? []) {

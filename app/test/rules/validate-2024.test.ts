@@ -338,6 +338,36 @@ describe('2024 牧师校验（B08-06）', () => {
   })
 })
 
+describe('2024 德鲁伊校验（B08-07）', () => {
+  it('原初职能未选择时提示补选，选择后通过', () => {
+    const incomplete = draft2024({ classId: 'class-2024-druid', targetLevel: 1 })
+    expect(issueIds(incomplete)).toContain('checkpoint-class-2024-druid-primal-order-1')
+
+    const complete = draft2024({
+      classId: 'class-2024-druid',
+      targetLevel: 1,
+      selections: [
+        selection('class-2024-druid-skills-1', ['skill-nature', 'skill-perception']),
+        selection('class-2024-druid-primal-order-1', ['druid-2024-primal-order-magician']),
+      ],
+    })
+    expect(issueIds(complete)).not.toContain('checkpoint-class-2024-druid-primal-order-1')
+  })
+
+  it('大地结社地形未选择时提示补选', () => {
+    const draft = draft2024({
+      classId: 'class-2024-druid',
+      subclassId: 'subclass-2024-druid-circle-of-the-land',
+      targetLevel: 3,
+      selections: [
+        selection('class-2024-druid-skills-1', ['skill-nature', 'skill-perception']),
+        selection('class-2024-druid-primal-order-1', ['druid-2024-primal-order-warden']),
+      ],
+    })
+    expect(issueIds(draft)).toContain('checkpoint-subclass-feature-druid-2024-land-circle-spells')
+  })
+})
+
 describe('2024 游荡者校验（B08-04）', () => {
   it('专精只能选择已熟练技能，且两次专精不能重复', () => {
     const notProficient = draft2024({

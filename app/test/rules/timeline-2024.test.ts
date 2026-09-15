@@ -170,4 +170,29 @@ describe('2024 职业时间线（B08-01）', () => {
       'class-2024-cleric-feat-19',
     ])
   })
+
+  it('德鲁伊时间线展开技能、原初职能、子职、元素之怒与地形选择', () => {
+    const levelOne = buildTimeline('class-2024-druid', 1, { ruleset: '5e-2024' })
+    expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-druid-skills-1',
+      'class-2024-druid-primal-order-1',
+    ])
+
+    const levelThree = buildTimeline('class-2024-druid', 3, { ruleset: '5e-2024' })
+    const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
+    expect(subclass?.id).toBe('class-2024-druid-subclass-3')
+    expect(subclass?.optionIds).toHaveLength(4)
+
+    const landTimeline = buildTimeline('class-2024-druid', 3, { ruleset: '5e-2024', subclassId: 'subclass-2024-druid-circle-of-the-land' })
+    expect(landTimeline.some((checkpoint) => checkpoint.id === 'subclass-feature-druid-2024-land-circle-spells')).toBe(true)
+
+    const levelTwenty = buildTimeline('class-2024-druid', 20, { ruleset: '5e-2024' })
+    expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-druid-feat-4',
+      'class-2024-druid-feat-8',
+      'class-2024-druid-feat-12',
+      'class-2024-druid-feat-16',
+      'class-2024-druid-feat-19',
+    ])
+  })
 })

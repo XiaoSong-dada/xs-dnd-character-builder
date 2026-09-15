@@ -87,6 +87,8 @@ export interface RuleOption {
   readonly weaponTraining?: WeaponTraining
   /** 选项授予的额外戏法数量（如 2024 牧师圣职·奇术使）。 */
   readonly cantripBonus?: number
+  /** 选项授予的始终准备法术（如 2024 德鲁伊大地结社的地形法术，按德鲁伊等级生效）。 */
+  readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
   /** 同一内容被重印时，当前规则实现采用的出版来源。 */
   readonly adoptedSourceId?: string
   /** 同一内容的首发来源；未重印时可省略。 */

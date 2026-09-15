@@ -71,6 +71,23 @@ describe('逐武器攻击派生', () => {
     expect(deriveWeaponAttack(monk, derived, greataxe)?.proficient).toBe(false)
   })
 
+  it('2024 德鲁伊原初职能·卫士授予军用武器熟练', () => {
+    const longsword = rulesRepository2024.getEquipment('equipment-2024-longsword')
+    const sickle = rulesRepository2024.getEquipment('equipment-2024-sickle')
+    if (!longsword || !sickle) throw new Error('缺少 2024 武器数据')
+
+    const plain = draft2024({ classId: 'class-2024-druid', targetLevel: 1 })
+    expect(deriveWeaponAttack(plain, deriveCharacter(plain), longsword)?.proficient).toBe(false)
+    expect(deriveWeaponAttack(plain, deriveCharacter(plain), sickle)?.proficient).toBe(true)
+
+    const warden = draft2024({
+      classId: 'class-2024-druid',
+      targetLevel: 1,
+      selections: [{ checkpointId: 'class-2024-druid-primal-order-1', optionIds: ['druid-2024-primal-order-warden'], confirmedAt: '2026-09-15T00:00:00.000Z' }],
+    })
+    expect(deriveWeaponAttack(warden, deriveCharacter(warden), longsword)?.proficient).toBe(true)
+  })
+
   it('2024 牧师圣职·保护者授予军用武器熟练', () => {
     const longsword = rulesRepository2024.getEquipment('equipment-2024-longsword')
     const mace = rulesRepository2024.getEquipment('equipment-2024-mace')

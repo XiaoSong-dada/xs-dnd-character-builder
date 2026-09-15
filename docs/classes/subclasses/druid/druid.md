@@ -1,5 +1,7 @@
 # 德鲁伊 Druid
 
+> 运行时名称采用 5e 不全书译名（原初职能、术师、卫士、荒野变形、荒野伙伴、荒野复苏、元素之怒、元素狂怒、兽形施法、大德鲁伊）；本页早期旧译名（原初职分、术士、守卫）仅作对照。
+
 ## 1. 文档范围
 
 本文档记录德鲁伊的基础职业资料、等级成长、车卡选择与项目实现边界。默认规则集为 `5e-2024`，公开规则依据 2024 Free Rules 与 SRD 5.2.1。
@@ -171,4 +173,4 @@
 - [2024 Circle of the Moon and Wild Shape Changes](https://www.dndbeyond.com/posts/1755-the-2024-circle-of-the-moon-druid-and-changes-to)
 - [Circle of the Sea Druid](https://www.dndbeyond.com/posts/1799-circle-of-the-sea-druid-channel-raging-waves-and)
 
-最后核验日期：2026-07-24。
+最后核验日期：2026-09-15。
