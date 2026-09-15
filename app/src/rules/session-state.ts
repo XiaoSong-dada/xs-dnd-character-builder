@@ -128,6 +128,7 @@ function snapshot(state: SessionState): SessionRestSnapshot {
     exhaustionLevel: state.exhaustionLevel,
     debuffs: state.debuffs,
     ...(state.hitDice ? { hitDice: state.hitDice } : {}),
+    ...(state.resourceUsage ? { resourceUsage: state.resourceUsage } : {}),
     at: new Date().toISOString(),
   }
 }
@@ -204,6 +205,7 @@ export function restoreLastRest(state: SessionState): SessionState {
     exhaustionLevel: last.exhaustionLevel,
     debuffs: last.debuffs,
     ...(last.hitDice ? { hitDice: last.hitDice } : {}),
+    ...(last.resourceUsage ? { resourceUsage: last.resourceUsage } : {}),
     lastRestSnapshot: undefined,
     updatedAt: new Date().toISOString(),
   }
@@ -262,12 +264,14 @@ export function reconcileSessionLimits(
     currentHp: preserveDamage(state.currentHp),
     usedSpellSlots: reconcileSlots(state.usedSpellSlots),
     ...(state.hitDice ? { hitDice: reconcileHitDice(state.hitDice) } : {}),
+    ...(state.resourceUsage ? { resourceUsage: state.resourceUsage } : {}),
     ...(state.lastRestSnapshot ? {
       lastRestSnapshot: {
         ...state.lastRestSnapshot,
         currentHp: preserveDamage(state.lastRestSnapshot.currentHp),
         usedSpellSlots: reconcileSlots(state.lastRestSnapshot.usedSpellSlots),
         ...(state.lastRestSnapshot.hitDice ? { hitDice: reconcileHitDice(state.lastRestSnapshot.hitDice) } : {}),
+        ...(state.lastRestSnapshot.resourceUsage ? { resourceUsage: state.lastRestSnapshot.resourceUsage } : {}),
       },
     } : {}),
     updatedAt: new Date().toISOString(),

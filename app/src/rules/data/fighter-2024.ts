@@ -58,7 +58,7 @@ export const fighterFeatures2024: readonly ClassFeature[] = [
     summary: '以附赠动作恢复 1d10＋战士等级生命值；1—3 级 2 次、4—9 级 3 次、10 级起 4 次；短休恢复 1 次，长休回满。',
     description: '以一个附赠动作恢复 1d10＋你的战士等级点生命值。使用次数：1—3 级 2 次、4—9 级 3 次、10 级起 4 次；完成短休后恢复 1 次已消耗次数，完成长休后恢复全部。',
     kind: 'bonus-action', status: 'implemented', sourceIds,
-    resource: { maxByLevel: SECOND_WIND_MAX, recovery: 'short-rest', note: '短休恢复 1 次，长休回满' },
+    resource: { maxByLevel: SECOND_WIND_MAX, recovery: 'short-rest', shortRestRecovery: 1, note: '短休恢复 1 次，长休回满' },
   },
   {
     id: 'fighter-2024-class-weapon-mastery', classId: 'class-2024-fighter', name: '武器精通', englishName: 'Weapon Mastery', level: 1,

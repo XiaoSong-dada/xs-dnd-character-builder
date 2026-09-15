@@ -60,6 +60,8 @@ export interface ClassResource {
   readonly maxFromAbility?: { readonly ability: AbilityKey; readonly minimum: number }
   /** 在等级表上限之外再加一项属性调整值（如防护师奥术守御＝2×等级＋智力调整值）。 */
   readonly abilityBonus?: AbilityKey
+  /** 短休只恢复固定数量（如 2024 狂暴／回气短休恢复 1 次）；缺省为短休全部恢复。 */
+  readonly shortRestRecovery?: number
 }
 
 /**

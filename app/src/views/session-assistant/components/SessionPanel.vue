@@ -405,6 +405,21 @@ function openTranscribe(spellId?: string): void {
           <button type="button" class="session-panel__step" aria-label="增加力竭层数" @click="panel.changeExhaustion(1)">＋</button>
         </div>
       </section>
+      <section v-if="panel.resourceViews.value.length" class="session-panel__section">
+        <h3>资源</h3>
+        <div class="session-panel__resource-list">
+          <div v-for="resource in panel.resourceViews.value" :key="resource.id" class="session-panel__resource">
+            <span>
+              {{ resource.name }}
+              <small>剩余 {{ resource.remaining }} / {{ resource.max }} {{ resource.dice ? resource.unit : '次' }}</small>
+            </span>
+            <div class="session-panel__resource-actions">
+              <button type="button" class="session-panel__step" :aria-label="`恢复${resource.name}`" @click="panel.changeResource(resource.id, -1)">＋</button>
+              <button type="button" class="session-panel__step" :aria-label="`消耗${resource.name}`" @click="panel.changeResource(resource.id, 1)">−</button>
+            </div>
+          </div>
+        </div>
+      </section>
       <section class="session-panel__section">
         <h3>状态</h3>
         <div class="session-panel__status-grid">

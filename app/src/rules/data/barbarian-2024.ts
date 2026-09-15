@@ -40,7 +40,7 @@ export const barbarianFeatures2024: readonly ClassFeature[] = [
     summary: '附赠动作进入狂暴：钝击／穿刺／挥砍抗性、狂暴伤害加值、力量检定与豁免优势；不能施法或专注。',
     description: '未着装重甲时，你可以用一个附赠动作消耗一次狂暴进入狂暴状态。狂暴期间：获得钝击、穿刺与挥砍伤害抗性；使用力量发动武器或徒手攻击并造成伤害时，伤害加上狂暴伤害加值；力量检定与力量豁免具有优势；不能施展法术，也不能维持专注。狂暴持续到你下个回合结束，可通过攻击敌人、迫使敌人豁免或用附赠动作延长，最长 10 分钟；穿重甲或陷入失能会提前结束。短休恢复 1 次已消耗次数，长休恢复全部。',
     kind: 'resource', status: 'implemented', sourceIds,
-    resource: { maxByLevel: RAGE_MAX, recovery: 'short-rest', note: '短休恢复 1 次，长休全部恢复；狂暴伤害加值按等级为 +2／+3／+4' },
+    resource: { maxByLevel: RAGE_MAX, recovery: 'short-rest', shortRestRecovery: 1, note: '短休恢复 1 次，长休全部恢复；狂暴伤害加值按等级为 +2／+3／+4' },
   },
   {
     id: 'barbarian-2024-class-unarmored-defense', classId: 'class-2024-barbarian', name: '无甲防御', englishName: 'Unarmored Defense', level: 1,

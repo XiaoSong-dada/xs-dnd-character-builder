@@ -21,6 +21,7 @@ import {
   toggleDebuff,
   undoHitDiceSpend,
 } from '@/rules/session-state'
+import { applyResourceChange, applyRestRecovery, getResourceUsed, listSessionResources } from '@/rules/session-resources'
 import { SessionStateStorageService } from '@/services/session-state-storage'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft } from '@/types/character'
@@ -209,12 +210,32 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     persist(undoHitDiceSpend(ensureState()))
   }
 
+  /** 可消耗资源（仅 2024 有登记；2014 为空列表）。 */
+  const sessionResources = computed(() => listSessionResources(draft.value, derived.value.modifiers))
+
+  /** 资源已用/剩余视图。 */
+  const resourceViews = computed(() => sessionResources.value.map((resource) => ({
+    ...resource,
+    used: getResourceUsed(ensureState(), resource.id),
+    remaining: Math.max(0, resource.max - getResourceUsed(ensureState(), resource.id)),
+  })))
+
+  function changeResource(id: string, delta: number): void {
+    const resource = sessionResources.value.find((item) => item.id === id)
+    if (!resource) return
+    const result = applyResourceChange(ensureState(), id, delta, resource.max)
+    operationError.value = result.clamped ? '已达到该资源的数量上限。' : ''
+    persist(result.state)
+  }
+
   function shortRest(): void {
-    persist(applyShortRest(ensureState(), pactSlotLevels.value, maxHp.value, { ruleset: draft.value.ruleset }))
+    const rested = applyShortRest(ensureState(), pactSlotLevels.value, maxHp.value, { ruleset: draft.value.ruleset })
+    persist(applyRestRecovery(rested, sessionResources.value, 'short-rest'))
   }
 
   function longRest(): void {
-    persist(applyLongRest(ensureState(), maxHp.value, { ruleset: draft.value.ruleset }))
+    const rested = applyLongRest(ensureState(), maxHp.value, { ruleset: draft.value.ruleset })
+    persist(applyRestRecovery(rested, sessionResources.value, 'long-rest'))
   }
 
   function undoRest(): void {
@@ -276,6 +297,8 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     toggleStatus,
     hitDice,
     hitDiceSnapshotAvailable,
+    resourceViews,
+    changeResource,
     spendHitDice: spendHitDiceAction,
     undoHitDice,
     shortRest,
