@@ -88,8 +88,8 @@ export const rogueFeatures2024: readonly ClassFeature[] = [
   {
     id: 'rogue-2024-class-thieves-cant', classId: 'class-2024-rogue', name: '盗贼黑话', englishName: "Thieves' Cant", level: 1,
     summary: '习得盗贼黑话，并额外掌握一门语言。',
-    description: '你习得盗贼黑话，以及语言表中的另一门语言。盗贼黑话用于与同道交流暗语、标记与切口。额外语言的正式选项录入归语言流程后续补齐。',
-    kind: 'passive', status: 'implemented', sourceIds,
+    description: '你习得盗贼黑话，以及语言表中的另一门语言（在起源步骤的语言选择中额外自选 1 种）。盗贼黑话用于与同道交流暗语、标记与切口。',
+    kind: 'passive', status: 'implemented', sourceIds, languageChoices: 1,
   },
   {
     id: 'rogue-2024-class-weapon-mastery', classId: 'class-2024-rogue', name: '武器精通', englishName: 'Weapon Mastery', level: 1,
@@ -407,6 +407,7 @@ export const rogueSubclasses2024: readonly SubclassRule[] = [
       maxSpellLevelByClassLevel: ARCANE_TRICKSTER_MAX_LEVELS,
       slotsByClassLevel: ARCANE_TRICKSTER_SLOTS,
       classSpellIds: wizardClassSpellIds2024,
+      requiredCantripSpellIds: ['spell-2024-mage-hand'],
     },
   },
   {

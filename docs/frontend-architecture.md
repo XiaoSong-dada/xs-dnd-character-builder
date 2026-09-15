@@ -494,7 +494,7 @@ src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-
 src/rules/repositories.ts        -> src/rules/data/{classes-2024,sources-2024,subclasses-2024,skill-options-2024,barbarian-2024,bard-2024,cleric-2024,druid-2024,fighter-2024,invocations-2024,metamagic-2024,monk-2024,paladin-2024,ranger-2024,rogue-2024,sorcerer-2024,warlock-2024,wizard-2024,feats-2024,spells-2024,origins-2024,species-traits-2024,equipment-2024,equipment-packs-2024,magic-items-2024,starting-equipment-2024,weapon-masteries-2024} + src/rules/repository（双版本仓库注册、未知版本拒绝与已开放版本判断）
 src/rules/item-catalog-loader.ts  -> src/rules/data/generated/magic-items-catalog-2014（动态 import；模块级 Promise 缓存 + 失败重试）
 src/rules/derive.ts              -> src/rules/{repositories,feats,origins,subclass-effects}
-src/rules/validate.ts            -> src/rules/{repositories,derive,feats,abilities,timeline,spellcasting,starting-equipment,weapon-mastery}
+src/rules/validate.ts            -> src/rules/{repositories,derive,feats,abilities,timeline,spellcasting,starting-equipment,weapon-mastery}（含子职必备戏法等提示级校验）
 src/rules/dependency.ts          -> src/rules/{derive,repositories,feats,timeline}
 src/rules/timeline.ts            -> src/rules/{repositories,feats} + src/rules/data/feats-2014
 src/rules/spellcasting.ts        -> src/rules/{repositories,derive,origins}（双版本施法配置、表定准备数、始终准备与免费施法来源解析）
@@ -506,7 +506,7 @@ src/rules/weapon-attacks.ts      -> src/rules/{repositories,weapon-training}（�
 src/rules/resources.ts           （无依赖，纯函数：资源上限／恢复文本与骰池文本）
 src/rules/feats.ts               -> src/rules/{repositories,source-books} + src/rules/data/{feats-2014,feats-2024}（双版本专长能力：授予、候选池、前置、复选、属性上限与护甲训练）
 src/rules/origins.ts             -> src/rules/{repositories,source-books}（物种链、背景属性分配与校验、物种生命值）
-src/rules/languages.ts           （无 rules 内部依赖，纯函数：2024 标准语言表与 2014 候选）
+src/rules/languages.ts           （无 rules 内部依赖，纯函数：2024 标准语言表与 2014 候选；必选数＝规则基础值＋职业特性追加 `ClassFeature.languageChoices`）
 src/rules/recommend.ts           -> src/rules/data/feats-2014（仅保留成长速览与起源提示）
 src/rules/source-books.ts        -> src/rules/data/sources-2014 + src/rules/repository（迁移推导入口）
 src/rules/equipment-filter.ts    -> src/types/rules（中英文/ID、稀有度、类别、同调、来源组合筛选纯函数）

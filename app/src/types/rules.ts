@@ -297,6 +297,8 @@ export interface SpellcastingConfig {
   }
   /** 可从法术书直接施展仪式，无需准备（2024 法师仪式学家）。 */
   readonly ritualCastingFromBook?: boolean
+  /** 必须包含的戏法（如 2014／2024 酉术师必须包含法师之手）；缺失时校验器给出提示级问题而不是硬阻断。 */
+  readonly requiredCantripSpellIds?: readonly string[]
 }
 
 export interface SpellRule {
@@ -478,6 +480,8 @@ export interface ClassFeature {
   readonly resource?: ClassResource
   /** 骰池派生数据（按等级变化的骰数与骰面；与消耗池分开）。 */
   readonly dicePool?: DicePoolRule
+  /** 本特性额外授予的“自选语言”数量（如 2024 游荡者盗贼黑话额外掌握一门语言）。 */
+  readonly languageChoices?: number
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }

@@ -347,6 +347,7 @@ const subclassSpellcasting: Readonly<Record<string, SpellcastingConfig>> = {
     maxSpellLevelByClassLevel: thirdCasterMaximumSpellLevels,
     slotsByClassLevel: THIRD_CASTER_SPELL_SLOTS,
     classSpellIds: wizardSpellIds,
+    requiredCantripSpellIds: ['spell-2014-mage-hand'],
   },
 }
 

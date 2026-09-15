@@ -293,6 +293,18 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       ) {
         issues.push({ id: 'cantrip-count', step: 'spells', severity: 'error', message: '戏法选择尚未完成或包含不可用项。', resolution: `需要选择${requiredCantrips}个当前职业戏法。` })
       }
+      const requiredCantripSpellIds = spellcasting.requiredCantripSpellIds ?? []
+      const missingRequiredCantrips = requiredCantripSpellIds.filter((id) => !draft.spellSelections.cantripIds.includes(id))
+      if (missingRequiredCantrips.length > 0 && draft.spellSelections.cantripIds.length > 0) {
+        const names = missingRequiredCantrips.map((id) => repository.getSpell(id)?.name ?? id).join('、')
+        issues.push({
+          id: 'required-cantrip-missing',
+          step: 'spells',
+          severity: 'warning',
+          message: `子职要求包含的戏法“${names}”尚未选择。`,
+          resolution: '诡术师的戏法必须包含法师之手；可在法术步骤补齐（提示级，不阻断草稿保存）。',
+        })
+      }
       // 抄录与子职额外入书的法术不计入升级名额：非抄录、非额外法术至少达到 requiredSpellbook。
       const transcribedBookIds = draft.spellSelections.transcribedSpellIds
       const extraBookIds = draft.spellSelections.spellbookExtraSpellIds ?? []

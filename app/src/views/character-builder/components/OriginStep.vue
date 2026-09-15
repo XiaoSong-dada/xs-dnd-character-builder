@@ -56,6 +56,7 @@ const variants = computed(() => props.backgroundId
   : [])
 const languageChoiceCount = computed(() => getRequiredLanguageCount({
   ruleset: props.ruleset,
+  classId: props.classId,
   backgroundId: props.backgroundId,
   backgroundVariantId: props.backgroundVariantId,
 }, repository.value))
