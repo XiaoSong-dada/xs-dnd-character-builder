@@ -99,7 +99,16 @@ export function getRequiredSpellCount(draft: CharacterDraft, config: Spellcastin
 }
 
 export function getRequiredCantripCount(draft: CharacterDraft, config: SpellcastingConfig): number {
-  return config.cantripsKnownByLevel?.[draft.targetLevel - 1] ?? 0
+  const base = config.cantripsKnownByLevel?.[draft.targetLevel - 1] ?? 0
+  if (base === 0) return 0
+  // 选择类特性可追加戏法（如 2024 牧师圣职·奇术使）。
+  const repository = getRulesRepository(draft.ruleset)
+  let bonus = 0
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt) continue
+    for (const optionId of selection.optionIds) bonus += repository.getOption(optionId)?.cantripBonus ?? 0
+  }
+  return base + bonus
 }
 
 export function getRequiredSpellbookCount(draft: CharacterDraft, config: SpellcastingConfig): number {

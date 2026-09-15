@@ -39,6 +39,13 @@ function isProficient(draft: CharacterDraft, equipment: EquipmentRule): boolean 
   const training = classRule?.weaponTraining
     ?? (draft.classId ? CLASS_WEAPON_PROFICIENCIES[draft.classId] : undefined)
   if (isWeaponTrainingCovered(training, equipment)) return true
+  // 选择类特性可附带武器训练（如 2024 牧师圣职·保护者）。
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt) continue
+    for (const optionId of selection.optionIds) {
+      if (isWeaponTrainingCovered(repository.getOption(optionId)?.weaponTraining, equipment)) return true
+    }
+  }
   const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
   const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
   return [race, subrace].some((item) => item?.weaponArmorProficiencies?.includes(equipment.id))

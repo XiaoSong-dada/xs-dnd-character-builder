@@ -81,6 +81,12 @@ export interface RuleOption {
   readonly description: string
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
+  /** 选项授予的护甲训练（如 2024 牧师圣职·保护者的重甲受训）。 */
+  readonly armorTraining?: readonly ArmorTraining[]
+  /** 选项授予的武器训练（如 2024 牧师圣职·保护者的军用武器熟练）。 */
+  readonly weaponTraining?: WeaponTraining
+  /** 选项授予的额外戏法数量（如 2024 牧师圣职·奇术使）。 */
+  readonly cantripBonus?: number
   /** 同一内容被重印时，当前规则实现采用的出版来源。 */
   readonly adoptedSourceId?: string
   /** 同一内容的首发来源；未重印时可省略。 */

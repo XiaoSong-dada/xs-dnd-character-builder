@@ -145,4 +145,29 @@ describe('2024 职业时间线（B08-01）', () => {
     ])
     expect(levelTwenty.some((checkpoint) => checkpoint.candidateKind === 'weapon-mastery')).toBe(false)
   })
+
+  it('牧师时间线展开技能、圣职、子职、受祝击与属性提升', () => {
+    const levelOne = buildTimeline('class-2024-cleric', 1, { ruleset: '5e-2024' })
+    expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-cleric-skills-1',
+      'class-2024-cleric-divine-order-1',
+    ])
+
+    const levelThree = buildTimeline('class-2024-cleric', 3, { ruleset: '5e-2024' })
+    const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
+    expect(subclass?.id).toBe('class-2024-cleric-subclass-3')
+    expect(subclass?.optionIds).toHaveLength(4)
+
+    const levelSeven = buildTimeline('class-2024-cleric', 7, { ruleset: '5e-2024' })
+    expect(levelSeven.find((checkpoint) => checkpoint.id === 'class-2024-cleric-blessed-strikes-7')?.kind).toBe('class-choice')
+
+    const levelTwenty = buildTimeline('class-2024-cleric', 20, { ruleset: '5e-2024' })
+    expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-cleric-feat-4',
+      'class-2024-cleric-feat-8',
+      'class-2024-cleric-feat-12',
+      'class-2024-cleric-feat-16',
+      'class-2024-cleric-feat-19',
+    ])
+  })
 })

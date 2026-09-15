@@ -309,6 +309,35 @@ describe('2024 武僧校验（B08-05）', () => {
   })
 })
 
+describe('2024 牧师校验（B08-06）', () => {
+  it('圣职未选择时提示补选，选择后通过', () => {
+    const incomplete = draft2024({ classId: 'class-2024-cleric', targetLevel: 1 })
+    expect(issueIds(incomplete)).toContain('checkpoint-class-2024-cleric-divine-order-1')
+
+    const complete = draft2024({
+      classId: 'class-2024-cleric',
+      targetLevel: 1,
+      selections: [
+        selection('class-2024-cleric-skills-1', ['skill-history', 'skill-religion']),
+        selection('class-2024-cleric-divine-order-1', ['cleric-2024-divine-order-protector']),
+      ],
+    })
+    expect(issueIds(complete)).not.toContain('checkpoint-class-2024-cleric-divine-order-1')
+  })
+
+  it('受祝击在 7 级未选择时提示补选', () => {
+    const draft = draft2024({
+      classId: 'class-2024-cleric',
+      targetLevel: 7,
+      selections: [
+        selection('class-2024-cleric-skills-1', ['skill-history', 'skill-religion']),
+        selection('class-2024-cleric-divine-order-1', ['cleric-2024-divine-order-thaumaturge']),
+      ],
+    })
+    expect(issueIds(draft)).toContain('checkpoint-class-2024-cleric-blessed-strikes-7')
+  })
+})
+
 describe('2024 游荡者校验（B08-04）', () => {
   it('专精只能选择已熟练技能，且两次专精不能重复', () => {
     const notProficient = draft2024({

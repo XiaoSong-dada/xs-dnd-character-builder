@@ -6,7 +6,7 @@
 
 本文档是**选择性加载资料**，不属于项目每次开发前的必读文档。仅在任务涉及职业、子职、职业特性、职业等级或相关规则数据时读取；目标职业明确时，只需读取通用约定和对应职业章节。
 
-- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士、法师／塑能师、野蛮人／4 道途、游荡者／4 子职与武僧／4 子职（B08-01—B08-05），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
+- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士、法师／塑能师、野蛮人／4 道途、游荡者／4 子职、武僧／4 子职与牧师／4 领域（B08-01—B08-06），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
 
 ## 2. 资料边界
 
@@ -75,7 +75,7 @@
 |---|---|---|---|---|---|
 | `barbarian` | 野蛮人 | Barbarian | [野蛮人详细资料](classes/subclasses/barbarian/barbarian.md) | [狂战士道途](classes/subclasses/barbarian/barbarian-berserker.md)<br>[兽心道途](classes/subclasses/barbarian/barbarian-wild-heart.md)<br>[世界树道途](classes/subclasses/barbarian/barbarian-world-tree.md)<br>[狂热者道途](classes/subclasses/barbarian/barbarian-zealot.md) | 基础职业与 4 个核心道途已接入运行时（B08-03） |
 | `bard` | 吟游诗人 | Bard | [吟游诗人详细资料](classes/subclasses/bard/bard.md) | [舞蹈学院](classes/subclasses/bard/bard-college-of-dance.md)<br>[魅惑学院](classes/subclasses/bard/bard-college-of-glamour.md)<br>[博闻学院](classes/subclasses/bard/bard-college-of-lore.md)<br>[勇气学院](classes/subclasses/bard/bard-college-of-valor.md) | 基础资料已核验 |
-| `cleric` | 牧师 | Cleric | [牧师详细资料](classes/subclasses/cleric/cleric.md) | [生命领域](classes/subclasses/cleric/cleric-life-domain.md)<br>[光明领域](classes/subclasses/cleric/cleric-light-domain.md)<br>[诡术领域](classes/subclasses/cleric/cleric-trickery-domain.md)<br>[战争领域](classes/subclasses/cleric/cleric-war-domain.md) | 基础资料已核验 |
+| `cleric` | 牧师 | Cleric | [牧师详细资料](classes/subclasses/cleric/cleric.md) | [生命领域](classes/subclasses/cleric/cleric-life-domain.md)<br>[光明领域](classes/subclasses/cleric/cleric-light-domain.md)<br>[诡术领域](classes/subclasses/cleric/cleric-trickery-domain.md)<br>[战争领域](classes/subclasses/cleric/cleric-war-domain.md) | 基础职业与 4 个领域已接入运行时（B08-06） |
 | `druid` | 德鲁伊 | Druid | [德鲁伊详细资料](classes/subclasses/druid/druid.md) | [大地结社](classes/subclasses/druid/druid-circle-of-the-land.md)<br>[月亮结社](classes/subclasses/druid/druid-circle-of-the-moon.md)<br>[海洋结社](classes/subclasses/druid/druid-circle-of-the-sea.md)<br>[星辰结社](classes/subclasses/druid/druid-circle-of-the-stars.md) | 基础资料已核验 |
 | `fighter` | 战士 | Fighter | [战士详细资料](classes/subclasses/fighter/fighter.md) | [战斗大师](classes/subclasses/fighter/fighter-battle-master.md)<br>[勇士](classes/subclasses/fighter/fighter-champion.md)<br>[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)<br>[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md) | 基础职业与勇士已接入运行时（B08-01） |
 | `monk` | 武僧 | Monk | [武僧详细资料](classes/subclasses/monk/monk.md) | [命流武者](classes/subclasses/monk/monk-mercy.md)<br>[四象武者](classes/subclasses/monk/monk-elements.md)<br>[散打武者](classes/subclasses/monk/monk-open-hand.md)<br>[暗影武者](classes/subclasses/monk/monk-shadow.md) | 基础职业与 4 个子职已接入运行时（B08-05） |
@@ -135,8 +135,8 @@
 - 职业基础与等级特性：[牧师详细资料](classes/subclasses/cleric/cleric.md)
 - 2024 子职：[生命领域](classes/subclasses/cleric/cleric-life-domain.md)、[光明领域](classes/subclasses/cleric/cleric-light-domain.md)、[诡术领域](classes/subclasses/cleric/cleric-trickery-domain.md)、[战争领域](classes/subclasses/cleric/cleric-war-domain.md)
 - 旧版与扩展子职：[知识领域](classes/subclasses/cleric/cleric-knowledge-domain.md)、[自然领域](classes/subclasses/cleric/cleric-nature-domain.md)、[风暴领域](classes/subclasses/cleric/cleric-tempest-domain.md)、[奥秘领域](classes/subclasses/cleric/cleric-arcana-domain.md)、[锻造领域](classes/subclasses/cleric/cleric-forge-domain.md)、[坟墓领域](classes/subclasses/cleric/cleric-grave-domain.md)、[秩序领域](classes/subclasses/cleric/cleric-order-domain.md)、[和平领域](classes/subclasses/cleric/cleric-peace-domain.md)、[暮光领域](classes/subclasses/cleric/cleric-twilight-domain.md)、[死亡领域（DM 选项）](classes/subclasses/cleric/cleric-death-domain.md)
-- 选择与校验：已记录技能、装备、神圣职分、戏法与法术准备、引导神力、领域等级和旧版神佑打击兼容边界
-- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-27
+- 选择与校验：已记录技能、装备、圣职（保护者／奇术使）、戏法与准备法术、引导神力、领域法术与子职等级；运行时的圣职、受祝击选择与领域法术始终准备已接入
+- 来源与核验：基础职业与 4 个核心领域已由 B08-06 按项目内 5e 不全书接入运行时；旧版与扩展领域仍沿用既有参考来源；最后核验日期 2026-09-15
 
 ### 5.4 德鲁伊 Druid
 

@@ -287,6 +287,13 @@ export function collectArmorTrainings(draft: CharacterDraft, repository: RulesRe
   for (const feat of listActiveFeats(draft, repository)) {
     for (const training of feat.armorTraining ?? []) trainings.add(training)
   }
+  // 选择类特性可附带训练（如 2024 牧师圣职·保护者）。
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt) continue
+    for (const optionId of selection.optionIds) {
+      for (const training of repository.getOption(optionId)?.armorTraining ?? []) trainings.add(training)
+    }
+  }
   return [...trainings]
 }
 

@@ -29,6 +29,10 @@ export const classStartingEquipment2024: readonly ClassStartingEquipmentRule[] =
     gear('barbarian-2024-a', [g('equipment-2024-greataxe'), g('equipment-2024-handaxe', 4), g('equipment-2024-explorer-s-pack')], 15),
     gold('barbarian-2024-b', 75),
   ] }] },
+  { classId: 'class-2024-cleric', fixedGrants: [], groups: [{ id: 'cleric-2024-starting', title: '选择职业初始装备或金币', options: [
+    gear('cleric-2024-a', [g('equipment-2024-chain-shirt'), g('equipment-2024-shield'), g('equipment-2024-mace'), g('equipment-2024-holy-symbol'), g('equipment-2024-priest-s-pack')], 7),
+    gold('cleric-2024-b', 110),
+  ] }] },
   { classId: 'class-2024-fighter', fixedGrants: [], groups: [{ id: 'fighter-2024-starting', title: '选择职业初始装备或金币', options: [
     gear('fighter-2024-a', [g('equipment-2024-chain-mail'), g('equipment-2024-greatsword'), g('equipment-2024-flail'), g('equipment-2024-javelin', 8), g('equipment-2024-dungeoneer-s-pack')], 4),
     gear('fighter-2024-b', [g('equipment-2024-studded-leather-armor'), g('equipment-2024-scimitar'), g('equipment-2024-shortsword'), g('equipment-2024-longbow'), g('equipment-2024-ammunition', 20), g('equipment-2024-quiver'), g('equipment-2024-dungeoneer-s-pack')], 11), gold('fighter-2024-c', 155),
