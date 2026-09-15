@@ -262,4 +262,29 @@ describe('2024 职业时间线（B08-01）', () => {
       'class-2024-warlock-feat-19',
     ])
   })
+
+  it('圣武士时间线展开技能、武器精通、战斗风格、子职与属性提升', () => {
+    const levelOne = buildTimeline('class-2024-paladin', 1, { ruleset: '5e-2024' })
+    expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-paladin-skills-1',
+      'class-2024-paladin-mastery-1',
+    ])
+
+    const levelTwo = buildTimeline('class-2024-paladin', 2, { ruleset: '5e-2024' })
+    expect(levelTwo.find((checkpoint) => checkpoint.kind === 'fighting-style')?.id).toBe('class-2024-paladin-style-2')
+
+    const levelThree = buildTimeline('class-2024-paladin', 3, { ruleset: '5e-2024' })
+    const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
+    expect(subclass?.id).toBe('class-2024-paladin-subclass-3')
+    expect(subclass?.optionIds).toHaveLength(4)
+
+    const levelTwenty = buildTimeline('class-2024-paladin', 20, { ruleset: '5e-2024' })
+    expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-paladin-feat-4',
+      'class-2024-paladin-feat-8',
+      'class-2024-paladin-feat-12',
+      'class-2024-paladin-feat-16',
+      'class-2024-paladin-feat-19',
+    ])
+  })
 })

@@ -6,7 +6,7 @@
 
 本文档是**选择性加载资料**，不属于项目每次开发前的必读文档。仅在任务涉及职业、子职、职业特性、职业等级或相关规则数据时读取；目标职业明确时，只需读取通用约定和对应职业章节。
 
-- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士、法师／塑能师、野蛮人／4 道途、游荡者／4 子职、武僧／4 子职、牧师／4 领域、德鲁伊／4 结社、吟游诗人／4 学院、术士／4 术法与魔契师／4 宗主（B08-01—B08-10），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
+- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士、法师／塑能师、野蛮人／4 道途、游荡者／4 子职、武僧／4 子职、牧师／4 领域、德鲁伊／4 结社、吟游诗人／4 学院、术士／4 术法、魔契师／4 宗主与圣武士／4 誓言（B08-01—B08-11），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
 
 ## 2. 资料边界
 
@@ -79,7 +79,7 @@
 | `druid` | 德鲁伊 | Druid | [德鲁伊详细资料](classes/subclasses/druid/druid.md) | [大地结社](classes/subclasses/druid/druid-circle-of-the-land.md)<br>[月亮结社](classes/subclasses/druid/druid-circle-of-the-moon.md)<br>[海洋结社](classes/subclasses/druid/druid-circle-of-the-sea.md)<br>[星辰结社](classes/subclasses/druid/druid-circle-of-the-stars.md) | 基础职业与 4 个结社已接入运行时（B08-07） |
 | `fighter` | 战士 | Fighter | [战士详细资料](classes/subclasses/fighter/fighter.md) | [战斗大师](classes/subclasses/fighter/fighter-battle-master.md)<br>[勇士](classes/subclasses/fighter/fighter-champion.md)<br>[奥法骑士](classes/subclasses/fighter/fighter-eldritch-knight.md)<br>[灵能战士](classes/subclasses/fighter/fighter-psi-warrior.md) | 基础职业与勇士已接入运行时（B08-01） |
 | `monk` | 武僧 | Monk | [武僧详细资料](classes/subclasses/monk/monk.md) | [命流武者](classes/subclasses/monk/monk-mercy.md)<br>[四象武者](classes/subclasses/monk/monk-elements.md)<br>[散打武者](classes/subclasses/monk/monk-open-hand.md)<br>[暗影武者](classes/subclasses/monk/monk-shadow.md) | 基础职业与 4 个子职已接入运行时（B08-05） |
-| `paladin` | 圣武士 | Paladin | [圣武士详细资料](classes/subclasses/paladin/paladin.md) | [奉献之誓](classes/subclasses/paladin/paladin-oath-of-devotion.md)<br>[荣耀之誓](classes/subclasses/paladin/paladin-oath-of-glory.md)<br>[古贤之誓](classes/subclasses/paladin/paladin-oath-of-the-ancients.md)<br>[复仇之誓](classes/subclasses/paladin/paladin-oath-of-vengeance.md) | 基础职业与奉献之誓已核验 |
+| `paladin` | 圣武士 | Paladin | [圣武士详细资料](classes/subclasses/paladin/paladin.md) | [奉献之誓](classes/subclasses/paladin/paladin-oath-of-devotion.md)<br>[荣耀之誓](classes/subclasses/paladin/paladin-oath-of-glory.md)<br>[古贤之誓](classes/subclasses/paladin/paladin-oath-of-the-ancients.md)<br>[复仇之誓](classes/subclasses/paladin/paladin-oath-of-vengeance.md) | 基础职业与 4 个誓言已接入运行时（B08-11） |
 | `ranger` | 游侠 | Ranger | [游侠详细资料](classes/subclasses/ranger/ranger.md) | [驯兽师](classes/subclasses/ranger/ranger-beast-master.md)<br>[妖精漫游者](classes/subclasses/ranger/ranger-fey-wanderer.md)<br>[幽域追猎者](classes/subclasses/ranger/ranger-gloom-stalker.md)<br>[猎人](classes/subclasses/ranger/ranger-hunter.md) | 基础职业与猎人已核验 |
 | `rogue` | 游荡者 | Rogue | [游荡者详细资料](classes/subclasses/rogue/rogue.md) | [诡术师](classes/subclasses/rogue/rogue-arcane-trickster.md)<br>[刺客](classes/subclasses/rogue/rogue-assassin.md)<br>[魂刃](classes/subclasses/rogue/rogue-soulknife.md)<br>[盗贼](classes/subclasses/rogue/rogue-thief.md) | 基础职业与 4 个子职已接入运行时（B08-04） |
 | `sorcerer` | 术士 | Sorcerer | [术士详细资料](classes/subclasses/sorcerer/sorcerer.md) | [畸变术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)<br>[时械术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)<br>[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)<br>[狂野术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md) | 基础职业与 4 个术法已接入运行时（B08-09） |
@@ -172,8 +172,8 @@
 - 职业基础与等级特性：[圣武士详细资料](classes/subclasses/paladin/paladin.md)
 - 2024子职：[奉献之誓](classes/subclasses/paladin/paladin-oath-of-devotion.md)、[荣耀之誓](classes/subclasses/paladin/paladin-oath-of-glory.md)、[古贤之誓](classes/subclasses/paladin/paladin-oath-of-the-ancients.md)、[复仇之誓](classes/subclasses/paladin/paladin-oath-of-vengeance.md)
 - 旧版与扩展子职：[王冠之誓](classes/subclasses/paladin/paladin-oath-of-the-crown.md)、[征服之誓](classes/subclasses/paladin/paladin-oath-of-conquest.md)、[救赎之誓](classes/subclasses/paladin/paladin-oath-of-redemption.md)、[守望之誓](classes/subclasses/paladin/paladin-oath-of-the-watchers.md)、[破誓者（DM选项）](classes/subclasses/paladin/paladin-oathbreaker.md)
-- 选择与校验：已记录技能、装备、武器精通、圣疗、施法、引导神力、灵光、斩击和旧版灵光兼容边界
-- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-27
+- 选择与校验：已记录技能、装备、武器精通（限熟练）、战斗风格、圣疗池、半施法准备、引导神力、誓言法术与灵光；运行时的圣疗、引导神力、圣武斩／信实坐骑与誓言法术已接入
+- 来源与核验：基础职业与 4 个核心誓言已由 B08-11 按项目内 5e 不全书接入运行时；旧版与扩展誓言仍沿用既有参考来源；最后核验日期 2026-09-15
 
 ### 5.8 游侠 Ranger
 
