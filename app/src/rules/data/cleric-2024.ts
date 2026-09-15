@@ -127,7 +127,7 @@ export const clericFeatures2024: readonly ClassFeature[] = [
     summary: '引导神力次数 2 级起 2 次、6 级起 3 次、18 级起 4 次；短休恢复 1 次，长休全部恢复。',
     description: '你能引导外层位面的神圣能量。起始掌握神圣火花与驱散亡灵两种效应，子职会提供更多选项。使用次数见职业表：2 级起 2 次，6 级起 3 次，18 级起 4 次；完成短休恢复 1 次，完成长休恢复全部。需要豁免的引导神力效应使用你的法术豁免 DC。神圣火花：魔法动作，为 30 尺内一个可见生物恢复 1d8＋感知调整值生命，或迫使其体质豁免失败受等量暗蚀／光耀伤害（成功减半）；7／13／18 级伤害骰为 2d8／3d8／4d8。驱散亡灵：魔法动作，30 尺内每个你选择的亡灵感知豁免，失败则恐慌且失能 1 分钟，并尽可能远离你；受到伤害或你失能／死亡时提前结束。',
     kind: 'resource', status: 'implemented', sourceIds,
-    resource: { maxByLevel: CHANNEL_DIVINITY_USES, recovery: 'short-rest', note: '短休恢复 1 次，长休全部恢复；神圣火花与驱散亡灵，子职另有选项' },
+    resource: { maxByLevel: CHANNEL_DIVINITY_USES, recovery: 'short-rest', shortRestRecovery: 1, note: '短休恢复 1 次，长休全部恢复；神圣火花与驱散亡灵，子职另有选项' },
   },
   {
     id: 'cleric-2024-class-subclass', classId: 'class-2024-cleric', name: '牧师子职', englishName: 'Cleric Subclass', level: 3,

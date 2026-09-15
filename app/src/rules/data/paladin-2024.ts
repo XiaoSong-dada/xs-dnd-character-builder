@@ -130,7 +130,7 @@ export const paladinFeatures2024: readonly ClassFeature[] = [
     summary: '3 级起 2 次、11 级起 3 次；短休恢复 1 次、长休全部恢复；起始选项为神圣感知，子职提供更多选项。',
     description: '你能引导外层位面的神圣能量。起始掌握神圣感知：以一个附赠动作扩展意识，持续 10 分钟，感知 60 尺内的天族、邪魔与亡灵及其生物类型，也能侦测受到圣居一类法术祝福或亵渎的地点与物件。使用次数：3 级起 2 次，11 级起 3 次；完成短休恢复 1 次，完成长休恢复全部。需要豁免的引导神力效应使用你的法术豁免 DC。',
     kind: 'resource', status: 'implemented', sourceIds,
-    resource: { maxByLevel: CHANNEL_DIVINITY_USES, recovery: 'short-rest', note: '短休恢复 1 次，长休全部恢复；神圣感知与子职选项' },
+    resource: { maxByLevel: CHANNEL_DIVINITY_USES, recovery: 'short-rest', shortRestRecovery: 1, note: '短休恢复 1 次，长休全部恢复；神圣感知与子职选项' },
   },
   {
     id: 'paladin-2024-class-subclass', classId: 'class-2024-paladin', name: '圣武士子职', englishName: 'Paladin Subclass', level: 3,

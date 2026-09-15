@@ -107,4 +107,61 @@ describe('B10-02 跑团资源结算（武职批次）', () => {
     expect(listSessionResources(legacy, MODIFIERS)).toEqual([])
     expect(listSessionResources(legacy, MODIFIERS, getRulesRepository('5e-2014'))).toEqual([])
   })
+
+describe('B10-02 跑团资源结算（神术批次）', () => {
+  it('牧师：引导神力短休恢复 1 次、神圣干预仅长休', () => {
+    const resources = listSessionResources(draftFor('class-2024-cleric', 10), MODIFIERS)
+    const channel = resources.find((item) => item.id === 'cleric-2024-class-channel-divinity')!
+    const intervention = resources.find((item) => item.id === 'cleric-2024-class-divine-intervention')!
+
+    expect(channel).toMatchObject({ recovery: 'short-rest', shortRestRecovery: 1 })
+    expect(intervention).toMatchObject({ recovery: 'long-rest' })
+
+    const spent = {
+      ...createInitialSessionState('c1', 60),
+      resourceUsage: { [channel.id]: 2, [intervention.id]: 1 },
+    }
+    const shortRested = applyRestRecovery(spent, resources, 'short-rest')
+    expect(getResourceUsed(shortRested, channel.id)).toBe(1)
+    expect(getResourceUsed(shortRested, intervention.id)).toBe(1)
+
+    const longRested = applyRestRecovery(spent, resources, 'long-rest')
+    expect([channel, intervention].map((item) => getResourceUsed(longRested, item.id))).toEqual([0, 0])
+  })
+
+  it('圣武士：圣疗池按 5×等级、长休回满；引导神力短休恢复 1 次', () => {
+    const resources = listSessionResources(draftFor('class-2024-paladin', 10), MODIFIERS)
+    const layOnHands = resources.find((item) => item.id === 'paladin-2024-class-lay-on-hands')!
+    const channel = resources.find((item) => item.id === 'paladin-2024-class-channel-divinity')!
+
+    expect(layOnHands).toMatchObject({ max: 50, recovery: 'long-rest', unit: '点治疗量' })
+    expect(channel.shortRestRecovery).toBe(1)
+
+    const spent = { ...createInitialSessionState('p1', 70), resourceUsage: { [layOnHands.id]: 30, [channel.id]: 1 } }
+    const shortRested = applyRestRecovery(spent, resources, 'short-rest')
+    expect(getResourceUsed(shortRested, layOnHands.id)).toBe(30)
+    expect(getResourceUsed(shortRested, channel.id)).toBe(0)
+    expect(getResourceUsed(applyRestRecovery(spent, resources, 'long-rest'), layOnHands.id)).toBe(0)
+  })
+
+  it('圣武士（荣耀之誓）：辉煌防御按魅力调整值、长休回满', () => {
+    const resources = listSessionResources(
+      draftFor('class-2024-paladin', 15, { subclassId: 'subclass-2024-paladin-oath-of-glory' }),
+      MODIFIERS,
+    )
+    const glory = resources.find((item) => item.id === 'paladin-2024-glory-glorious-defense')!
+    expect(glory).toMatchObject({ max: Math.max(1, MODIFIERS.cha), recovery: 'long-rest' })
+
+    const spent = { ...createInitialSessionState('p2', 90), resourceUsage: { [glory.id]: 1 } }
+    expect(getResourceUsed(applyRestRecovery(spent, resources, 'short-rest'), glory.id)).toBe(1)
+    expect(getResourceUsed(applyRestRecovery(spent, resources, 'long-rest'), glory.id)).toBe(0)
+  })
+
+  it('神术批次不把无上限条目误判为可消耗资源', () => {
+    for (const resource of listSessionResources(draftFor('class-2024-paladin', 10), MODIFIERS)) {
+      expect(resource.max).toBeGreaterThan(0)
+      expect(['short-rest', 'long-rest']).toContain(resource.recovery)
+    }
+  })
+})
 })
