@@ -287,6 +287,28 @@ describe('2024 野蛮人校验（B08-03）', () => {
   })
 })
 
+describe('2024 武僧校验（B08-05）', () => {
+  it('技能与工具选择未完成时提示补选', () => {
+    const incomplete = draft2024({ classId: 'class-2024-monk', targetLevel: 1 })
+    expect(issueIds(incomplete)).toContain('checkpoint-class-2024-monk-skills-1')
+    expect(issueIds(incomplete)).toContain('checkpoint-class-2024-monk-tool-1')
+  })
+
+  it('技能与工具选择完成后不再报告对应检查点', () => {
+    const complete = draft2024({
+      classId: 'class-2024-monk',
+      targetLevel: 1,
+      selections: [
+        selection('class-2024-monk-skills-1', ['skill-acrobatics', 'skill-stealth']),
+        selection('class-2024-monk-tool-1', ['monk-2024-tool-artisans-tools']),
+      ],
+    })
+    const ids = issueIds(complete)
+    expect(ids).not.toContain('checkpoint-class-2024-monk-skills-1')
+    expect(ids).not.toContain('checkpoint-class-2024-monk-tool-1')
+  })
+})
+
 describe('2024 游荡者校验（B08-04）', () => {
   it('专精只能选择已熟练技能，且两次专精不能重复', () => {
     const notProficient = draft2024({

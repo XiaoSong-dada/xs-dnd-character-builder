@@ -121,4 +121,28 @@ describe('2024 职业时间线（B08-01）', () => {
     expect(mastery?.weaponMasteryFilter).toBe('melee')
     expect(getCheckpointSelectionBounds(draft2024({ targetLevel: 20 }), mastery!).max).toBe(4)
   })
+
+  it('武僧时间线展开技能、工具、子职与属性提升', () => {
+    const levelOne = buildTimeline('class-2024-monk', 1, { ruleset: '5e-2024' })
+    expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-monk-skills-1',
+      'class-2024-monk-tool-1',
+    ])
+
+    const levelThree = buildTimeline('class-2024-monk', 3, { ruleset: '5e-2024' })
+    const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
+    expect(subclass?.id).toBe('class-2024-monk-subclass-3')
+    expect(subclass?.title).toBe('选择武僧子职')
+    expect(subclass?.optionIds).toHaveLength(4)
+
+    const levelTwenty = buildTimeline('class-2024-monk', 20, { ruleset: '5e-2024' })
+    expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-monk-feat-4',
+      'class-2024-monk-feat-8',
+      'class-2024-monk-feat-12',
+      'class-2024-monk-feat-16',
+      'class-2024-monk-feat-19',
+    ])
+    expect(levelTwenty.some((checkpoint) => checkpoint.candidateKind === 'weapon-mastery')).toBe(false)
+  })
 })

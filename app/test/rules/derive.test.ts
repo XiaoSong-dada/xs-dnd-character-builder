@@ -108,6 +108,30 @@ describe('deriveCharacter', () => {
     expect(deriveCharacter(withArmor).armorClass.value).toBe(13)
   })
 
+  it('2024 武僧无甲防御为 10＋敏捷＋感知，持盾或着甲时失效', () => {
+    const unarmored: CharacterDraft = draft2024({
+      classId: 'class-2024-monk',
+      baseAbilities: { str: 12, dex: 14, con: 13, int: 8, wis: 16, cha: 10 },
+    })
+    // 10 + 敏捷 2 + 感知 3 = 15
+    expect(deriveCharacter(unarmored).armorClass.value).toBe(15)
+    expect(deriveCharacter(unarmored).armorClass.sources[0]?.detail).toBe('10 + 敏捷调整值 + WIS调整值')
+
+    const withShield: CharacterDraft = {
+      ...unarmored,
+      inventory: [{ id: 'shield', itemId: 'equipment-2024-shield', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 }],
+    }
+    // 持盾时无甲防御失效：10 + 敏捷 2 + 盾牌 2
+    expect(deriveCharacter(withShield).armorClass.value).toBe(14)
+
+    const withArmor: CharacterDraft = {
+      ...unarmored,
+      inventory: [{ id: 'leather', itemId: 'equipment-2024-leather-armor', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 }],
+    }
+    // 皮甲 11 + 敏捷 2
+    expect(deriveCharacter(withArmor).armorClass.value).toBe(13)
+  })
+
   it('applies arbitrary +2 and split +1/+1 timeline ability improvements', () => {
     const improvedDraft: CharacterDraft = {
       ...draft,

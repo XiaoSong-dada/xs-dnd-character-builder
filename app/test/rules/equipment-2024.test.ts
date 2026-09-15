@@ -27,7 +27,7 @@ describe('2024 首批装备闭环', () => {
     expect(rulesRepository2024.equipment.every((item) => item.ruleset === '5e-2024')).toBe(true)
     expect(rulesRepository2024.weaponMasteries).toHaveLength(8)
     expect(rulesRepository2014.weaponMasteries).toEqual([])
-    expect(rulesRepository2024.equipment.filter((item) => item.category === 'weapon').every((item) => item.masteryId)).toBe(true)
+    expect(rulesRepository2024.equipment.filter((item) => item.category === 'weapon' && item.sourceIds.includes('source-2024-phb')).every((item) => item.masteryId)).toBe(true)
     expect(rulesRepository2024.getEquipment('equipment-2024-potion-of-healing')).toBeUndefined()
     expect(rulesRepository2024.getEquipment('equipment-2024-spell-scroll')).toBeUndefined()
   })

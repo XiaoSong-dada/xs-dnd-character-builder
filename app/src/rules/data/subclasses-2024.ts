@@ -1,6 +1,7 @@
 import type { RuleOption, SubclassRule } from '@/types/rules'
 import { barbarianSubclasses2024 } from '@/rules/data/barbarian-2024'
 import { fighterSubclasses2024 } from '@/rules/data/fighter-2024'
+import { monkSubclasses2024 } from '@/rules/data/monk-2024'
 import { rogueSubclasses2024 } from '@/rules/data/rogue-2024'
 import { wizardSubclasses2024 } from '@/rules/data/wizard-2024'
 
@@ -8,6 +9,7 @@ import { wizardSubclasses2024 } from '@/rules/data/wizard-2024'
 export const subclasses2024: readonly SubclassRule[] = [
   ...barbarianSubclasses2024,
   ...fighterSubclasses2024,
+  ...monkSubclasses2024,
   ...rogueSubclasses2024,
   ...wizardSubclasses2024,
 ]

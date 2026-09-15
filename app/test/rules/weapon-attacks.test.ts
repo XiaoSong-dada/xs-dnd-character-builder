@@ -56,4 +56,18 @@ describe('逐武器攻击派生', () => {
     expect(deriveWeaponAttack(rogue, derived, dagger)?.proficient).toBe(true)
     expect(deriveWeaponAttack(rogue, derived, longsword)?.proficient).toBe(false)
   })
+
+  it('2024 武僧武器训练为简易＋轻型军用', () => {
+    const monk = draft2024({ classId: 'class-2024-monk', targetLevel: 1 })
+    const derived = deriveCharacter(monk)
+    const shortsword = rulesRepository2024.getEquipment('equipment-2024-shortsword')
+    const dagger = rulesRepository2024.getEquipment('equipment-2024-dagger')
+    const longsword = rulesRepository2024.getEquipment('equipment-2024-longsword')
+    const greataxe = rulesRepository2024.getEquipment('equipment-2024-greataxe')
+    if (!shortsword || !dagger || !longsword || !greataxe) throw new Error('缺少 2024 武器数据')
+    expect(deriveWeaponAttack(monk, derived, shortsword)?.proficient).toBe(true)
+    expect(deriveWeaponAttack(monk, derived, dagger)?.proficient).toBe(true)
+    expect(deriveWeaponAttack(monk, derived, longsword)?.proficient).toBe(false)
+    expect(deriveWeaponAttack(monk, derived, greataxe)?.proficient).toBe(false)
+  })
 })

@@ -516,6 +516,16 @@ export interface BackgroundRule {
   readonly sourceIds: readonly string[]
 }
 
+/** 魔法物品的充能与消耗登记（B07-04 登记展示；消耗与恢复结算归 B10）。 */
+export interface MagicItemUsageRule {
+  /** 是否有充能（有限使用次数）机制；具体上限与消耗见物品说明。 */
+  readonly charged: boolean
+  /** 是否为一次性消耗品（药水、卷轴、油等）。 */
+  readonly consumable: boolean
+  /** 恢复时机集合；一次性消耗不在此列。 */
+  readonly recovery: readonly ('dawn' | 'short-rest' | 'long-rest')[]
+}
+
 export interface EquipmentRule {
   readonly id: string
   readonly name: string
@@ -553,6 +563,12 @@ export interface EquipmentRule {
   readonly attunementCondition?: string
   /** 魔法加值（+1/+2/+3）：供命中/AC/伤害派生计算；仅魔法物品使用。 */
   readonly magicBonus?: number
+  /** 魔法物品的动作边界；组合或依正文触发记为 varies。 */
+  readonly itemAction?: 'action' | 'bonus-action' | 'reaction' | 'magic-action' | 'varies'
+  /** 充能、消耗与恢复时机登记（B01《机制索引》解析）；普通装备省略。 */
+  readonly magicItemUsage?: MagicItemUsageRule
+  /** 机制索引登记的状态引用（如隐形、中毒）；无状态引用时省略。 */
+  readonly stateReferences?: readonly string[]
   readonly sourceIds: readonly string[]
   readonly priceCp?: number
   readonly weightLb?: number
