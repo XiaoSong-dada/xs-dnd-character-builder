@@ -6,9 +6,10 @@ import { buildTimeline } from '@/rules/timeline'
 import { validateDraft } from '@/rules/validate'
 import { validateSpellSelections } from '@/rules/spellcasting'
 import { EMPTY_CURRENCY, isStartingEquipmentComplete } from '@/rules/starting-equipment'
+import { isOriginStepComplete } from '@/rules/origins'
 import { getDefaultEnabledSourceIds } from '@/rules/source-books'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
-import { isRulesetOpen } from '@/rules/repositories'
+import { getRulesRepository, isRulesetOpen } from '@/rules/repositories'
 import { hasBuildChoices } from '@/rules/draft-progress'
 import { resolveInitialRuleset } from '@/services/ruleset-preference'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
@@ -101,7 +102,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
       draft.targetLevel >= 1 && draft.targetLevel <= 20,
       true,
       Boolean(draft.classId),
-      Boolean(draft.backgroundId && draft.raceId),
+      isOriginStepComplete(draft, getRulesRepository(draft.ruleset)),
       abilitiesValid,
       timelineComplete,
       isStartingEquipmentComplete(draft) && !draft.equipmentNeedsReview,

@@ -1,6 +1,6 @@
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { SUBCLASS_CHOICE_OPTION_IDS } from '@/rules/data/subclass-choice-options-2014'
-import { decodeAbilityImprovement } from '@/rules/feats'
+import { decodeAbilityImprovement, formatFeatBonusOption } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpellcastingConfig, usesPreparedSelection } from '@/rules/spellcasting'
@@ -134,6 +134,18 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
           ? `${ABILITY_LABELS[abilityImprovement.abilities[0]]} +2`
           : abilityImprovement.abilities.map((ability) => `${ABILITY_LABELS[ability]} +1`).join('、')
         features.push({ id: optionId, category: 'feat', name: '属性值提升', summary, priority: 10 })
+        continue
+      }
+      // 专长自带属性提升子选项（feat-bonus-*）进入导出特性列表（B09-09）。
+      const featBonusLabel = formatFeatBonusOption(repository, optionId)
+      if (featBonusLabel) {
+        features.push({
+          id: optionId,
+          category: 'feat',
+          name: featBonusLabel,
+          summary: repository.getOption(optionId)?.description ?? '由专长授予的属性提升。',
+          priority: 10,
+        })
         continue
       }
       // 已选选择类选项（超魔、战技与其余子职选项、法术精通/招牌法术）进入导出

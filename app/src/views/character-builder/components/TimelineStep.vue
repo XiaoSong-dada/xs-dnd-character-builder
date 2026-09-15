@@ -8,7 +8,7 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
 import { getRulesRepository } from '@/rules/repositories'
 import { abilityModifier, deriveAbilities } from '@/rules/derive'
-import { getCheckpointSelectionBounds } from '@/rules/feats'
+import { formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
 import { formatResourceText } from '@/rules/resources'
 import { buildTimeline } from '@/rules/timeline'
 import { getCheckpointCandidates } from '@/rules/spellcasting'
@@ -219,7 +219,7 @@ function spellCandidateDescription(spell: SpellRule): string {
           <OptionCard
             v-for="optionId in checkpoint.optionIds"
             :key="optionId"
-            :title="rulesRepository.getOption(optionId)?.name ?? featureOptionLabel(checkpoint.id, optionId) ?? optionId"
+            :title="rulesRepository.getOption(optionId)?.name ?? formatFeatBonusOption(rulesRepository, optionId) ?? featureOptionLabel(checkpoint.id, optionId) ?? optionId"
             :description="rulesRepository.getOption(optionId)?.description"
             :state="selectedIds(checkpoint.id).includes(optionId)
               ? 'selected'

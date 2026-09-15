@@ -45,6 +45,7 @@ const {
   stepMeta,
   stepNumber,
   canContinue,
+  originBlockers,
   createDraft,
   defaultRuleset,
   rulesetFallbackNotice,
@@ -177,6 +178,7 @@ function updateMethod(value: AbilityMethod): void {
     />
     <OriginStep
       v-else-if="step === 'origin'"
+      :blockers="originBlockers"
       :ruleset="activeDraft.ruleset"
       :class-id="activeDraft.classId"
       :race-id="activeDraft.raceId"

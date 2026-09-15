@@ -13,9 +13,9 @@ import {
   getFeatEligibility,
   type AbilityImprovementMode,
 } from '@/rules/feats'
+import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
 import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
-import { getSpellcastingConfig } from '@/rules/spellcasting'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
 
 const props = defineProps<{
@@ -44,19 +44,13 @@ const tagFilters = ['all', '战斗', '施法', '属性', '探索', '支援'] as 
 const tagFilterOptions = tagFilters.map((id) => ({ id, label: id === 'all' ? '全部' : id }))
 
 const abilitiesBeforeCheckpoint = computed(() => deriveAbilities(props.draft, props.checkpointId))
-const canCastSpells = computed(() => {
-  const spellcasting = getSpellcastingConfig(props.draft)
-  return Boolean(spellcasting && props.checkpointLevel >= spellcasting.startsAtLevel)
-})
 const featEntries = computed(() => repository.value.feats.map((feat) => ({
   feat,
-  eligibility: getFeatEligibility(feat, {
-    abilities: abilitiesBeforeCheckpoint.value,
-    classId: props.draft.classId ?? '',
-    canCastSpells: canCastSpells.value,
-    raceId: props.draft.raceId,
-    subraceId: props.draft.subraceId,
-  }),
+  // 资格上下文与 validateDraft 同源（B09-08）：包含 2024 的节点等级、护甲训练与战斗风格前置。
+  eligibility: getFeatEligibility(feat, getFeatEligibilityContext(props.draft, {
+    checkpointId: props.checkpointId,
+    checkpointLevel: props.checkpointLevel,
+  })),
 })))
 const visibleFeats = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('zh-CN')

@@ -56,6 +56,25 @@ describe('CharacterSheetStep', () => {
     setActivePinia(createPinia())
   })
 
+  it('2024 专长自带属性提升在特性列表显示中文标签（B09-09）', async () => {
+    const modern: CharacterDraft = {
+      ...draft,
+      ruleset: '5e-2024',
+      classId: 'class-2024-fighter',
+      targetLevel: 5,
+      selections: [
+        { checkpointId: 'class-2024-fighter-feat-4', optionIds: ['feat-2024-keen-mind'], confirmedAt: '' },
+        { checkpointId: 'feat-child:class-2024-fighter-feat-4:feat-2024-keen-mind:ability', optionIds: ['feat-bonus-int-1'], confirmedAt: '' },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, { props: { draft: modern, derived: deriveCharacter(modern) } })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('敏锐心灵 · 智力 +1')
+    expect(wrapper.text()).not.toContain('feat-bonus-int-1')
+  })
+
   it('2024 草稿显示版本与车卡预览边界（B09-04）', () => {
     const modern: CharacterDraft = { ...draft, ruleset: '5e-2024', classId: 'class-2024-fighter' }
     const wrapper = mount(CharacterSheetStep, { props: { draft: modern, derived: deriveCharacter(modern) } })

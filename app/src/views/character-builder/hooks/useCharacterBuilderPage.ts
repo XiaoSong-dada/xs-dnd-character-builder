@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 
 import { deriveCharacter, getFlexibleBonusRule, getRaceAbilityBonuses } from '@/rules/derive'
-import { getBackgroundAbilityBonuses } from '@/rules/origins'
+import { getBackgroundAbilityBonuses, getOriginStepBlockers, isOriginStepComplete } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
@@ -111,21 +111,18 @@ export function useCharacterBuilderPage() {
       return count >= bounds.min && count <= bounds.max
     })
   })
+  /** 起源步骤未完成原因（与门禁同源，供起源页提示）。 */
+  const originBlockers = computed(() => {
+    const draft = activeDraft.value
+    return draft ? getOriginStepBlockers(draft, repositoryFor(draft)) : []
+  })
   const canContinue = computed(() => {
     const draft = activeDraft.value
     if (!draft) return false
     if (step.value === 'class') return Boolean(draft.classId)
     if (step.value === 'sources') return true
-    if (step.value === 'origin') {
-      const race = draft.raceId ? repositoryFor(draft).getRace(draft.raceId) : undefined
-      const background = draft.backgroundId ? repositoryFor(draft).getBackground(draft.backgroundId) : undefined
-      return Boolean(
-        background
-        && race
-        && (!race.requiresSubrace || draft.subraceId)
-        && draft.languages.length === background.languageChoices,
-      )
-    }
+    // 起源完成判定与起源页提示、完成校验同源（B09-07）；不再使用 2014 的 background.languageChoices。
+    if (step.value === 'origin') return isOriginStepComplete(draft, repositoryFor(draft))
     if (step.value === 'abilities') {
       return draft.raceAbilityChoices.length === raceFlexibleCount.value
         && areBaseAbilitiesValid(draft.baseAbilities, draft.abilityMethod, draft.ruleset)
@@ -689,6 +686,7 @@ export function useCharacterBuilderPage() {
     stepMeta,
     stepNumber,
     canContinue,
+    originBlockers,
     createDraft,
     defaultRuleset,
     rulesetFallbackNotice,

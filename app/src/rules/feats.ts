@@ -331,6 +331,23 @@ export function getCheckpointSelectionBounds(
   return { min: checkpoint.minSelections, max: checkpoint.maxSelections }
 }
 
+/** 解析专长自带属性提升子选项（`feat-bonus-<ability>-<1|2>`）。 */
+export function decodeFeatBonusOption(optionId: string): { readonly ability: AbilityKey; readonly amount: number } | undefined {
+  const match = /^feat-bonus-(str|dex|con|int|wis|cha)-([12])$/.exec(optionId)
+  if (!match) return undefined
+  return { ability: match[1] as AbilityKey, amount: Number(match[2]) }
+}
+
+/**
+ * 专长属性提升子选项的显示标签（如“智力 +1”）；非该类型返回 undefined。
+ * 时间线子检查点、角色卡与导出统一使用，避免再显示原始 ID（B09-09）。
+ */
+export function formatFeatBonusOption(repository: RulesRepository, optionId: string): string | undefined {
+  const decoded = decodeFeatBonusOption(optionId)
+  if (!decoded) return undefined
+  return repository.getOption(optionId)?.name || `${ABILITY_LABELS[decoded.ability]} +${decoded.amount}`
+}
+
 /** 解析专长子选择中的属性提升选择（`feat-bonus-<ability>-1`），用于授予法术的施法属性。 */
 export function getFeatChosenAbility(
   draft: CharacterDraft,
@@ -341,8 +358,8 @@ export function getFeatChosenAbility(
   const selection = draft.selections.find((item) =>
     item.checkpointId === `feat-child:${parentCheckpointId}:${featId}:ability` && !item.invalidatedAt)
   for (const optionId of selection?.optionIds ?? []) {
-    const match = /^feat-bonus-(str|dex|con|int|wis|cha)-[12]$/.exec(optionId)
-    if (match) return match[1] as AbilityKey
+    const decoded = decodeFeatBonusOption(optionId)
+    if (decoded) return decoded.ability
   }
   return undefined
 }

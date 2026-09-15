@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
+import UiNotice from '@/components/ui/UiNotice.vue'
 import { getBackgroundRecommendationReason, getRaceRecommendationReason } from '@/rules/recommend'
 import { getRulesRepository } from '@/rules/repositories'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
@@ -24,7 +25,9 @@ const props = withDefaults(defineProps<{
   enabledSourceIds?: readonly string[]
   sizeChoice?: 'small' | 'medium'
   backgroundAbilities?: Readonly<Partial<Record<AbilityKey, number>>>
-}>(), { raceSkillChoices: () => [], ruleset: '5e-2014' })
+  /** 起源步骤未完成原因（与门禁同源，B09-07）。 */
+  blockers?: readonly { readonly id: string; readonly message: string; readonly resolution: string }[]
+}>(), { raceSkillChoices: () => [], ruleset: '5e-2014', blockers: () => [] })
 
 const emit = defineEmits<{
   race: [id: string]
@@ -359,6 +362,18 @@ function toggleLanguage(id: string): void {
         {{ languages.includes(language) ? '✓ ' : '' }}{{ language }}
       </button>
     </div>
+    <UiNotice
+      v-if="blockers.length"
+      class="origin-step__blockers"
+      tone="warning"
+      :title="`还差 ${blockers.length} 项才能继续`"
+    >
+      <ul>
+        <li v-for="blocker in blockers" :key="blocker.id">
+          {{ blocker.message }}<small>{{ blocker.resolution }}</small>
+        </li>
+      </ul>
+    </UiNotice>
   </section>
 </template>
 
@@ -383,6 +398,14 @@ function toggleLanguage(id: string): void {
     background: var(--color-gold-soft);
 
     > strong { font-size: 0.8rem; }
+  }
+
+  &__blockers {
+    margin-top: 0.5rem;
+
+    ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.35rem; }
+    li { line-height: 1.5; }
+    small { display: block; color: var(--color-text-muted); }
   }
 
   &__languages {

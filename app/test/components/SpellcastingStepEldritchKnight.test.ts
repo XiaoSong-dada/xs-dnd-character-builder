@@ -48,7 +48,7 @@ describe('奥法骑士法术步骤（子职级施法）', () => {
     const wrapper = mount(SpellcastingStep, { props: { draft } })
 
     const text = wrapper.text()
-    expect(text).toContain('INT施法')
+    expect(text).toContain('智力施法')
     expect(text).toContain('最高1环')
     expect(text).toContain('1环×2')
     // known 模式：戏法与掌握法术区块；无法术书、无准备。
@@ -77,7 +77,7 @@ describe('奥法骑士法术步骤（子职级施法）', () => {
   it('诡术师同样获得子职级施法配置', () => {
     const draft = ekDraft(3, 'subclass-2014-rogue-arcane-trickster')
     const wrapper = mount(SpellcastingStep, { props: { draft } })
-    expect(wrapper.text()).toContain('INT施法')
+    expect(wrapper.text()).toContain('智力施法')
     expect(rulesRepository.getSpellcastingConfig(draft)?.mode).toBe('known')
   })
 })

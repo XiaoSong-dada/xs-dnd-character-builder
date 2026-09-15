@@ -1,3 +1,5 @@
+import { ABILITY_LABELS, formatAbilityModifierLabel } from '@/rules/data/ability-labels'
+import { SKILL_IDS } from '@/rules/data/skill-ids'
 import { getRulesRepository } from '@/rules/repositories'
 import { applyAbilityImprovement, collectFeatSkillSelections, decodeAbilityImprovement, getFeatAbilityCap, listActiveFeats } from '@/rules/feats'
 import { getBackgroundAbilityBonuses, getSpeciesHitPointBonus } from '@/rules/origins'
@@ -65,27 +67,8 @@ function collectFeatSavingThrowAbilities(draft: CharacterDraft): Readonly<Partia
   return result
 }
 
-/** 全部 18 项 2014 技能 ID（种族自选规格的缺省选项列表）。 */
-export const SKILL_IDS: readonly string[] = [
-  'skill-acrobatics',
-  'skill-animal-handling',
-  'skill-arcana',
-  'skill-athletics',
-  'skill-deception',
-  'skill-history',
-  'skill-insight',
-  'skill-intimidation',
-  'skill-investigation',
-  'skill-medicine',
-  'skill-nature',
-  'skill-perception',
-  'skill-performance',
-  'skill-persuasion',
-  'skill-religion',
-  'skill-sleight-of-hand',
-  'skill-stealth',
-  'skill-survival',
-]
+/** 全部 18 项技能 ID（已移至叶子模块，此处转出以保持既有导入路径可用）。 */
+export { SKILL_IDS }
 
 function addAbilities(base: AbilityScores, bonus: Partial<AbilityScores>): AbilityScores {
   return {
@@ -361,7 +344,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     const featSavingName = featSavingThrowAbilities[key]
     const proficient = (classRule?.savingThrowAbilities.includes(key) ?? false) || Boolean(featSavingName)
     return [key, withManualAdjustment(derived(modifiers[key] + (proficient ? proficiency : 0), [
-      { id: `${key}-save-ability`, label: '属性调整值', value: modifiers[key], detail: `${key.toUpperCase()} ${abilities[key]}` },
+      { id: `${key}-save-ability`, label: '属性调整值', value: modifiers[key], detail: `${ABILITY_LABELS[key]} ${abilities[key]}` },
       ...(classRule?.savingThrowAbilities.includes(key) ? [{ id: `${key}-save-proficiency`, label: '职业豁免熟练', value: proficiency, detail: classRule?.name ?? '' }] : []),
       ...(featSavingName ? [{ id: `${key}-save-feat-proficiency`, label: '专长豁免熟练', value: proficiency, detail: featSavingName }] : []),
     ]), manual.savingThrowAdjustments[key], `save-${key}`)]
@@ -370,7 +353,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     const proficient = proficientSkillIds.has(skillId)
     const expertise = expertiseIds.has(skillId)
     return [skillId, withManualAdjustment(derived(modifiers[ability] + (proficient ? proficiency : 0) + (expertise ? proficiency : 0), [
-      { id: `${skillId}-ability`, label: `${ability.toUpperCase()}调整值`, value: modifiers[ability], detail: `属性 ${abilities[ability]}` },
+      { id: `${skillId}-ability`, label: formatAbilityModifierLabel(ability), value: modifiers[ability], detail: `属性 ${abilities[ability]}` },
       ...(proficient ? [{
         id: `${skillId}-proficiency`,
         label: '技能熟练',
@@ -421,7 +404,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
       detail: equippedArmor
         ? equippedArmor.description
         : unarmoredDefense && !equippedArmor && (unarmoredDefense.allowsShield || !hasShield)
-          ? `10 + 敏捷调整值 + ${unarmoredDefense.ability.toUpperCase()}调整值`
+          ? `10 + 敏捷调整值 + ${formatAbilityModifierLabel(unarmoredDefense.ability)}`
           : barbarianUnarmored
             ? '10 + 敏捷调整值 + 体质调整值'
             : monkUnarmored
@@ -438,13 +421,13 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const initiativeValue = withManualAdjustment(derived(modifiers.dex, [{ id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` }]), manual.derivedAdjustments.initiative, 'initiative')
   const attackValue = withManualAdjustment(derived(proficiency + modifiers[attackAbility] + weaponMagicBonus + subclassEffects.attackBonus, [
     { id: 'attack-proficiency', label: '熟练加值', value: proficiency, detail: '熟练武器' },
-    { id: `attack-${attackAbility}`, label: `${attackAbility.toUpperCase()}调整值`, value: modifiers[attackAbility], detail: `属性 ${abilities[attackAbility]}` },
+    { id: `attack-${attackAbility}`, label: formatAbilityModifierLabel(attackAbility), value: modifiers[attackAbility], detail: `属性 ${abilities[attackAbility]}` },
     ...(weaponMagicBonus ? [{ id: 'magic-weapon-attack', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []),
     ...(subclassEffects.attackBonus !== 0 ? [{ id: 'subclass-attack', label: '子职攻击加成', value: subclassEffects.attackBonus, detail: '来自子职特性' }] : []),
   ]), manual.derivedAdjustments.attackBonus, 'attack')
   const damageValue = withManualAdjustment(derived(modifiers[attackAbility] + weaponMagicBonus + subclassEffects.damageBonus, [{
     id: `damage-${attackAbility}`,
-    label: `${attackAbility.toUpperCase()}调整值`,
+    label: formatAbilityModifierLabel(attackAbility),
     value: modifiers[attackAbility],
     detail: `属性 ${abilities[attackAbility]}`,
   }, ...(weaponMagicBonus ? [{ id: 'magic-weapon-damage', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []), ...(subclassEffects.damageBonus !== 0 ? [{ id: 'subclass-damage', label: '子职伤害加成', value: subclassEffects.damageBonus, detail: '来自子职特性' }] : [])]), manual.derivedAdjustments.attackDamageBonus, 'damage')
@@ -460,7 +443,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const baseSpellAttack = spellcasting && spellAbilityModifier !== undefined && draft.targetLevel >= spellcasting.startsAtLevel
     ? derived(proficiency + spellAbilityModifier + subclassEffects.spellAttackBonus, [
       { id: 'spell-attack-proficiency', label: '熟练加值', value: proficiency, detail: `${draft.targetLevel}级角色` },
-      { id: 'spell-attack-ability', label: `${spellcasting.ability.toUpperCase()}调整值`, value: spellAbilityModifier, detail: '职业施法属性' },
+      { id: 'spell-attack-ability', label: formatAbilityModifierLabel(spellcasting.ability), value: spellAbilityModifier, detail: '职业施法属性' },
       ...(subclassEffects.spellAttackBonus !== 0 ? [{ id: 'subclass-spell-attack', label: '子职法术攻击加成', value: subclassEffects.spellAttackBonus, detail: '来自子职特性' }] : []),
     ])
     : hasManualSpellAttack ? derived(0, [{ id: 'manual-spell-base', label: '人工施法基础', value: 0, detail: '当前职业无系统施法能力' }]) : undefined
@@ -468,7 +451,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     ? derived(8 + proficiency + spellAbilityModifier + subclassEffects.spellSaveDcBonus, [
       { id: 'spell-dc-base', label: '法术豁免基础', value: 8, detail: '固定基础值' },
       { id: 'spell-dc-proficiency', label: '熟练加值', value: proficiency, detail: `${draft.targetLevel}级角色` },
-      { id: 'spell-dc-ability', label: `${spellcasting.ability.toUpperCase()}调整值`, value: spellAbilityModifier, detail: '职业施法属性' },
+      { id: 'spell-dc-ability', label: formatAbilityModifierLabel(spellcasting.ability), value: spellAbilityModifier, detail: '职业施法属性' },
       ...(subclassEffects.spellSaveDcBonus !== 0 ? [{ id: 'subclass-spell-dc', label: '子职法术DC加成', value: subclassEffects.spellSaveDcBonus, detail: '来自子职特性' }] : []),
     ])
     : hasManualSpellDc ? derived(0, [{ id: 'manual-spell-dc-base', label: '人工施法基础', value: 0, detail: '当前职业无系统施法能力' }]) : undefined

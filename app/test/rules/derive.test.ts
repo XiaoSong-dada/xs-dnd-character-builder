@@ -92,7 +92,7 @@ describe('deriveCharacter', () => {
     })
     // 10 + 敏捷 2 + 体质 2 = 14
     expect(deriveCharacter(unarmored).armorClass.value).toBe(14)
-    expect(deriveCharacter(unarmored).armorClass.sources[0]?.detail).toBe('10 + 敏捷调整值 + CON调整值')
+    expect(deriveCharacter(unarmored).armorClass.sources[0]?.detail).toBe('10 + 敏捷调整值 + 体质调整值')
 
     const withShield: CharacterDraft = {
       ...unarmored,
@@ -115,7 +115,7 @@ describe('deriveCharacter', () => {
     })
     // 10 + 敏捷 2 + 感知 3 = 15
     expect(deriveCharacter(unarmored).armorClass.value).toBe(15)
-    expect(deriveCharacter(unarmored).armorClass.sources[0]?.detail).toBe('10 + 敏捷调整值 + WIS调整值')
+    expect(deriveCharacter(unarmored).armorClass.sources[0]?.detail).toBe('10 + 敏捷调整值 + 感知调整值')
 
     const withShield: CharacterDraft = {
       ...unarmored,

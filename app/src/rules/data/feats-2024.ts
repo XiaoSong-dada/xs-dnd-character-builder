@@ -24,6 +24,19 @@ const categoryTags: Readonly<Record<FeatCategory, string>> = {
   'epic-boon': '传奇恩惠',
 }
 
+/**
+ * 专长自带属性提升子选项（`feat-bonus-<ability>-<1|2>`）的中文标签。
+ * 与 2014 的 `featChoiceOptions2014` 同形：时间线子检查点、角色卡与导出均按此解析显示名，
+ * 不得再回退到原始 ID（B09-09）。
+ */
+export const featChoiceOptions2024: readonly RuleOption[] = ABILITY_KEYS.flatMap((ability) => [1, 2].map((amount) => ({
+  id: `feat-bonus-${ability}-${amount}`,
+  name: `${ABILITY_LABELS[ability]} +${amount}`,
+  description: `由父专长将${ABILITY_LABELS[ability]}提高${amount}点，最终值不得超过20。`,
+  status: 'implemented' as const,
+  sourceIds,
+})))
+
 const generalPrerequisite = { minimumLevel: 4 } as const
 const boonPrerequisite = { minimumLevel: 19 } as const
 

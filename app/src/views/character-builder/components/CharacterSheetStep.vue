@@ -14,7 +14,7 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-media'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
-import { decodeAbilityImprovement, getCheckpointSelectionBounds } from '@/rules/feats'
+import { decodeAbilityImprovement, formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
@@ -295,7 +295,7 @@ function isAlsoNormallyAcquired(spellId: string): boolean {
 const selectedOptionEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
   const choiceCheckpointIds = [
     ...(classInfo.value?.features ?? []).flatMap((feature) => feature.checkpointIds ?? []),
     ...(subclassInfo.value?.features ?? [])
@@ -353,7 +353,7 @@ function featureChoiceLabel(feature: ClassFeature): string {
   if (checkpointIds.length === 0) return '需选择'
   const draft = props.draft
   if (!draft.classId) return '需选择'
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
   const unlocked = checkpointIds
     .map((checkpointId) => timeline.find((item) => item.id === checkpointId))
     .filter((checkpoint): checkpoint is NonNullable<typeof checkpoint> => Boolean(checkpoint))
@@ -452,7 +452,7 @@ const classInfo = computed(() => {
 const featAndAsiEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
   const entries: {
     id: string
     level: number
@@ -463,7 +463,19 @@ const featAndAsiEntries = computed(() => {
     if (selection.invalidatedAt) continue
     const checkpoint = timeline.find((item) => item.id === selection.checkpointId)
     for (const optionId of selection.optionIds) {
-      if (optionId.startsWith('feat-')) {
+      const bonusLabel = formatFeatBonusOption(getRulesRepository(props.draft.ruleset), optionId)
+      if (bonusLabel) {
+        // 专长自带属性提升子选项（feat-child 检查点）：显示“专长名 · 智力 +1”（B09-09）。
+        const parentName = checkpoint?.parentOptionId
+          ? getRulesRepository(props.draft.ruleset).getFeat(checkpoint.parentOptionId)?.name
+          : undefined
+        entries.push({
+          id: optionId,
+          level: checkpoint?.level ?? 1,
+          label: parentName ? `${parentName} · ${bonusLabel}` : bonusLabel,
+          detail: getRulesRepository(props.draft.ruleset).getOption(optionId)?.description,
+        })
+      } else if (optionId.startsWith('feat-')) {
         const feat = getRulesRepository(props.draft.ruleset).feats.find((item) => item.id === optionId)
         if (feat) {
           entries.push({ id: feat.id, level: checkpoint?.level ?? 1, label: `${feat.name} · ${feat.englishName}`, detail: feat.detail })
@@ -525,7 +537,7 @@ const needsReview = computed(() => {
   const draft = props.draft
   const hasInvalidated = draft.selections.some((item) => Boolean(item.invalidatedAt))
   if (!draft.classId) return hasInvalidated
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
   const incomplete = timeline.some((checkpoint) => {
     const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
     return (selection?.optionIds.length ?? 0) < checkpoint.minSelections

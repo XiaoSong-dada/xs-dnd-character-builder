@@ -355,3 +355,43 @@ describe('useCharacterBuilderPage 改版与改职业的数据保护（B09-03）'
     expect(JSON.stringify(store.activeDraft)).toBe(before)
   })
 })
+
+describe('useCharacterBuilderPage 起源步骤完成判定（B09-07）', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    routerReplace.mockClear()
+  })
+
+  function makeWizardOriginDraft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
+    return makeFighterDraft({
+      id: 'test-2024-origin',
+      ruleset: '5e-2024',
+      classId: 'class-2024-wizard',
+      subclassId: undefined,
+      raceId: 'species-2024-elf',
+      subraceId: 'species-2024-elf-high-elf-lineage',
+      backgroundId: 'background-2024-sage',
+      currentStep: 'origin',
+      raceSkillChoices: ['skill-perception'],
+      backgroundAbilityAllocation: { int: 2, con: 1 },
+      languages: [],
+      ...overrides,
+    })
+  }
+
+  it('2024 语言未选满不可继续，选满 2 门后可继续', async () => {
+    const { page, store } = await setupPage(makeWizardOriginDraft())
+
+    expect(page.step.value).toBe('origin')
+    expect(page.canContinue.value).toBe(false)
+    expect(page.originBlockers.value.map((blocker) => blocker.id)).toContain('background-languages')
+
+    store.updateDraft({ languages: ['龙语'] })
+    expect(page.canContinue.value).toBe(false)
+
+    store.updateDraft({ languages: ['龙语', '精灵语'] })
+    expect(page.originBlockers.value).toEqual([])
+    expect(page.canContinue.value).toBe(true)
+  })
+})

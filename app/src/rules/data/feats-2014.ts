@@ -1,16 +1,9 @@
+import { ABILITY_KEYS, ABILITY_LABELS } from '@/rules/data/ability-labels'
 import type { AbilityKey } from '@/types/character'
 import type { FeatRule, RuleOption } from '@/types/rules'
 
-export const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const
-
-export const ABILITY_LABELS: Readonly<Record<AbilityKey, string>> = {
-  str: '力量',
-  dex: '敏捷',
-  con: '体质',
-  int: '智力',
-  wis: '感知',
-  cha: '魅力',
-}
+/** 属性键与中文标签已移至叶子模块；此处再导出以保持既有引用路径可用（B09-11）。 */
+export { ABILITY_KEYS, ABILITY_LABELS }
 
 const basicSourceIds = ['basic-rules-2014'] as const
 const featSourceIds = ['basic-rules-2014', 'phb-2014-index'] as const

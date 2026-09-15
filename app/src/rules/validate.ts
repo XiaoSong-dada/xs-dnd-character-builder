@@ -1,8 +1,7 @@
 import { getRulesRepository } from '@/rules/repositories'
 import { deriveAbilities } from '@/rules/derive'
+import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
 import {
-  classHasFightingStyle,
-  collectArmorTrainings,
   collectFeatSkillSelections,
   decodeAbilityImprovement,
   getAbilityImprovementEligibility,
@@ -16,7 +15,7 @@ import { getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellbookExtraAllowance, getSpellbookExtraCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
-import { getBackgroundAllocationIssue, getDraftSpeciesRules } from '@/rules/origins'
+import { getBackgroundAllocationIssue, getOriginStepBlockers, getSpeciesProficiencyBlockers } from '@/rules/origins'
 import { validateWeaponMasterySelection } from '@/rules/weapon-mastery'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { isSourceEnabled } from '@/rules/source-books'
@@ -59,7 +58,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     requireEnabled(`item-${entry.id}`, 'equipment', `物品“${item?.name ?? entry.itemId}”`, item)
   }
   if (!draft.classId) issues.push({ id: 'class-required', step: 'class', severity: 'error', message: '尚未选择职业。', resolution: '返回职业步骤选择一个职业。' })
-  if (!draft.backgroundId || !draft.raceId) issues.push({ id: 'origin-required', step: 'origin', severity: 'error', message: '角色起源尚未完成。', resolution: '选择2014种族和背景。' })
+  if (!draft.backgroundId || !draft.raceId) issues.push({ id: 'origin-required', step: 'origin', severity: 'error', message: '角色起源尚未完成。', resolution: draft.ruleset === '5e-2024' ? '选择物种与背景。' : '选择种族和背景。' })
   if (!draft.name.trim()) issues.push({ id: 'name-required', step: 'identity', severity: 'error', message: '角色还没有名字。', resolution: '填写角色姓名。' })
   if (draft.classId && !isStartingEquipmentComplete(draft)) {
     issues.push({
@@ -176,10 +175,12 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
 
   const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
   const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
-  if (race?.requiresSubrace && !subrace) {
-    issues.push({ id: 'subrace-required', step: 'origin', severity: 'error', message: `${race.name}需要选择子种族。`, resolution: '在种族卡片下选择一个子种族。' })
+  // 起源类问题统一由 getOriginStepBlockers 判定（B09-07），此处只负责映射为校验条目。
+  const originBlockers = getOriginStepBlockers(draft, repository)
+  if (originBlockers.some((blocker) => blocker.id === 'subrace-required')) {
+    issues.push({ id: 'subrace-required', step: 'origin', severity: 'error', message: `${race?.name ?? ''}需要选择子种族。`, resolution: '在种族卡片下选择一个子种族。' })
   }
-  if (subrace && subrace.parentRaceId !== draft.raceId) {
+  if (originBlockers.some((blocker) => blocker.id === 'subrace-mismatch')) {
     issues.push({ id: 'subrace-mismatch', step: 'origin', severity: 'error', message: '所选子种族不属于当前种族。', resolution: '重新选择当前种族的子种族。' })
   }
   const flexibleRule = getFlexibleBonusRule(race, subrace)
@@ -201,10 +202,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     })
   }
   const requiredLanguages = getRequiredLanguageCount(draft, repository)
-  if (
-    requiredLanguages > 0
-    && (draft.languages.length !== requiredLanguages || new Set(draft.languages).size !== draft.languages.length)
-  ) {
+  if (originBlockers.some((blocker) => blocker.id === 'background-languages')) {
     issues.push({
       id: 'background-languages',
       step: 'origin',
@@ -225,7 +223,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       })
     }
     const allocationIssue = getBackgroundAllocationIssue(draft, repository)
-    if (allocationIssue) {
+    if (originBlockers.some((blocker) => blocker.id === 'background-ability-allocation')) {
       issues.push({
         id: 'background-ability-allocation',
         step: 'abilities',
@@ -234,18 +232,14 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         resolution: allocationIssue,
       })
     }
-    const sizeRules = getDraftSpeciesRules(draft, repository).filter((race) => (race.sizeChoices?.length ?? 0) > 0)
-    if (sizeRules.length > 0) {
-      const size = draft.speciesSizeChoice
-      if (!size || !sizeRules.some((race) => race.sizeChoices?.includes(size))) {
-        issues.push({
-          id: 'species-size-required',
-          step: 'origin',
-          severity: 'error',
-          message: '物种需要选择体型。',
-          resolution: '选择小型或中型。',
-        })
-      }
+    if (originBlockers.some((blocker) => blocker.id === 'species-size-required')) {
+      issues.push({
+        id: 'species-size-required',
+        step: 'origin',
+        severity: 'error',
+        message: '物种需要选择体型。',
+        resolution: '选择小型或中型。',
+      })
     }
   }
 
@@ -350,10 +344,6 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
     const checkpointLevels = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint.level]))
     const isV2024 = repository.ruleset === '5e-2024'
-    const armorTrainings = isV2024 ? collectArmorTrainings(draft, repository) : undefined
-    const hasFightingStyle = isV2024
-      ? classHasFightingStyle(repository, draft.classId, draft.targetLevel)
-      : undefined
     for (const checkpoint of timeline) {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const count = selection?.optionIds.length ?? 0
@@ -454,15 +444,10 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         }
         const selectedFeat = repository.getFeat(optionId)
         if (selectedFeat && draft.classId) {
-          const spellcasting = getSpellcastingConfig(draft)
-          const eligibility = getFeatEligibility(selectedFeat, {
-            abilities: abilitiesBefore,
-            classId: draft.classId,
-            canCastSpells: Boolean(spellcasting && checkpoint.level >= spellcasting.startsAtLevel),
-            raceId: draft.raceId,
-            subraceId: draft.subraceId,
-            ...(isV2024 ? { level: checkpoint.level, hasFightingStyle, armorTrainings } : {}),
-          })
+          const eligibility = getFeatEligibility(
+            selectedFeat,
+            getFeatEligibilityContext(draft, { checkpointId: checkpoint.id, checkpointLevel: checkpoint.level }),
+          )
           if (!eligibility.available) {
             issues.push({
               id: `feat-prerequisite-${checkpoint.id}-${optionId}`,
@@ -600,43 +585,9 @@ function validateRaceSkillChoices(draft: CharacterDraft): readonly ValidationIss
       : undefined
   if (!race) return issues
   const isGithyanki = race.id === 'race-2014-gith-githyanki'
-  const chosen = draft.raceSkillChoices ?? []
-  const toolChosen = Boolean(race.toolProficiencyChoices && draft.raceToolChoice)
-  const skillSpec = race.skillProficiencyChoices
-  if (skillSpec) {
-    // 吉斯洋基选了工具侧时不再要求技能（二选一）。
-    if (!(isGithyanki && toolChosen) && chosen.length !== skillSpec.count) {
-      issues.push({
-        id: 'race-skill-choice-count',
-        step: 'origin',
-        severity: 'error',
-        message: isGithyanki && chosen.length === 0
-          ? `${race.name}需要选择一项技能或工具熟练。`
-          : `${race.name}需要选择${skillSpec.count}项技能熟练。`,
-        resolution: `已选 ${chosen.length} 项，请返回起源步骤补选或移除。`,
-      })
-    }
-    const allowed = skillSpec.optionIds ?? SKILL_IDS
-    for (const skillId of chosen) {
-      if (!allowed.includes(skillId)) {
-        issues.push({
-          id: `race-skill-choice-invalid-${skillId}`,
-          step: 'origin',
-          severity: 'error',
-          message: `${race.name}的技能熟练选项“${skillId}”不在可选范围内。`,
-          resolution: '请返回起源步骤重新选择。',
-        })
-      }
-    }
-    if (isGithyanki && toolChosen && chosen.length > 0) {
-      issues.push({
-        id: 'githyanki-choice-exclusive',
-        step: 'origin',
-        severity: 'error',
-        message: '吉斯洋基人的腐化精通只能选择一项技能或工具熟练。',
-        resolution: '请只保留技能或工具其中一项。',
-      })
-    }
+  // 物种熟练的错误级判定统一来自规则层（B09-07）；此处只映射为校验条目。
+  for (const blocker of getSpeciesProficiencyBlockers(draft, repository)) {
+    issues.push({ id: blocker.id, step: 'origin', severity: 'error', message: blocker.message, resolution: blocker.resolution })
   }
   if (race.toolProficiencyChoices && !isGithyanki && !draft.raceToolChoice) {
     // 工具熟练不参与派生，未选仅提示（不阻塞角色完成）。

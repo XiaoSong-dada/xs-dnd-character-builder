@@ -18,6 +18,7 @@ import {
   getAlwaysPreparedSpellIds,
   usesPreparedSelection,
 } from '@/rules/spellcasting'
+import { ABILITY_LABELS } from '@/rules/data/ability-labels'
 import { getRulesRepository } from '@/rules/repositories'
 import type { SpellRule } from '@/types/rules'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
@@ -171,7 +172,7 @@ function toggleSpellbookExtra(id: string): void {
       </div>
       <header>
         <div>
-          <span>{{ config.ability.toUpperCase() }}施法 · 最高{{ maximumLevel }}环</span>
+          <span>{{ ABILITY_LABELS[config.ability] }}施法 · 最高{{ maximumLevel }}环</span>
           <p v-if="spellSlots.length" class="spellcasting-step__slots">{{ spellSlotsLabel }}</p>
           <h3>{{ modeLabel }}法术</h3>
         </div>

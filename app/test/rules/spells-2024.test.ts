@@ -45,6 +45,16 @@ describe('2024 法术目录', () => {
     expect(detectMagic?.concentration).toBe(true)
   })
 
+  it('展开详情使用中文属性与生命值（B09-10）', () => {
+    const forbidden = /(?<![A-Za-z])(STR|DEX|CON|INT|WIS|CHA|HP|HD)(?![A-Za-z])/
+    const offenders = spells2024.filter((spell) => forbidden.test(spell.description))
+    expect(offenders.map((spell) => spell.id)).toEqual([])
+    // 抽查：豁免、技能括号、并列列表三类写法均已是中文
+    expect(spells2024.find((spell) => spell.englishName === 'Burning Hands')?.description).toContain('敏捷豁免失败3d6火焰')
+    expect(spells2024.find((spell) => spell.englishName === 'Minor Illusion')?.description).toContain('智力（调查）')
+    expect(spells2024.find((spell) => spell.englishName === 'Gaseous Form')?.description).toContain('力量/敏捷/体质')
+  })
+
   it('两版同名法术互不命中，依赖数据条目为 selectable', () => {
     expect(rulesRepository2024.getSpell('spell-2014-fireball')).toBeUndefined()
     expect(rulesRepository2024.getSpell('spell-2024-wish')?.status).toBe('selectable')

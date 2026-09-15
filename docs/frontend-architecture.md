@@ -512,6 +512,9 @@ src/rules/resources.ts           （无依赖，纯函数：资源上限／恢�
 src/rules/feats.ts               -> src/rules/{repositories,source-books} + src/rules/data/{feats-2014,feats-2024}（双版本专长能力：授予、候选池、前置、复选、属性上限与护甲训练）
 src/rules/origins.ts             -> src/rules/{repositories,source-books}（物种链、背景属性分配与校验、物种生命值）
 src/rules/languages.ts           （无 rules 内部依赖，纯函数：2024 标准语言表与 2014 候选；必选数＝规则基础值＋职业特性追加 `ClassFeature.languageChoices`）
+src/rules/origins.ts             -> src/rules/{languages,source-books}（起源派生与完成判定单一来源：`getOriginStepBlockers`／`isOriginStepComplete`，供步骤门禁、起源页提示、完成度与 validate 共用；B09-07）
+src/rules/feats.ts               （专长能力与显示：`decodeFeatBonusOption`／`formatFeatBonusOption` 解析 `feat-bonus-<ability>-<1|2>` 子选项标签，时间线／角色卡／导出共用；B09-09）
+src/rules/feat-eligibility.ts    -> src/rules/{derive,feats,repositories,spellcasting,timeline}（专长资格上下文单一来源：`getFeatEligibilityContext`，供时间线专长面板与 validate 共用；2024 携带节点等级、护甲训练与战斗风格，2014 保持最小上下文；B09-08）
 src/rules/recommend.ts           -> src/rules/data/feats-2014（仅保留成长速览与起源提示）
 src/rules/source-books.ts        -> src/rules/data/sources-2014 + src/rules/repository（迁移推导入口）
 src/rules/equipment-filter.ts    -> src/types/rules（中英文/ID、稀有度、类别、同调、来源组合筛选纯函数）
