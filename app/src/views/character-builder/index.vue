@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import BaseButton from '@/components/ui/BaseButton.vue'
 import UiModal from '@/components/ui/UiModal.vue'
@@ -22,6 +22,7 @@ import StartPanel from '@/views/character-builder/components/StartPanel.vue'
 import TimelineStep from '@/views/character-builder/components/TimelineStep.vue'
 import ValidationStep from '@/views/character-builder/components/ValidationStep.vue'
 import { useCharacterBuilderPage } from '@/views/character-builder/hooks/useCharacterBuilderPage'
+import { hasBuildChoices } from '@/rules/draft-progress'
 import type { AbilityMethod, DraftStep } from '@/types/character'
 
 const {
@@ -45,6 +46,9 @@ const {
   stepNumber,
   canContinue,
   createDraft,
+  defaultRuleset,
+  rulesetFallbackNotice,
+  updateRuleset,
   openDraft,
   returnToStart,
   deleteDraft,
@@ -87,6 +91,9 @@ const {
 /** 等级调整弹窗：仅由角色卡页发起，目标始终为当前活动草稿。 */
 const levelModalOpen = ref(false)
 
+/** 已有构筑选择的草稿锁定版本卡片：不原地转换（B00-04；另建流程归 B09-03）。 */
+const rulesetLocked = computed(() => activeDraft.value ? hasBuildChoices(activeDraft.value) : false)
+
 function openLevelModal(): void {
   levelModalOpen.value = true
 }
@@ -121,6 +128,7 @@ function updateMethod(value: AbilityMethod): void {
     v-if="!activeDraft"
     :drafts="drafts"
     :legacy-drafts="legacyDrafts"
+    :default-ruleset="defaultRuleset"
     @create="createDraft"
     @open="openDraft"
     @delete="deleteDraft"
@@ -145,7 +153,17 @@ function updateMethod(value: AbilityMethod): void {
     <div v-if="levelAdjustNotice" class="builder-level-notice" @click="goToLevelAdjustStep">
       <UiNotice :tone="levelAdjustNotice.tone" :title="levelAdjustNotice.message">点击前往对应步骤处理。</UiNotice>
     </div>
-    <SetupStep v-if="step === 'setup'" :target-level="activeDraft.targetLevel" :ability-method="activeDraft.abilityMethod" @level="updateLevel" @method="updateMethod" />
+    <SetupStep
+      v-if="step === 'setup'"
+      :target-level="activeDraft.targetLevel"
+      :ability-method="activeDraft.abilityMethod"
+      :ruleset="activeDraft.ruleset"
+      :ruleset-locked="rulesetLocked"
+      :ruleset-fallback="rulesetFallbackNotice"
+      @level="updateLevel"
+      @method="updateMethod"
+      @ruleset="updateRuleset"
+    />
     <SourcesStep v-else-if="step === 'sources'" :selected="activeDraft.enabledSourceIds" @change="updateSources" />
     <ClassStep
       v-else-if="step === 'class'"

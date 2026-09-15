@@ -9,6 +9,8 @@ import { EMPTY_CURRENCY, isStartingEquipmentComplete } from '@/rules/starting-eq
 import { getDefaultEnabledSourceIds } from '@/rules/source-books'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { isRulesetOpen } from '@/rules/repositories'
+import { hasBuildChoices } from '@/rules/draft-progress'
+import { resolveInitialRuleset } from '@/services/ruleset-preference'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { getEffectiveSpellSlots } from '@/rules/spellcasting'
 import { reconcileSessionLimits } from '@/rules/session-state'
@@ -29,8 +31,7 @@ import type {
 
 const DEFAULT_ABILITIES: AbilityScores = { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 }
 
-/** 未完成验收的规则版本不进入产品入口；数据层仍可创建与往返。 */
-const UNOPENED_RULESET_MESSAGE = '2024 角色尚未开放，暂不能导入。'
+const UNOPENED_RULESET_MESSAGE = '该规则版本的角色尚未开放，暂不能导入。'
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `draft-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -114,8 +115,8 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
 
   watch(drafts, (value) => DraftStorageService.saveAll(value), { deep: true })
 
-  function createDraft(ruleset: RulesetId = '5e-2014'): CharacterDraft {
-    const draft = createCharacterDraft(ruleset)
+  function createDraft(ruleset?: RulesetId): CharacterDraft {
+    const draft = createCharacterDraft(ruleset ?? resolveInitialRuleset().ruleset)
     drafts.value.push(draft)
     activeDraftId.value = draft.id
     return draft
@@ -147,6 +148,24 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     const current = drafts.value[index]
     if (!current) return
     replaceDraft(index, current, { ...current, ...patch, updatedAt: new Date().toISOString() })
+  }
+
+  /**
+   * 切换活动草稿的规则版本（B00-04）：仅在尚未产生构筑选择时允许；
+   * 已有构筑的版本变更走另建流程（B09-03），不在此处原地转换。
+   */
+  function changeRuleset(ruleset: RulesetId): boolean {
+    const index = drafts.value.findIndex((draft) => draft.id === activeDraftId.value)
+    if (index < 0) return false
+    const current = drafts.value[index]
+    if (!current || current.ruleset === ruleset || hasBuildChoices(current)) return false
+    replaceDraft(index, current, {
+      ...current,
+      ruleset,
+      enabledSourceIds: ruleset === '5e-2014' ? getDefaultEnabledSourceIds() : [],
+      updatedAt: new Date().toISOString(),
+    })
+    return true
   }
 
   function replaceDraft(index: number, current: CharacterDraft, next: CharacterDraft): void {
@@ -244,6 +263,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     validationIssues,
     completion,
     createDraft,
+    changeRuleset,
     activateDraft,
     closeActiveDraft,
     deleteDraft,

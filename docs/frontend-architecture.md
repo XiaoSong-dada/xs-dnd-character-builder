@@ -462,6 +462,10 @@ src/services/session-state-storage.ts（跑团助手局内状态，独立 localS
 src/services/update-notice-storage.ts（已读版本，独立 localStorage key；SSR/异常安全降级）
   -> src/utils/version.ts
 
+src/services/ruleset-preference.ts（本设备版本偏好，独立 localStorage key；SSR/异常容错；含新建版本解析与未开放回退报告）
+  -> src/rules/repositories（isRulesetId、isRulesetOpen）
+  -> src/types/character
+
 src/types/session-state.ts
   -> 无项目内依赖（SessionState、13 项预置状态与力竭常量）
 
@@ -495,6 +499,7 @@ src/rules/repositories.ts        -> src/rules/data/{classes-2024,sources-2024,su
 src/rules/item-catalog-loader.ts  -> src/rules/data/generated/magic-items-catalog-2014（动态 import；模块级 Promise 缓存 + 失败重试）
 src/rules/derive.ts              -> src/rules/{repositories,feats,origins,subclass-effects}
 src/rules/validate.ts            -> src/rules/{repositories,derive,feats,abilities,timeline,spellcasting,starting-equipment,weapon-mastery}（含子职必备戏法等提示级校验）
+src/rules/draft-progress.ts      （无内部依赖，纯函数：是否存在构筑选择，供改版门禁与后续影响提示使用）
 src/rules/dependency.ts          -> src/rules/{derive,repositories,feats,timeline}
 src/rules/timeline.ts            -> src/rules/{repositories,feats} + src/rules/data/feats-2014
 src/rules/spellcasting.ts        -> src/rules/{repositories,derive,origins}（双版本施法配置、表定准备数、始终准备与免费施法来源解析）

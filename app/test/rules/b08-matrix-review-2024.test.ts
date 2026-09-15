@@ -197,10 +197,12 @@ describe('B08-14 2024 目标矩阵复核', () => {
     }
   })
 
-  it('2024 入口保持关闭，未完成内容不可选', () => {
-    expect([...OPEN_RULESETS]).toEqual(['5e-2014'])
-    expect(isRulesetOpen('5e-2024')).toBe(false)
+  it('2024 入口已开放，未按版本仍被拒绝（B09-01）', () => {
+    expect([...OPEN_RULESETS]).toEqual(['5e-2014', '5e-2024'])
+    expect(isRulesetOpen('5e-2024')).toBe(true)
     expect(isRulesetOpen('5e-2014')).toBe(true)
+    expect(isRulesetOpen('5e-2099')).toBe(false)
+    expect(isRulesetOpen(undefined)).toBe(false)
   })
 
   it('盗贼黑话额外语言进入语言选择与校验（2014 不受影响）', () => {

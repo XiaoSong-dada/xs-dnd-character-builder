@@ -5,8 +5,9 @@ import { nextTick } from 'vue'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import { deriveCharacter } from '@/rules/derive'
 import { EMPTY_MANUAL_EDITS } from '@/rules/manual-edits'
-import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
+import { CharacterJsonService } from '@/services/character-json'
 import { CharacterPackageService } from '@/services/character-package'
+import { RulesetPreferenceService } from '@/services/ruleset-preference'
 import { SessionStateStorageService } from '@/services/session-state-storage'
 
 describe('character drafts store', () => {
@@ -119,33 +120,42 @@ describe('character drafts store', () => {
     expect(reloaded.drafts.map((draft) => draft.ruleset).sort()).toEqual(['5e-2014', '5e-2024'])
   })
 
-  it('拒绝导入尚未开放的 2024 角色文件且不产生草稿', () => {
+  it('新建按本设备偏好解析版本，已有构筑不能原地改版（B09-01）', () => {
+    const store = useCharacterDraftsStore()
+    RulesetPreferenceService.savePreferredRuleset('5e-2024')
+    const modern = store.createDraft()
+    expect(modern.ruleset).toBe('5e-2024')
+    expect(modern.enabledSourceIds).toEqual([])
+
+    expect(store.changeRuleset('5e-2014')).toBe(true)
+    expect(store.activeDraft?.ruleset).toBe('5e-2014')
+    expect(store.activeDraft?.enabledSourceIds.length).toBeGreaterThan(0)
+
+    expect(store.changeRuleset('5e-2024')).toBe(true)
+    store.updateDraft({ classId: 'class-2024-fighter' })
+    expect(store.changeRuleset('5e-2014')).toBe(false)
+    expect(store.activeDraft?.ruleset).toBe('5e-2024')
+    expect(store.activeDraft?.classId).toBe('class-2024-fighter')
+  })
+
+  it('导入 2024 角色文件与完整角色包均成功（B09-01）', async () => {
     const store = useCharacterDraftsStore()
     const raw = JSON.stringify({
       schemaVersion: 8,
-      id: 'unopened-2024',
+      id: 'opened-2024',
       ruleset: '5e-2024',
       baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
       selections: [],
     })
 
-    expect(() => store.importDraft(raw)).toThrowError(CharacterImportError)
-    expect(() => store.importDraft(raw)).toThrowError('尚未开放')
-    expect(store.drafts).toHaveLength(0)
-  })
+    const imported = store.importDraft(raw)
+    expect(imported.ruleset).toBe('5e-2024')
+    expect(store.drafts).toHaveLength(1)
 
-  it('拒绝导入尚未开放的 2024 完整角色包且不产生草稿', async () => {
-    const store = useCharacterDraftsStore()
-    const draft = CharacterJsonService.importDraft(JSON.stringify({
-      schemaVersion: 8,
-      id: 'unopened-package-2024',
-      ruleset: '5e-2024',
-      baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
-      selections: [],
-    }))
+    const draft = CharacterJsonService.importDraft(raw)
     const bytes = await CharacterPackageService.build(draft)
-
-    await expect(store.importPackage(new Blob([bytes as BlobPart], { type: 'application/zip' }))).rejects.toThrow('尚未开放')
-    expect(store.drafts).toHaveLength(0)
+    const packed = await store.importPackage(new Blob([bytes as BlobPart], { type: 'application/zip' }))
+    expect(packed.ruleset).toBe('5e-2024')
+    expect(store.drafts).toHaveLength(2)
   })
 })

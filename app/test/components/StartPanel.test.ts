@@ -41,6 +41,23 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
+describe('StartPanel 版本展示（B09-01）', () => {
+  it('hero 按默认版本显示，角色条显示自身版本', () => {
+    const legacy = { ...draft, id: 'legacy-draft', ruleset: '5e-2014' as const }
+    const modern = { ...draft, id: 'modern-draft', ruleset: '5e-2024' as const }
+    const wrapper = mount(StartPanel, { props: { drafts: [legacy, modern], legacyDrafts: [], defaultRuleset: '5e-2024' } })
+
+    expect(wrapper.text()).toContain('D&D 5e · 2024')
+    expect(wrapper.text()).toContain('2014 · 3级')
+    expect(wrapper.text()).toContain('2024 · 3级')
+  })
+
+  it('未传入默认版本时 hero 回退 2014', () => {
+    const wrapper = mount(StartPanel, { props: { drafts: [], legacyDrafts: [] } })
+    expect(wrapper.text()).toContain('D&D 5e · 2014')
+  })
+})
+
 describe('StartPanel draft deletion', () => {
   it('requires confirmation before emitting delete', async () => {
     const wrapper = mount(StartPanel, {

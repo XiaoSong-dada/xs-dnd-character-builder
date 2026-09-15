@@ -16,6 +16,7 @@ import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rule
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { CharacterPackageService } from '@/services/character-package'
+import { RulesetPreferenceService, resolveInitialRuleset } from '@/services/ruleset-preference'
 import { downloadXlsx, fillTemplate, loadCharacterSheetTemplate } from '@/services/export-xlsx'
 import { buildCharacterSheetPdf, downloadPdf } from '@/services/export-pdf'
 import { buildCharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
@@ -31,6 +32,7 @@ import type {
   DraftStep,
   InventoryEntry,
   InfusionAssignment,
+  RulesetId,
   SpellSelections,
   StartingEquipmentSelection,
 } from '@/types/character'
@@ -45,6 +47,10 @@ export function useCharacterBuilderPage() {
   const store = useCharacterDraftsStore()
   const { drafts, legacyDrafts, activeDraft, derivedSummary, validationIssues, completion } = storeToRefs(store)
   const importError = ref('')
+  /** 新建默认版本（按本设备偏好解析，B00-02）；起点页 hero 与第一页共用。 */
+  const defaultRuleset = ref<RulesetId>(resolveInitialRuleset().ruleset)
+  /** 记忆版本尚未开放时的回退说明（Q-B09-1：第一页内联提示）。 */
+  const rulesetFallbackNotice = ref<RulesetId>()
   const exportingFormat = ref<'pdf' | 'xlsx' | 'zip'>()
   const exportNotice = ref<{ readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }>()
   const pendingChange = ref<{
@@ -136,7 +142,24 @@ export function useCharacterBuilderPage() {
   }
 
   function createDraft(): void {
-    syncRoute(store.createDraft())
+    const resolved = resolveInitialRuleset()
+    syncRoute(store.createDraft(resolved.ruleset))
+    defaultRuleset.value = resolved.ruleset
+    rulesetFallbackNotice.value = resolved.fellBack ? resolved.preferred : undefined
+  }
+
+  /** 第一页显式选择版本（B00-02）：只在本设备偏好中记忆；已有构筑不原地转换（B00-04，另建流程归 B09-03）。 */
+  function updateRuleset(value: RulesetId): void {
+    const draft = store.activeDraft
+    if (!draft || draft.ruleset === value) return
+    if (!store.changeRuleset(value)) return
+    RulesetPreferenceService.savePreferredRuleset(value)
+    defaultRuleset.value = value
+    rulesetFallbackNotice.value = undefined
+  }
+
+  function dismissRulesetFallbackNotice(): void {
+    rulesetFallbackNotice.value = undefined
   }
 
   function openDraft(id: string): void {
@@ -629,6 +652,10 @@ export function useCharacterBuilderPage() {
     stepNumber,
     canContinue,
     createDraft,
+    defaultRuleset,
+    rulesetFallbackNotice,
+    dismissRulesetFallbackNotice,
+    updateRuleset,
     openDraft,
     returnToStart,
     deleteDraft,

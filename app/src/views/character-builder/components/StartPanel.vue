@@ -8,12 +8,19 @@ import { CharacterMediaImage } from '@/features/character-media'
 import { siteConfig } from '@/config/site'
 import { rulesRepository } from '@/rules/repository'
 import { STEP_META } from '@/views/character-builder/steps'
-import type { CharacterDraft, LegacyDraftRecord } from '@/types/character'
+import type { CharacterDraft, LegacyDraftRecord, RulesetId } from '@/types/character'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   drafts: readonly CharacterDraft[]
   legacyDrafts: readonly LegacyDraftRecord[]
-}>()
+  /** 新建默认版本（按本设备偏好解析，B00-02）。 */
+  defaultRuleset?: RulesetId
+}>(), { defaultRuleset: '5e-2014' })
+
+/** 2014／2024 短标签：供 hero 与角色条展示版本。 */
+function rulesetLabel(ruleset: RulesetId): string {
+  return ruleset === '5e-2024' ? '2024' : '2014'
+}
 
 function readFile(event: Event): void {
   const input = event.target as HTMLInputElement
@@ -65,7 +72,7 @@ const hasSiteInfo = computed(() => Boolean(siteConfig.authorName || siteConfig.g
   <section class="start-panel">
     <div class="start-panel__hero">
       <span aria-hidden="true">◇</span>
-      <p>D&amp;D 5e · 2014</p>
+      <p>D&amp;D 5e · {{ rulesetLabel(props.defaultRuleset) }}</p>
       <h1>从一个英雄想法开始</h1>
       <small>每个决定都会说明它影响的规则和数值。</small>
       <p v-if="hasSiteInfo" class="start-panel__signature">
@@ -93,7 +100,7 @@ const hasSiteInfo = computed(() => Boolean(siteConfig.authorName || siteConfig.g
     >
       <button type="button" class="start-panel__draft-open" @click="$emit('open', draft.id)">
         <CharacterMediaImage v-if="draft.media?.avatar" class="start-panel__draft-avatar" :media-id="draft.media.avatar.mediaId" :alt="`${draft.name || '角色'}头像`" />
-        <span><strong>{{ draft.name || '未命名角色' }}</strong><small>{{ draft.targetLevel }}级 · {{ statusText(draft) }}</small></span>
+        <span><strong>{{ draft.name || '未命名角色' }}</strong><small>{{ rulesetLabel(draft.ruleset) }} · {{ draft.targetLevel }}级 · {{ statusText(draft) }}</small></span>
         <b>继续 ›</b>
       </button>
       <button
