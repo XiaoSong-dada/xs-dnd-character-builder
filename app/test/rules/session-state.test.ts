@@ -7,7 +7,11 @@ import {
   applyShortRest,
   applySpellSlotChange,
   clampCurrentHp,
+  averageHitDieValue,
   createInitialSessionState,
+  ensureHitDicePool,
+  spendHitDice,
+  undoHitDiceSpend,
   getAvailableSlotLevels,
   restoreLastRest,
   reconcileSessionLimits,
@@ -259,5 +263,76 @@ describe('session-state 可施法环位（升环）', () => {
     expect(getAvailableSlotLevels(state, 3, pactSlots)).toEqual([5])
     const exhausted: SessionState = { ...baseState, usedSpellSlots: { 5: 2 } }
     expect(getAvailableSlotLevels(exhausted, 5, pactSlots)).toEqual([])
+  })
+
+})
+
+describe('B10-01 两版休息与生命骰', () => {
+  const modern = () => createInitialSessionState('draft-2024', 30, 5)
+
+  it('2024 短休不自动治疗，仅恢复契约法术位并保留快照', () => {
+    const state = { ...modern(), currentHp: 10, usedSpellSlots: { 1: 2, 3: 1 }, exhaustionLevel: 2, debuffs: ['poisoned'] }
+    const rested = applyShortRest(state, [3], 30, { ruleset: '5e-2024' })
+
+    expect(rested.currentHp).toBe(10)
+    expect(rested.usedSpellSlots).toEqual({ 1: 2, 3: 0 })
+    expect(rested.exhaustionLevel).toBe(2)
+    expect(rested.lastRestSnapshot?.currentHp).toBe(10)
+  })
+
+  it('2024 长休：回满血、法术位与生命骰恢复、力竭 −1、debuff 保持', () => {
+    const state = { ...modern(), currentHp: 8, usedSpellSlots: { 2: 3 }, exhaustionLevel: 2, debuffs: ['prone'], hitDice: { total: 5, spent: 4 } }
+    const rested = applyLongRest(state, 30, { ruleset: '5e-2024' })
+
+    expect(rested.currentHp).toBe(30)
+    expect(rested.usedSpellSlots).toEqual({})
+    expect(rested.hitDice).toEqual({ total: 5, spent: 0 })
+    expect(rested.exhaustionLevel).toBe(1)
+    expect(rested.debuffs).toEqual(['prone'])
+    expect(rested.lastRestSnapshot?.hitDice).toEqual({ total: 5, spent: 4 })
+  })
+
+  it('2014 行为不变：长休清零力竭与 debuff，短休回一半损失', () => {
+    const state = { ...createInitialSessionState('draft-2014', 30), currentHp: 10, exhaustionLevel: 2, debuffs: ['prone'] }
+    const short = applyShortRest(state, [], 30)
+    expect(short.currentHp).toBe(20)
+    const long = applyLongRest(state, 30)
+    expect(long.exhaustionLevel).toBe(0)
+    expect(long.debuffs).toEqual([])
+  })
+
+  it('花费生命骰：按骰点＋消耗数×体质恢复并可撤回', () => {
+    const state = { ...modern(), currentHp: 10, hitDice: { total: 5, spent: 1 } }
+    const spent = spendHitDice(state, { count: 2, outcomes: [6, 3], conModifier: 2, maxHp: 30 })
+
+    expect(spent.hitDice).toEqual({ total: 5, spent: 3 })
+    expect(spent.currentHp).toBe(10 + 6 + 3 + 2 * 2)
+
+    const undone = undoHitDiceSpend(spent)
+    expect(undone.currentHp).toBe(10)
+    expect(undone.hitDice).toEqual({ total: 5, spent: 1 })
+    expect(undone.lastHitDiceSnapshot).toBeUndefined()
+  })
+
+  it('生命骰边界：无池/耗尽不改动，恢复量至少 1 且不超过最大 HP', () => {
+    expect(spendHitDice(createInitialSessionState('draft-2014', 20), { count: 1, outcomes: [4], conModifier: 0, maxHp: 20 })).toEqual(createInitialSessionState('draft-2014', 20))
+    const exhausted = { ...modern(), hitDice: { total: 5, spent: 5 }, currentHp: 5 }
+    expect(spendHitDice(exhausted, { count: 1, outcomes: [6], conModifier: 3, maxHp: 30 })).toBe(exhausted)
+    const negative = { ...modern(), currentHp: 10, hitDice: { total: 5, spent: 0 } }
+    const healed = spendHitDice(negative, { count: 1, outcomes: [1], conModifier: -3, maxHp: 30 })
+    expect(healed.currentHp).toBe(11)
+    const capped = spendHitDice({ ...negative, currentHp: 29 }, { count: 1, outcomes: [12], conModifier: 0, maxHp: 30 })
+    expect(capped.currentHp).toBe(30)
+  })
+
+  it('旧状态迁移补全骰池并把花费数钳制到总数内', () => {
+    const legacy = createInitialSessionState('draft-legacy', 20)
+    expect(legacy.hitDice).toBeUndefined()
+    const migrated = ensureHitDicePool({ ...legacy, hitDice: { total: 3, spent: 7 } }, 4)
+    expect(migrated.hitDice).toEqual({ total: 4, spent: 3 })
+  })
+
+  it('“直接回”平均值：d6→4、d8→5、d10→6、d12→7', () => {
+    expect([6, 8, 10, 12].map(averageHitDieValue)).toEqual([4, 5, 6, 7])
   })
 })

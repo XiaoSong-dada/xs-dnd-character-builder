@@ -196,7 +196,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     if (state) {
       const oldMaxHp = deriveCharacter(current).hitPoints.value
       const newMaxHp = deriveCharacter(next).hitPoints.value
-      SessionStateStorageService.save(reconcileSessionLimits(state, oldMaxHp, newMaxHp, getEffectiveSpellSlots(next)))
+      SessionStateStorageService.save(reconcileSessionLimits(state, oldMaxHp, newMaxHp, getEffectiveSpellSlots(next), next.ruleset === '5e-2024' ? next.targetLevel : undefined))
     }
     drafts.value[index] = next
   }

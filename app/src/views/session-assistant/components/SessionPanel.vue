@@ -361,6 +361,25 @@ function openTranscribe(spellId?: string): void {
               撤回上次休息
             </button>
           </div>
+          <div v-if="panel.hitDice.value" class="session-panel__hit-dice">
+            <p>
+              生命骰 d{{ panel.hitDice.value.die }}：剩余
+              <b>{{ panel.hitDice.value.remaining }}</b> / {{ panel.hitDice.value.total }} 颗
+              <small>短休可花费生命骰恢复生命（骰点＋消耗数×体质调整值）。</small>
+            </p>
+            <div class="session-panel__rest-actions">
+              <button type="button" class="session-panel__rest-button" :disabled="panel.hitDice.value.remaining === 0" @click="panel.spendHitDice(1, 'roll')">掷骰消耗 1 颗</button>
+              <button type="button" class="session-panel__rest-button" :disabled="panel.hitDice.value.remaining === 0" @click="panel.spendHitDice(1, 'average')">直接回 1 颗（{{ panel.hitDice.value.average }}）</button>
+              <button
+                v-if="panel.hitDiceSnapshotAvailable.value"
+                type="button"
+                class="session-panel__rest-button session-panel__rest-button--undo"
+                @click="panel.undoHitDice()"
+              >
+                撤回生命骰消耗
+              </button>
+            </div>
+          </div>
         </div>
         <div class="session-panel__footer" />
       </div>
