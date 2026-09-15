@@ -6,7 +6,7 @@ import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import { CharacterMediaImage } from '@/features/character-media'
 import { siteConfig } from '@/config/site'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import { STEP_META } from '@/views/character-builder/steps'
 import type { CharacterDraft, LegacyDraftRecord, RulesetId } from '@/types/character'
 
@@ -57,13 +57,12 @@ function confirmDelete(): void {
 }
 
 /** 角色条第三段信息：完成态显示职业；进行中已选职业显示"职业 · 第N步"；未选职业显示"第N步 · 步骤名"。 */
-function statusText(draft: CharacterDraft): string {
+const statusText = (draft: CharacterDraft): string => {
   const meta = STEP_META[draft.currentStep]
-  const className = draft.classId ? rulesRepository.getClass(draft.classId)?.name : undefined
+  const className = draft.classId ? getRulesRepository(draft.ruleset).getClass(draft.classId)?.name : undefined
   if (draft.currentStep === 'sheet') return className ?? meta.eyebrow
   return className ? `${className} · ${meta.eyebrow}` : `${meta.eyebrow} · ${meta.title}`
 }
-
 /** hero 署名行：任一站点信息配置后即渲染（tagline 预留不展示）。 */
 const hasSiteInfo = computed(() => Boolean(siteConfig.authorName || siteConfig.githubUrl || siteConfig.version))
 </script>

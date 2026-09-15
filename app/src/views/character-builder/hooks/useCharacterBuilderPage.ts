@@ -8,7 +8,6 @@ import { getRulesRepository } from '@/rules/repositories'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
-import { rulesRepository } from '@/rules/repository'
 import { isSourceEnabled, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { buildTimeline } from '@/rules/timeline'
 import { validateSpellSelections } from '@/rules/spellcasting'
@@ -51,6 +50,8 @@ export function useCharacterBuilderPage() {
   const defaultRuleset = ref<RulesetId>(resolveInitialRuleset().ruleset)
   /** 记忆版本尚未开放时的回退说明（Q-B09-1：第一页内联提示）。 */
   const rulesetFallbackNotice = ref<RulesetId>()
+  /** 按草稿版本取仓库（B09-02）：绑定、名称与校验均不得使用固定 2014 仓库。 */
+  const repositoryFor = (draft: { readonly ruleset: RulesetId } | undefined) => getRulesRepository(draft?.ruleset ?? defaultRuleset.value)
   const exportingFormat = ref<'pdf' | 'xlsx' | 'zip'>()
   const exportNotice = ref<{ readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }>()
   const pendingChange = ref<{
@@ -71,8 +72,8 @@ export function useCharacterBuilderPage() {
   const raceFlexibleCount = computed(() => {
     const draft = activeDraft.value
     if (!draft) return 0
-    const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-    const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+    const race = draft.raceId ? repositoryFor(draft).getRace(draft.raceId) : undefined
+    const subrace = draft.subraceId ? repositoryFor(draft).getRace(draft.subraceId) : undefined
     const flexibleRule = getFlexibleBonusRule(race, subrace)
     return flexibleRule?.flexibleBonusGroups?.reduce((sum, group) => sum + group.count, 0)
       ?? flexibleRule?.flexibleBonusCount ?? 0
@@ -80,15 +81,15 @@ export function useCharacterBuilderPage() {
   const raceFlexibleGroups = computed(() => {
     const draft = activeDraft.value
     if (!draft) return undefined
-    const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-    const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+    const race = draft.raceId ? repositoryFor(draft).getRace(draft.raceId) : undefined
+    const subrace = draft.subraceId ? repositoryFor(draft).getRace(draft.subraceId) : undefined
     return getFlexibleBonusRule(race, subrace)?.flexibleBonusGroups
   })
   const excludedRaceAbilityChoices = computed(() => {
     const draft = activeDraft.value
     if (!draft) return []
-    const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-    const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+    const race = draft.raceId ? repositoryFor(draft).getRace(draft.raceId) : undefined
+    const subrace = draft.subraceId ? repositoryFor(draft).getRace(draft.subraceId) : undefined
     return subrace?.excludedFlexibleAbilityKeys ?? race?.excludedFlexibleAbilityKeys ?? []
   })
   const step = computed(() => activeDraft.value?.currentStep ?? 'setup')
@@ -113,8 +114,8 @@ export function useCharacterBuilderPage() {
     if (step.value === 'class') return Boolean(draft.classId)
     if (step.value === 'sources') return true
     if (step.value === 'origin') {
-      const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-      const background = draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
+      const race = draft.raceId ? repositoryFor(draft).getRace(draft.raceId) : undefined
+      const background = draft.backgroundId ? repositoryFor(draft).getBackground(draft.backgroundId) : undefined
       return Boolean(
         background
         && race
@@ -373,25 +374,25 @@ export function useCharacterBuilderPage() {
     const add = (label: string, rule: { readonly sourceIds: readonly string[] } | undefined): void => {
       if (rule && !isSourceEnabled(rule.sourceIds, enabledSourceIds)) affected.push(label)
     }
-    add(`职业：${draft.classId ? rulesRepository.getClass(draft.classId)?.name ?? draft.classId : ''}`, draft.classId ? rulesRepository.getClass(draft.classId) : undefined)
-    add(`子职：${draft.subclassId ? rulesRepository.getSubclass(draft.subclassId)?.name ?? draft.subclassId : ''}`, draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined)
-    add(`种族：${draft.raceId ? rulesRepository.getRace(draft.raceId)?.name ?? draft.raceId : ''}`, draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined)
-    add(`子种族：${draft.subraceId ? rulesRepository.getRace(draft.subraceId)?.name ?? draft.subraceId : ''}`, draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined)
-    add(`背景：${draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId)?.name ?? draft.backgroundId : ''}`, draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined)
-    add(`背景变体：${draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId)?.name ?? draft.backgroundVariantId : ''}`, draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId) : undefined)
+    add(`职业：${draft.classId ? repositoryFor(draft).getClass(draft.classId)?.name ?? draft.classId : ''}`, draft.classId ? repositoryFor(draft).getClass(draft.classId) : undefined)
+    add(`子职：${draft.subclassId ? repositoryFor(draft).getSubclass(draft.subclassId)?.name ?? draft.subclassId : ''}`, draft.subclassId ? repositoryFor(draft).getSubclass(draft.subclassId) : undefined)
+    add(`种族：${draft.raceId ? repositoryFor(draft).getRace(draft.raceId)?.name ?? draft.raceId : ''}`, draft.raceId ? repositoryFor(draft).getRace(draft.raceId) : undefined)
+    add(`子种族：${draft.subraceId ? repositoryFor(draft).getRace(draft.subraceId)?.name ?? draft.subraceId : ''}`, draft.subraceId ? repositoryFor(draft).getRace(draft.subraceId) : undefined)
+    add(`背景：${draft.backgroundId ? repositoryFor(draft).getBackground(draft.backgroundId)?.name ?? draft.backgroundId : ''}`, draft.backgroundId ? repositoryFor(draft).getBackground(draft.backgroundId) : undefined)
+    add(`背景变体：${draft.backgroundVariantId ? repositoryFor(draft).getBackground(draft.backgroundVariantId)?.name ?? draft.backgroundVariantId : ''}`, draft.backgroundVariantId ? repositoryFor(draft).getBackground(draft.backgroundVariantId) : undefined)
     for (const selection of draft.selections.filter((item) => !item.invalidatedAt)) {
       for (const optionId of selection.optionIds) {
-        const option = rulesRepository.getOption(optionId)
+        const option = repositoryFor(draft).getOption(optionId)
         add(`选择：${option?.name ?? optionId}`, option)
       }
     }
     const spellIds = Object.values(draft.spellSelections).flat()
     for (const spellId of new Set(spellIds)) {
-      const spell = rulesRepository.getSpell(spellId)
+      const spell = repositoryFor(draft).getSpell(spellId)
       add(`法术：${spell?.name ?? spellId}`, spell)
     }
     for (const entry of draft.inventory) {
-      const item = rulesRepository.getEquipment(entry.itemId)
+      const item = repositoryFor(draft).getEquipment(entry.itemId)
       add(`物品：${item?.name ?? entry.itemId}`, item)
     }
     return [...new Set(affected.filter((item) => !item.endsWith('：')))]
@@ -434,8 +435,8 @@ export function useCharacterBuilderPage() {
   }
 
   function selectBackground(id: string): void {
-    const background = rulesRepository.getBackground(id)
     const draft = activeDraft.value
+    const background = repositoryFor(draft).getBackground(id)
     if (!draft || draft.backgroundId === id) return
     const apply = () => {
       const equipment = buildStartingEquipmentState({ ...draft, backgroundId: id })

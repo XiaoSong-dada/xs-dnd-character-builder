@@ -5,11 +5,14 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiScrollModal from '@/components/ui/UiScrollModal.vue'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
+import type { RulesetId } from '@/types/character'
 import type { ManualAddedSpell, ManualSpellDestination, SpellcastingMode } from '@/types/character'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 
-const props = defineProps<{ open: boolean; mode?: SpellcastingMode; existingIds: readonly string[] }>()
+const props = withDefaults(defineProps<{ open: boolean; mode?: SpellcastingMode; existingIds: readonly string[]; ruleset?: RulesetId }>(), { ruleset: '5e-2014' })
+/** 人工添加法术的候选按草稿版本解析（B09-02）。 */
+const repository = computed(() => getRulesRepository(props.ruleset))
 const emit = defineEmits<{ close: []; add: [spell: ManualAddedSpell] }>()
 const search = ref('')
 const selectedId = ref('')
@@ -37,7 +40,7 @@ watch(() => props.open, (open) => {
 })
 const filtered = computed(() => {
   const query = search.value.trim().toLocaleLowerCase()
-  return rulesRepository.spells.filter((spell) => !props.existingIds.includes(spell.id)
+  return repository.value.spells.filter((spell) => !props.existingIds.includes(spell.id)
     && (!query || `${spell.name} ${spell.englishName} ${spell.id}`.toLocaleLowerCase().includes(query)))
 })
 function submit(): void {

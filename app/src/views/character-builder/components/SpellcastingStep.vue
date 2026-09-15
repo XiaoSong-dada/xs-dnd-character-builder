@@ -18,20 +18,23 @@ import {
   getAlwaysPreparedSpellIds,
   usesPreparedSelection,
 } from '@/rules/spellcasting'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
+import type { SpellRule } from '@/types/rules'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{ draft: CharacterDraft }>()
 const emit = defineEmits<{ change: [value: SpellSelections] }>()
 const config = computed(() => getSpellcastingConfig(props.draft))
+/** 法术候选、来源与名称按草稿版本解析（B09-02）。 */
+const repository = computed(() => getRulesRepository(props.draft.ruleset))
 const search = ref('')
 const sourceFilter = ref('all')
 const sourceOptions = computed(() => [
   { id: 'all', label: '全部来源' },
-  ...rulesRepository.sources.filter((source) => source.category === 'core' || (props.draft.enabledSourceIds ?? []).includes(source.id)).map((source) => ({ id: source.id, label: source.shortTitle })),
+  ...repository.value.sources.filter((source) => source.category === 'core' || (props.draft.enabledSourceIds ?? []).includes(source.id)).map((source) => ({ id: source.id, label: source.shortTitle })),
 ])
-const matchesView = (spell: NonNullable<ReturnType<typeof rulesRepository.getSpell>>): boolean => {
+const matchesView = (spell: SpellRule): boolean => {
   const keyword = search.value.trim().toLocaleLowerCase('zh-CN')
   return (sourceFilter.value === 'all' || spell.sourceIds.includes(sourceFilter.value))
     && (!keyword || `${spell.name}${spell.englishName}`.toLocaleLowerCase('zh-CN').includes(keyword))
@@ -39,10 +42,10 @@ const matchesView = (spell: NonNullable<ReturnType<typeof rulesRepository.getSpe
 /** 施法来源名称（子职施法优先，如奥法骑士/诡术师；否则职业）。 */
 const castingSourceName = computed(() => {
   if (props.draft.subclassId) {
-    const subclass = rulesRepository.getSubclass(props.draft.subclassId)
+    const subclass = repository.value.getSubclass(props.draft.subclassId)
     if (subclass?.spellcasting) return subclass.name
   }
-  return props.draft.classId ? rulesRepository.getClass(props.draft.classId)?.name ?? '' : ''
+  return props.draft.classId ? repository.value.getClass(props.draft.classId)?.name ?? '' : ''
 })
 const requiredCount = computed(() => config.value ? getRequiredSpellCount(props.draft, config.value) : 0)
 const requiredCantripCount = computed(() => config.value ? getRequiredCantripCount(props.draft, config.value) : 0)
@@ -54,7 +57,7 @@ const spellbookExtraCandidates = computed(() => config.value ? getSpellbookExtra
 const normalSpellbookCount = computed(() => props.draft.spellSelections.spellbookSpellIds
   .filter((id) => !props.draft.spellSelections.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
 const selectedIds = computed(() => config.value ? getSelectedSpellIds(props.draft, config.value) : [])
-const alwaysPreparedSpells = computed(() => getAlwaysPreparedSpellIds(props.draft).map((id) => rulesRepository.getSpell(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell)))
+const alwaysPreparedSpells = computed(() => getAlwaysPreparedSpellIds(props.draft).map((id) => repository.value.getSpell(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell)))
 const cantrips = computed(() => config.value ? getAvailableSpells(props.draft, config.value).filter((spell) => spell.level === 0 && matchesView(spell)) : [])
 const maximumLevel = computed(() => config.value ? getMaximumSpellLevel(config.value, props.draft.targetLevel) : 0)
 const spellSlots = computed(() => config.value ? getSpellSlots(config.value, props.draft.targetLevel) : [])

@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import {
   TRANSCRIBE_HOURS_PER_LEVEL,
   applyTranscription,
@@ -44,7 +44,7 @@ export function useSpellbookTranscription(getDraft: () => CharacterDraft) {
   const totalCost = computed(() => getTranscribeTotalCost(selectedIds.value))
   /** 抄录耗时（仅提示）：每个法术环级 × 2 小时。 */
   const totalHours = computed(() => selectedIds.value.reduce((sum, id) => {
-    const spell = rulesRepository.getSpell(id)
+    const spell = getRulesRepository(getDraft().ruleset).getSpell(id)
     return sum + (spell ? spell.level * TRANSCRIBE_HOURS_PER_LEVEL : 0)
   }, 0))
   const totalGold = computed(() => {

@@ -164,11 +164,12 @@ function updateMethod(value: AbilityMethod): void {
       @method="updateMethod"
       @ruleset="updateRuleset"
     />
-    <SourcesStep v-else-if="step === 'sources'" :selected="activeDraft.enabledSourceIds" @change="updateSources" />
+    <SourcesStep v-else-if="step === 'sources'" :selected="activeDraft.enabledSourceIds" :ruleset="activeDraft.ruleset" @change="updateSources" />
     <ClassStep
       v-else-if="step === 'class'"
       :selected="activeDraft.classId"
       :enabled-source-ids="activeDraft.enabledSourceIds"
+      :ruleset="activeDraft.ruleset"
       @select="selectClass"
     />
     <OriginStep

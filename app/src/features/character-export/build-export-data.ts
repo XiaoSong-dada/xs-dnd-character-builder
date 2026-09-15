@@ -1,12 +1,13 @@
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { SUBCLASS_CHOICE_OPTION_IDS } from '@/rules/data/subclass-choice-options-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpellcastingConfig, usesPreparedSelection } from '@/rules/spellcasting'
 import { isSourceEnabled } from '@/rules/source-books'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
+import type { RulesRepository } from '@/types/rules'
 
 export type ExportDiagnosticCode =
   | 'missing-rule-data'
@@ -112,16 +113,17 @@ function signed(value: number): string {
   return `${value >= 0 ? '+' : ''}${value}`
 }
 
-function optionName(id: string): string {
-  return rulesRepository.getOption(id)?.name ?? id
+function optionName(repository: RulesRepository, id: string): string {
+  return repository.getOption(id)?.name ?? id
 }
 
 function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
+  const repository = getRulesRepository(draft.ruleset)
   const features: ExportFeature[] = []
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
     for (const optionId of selection.optionIds) {
-      const feat = rulesRepository.getFeat(optionId)
+      const feat = repository.getFeat(optionId)
       if (feat) {
         features.push({ id: feat.id, category: 'feat', name: feat.name, summary: feat.detail, priority: 10 })
         continue
@@ -140,16 +142,16 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
       const isSpellMasterySelection = selection.checkpointId.startsWith('wizard-2014-spell-mastery-')
         || selection.checkpointId.startsWith('wizard-2014-signature-spells-')
       if (isMetamagic || isInfusion || isSpellMasterySelection || SUBCLASS_CHOICE_OPTION_IDS.includes(optionId)) {
-        const spell = rulesRepository.getSpell(optionId)
+        const spell = repository.getSpell(optionId)
         if (spell) {
           features.push({ id: spell.id, category: 'class', name: spell.name, summary: spell.description, priority: 10 })
           continue
         }
-        const option = rulesRepository.getOption(optionId)
+        const option = repository.getOption(optionId)
         if (option) {
           const assignment = isInfusion ? (draft.infusionAssignments ?? []).find((item) => item.infusionId === optionId) : undefined
           const entry = assignment ? draft.inventory.find((item) => item.id === assignment.inventoryEntryId) : undefined
-          const boundItem = entry ? rulesRepository.getEquipment(entry.itemId) : undefined
+          const boundItem = entry ? repository.getEquipment(entry.itemId) : undefined
           features.push({
             id: option.id,
             category: isMetamagic || isInfusion ? 'class' : 'subclass',
@@ -167,13 +169,14 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
 }
 
 function buildFeatures(draft: CharacterDraft): ExportFeature[] {
-  const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
-  const subclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
-  const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+  const repository = getRulesRepository(draft.ruleset)
+  const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
+  const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
   const background = draft.backgroundVariantId
-    ? rulesRepository.getBackground(draft.backgroundVariantId)
-    : draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
+    ? repository.getBackground(draft.backgroundVariantId)
+    : draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
   return [
     ...resolveSelectedFeatures(draft),
     ...(subclass?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'subclass' as const, name: feature.name, summary: feature.summary, priority: 20 })),
@@ -184,6 +187,7 @@ function buildFeatures(draft: CharacterDraft): ExportFeature[] {
 }
 
 function buildInventory(draft: CharacterDraft, diagnostics: ExportDiagnostic[]) {
+  const repository = getRulesRepository(draft.ruleset)
   const grouped = new Map<string, { quantity: number; equippedQuantity: number }>()
   for (const entry of draft.inventory) {
     const current = grouped.get(entry.itemId) ?? { quantity: 0, equippedQuantity: 0 }
@@ -192,13 +196,14 @@ function buildInventory(draft: CharacterDraft, diagnostics: ExportDiagnostic[]) 
     grouped.set(entry.itemId, current)
   }
   return [...grouped.entries()].map(([itemId, totals]) => {
-    const equipment = rulesRepository.getEquipment(itemId)
+    const equipment = repository.getEquipment(itemId)
     if (!equipment) diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `inventory.${itemId}`, message: `无法解析物品 ${itemId}，已使用原始 ID。` })
     return { itemId, name: equipment?.name ?? itemId, ...totals }
   })
 }
 
 function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): readonly ExportSpell[] {
+  const repository = getRulesRepository(draft.ruleset)
   const config = getSpellcastingConfig(draft)
   const baseIds = config?.mode === 'spellbook'
     ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.spellbookSpellIds]
@@ -210,7 +215,7 @@ function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): read
   const ids = [...new Set([...baseIds, ...alwaysPrepared, ...getMagicalSecretsSpellIds(draft), ...manual.map((item) => item.spellId)])]
   const prepared = new Set([...draft.spellSelections.preparedSpellIds, ...alwaysPrepared, ...manual.filter((item) => item.prepared).map((item) => item.spellId)])
   return ids.map((id) => {
-    const spell = rulesRepository.getSpell(id)
+    const spell = repository.getSpell(id)
     if (!spell) diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `spell.${id}`, message: `无法解析法术 ${id}。` })
     return spell ? { id, name: spell.name, level: spell.level, prepared: prepared.has(id) } : undefined
   }).filter((spell): spell is ExportSpell => Boolean(spell)).sort((left, right) =>
@@ -220,21 +225,22 @@ function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): read
 }
 
 export function buildCharacterExportModel(draft: CharacterDraft, derived: DerivedCharacter): CharacterExportModel {
+  const repository = getRulesRepository(draft.ruleset)
   const diagnostics: ExportDiagnostic[] = []
-  const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
-  const subclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
-  const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
-  const background = draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
-  const backgroundVariant = draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId) : undefined
+  const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
+  const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
+  const background = draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
+  const backgroundVariant = draft.backgroundVariantId ? repository.getBackground(draft.backgroundVariantId) : undefined
   if (draft.classId && !classRule) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.class', message: '无法解析角色职业。' })
-  if (classRule && !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.class', message: `职业“${classRule.name}”的来源已关闭，导出已阻止。` })
-  if (subclass && !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.subclass', message: `子职“${subclass.name}”的来源已关闭，导出已阻止。` })
+  if (classRule && !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds, repository)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.class', message: `职业“${classRule.name}”的来源已关闭，导出已阻止。` })
+  if (subclass && !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.subclass', message: `子职“${subclass.name}”的来源已关闭，导出已阻止。` })
   if (draft.raceId && !race) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.race', message: '无法解析角色种族。' })
 
   const inventory = buildInventory(draft, diagnostics)
   const attacks = inventory.filter((entry) => entry.equippedQuantity > 0).flatMap((entry) => {
-    const equipment = rulesRepository.getEquipment(entry.itemId)
+    const equipment = repository.getEquipment(entry.itemId)
     if (!equipment) return []
     const attack = deriveWeaponAttack(draft, derived, equipment)
     if (!attack) {
@@ -256,9 +262,9 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
   }])) as Record<AbilityKey, ExportAbility>
   const skills = Object.entries(derived.skills).map(([id, value]) => {
     const labels = value.sources.map((source) => source.label)
-    return { id, name: optionName(id), value: value.value, proficiency: labels.includes('专精') ? 'expertise' as const : labels.includes('技能熟练') ? 'proficient' as const : 'none' as const }
+    return { id, name: optionName(repository, id), value: value.value, proficiency: labels.includes('专精') ? 'expertise' as const : labels.includes('技能熟练') ? 'proficient' as const : 'none' as const }
   })
-  const languages = draft.languages.map(optionName)
+  const languages = draft.languages.map((id) => optionName(repository, id))
   const spellcastingConfig = getSpellcastingConfig(draft)
 
   return {

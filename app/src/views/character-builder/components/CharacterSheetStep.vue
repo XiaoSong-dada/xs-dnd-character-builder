@@ -15,7 +15,6 @@ import UiTabs from '@/components/ui/UiTabs.vue'
 import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-media'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, getCheckpointSelectionBounds } from '@/rules/feats'
-import { rulesRepository } from '@/rules/repository'
 import { getRulesRepository } from '@/rules/repositories'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
@@ -44,6 +43,8 @@ const emit = defineEmits<{
   changeManualEdits: [manualEdits: CharacterManualEdits]
   changeMedia: [media: CharacterMedia | undefined]
 }>()
+/** 角色卡解析与名称一律使用草稿版本仓库（B09-02）。 */
+const repository = computed(() => getRulesRepository(props.draft.ruleset))
 const showMediaEditor = ref(false)
 const showMoreActions = ref(false)
 const moreButtonRef = ref<HTMLButtonElement>()
@@ -104,12 +105,12 @@ function abilityNote(key: AbilityKey): string {
 const identityLine = computed(() => {
   const draft = props.draft
   const names = [
-    draft.classId ? rulesRepository.getClass(draft.classId)?.name : undefined,
-    draft.subclassId ? rulesRepository.getSubclass(draft.subclassId)?.name : undefined,
-    draft.raceId ? rulesRepository.getRace(draft.raceId)?.name : undefined,
-    draft.subraceId ? rulesRepository.getRace(draft.subraceId)?.name : undefined,
-    draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId)?.name : undefined,
-    draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId)?.name : undefined,
+    draft.classId ? repository.value.getClass(draft.classId)?.name : undefined,
+    draft.subclassId ? repository.value.getSubclass(draft.subclassId)?.name : undefined,
+    draft.raceId ? repository.value.getRace(draft.raceId)?.name : undefined,
+    draft.subraceId ? repository.value.getRace(draft.subraceId)?.name : undefined,
+    draft.backgroundId ? repository.value.getBackground(draft.backgroundId)?.name : undefined,
+    draft.backgroundVariantId ? repository.value.getBackground(draft.backgroundVariantId)?.name : undefined,
   ].filter(Boolean)
   return `${draft.targetLevel}级 · ${names.join(' · ')}`
 })
@@ -130,7 +131,7 @@ const spellSlotsLabel = computed(() => {
 const manualSpellIds = computed(() => new Set(editing.manual.value.addedSpells.map((item) => item.spellId)))
 const cantripSpells = computed(() => props.draft.spellSelections.cantripIds
   .filter((id) => !manualSpellIds.value.has(id))
-  .map((id) => rulesRepository.getSpell(id))
+  .map((id) => repository.value.getSpell(id))
   .filter((spell): spell is SpellRule => Boolean(spell)))
 const preparedOrKnownSpells = computed(() => {
   const config = spellcastingConfig.value
@@ -138,11 +139,11 @@ const preparedOrKnownSpells = computed(() => {
   // 已准备 / 已掌握法术以规则层 getSelectedSpellIds 为唯一事实源（覆盖 spellbook/prepared/known/pact 四种模式）。
   return getSelectedSpellIds(props.draft, config)
     .filter((id) => !manualSpellIds.value.has(id))
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
 const manualAddedSpells = computed(() => editing.manual.value.addedSpells
-  .map((entry) => ({ entry, spell: rulesRepository.getSpell(entry.spellId) }))
+  .map((entry) => ({ entry, spell: repository.value.getSpell(entry.spellId) }))
   .filter((item): item is { entry: ManualAddedSpell; spell: SpellRule } => Boolean(item.spell)))
 const existingSpellIds = computed(() => [...new Set([
   ...props.draft.spellSelections.cantripIds,
@@ -158,7 +159,7 @@ const spellbookSpells = computed(() => {
   if (spellcastingConfig.value?.mode !== 'spellbook') return []
   return props.draft.spellSelections.spellbookSpellIds
     .filter((id) => !manualSpellIds.value.has(id))
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
 const requiredCantripCount = computed(() => (spellcastingConfig.value ? getRequiredCantripCount(props.draft, spellcastingConfig.value) : 0))
@@ -183,7 +184,7 @@ const preparedCandidates = computed(() => {
   const config = spellcastingConfig.value
   if (!config) return []
   return getSpellCandidates(props.draft, config).prepared
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
 /** 法师候选准备：法术书中未准备（长休可换入准备）。 */
@@ -191,7 +192,7 @@ const wizardPrepareFromBook = computed(() => {
   const config = spellcastingConfig.value
   if (!config) return []
   return getSpellCandidates(props.draft, config).prepareFromBook
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
 /** 法师候选写入：职业池中未写入法术书（升级时可扩充入书，只读展示）。 */
@@ -199,7 +200,7 @@ const wizardWriteToBook = computed(() => {
   const config = spellcastingConfig.value
   if (!config) return []
   return getSpellCandidates(props.draft, config).writeToBook
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
 /** 候选按环级分组。 */
@@ -216,7 +217,7 @@ const allPreparedSpells = computed(() => {
   const config = spellcastingConfig.value
   if (!config || config.mode !== 'prepared') return []
   const knownCantrips = props.draft.spellSelections.cantripIds
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
   const leveled = getAvailableSpells(props.draft, config).filter((spell) => spell.level > 0)
   return [...knownCantrips, ...leveled]
@@ -267,7 +268,7 @@ const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || prepa
 /** 魔法奥秘法术（来自时间线检查点选择，不计入已知法术上限）。 */
 const magicalSecretsSpells = computed(() => getMagicalSecretsSpellIds(props.draft)
   .filter((id) => !manualSpellIds.value.has(id))
-  .map((id) => rulesRepository.getSpell(id))
+  .map((id) => repository.value.getSpell(id))
   .filter((spell): spell is SpellRule => Boolean(spell)))
 
 function manualSpellDestinationLabel(entry: ManualAddedSpell): string {
@@ -367,17 +368,17 @@ function isPreparedSpell(id: string): boolean {
 /** 物品页签：已装备（equippedQuantity > 0）与全部物品栏条目。 */
 const equippedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity > 0))
 function equipmentName(itemId: string): string {
-  return rulesRepository.getEquipment(itemId)?.name ?? itemId
+  return repository.value.getEquipment(itemId)?.name ?? itemId
 }
 function equipmentSummary(itemId: string): string {
-  const equipment = rulesRepository.getEquipment(itemId)
+  const equipment = repository.value.getEquipment(itemId)
   return equipment?.damageDice ? `${equipment.damageDice} ${equipment.damageType}伤害` : ''
 }
 /** 添加物品弹窗开关。 */
 const showAddItemModal = ref(false)
 function handleAddItem(payload: { itemId: string; quantity: number; equip: boolean }): void {
   // 防御：非可装备物品（如自定义物品）不允许装备。
-  const equip = payload.equip && Boolean(rulesRepository.getEquipment(payload.itemId)?.equippable)
+  const equip = payload.equip && Boolean(repository.value.getEquipment(payload.itemId)?.equippable)
   const inventory = addAdventureItem(props.draft.inventory, props.draft.id, {
     itemId: payload.itemId,
     quantity: payload.quantity,
@@ -493,7 +494,7 @@ const subclassInfo = computed(() => {
 const raceInfo = computed(() => {
   const raceId = props.draft.raceId
   if (!raceId) return undefined
-  const race = rulesRepository.getRace(raceId)
+  const race = repository.value.getRace(raceId)
   if (!race) return undefined
   const features = getRulesRepository(props.draft.ruleset).getRaceFeatures(raceId)
     .filter((feature) => feature.level <= props.draft.targetLevel)
@@ -503,7 +504,7 @@ const raceInfo = computed(() => {
 const subraceInfo = computed(() => {
   const subraceId = props.draft.subraceId
   if (!subraceId || subraceId === props.draft.raceId) return undefined
-  const race = rulesRepository.getRace(subraceId)
+  const race = repository.value.getRace(subraceId)
   if (!race) return undefined
   const features = getRulesRepository(props.draft.ruleset).getRaceFeatures(subraceId)
     .filter((feature) => feature.level <= props.draft.targetLevel)
@@ -513,7 +514,7 @@ const subraceInfo = computed(() => {
 const backgroundInfo = computed(() => {
   const backgroundId = props.draft.backgroundId ?? props.draft.backgroundVariantId
   if (!backgroundId) return undefined
-  const background = rulesRepository.getBackground(backgroundId)
+  const background = repository.value.getBackground(backgroundId)
   if (!background) return undefined
   const ownerId = background.parentBackgroundId ?? backgroundId
   const features = getRulesRepository(props.draft.ruleset).getBackgroundFeatures(ownerId)
@@ -975,7 +976,7 @@ function handleExportPdf(): void {
               <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
               <button v-else type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
             </template>
-            <template #expanded>{{ rulesRepository.getEquipment(entry.itemId)?.description }}</template>
+            <template #expanded>{{ repository.getEquipment(entry.itemId)?.description }}</template>
           </ExpandableOptionCard>
         </ListShell>
       </div>
@@ -995,7 +996,7 @@ function handleExportPdf(): void {
               <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
               <button v-else type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
             </template>
-            <template #expanded>{{ rulesRepository.getEquipment(entry.itemId)?.description }}</template>
+            <template #expanded>{{ repository.getEquipment(entry.itemId)?.description }}</template>
           </ExpandableOptionCard>
         </ListShell>
       </div>
@@ -1026,6 +1027,7 @@ function handleExportPdf(): void {
       :open="showManualSpellModal"
       :mode="editing.spellMode.value"
       :existing-ids="existingSpellIds"
+      :ruleset="draft.ruleset"
       @close="showManualSpellModal = false"
       @add="editing.addSpell"
     />

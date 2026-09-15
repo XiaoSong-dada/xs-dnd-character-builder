@@ -13,7 +13,7 @@ import {
   getFeatEligibility,
   type AbilityImprovementMode,
 } from '@/rules/feats'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
 import { getSpellcastingConfig } from '@/rules/spellcasting'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
@@ -27,6 +27,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ select: [optionId?: string] }>()
+/** 专长候选按草稿版本解析（B09-02）：不得固定 2014 仓库。 */
+const repository = computed(() => getRulesRepository(props.draft.ruleset))
 const selectedImprovement = computed(() => props.selectedOptionId
   ? decodeAbilityImprovement(props.selectedOptionId)
   : undefined)
@@ -46,7 +48,7 @@ const canCastSpells = computed(() => {
   const spellcasting = getSpellcastingConfig(props.draft)
   return Boolean(spellcasting && props.checkpointLevel >= spellcasting.startsAtLevel)
 })
-const featEntries = computed(() => rulesRepository.feats.map((feat) => ({
+const featEntries = computed(() => repository.value.feats.map((feat) => ({
   feat,
   eligibility: getFeatEligibility(feat, {
     abilities: abilitiesBeforeCheckpoint.value,
@@ -59,7 +61,7 @@ const featEntries = computed(() => rulesRepository.feats.map((feat) => ({
 const visibleFeats = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('zh-CN')
   return featEntries.value.filter(({ feat, eligibility }) => {
-    if (!isSourceEnabled(feat.sourceIds, props.draft.enabledSourceIds)) return false
+    if (!isSourceEnabled(feat.sourceIds, props.draft.enabledSourceIds, repository.value)) return false
     if (availableOnly.value && !eligibility.available) return false
     if (tagFilter.value !== 'all' && !feat.tags.includes(tagFilter.value)) return false
     if (!query) return true
@@ -177,7 +179,7 @@ function selectFeat(featId: string, available: boolean): void {
 
     <template v-else>
       <ListShell
-        :count="`${visibleFeats.length}/${rulesRepository.feats.length}`"
+        :count="`${visibleFeats.length}/${repository.feats.length}`"
         searchable
         search-label=""
         search-placeholder="搜索专长名称、英文名或用途"
@@ -195,7 +197,7 @@ function selectFeat(featId: string, available: boolean): void {
               <input v-model="availableOnly" type="checkbox">
               <span>只看当前可选</span>
             </label>
-            <UiBadge>2014 · {{ visibleFeats.length }}/{{ rulesRepository.feats.length }}</UiBadge>
+            <UiBadge>{{ props.draft.ruleset === '5e-2024' ? '2024' : '2014' }} · {{ visibleFeats.length }}/{{ repository.feats.length }}</UiBadge>
           </div>
         </template>
         <ExpandableOptionCard

@@ -5,17 +5,19 @@ import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import { getClassGrowthSummary } from '@/rules/recommend'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
+import type { RulesetId } from '@/types/character'
 
-const props = defineProps<{ selected?: string; enabledSourceIds?: readonly string[] }>()
+const props = withDefaults(defineProps<{ selected?: string; enabledSourceIds?: readonly string[]; ruleset?: RulesetId }>(), { ruleset: '5e-2014' })
 defineEmits<{ select: [id: string] }>()
 
-const visibleClasses = computed(() => rulesRepository.classes
-  .filter((classRule) => isSourceEnabled(classRule.sourceIds, props.enabledSourceIds))
+const repository = computed(() => getRulesRepository(props.ruleset))
+const visibleClasses = computed(() => repository.value.classes
+  .filter((classRule) => isSourceEnabled(classRule.sourceIds, props.enabledSourceIds, repository.value))
   .map((classRule) => ({
     classRule,
-    growth: getClassGrowthSummary(classRule, rulesRepository),
+    growth: getClassGrowthSummary(classRule, repository.value),
   })))
 </script>
 
