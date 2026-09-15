@@ -56,6 +56,15 @@ describe('CharacterSheetStep', () => {
     setActivePinia(createPinia())
   })
 
+  it('2024 草稿显示版本与车卡预览边界（B09-04）', () => {
+    const modern: CharacterDraft = { ...draft, ruleset: '5e-2024', classId: 'class-2024-fighter' }
+    const wrapper = mount(CharacterSheetStep, { props: { draft: modern, derived: deriveCharacter(modern) } })
+
+    expect(wrapper.text()).toContain('规则预览 · 5e-2024')
+    expect(wrapper.text()).toContain('2024 车卡预览')
+    expect(wrapper.text()).toContain('跑团资源结算与导出承载尚未完成')
+  })
+
   it('uses Chinese labels for abilities, saving throws, and skills', async () => {
     const wrapper = mount(CharacterSheetStep, {
       props: { draft, derived: deriveCharacter(draft) },

@@ -551,11 +551,14 @@ function handleExportPdf(): void {
 
 <template>
   <section class="character-sheet">
+    <UiNotice v-if="draft.ruleset === '5e-2024'" tone="info" title="2024 车卡预览">
+      2024 车卡流程已可用；跑团资源结算与导出承载尚未完成，数值以规则层登记为准。
+    </UiNotice>
     <header :class="{ 'character-sheet__header--media': draft.media?.avatar || draft.media?.portrait }">
       <div class="character-sheet__header-content" :class="{ 'character-sheet__header-content--portrait': draft.media?.portrait }">
         <CharacterMediaImage v-if="draft.media?.avatar" class="character-sheet__avatar" :media-id="draft.media.avatar.mediaId" :alt="`${draft.name || '角色'}头像`" />
         <div>
-          <span>规则预览 · 5e-2014</span>
+          <span>规则预览 · {{ draft.ruleset }}</span>
           <h2>{{ draft.name || '未命名角色' }}</h2>
           <p>{{ identityLine }}</p>
           <div v-if="draft.classId" class="character-sheet__header-actions">

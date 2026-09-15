@@ -230,7 +230,7 @@ function updateMethod(value: AbilityMethod): void {
     />
     <SpellcastingStep v-else-if="step === 'spells'" :draft="activeDraft" @change="updateSpells" />
     <IdentityStep v-else-if="step === 'identity'" :draft="activeDraft" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" @change-media="updateDraft({ media: $event })" />
-    <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" @go="setStep($event as DraftStep)" />
+    <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" :ruleset="activeDraft.ruleset" @go="setStep($event as DraftStep)" />
     <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" :exporting-format="exportingFormat" :export-notice="exportNotice" @export="exportDraft" @export-package="exportPackage" @export-pdf="exportPdf" @export-xlsx="exportXlsx" @adjust-level="openLevelModal" @reedit="startReedit" @change-spell-selections="updateSpells" @change-inventory="updateInventory" @change-adventure-gold="updateAdventureGold" @change-manual-edits="updateManualEdits" @change-media="updateDraft({ media: $event })" />
 
     <template v-if="step !== 'sheet' && derivedSummary" #drawer>
