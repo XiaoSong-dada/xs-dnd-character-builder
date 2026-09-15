@@ -50,6 +50,10 @@ export const classStartingEquipment2024: readonly ClassStartingEquipmentRule[] =
     { ...gear('monk-2024-a', [g('equipment-2024-spear'), g('equipment-2024-dagger', 5), g('equipment-2024-explorer-s-pack')], 11), pick: { count: 1, allowedItemIds: MONK_TOOL_ITEM_IDS } },
     gold('monk-2024-b', 50),
   ] }] },
+  { classId: 'class-2024-ranger', fixedGrants: [], groups: [{ id: 'ranger-2024-starting', title: '选择职业初始装备或金币', options: [
+    gear('ranger-2024-a', [g('equipment-2024-studded-leather-armor'), g('equipment-2024-scimitar'), g('equipment-2024-shortsword'), g('equipment-2024-longbow'), g('equipment-2024-ammunition', 20), g('equipment-2024-quiver'), g('equipment-2024-sprig-of-mistletoe'), g('equipment-2024-explorer-s-pack')], 7),
+    gold('ranger-2024-b', 150),
+  ] }] },
   { classId: 'class-2024-rogue', fixedGrants: [], groups: [{ id: 'rogue-2024-starting', title: '选择职业初始装备或金币', options: [
     gear('rogue-2024-a', [g('equipment-2024-leather-armor'), g('equipment-2024-dagger', 2), g('equipment-2024-shortsword'), g('equipment-2024-shortbow'), g('equipment-2024-ammunition', 20), g('equipment-2024-quiver'), g('equipment-2024-thieves-tools'), g('equipment-2024-burglar-s-pack')], 8),
     gold('rogue-2024-b', 100),

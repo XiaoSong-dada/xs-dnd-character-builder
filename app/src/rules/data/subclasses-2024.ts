@@ -6,6 +6,7 @@ import { druidSubclasses2024 } from '@/rules/data/druid-2024'
 import { fighterSubclasses2024 } from '@/rules/data/fighter-2024'
 import { monkSubclasses2024 } from '@/rules/data/monk-2024'
 import { paladinSubclasses2024 } from '@/rules/data/paladin-2024'
+import { rangerSubclasses2024 } from '@/rules/data/ranger-2024'
 import { rogueSubclasses2024 } from '@/rules/data/rogue-2024'
 import { sorcererSubclasses2024 } from '@/rules/data/sorcerer-2024'
 import { warlockSubclasses2024 } from '@/rules/data/warlock-2024'
@@ -20,6 +21,7 @@ export const subclasses2024: readonly SubclassRule[] = [
   ...fighterSubclasses2024,
   ...monkSubclasses2024,
   ...paladinSubclasses2024,
+  ...rangerSubclasses2024,
   ...rogueSubclasses2024,
   ...sorcererSubclasses2024,
   ...warlockSubclasses2024,

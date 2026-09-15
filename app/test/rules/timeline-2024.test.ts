@@ -287,4 +287,31 @@ describe('2024 职业时间线（B08-01）', () => {
       'class-2024-paladin-feat-19',
     ])
   })
+
+  it('游侠时间线展开技能、武器精通、专精、战斗风格与子职', () => {
+    const levelOne = buildTimeline('class-2024-ranger', 1, { ruleset: '5e-2024' })
+    expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-ranger-skills-1',
+      'class-2024-ranger-mastery-1',
+    ])
+
+    const levelTwo = buildTimeline('class-2024-ranger', 2, { ruleset: '5e-2024' })
+    expect(levelTwo.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-ranger-skills-1',
+      'class-2024-ranger-mastery-1',
+      'class-2024-ranger-expertise-2',
+      'class-2024-ranger-style-2',
+    ])
+
+    const levelThree = buildTimeline('class-2024-ranger', 3, { ruleset: '5e-2024' })
+    const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
+    expect(subclass?.id).toBe('class-2024-ranger-subclass-3')
+    expect(subclass?.optionIds).toHaveLength(4)
+
+    const levelTwenty = buildTimeline('class-2024-ranger', 20, { ruleset: '5e-2024' })
+    expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'expertise').map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-ranger-expertise-2',
+      'class-2024-ranger-expertise-9',
+    ])
+  })
 })
