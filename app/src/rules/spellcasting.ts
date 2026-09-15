@@ -82,10 +82,15 @@ export function getUnpreparedManualSpellIds(draft: CharacterDraft): readonly str
     .map((item) => item.spellId)
 }
 
+/** 是否以“准备列表”选择法术：prepared／spellbook，或 2024 契约施法（pact 且按准备表）。 */
+export function usesPreparedSelection(config: SpellcastingConfig): boolean {
+  return config.mode === 'prepared' || config.mode === 'spellbook' || (config.mode === 'pact' && Boolean(config.preparedCountByLevel))
+}
+
 export function getRequiredSpellCount(draft: CharacterDraft, config: SpellcastingConfig): number {
   if (draft.targetLevel < config.startsAtLevel) return 0
-  if (config.mode === 'known' || config.mode === 'pact') return config.spellsKnownByLevel?.[draft.targetLevel - 1] ?? 0
   if (config.preparedCountByLevel) return config.preparedCountByLevel[draft.targetLevel - 1] ?? 0
+  if (config.mode === 'known' || config.mode === 'pact') return config.spellsKnownByLevel?.[draft.targetLevel - 1] ?? 0
   if (config.preparedFormula === 'ability-plus-half-level') {
     return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + Math.floor(draft.targetLevel / 2))
   }
@@ -147,9 +152,7 @@ export function getSpellbookExtraCandidates(draft: CharacterDraft, config: Spell
 }
 
 export function getSelectedSpellIds(draft: CharacterDraft, config: SpellcastingConfig): readonly string[] {
-  if (config.mode === 'known') return draft.spellSelections.knownSpellIds
-  if (config.mode === 'prepared') return draft.spellSelections.preparedSpellIds
-  if (config.mode === 'spellbook') return draft.spellSelections.preparedSpellIds
+  if (usesPreparedSelection(config)) return draft.spellSelections.preparedSpellIds
   return draft.spellSelections.knownSpellIds
 }
 
@@ -177,7 +180,7 @@ export function getSpellCandidates(draft: CharacterDraft, config: SpellcastingCo
       prepareFromBook: book.filter((id) => !prepared.includes(id)),
     }
   }
-  if (config.mode === 'prepared') {
+  if (usesPreparedSelection(config)) {
     const selected = getSelectedSpellIds(draft, config)
     return { ...empty, prepared: availableIds.filter((id) => !selected.includes(id)) }
   }

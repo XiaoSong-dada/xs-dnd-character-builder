@@ -3,7 +3,7 @@ import { SUBCLASS_CHOICE_OPTION_IDS } from '@/rules/data/subclass-choice-options
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { rulesRepository } from '@/rules/repository'
 import { normalizeManualEdits } from '@/rules/manual-edits'
-import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpellcastingConfig, usesPreparedSelection } from '@/rules/spellcasting'
 import { isSourceEnabled } from '@/rules/source-books'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
@@ -202,7 +202,7 @@ function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): read
   const config = getSpellcastingConfig(draft)
   const baseIds = config?.mode === 'spellbook'
     ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.spellbookSpellIds]
-    : config?.mode === 'prepared'
+    : config && usesPreparedSelection(config)
       ? [...draft.spellSelections.cantripIds, ...getAvailableSpells(draft, config).filter((spell) => spell.level > 0).map((spell) => spell.id)]
       : [...draft.spellSelections.cantripIds, ...draft.spellSelections.knownSpellIds]
   const alwaysPrepared = getAlwaysPreparedSpellIds(draft)

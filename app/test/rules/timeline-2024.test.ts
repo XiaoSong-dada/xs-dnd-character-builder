@@ -237,4 +237,29 @@ describe('2024 职业时间线（B08-01）', () => {
       'class-2024-sorcerer-metamagic-17',
     ])
   })
+
+  it('魔契师时间线展开技能、祈唤、玄奥秘法与子职', () => {
+    const levelOne = buildTimeline('class-2024-warlock', 1, { ruleset: '5e-2024' })
+    expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-warlock-skills-1',
+      'class-2024-warlock-invocations-1',
+    ])
+
+    const levelThree = buildTimeline('class-2024-warlock', 3, { ruleset: '5e-2024' })
+    const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
+    expect(subclass?.id).toBe('class-2024-warlock-subclass-3')
+    expect(subclass?.optionIds).toHaveLength(4)
+
+    const levelEleven = buildTimeline('class-2024-warlock', 11, { ruleset: '5e-2024' })
+    expect(levelEleven.find((checkpoint) => checkpoint.id === 'class-2024-warlock-arcanum-11')?.candidateKind).toBe('spell-pool')
+
+    const levelTwenty = buildTimeline('class-2024-warlock', 20, { ruleset: '5e-2024' })
+    expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
+      'class-2024-warlock-feat-4',
+      'class-2024-warlock-feat-8',
+      'class-2024-warlock-feat-12',
+      'class-2024-warlock-feat-16',
+      'class-2024-warlock-feat-19',
+    ])
+  })
 })

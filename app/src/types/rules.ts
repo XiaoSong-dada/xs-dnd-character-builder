@@ -91,6 +91,12 @@ export interface RuleOption {
   readonly cantripBonus?: number
   /** 超魔选项的术法点消耗（2024 超魔数据；B10 结算输入）。 */
   readonly sorceryPointCost?: number
+  /** 选项的职业等级先决（如 2024 魔能祈唤等级要求）；候选与校验按此筛选。 */
+  readonly minimumLevel?: number
+  /** 依赖的已选选项（如魔能斩需先选刃之魔契）。 */
+  readonly requiredOptionIds?: readonly string[]
+  /** 可重复选择（如苦痛魔爆可为不同戏法重复选取）。 */
+  readonly repeatable?: boolean
   /** 选项授予的始终准备法术（如 2024 德鲁伊大地结社的地形法术，按德鲁伊等级生效）。 */
   readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
   /** 同一内容被重印时，当前规则实现采用的出版来源。 */

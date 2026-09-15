@@ -7,6 +7,7 @@ import { fighterSubclasses2024 } from '@/rules/data/fighter-2024'
 import { monkSubclasses2024 } from '@/rules/data/monk-2024'
 import { rogueSubclasses2024 } from '@/rules/data/rogue-2024'
 import { sorcererSubclasses2024 } from '@/rules/data/sorcerer-2024'
+import { warlockSubclasses2024 } from '@/rules/data/warlock-2024'
 import { wizardSubclasses2024 } from '@/rules/data/wizard-2024'
 
 /** 2024 子职装配列表：按 B08 批次逐批追加。 */
@@ -19,6 +20,7 @@ export const subclasses2024: readonly SubclassRule[] = [
   ...monkSubclasses2024,
   ...rogueSubclasses2024,
   ...sorcererSubclasses2024,
+  ...warlockSubclasses2024,
   ...wizardSubclasses2024,
 ]
 

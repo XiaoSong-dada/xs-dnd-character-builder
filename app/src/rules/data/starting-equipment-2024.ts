@@ -58,6 +58,10 @@ export const classStartingEquipment2024: readonly ClassStartingEquipmentRule[] =
     gear('sorcerer-2024-a', [g('equipment-2024-spear'), g('equipment-2024-dagger', 2), g('equipment-2024-crystal'), g('equipment-2024-dungeoneer-s-pack')], 28),
     gold('sorcerer-2024-b', 50),
   ] }] },
+  { classId: 'class-2024-warlock', fixedGrants: [], groups: [{ id: 'warlock-2024-starting', title: '选择职业初始装备或金币', options: [
+    gear('warlock-2024-a', [g('equipment-2024-leather-armor'), g('equipment-2024-sickle'), g('equipment-2024-dagger', 2), g('equipment-2024-orb'), g('equipment-2024-book'), g('equipment-2024-scholar-s-pack')], 15),
+    gold('warlock-2024-b', 100),
+  ] }] },
   { classId: 'class-2024-wizard', fixedGrants: [], groups: [{ id: 'wizard-2024-starting', title: '选择职业初始装备或金币', options: [
     gear('wizard-2024-a', [g('equipment-2024-dagger', 2), g('equipment-2024-arcane-focus'), g('equipment-2024-robe'), g('equipment-2024-book'), g('equipment-2024-scholar-s-pack')], 5), gold('wizard-2024-b', 55),
   ] }] },

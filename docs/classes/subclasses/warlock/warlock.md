@@ -1,5 +1,7 @@
 # 邪术师 Warlock
 
+> 运行时名称采用 5e 不全书译名（魔能祈唤、契约魔法、秘法回流、联络宗主、玄奥秘法、魔能掌控、魔契师）；本页早期旧译名（魔法机巧、邪术师）仅作对照。
+
 ## 基础资料
 
 - 职业 ID：`warlock`；规则集：`5e-2024`
@@ -62,5 +64,5 @@
 
 - [2024 Free Rules](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes)
 - [SRD 5.2.1](https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf)
-- 开放子职整理到实现级；商业内容只保留索引与兼容资料。最后核验：2026-07-24。
+- 开放子职整理到实现级；商业内容只保留索引与兼容资料。最后核验：2026-09-15。
 

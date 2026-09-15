@@ -388,6 +388,30 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         : deriveAbilities(draft, checkpoint.id)
       for (const optionId of selection?.optionIds ?? []) {
         const option = repository.getOption(optionId) ?? repository.getFeat(optionId)
+        // 选项等级先决（如 2024 魔能祈唤）与依赖先决（如魔能斩需先选刃之魔契）。
+        if (option?.minimumLevel && option.minimumLevel > draft.targetLevel) {
+          issues.push({
+            id: `option-level-${checkpoint.id}-${optionId}`,
+            step: checkpoint.step,
+            severity: 'error',
+            message: `「${option.name}」需要 ${option.minimumLevel} 级才能选择。`,
+            resolution: '提高目标等级，或移除该选择。',
+          })
+        }
+        if (option?.requiredOptionIds?.length) {
+          const activeOptionIds = new Set(draft.selections.filter((item) => !item.invalidatedAt).flatMap((item) => item.optionIds))
+          const missing = option.requiredOptionIds.filter((id) => !activeOptionIds.has(id))
+          if (missing.length > 0) {
+            const names = missing.map((id) => repository.getOption(id)?.name ?? id).join('、')
+            issues.push({
+              id: `option-prerequisite-${checkpoint.id}-${optionId}`,
+              step: checkpoint.step,
+              severity: 'error',
+              message: `「${option.name}」需要先选择：${names}。`,
+              resolution: '先选择前置祈唤，或移除该选择。',
+            })
+          }
+        }
         const featBonus = /^feat-bonus-(str|dex|con|int|wis|cha)-([12])$/.exec(optionId)
         if (featBonus) {
           const ability = featBonus[1] as keyof ReturnType<typeof deriveAbilities>

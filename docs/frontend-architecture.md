@@ -491,7 +491,7 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 
 ```text
 src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-expansions-2014,magic-items-xgte-tcoe-2014,generated/magic-items-catalog-index-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
-src/rules/repositories.ts        -> src/rules/data/{classes-2024,sources-2024,subclasses-2024,skill-options-2024,barbarian-2024,bard-2024,cleric-2024,druid-2024,fighter-2024,metamagic-2024,monk-2024,rogue-2024,sorcerer-2024,wizard-2024,feats-2024,spells-2024,origins-2024,species-traits-2024,equipment-2024,equipment-packs-2024,magic-items-2024,starting-equipment-2024,weapon-masteries-2024} + src/rules/repository（双版本仓库注册、未知版本拒绝与已开放版本判断）
+src/rules/repositories.ts        -> src/rules/data/{classes-2024,sources-2024,subclasses-2024,skill-options-2024,barbarian-2024,bard-2024,cleric-2024,druid-2024,fighter-2024,invocations-2024,metamagic-2024,monk-2024,rogue-2024,sorcerer-2024,warlock-2024,wizard-2024,feats-2024,spells-2024,origins-2024,species-traits-2024,equipment-2024,equipment-packs-2024,magic-items-2024,starting-equipment-2024,weapon-masteries-2024} + src/rules/repository（双版本仓库注册、未知版本拒绝与已开放版本判断）
 src/rules/item-catalog-loader.ts  -> src/rules/data/generated/magic-items-catalog-2014（动态 import；模块级 Promise 缓存 + 失败重试）
 src/rules/derive.ts              -> src/rules/{repositories,feats,origins,subclass-effects}
 src/rules/validate.ts            -> src/rules/{repositories,derive,feats,abilities,timeline,spellcasting,starting-equipment,weapon-mastery}
@@ -530,11 +530,14 @@ druid-2024             （德鲁伊职业／12 条职业特性／4 结社／荒�
 bard-2024              （吟游诗人职业／11 条职业特性／4 学院／激励骰与属性型次数／专精、乐器选项与魔法奥秘扩展池；学院训练与无甲 AC 数据内联；经 classes-2024、subclasses-2024 挂载；BARD_INSTRUMENT_ITEM_IDS 供 starting-equipment-2024 使用）
 sorcerer-2024          （术士职业／9 条职业特性／4 术法／术法点与先天术法资源／2024 超魔检查点与子职法术；龙族无甲 AC 数据内联；经 classes-2024、subclasses-2024 挂载）
 metamagic-2024         （2024 超魔 10 项独立数据表，与 metamagic-2014 分离；由 sorcerer-2024 引用并经 repositories 挂载）
+warlock-2024           （魔契师职业／8 条职业特性／4 宗主／契约施法（pact 模式＋准备表）／玄奥秘法与宗主法术；经 classes-2024、subclasses-2024 挂载）
+invocations-2024       （2024 魔能祈唤 28 项独立数据（等级先决、依赖先决、复选标记）；由 warlock-2024 引用并经 repositories 挂载）
 magic-items-2024       （DMG 2024 魔法物品 348 条／同调、动作、充能与消耗登记；由 scripts/build-magic-items-2024.mjs 从 B01 两份矩阵生成，经 repositories 挂载到 2024 仓库）
 wizard-2024            （法师 9 条职业特性、学者专精与塑能师额外入书规则，经 classes-2024、subclasses-2024 挂载）
-classes-2024           <- {barbarian-2024, bard-2024, cleric-2024, druid-2024, fighter-2024, monk-2024, rogue-2024, sorcerer-2024, wizard-2024}（职业装配列表）
-subclasses-2024        <- {barbarian-2024, bard-2024, cleric-2024, druid-2024, fighter-2024, monk-2024, rogue-2024, sorcerer-2024, wizard-2024}（子职装配与子职选项投影）
+classes-2024           <- {barbarian-2024, bard-2024, cleric-2024, druid-2024, fighter-2024, monk-2024, rogue-2024, sorcerer-2024, warlock-2024, wizard-2024}（职业装配列表）
+subclasses-2024        <- {barbarian-2024, bard-2024, cleric-2024, druid-2024, fighter-2024, monk-2024, rogue-2024, sorcerer-2024, warlock-2024, wizard-2024}（子职装配与子职选项投影）
 sorcerer-2024          <- metamagic-2024（2024 超魔选项；与 2014 数据隔离）
+warlock-2024           <- invocations-2024（2024 魔能祈唤；与 2014 索引隔离）
 starting-equipment-2024 <- monk-2024（初始装备 A 的工具／乐器选择候选 MONK_TOOL_ITEM_IDS）
 origins-2024           （16 背景、10 物种、8 血统／传承；含物种 `spellGrants`，经 repositories 挂载）
 species-traits-2024    （物种特性注册表，按 raceId 关联 origins-2024）

@@ -6,7 +6,7 @@
 
 本文档是**选择性加载资料**，不属于项目每次开发前的必读文档。仅在任务涉及职业、子职、职业特性、职业等级或相关规则数据时读取；目标职业明确时，只需读取通用约定和对应职业章节。
 
-- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士、法师／塑能师、野蛮人／4 道途、游荡者／4 子职、武僧／4 子职、牧师／4 领域、德鲁伊／4 结社、吟游诗人／4 学院与术士／4 术法（B08-01—B08-09），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
+- 当前运行时完成度：13 个 2014 职业（含 TCoE 奇械师）与 118 个子职条目；116 个玩家子职进入时间线，2 个 DM 专用条目只作索引。2024 已接入战士／勇士、法师／塑能师、野蛮人／4 道途、游荡者／4 子职、武僧／4 子职、牧师／4 领域、德鲁伊／4 结社、吟游诗人／4 学院、术士／4 术法与魔契师／4 宗主（B08-01—B08-10），其余职业与子职按 B08 逐批接入。0.7.0 审计矩阵见 `source-content-matrix-0.7.0.md`。
 
 ## 2. 资料边界
 
@@ -83,7 +83,7 @@
 | `ranger` | 游侠 | Ranger | [游侠详细资料](classes/subclasses/ranger/ranger.md) | [驯兽师](classes/subclasses/ranger/ranger-beast-master.md)<br>[妖精漫游者](classes/subclasses/ranger/ranger-fey-wanderer.md)<br>[幽域追猎者](classes/subclasses/ranger/ranger-gloom-stalker.md)<br>[猎人](classes/subclasses/ranger/ranger-hunter.md) | 基础职业与猎人已核验 |
 | `rogue` | 游荡者 | Rogue | [游荡者详细资料](classes/subclasses/rogue/rogue.md) | [诡术师](classes/subclasses/rogue/rogue-arcane-trickster.md)<br>[刺客](classes/subclasses/rogue/rogue-assassin.md)<br>[魂刃](classes/subclasses/rogue/rogue-soulknife.md)<br>[盗贼](classes/subclasses/rogue/rogue-thief.md) | 基础职业与 4 个子职已接入运行时（B08-04） |
 | `sorcerer` | 术士 | Sorcerer | [术士详细资料](classes/subclasses/sorcerer/sorcerer.md) | [畸变术法](classes/subclasses/sorcerer/sorcerer-aberrant-sorcery.md)<br>[时械术法](classes/subclasses/sorcerer/sorcerer-clockwork-sorcery.md)<br>[龙族术法](classes/subclasses/sorcerer/sorcerer-draconic-sorcery.md)<br>[狂野术法](classes/subclasses/sorcerer/sorcerer-wild-magic-sorcery.md) | 基础职业与 4 个术法已接入运行时（B08-09） |
-| `warlock` | 邪术师 | Warlock | [邪术师详细资料](classes/subclasses/warlock/warlock.md) | [至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)<br>[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)<br>[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)<br>[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md) | 基础职业与邪魔宗主已核验 |
+| `warlock` | 魔契师（旧稿：邪术师） | Warlock | [魔契师详细资料](classes/subclasses/warlock/warlock.md) | [至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)<br>[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)<br>[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)<br>[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md) | 基础职业与 4 个宗主已接入运行时（B08-10） |
 | `wizard` | 法师 | Wizard | [法师详细资料](classes/subclasses/wizard/wizard.md) | [防护师](classes/subclasses/wizard/wizard-abjurer.md)<br>[预言师](classes/subclasses/wizard/wizard-diviner.md)<br>[塑能师](classes/subclasses/wizard/wizard-evoker.md)<br>[幻术师](classes/subclasses/wizard/wizard-illusionist.md) | 基础职业与塑能师已接入运行时（B08-02） |
 
 ## 4.1 官方旧版与扩展子职索引
@@ -204,15 +204,15 @@
 - 选择与校验：已记录施法、先天术法、术法点、2024 超魔法（2／10／17 级各选 2 项，不可重复）、法术位转换、常备法术与子职等级；运行时的术法点、2024 超魔选项与子职法术已接入
 - 来源与核验：基础职业与 4 个核心术法已由 B08-09 按项目内 5e 不全书接入运行时；旧版与扩展子职仍沿用既有参考来源；最后核验日期 2026-09-15
 
-### 5.11 邪术师 Warlock
+### 5.11 魔契师 Warlock（旧稿：邪术师）
 
 - 职业 ID：`warlock`
 - 当前2014实现：[2014邪术师实现说明](classes/subclasses/warlock/warlock-2014.md)
-- 职业基础与等级特性：[邪术师详细资料](classes/subclasses/warlock/warlock.md)
+- 职业基础与等级特性：[魔契师详细资料](classes/subclasses/warlock/warlock.md)
 - 2024子职：[至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)、[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)、[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)、[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md)
 - 旧版与扩展子职：[不朽者](classes/subclasses/warlock/warlock-undying-patron.md)、[咒剑](classes/subclasses/warlock/warlock-hexblade-patron.md)、[深海意志](classes/subclasses/warlock/warlock-fathomless-patron.md)、[巨灵](classes/subclasses/warlock/warlock-genie-patron.md)、[死灵](classes/subclasses/warlock/warlock-undead-patron.md)
-- 选择与校验：已记录契约魔法、魔能祈唤、魔法机巧、玄奥秘法、宗主等级和旧版1级特性映射
-- 来源与核验：2024 Free Rules、SRD 5.2.1 与官方扩展书目录；最后核验日期 2026-07-27
+- 选择与校验：已记录契约魔法、魔能祈唤（28 项，按等级与依赖先决筛选）、秘法回流、玄奥秘法（11／13／15／17 级四档）、宗主等级与旧版1级特性映射；运行时的契约施法、祈唤先决与玄奥秘法已接入
+- 来源与核验：基础职业与 4 个核心宗主已由 B08-10 按项目内 5e 不全书接入运行时；旧版与扩展宗主仍沿用既有参考来源；最后核验日期 2026-09-15
 
 ### 5.12 法师 Wizard
 

@@ -10,6 +10,7 @@ import { clericOptions2024 } from '@/rules/data/cleric-2024'
 import { druidOptions2024 } from '@/rules/data/druid-2024'
 import { monkOptions2024 } from '@/rules/data/monk-2024'
 import { sorcererOptions2024 } from '@/rules/data/sorcerer-2024'
+import { warlockOptions2024 } from '@/rules/data/warlock-2024'
 import { equipmentWithPacks2024 } from '@/rules/data/equipment-packs-2024'
 import { magicItems2024 } from '@/rules/data/magic-items-2024'
 import { classStartingEquipment2024, backgroundStartingEquipment2024 } from '@/rules/data/starting-equipment-2024'
@@ -37,7 +38,7 @@ export const rulesRepository2024 = createRulesRepository('5e-2024', {
   backgrounds: backgrounds2024,
   raceFeatures: speciesTraits2024,
   backgroundFeatures: [],
-  options: [...abilityImprovementOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024, ...skillOptions2024, ...subclassOptions2024, ...barbarianOptions2024, ...bardOptions2024, ...clericOptions2024, ...druidOptions2024, ...monkOptions2024, ...sorcererOptions2024],
+  options: [...abilityImprovementOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024, ...skillOptions2024, ...subclassOptions2024, ...barbarianOptions2024, ...bardOptions2024, ...clericOptions2024, ...druidOptions2024, ...monkOptions2024, ...sorcererOptions2024, ...warlockOptions2024],
   feats: feats2024,
   equipment: [...equipmentWithPacks2024, ...magicItems2024],
   classStartingEquipment: classStartingEquipment2024,
