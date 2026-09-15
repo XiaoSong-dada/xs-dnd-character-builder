@@ -1034,7 +1034,7 @@ function handleExportPdf(): void {
       @close="showManualSpellModal = false"
       @add="editing.addSpell"
     />
-    <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" @close="showAddItemModal = false" @add="handleAddItem" />
+    <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" :ruleset="draft.ruleset" @close="showAddItemModal = false" @add="handleAddItem" />
     <AdjustItemModal
       v-if="adjustEntry"
       :open="showAdjustItemModal"

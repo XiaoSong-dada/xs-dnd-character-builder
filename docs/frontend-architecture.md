@@ -496,7 +496,7 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 ```text
 src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-expansions-2014,magic-items-xgte-tcoe-2014,generated/magic-items-catalog-index-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
 src/rules/repositories.ts        -> src/rules/data/{classes-2024,sources-2024,subclasses-2024,skill-options-2024,barbarian-2024,bard-2024,cleric-2024,druid-2024,fighter-2024,invocations-2024,metamagic-2024,monk-2024,paladin-2024,ranger-2024,rogue-2024,sorcerer-2024,warlock-2024,wizard-2024,feats-2024,spells-2024,origins-2024,species-traits-2024,equipment-2024,equipment-packs-2024,magic-items-2024,starting-equipment-2024,weapon-masteries-2024} + src/rules/repository（双版本仓库注册、未知版本拒绝与已开放版本判断）
-src/rules/item-catalog-loader.ts  -> src/rules/data/generated/magic-items-catalog-2014（动态 import；模块级 Promise 缓存 + 失败重试）
+src/rules/item-catalog-loader.ts  -> src/rules/data/generated/magic-items-catalog-2014（2014 动态 import，模块级 Promise 缓存 + 失败重试）；ruleset 为 5e-2024 时返回 equipment-2024 与 magic-items-2024 的静态装配（B09-06 最小切片；购买与来源关闭全量语义归 B07-05）
 src/rules/derive.ts              -> src/rules/{repositories,feats,origins,subclass-effects}
 src/rules/validate.ts            -> src/rules/{repositories,derive,feats,abilities,timeline,spellcasting,starting-equipment,weapon-mastery}（含子职必备戏法等提示级校验）
 src/rules/draft-progress.ts      （无内部依赖，纯函数：是否存在构筑选择，供改版门禁与后续影响提示使用）

@@ -13,11 +13,12 @@ import {
   type EquipmentFilterRarity,
 } from '@/rules/equipment-filter'
 import { loadItemCatalog } from '@/rules/item-catalog-loader'
-import { rulesRepository } from '@/rules/repository'
+import type { RulesetId } from '@/types/character'
+import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { EquipmentRule } from '@/types/rules'
 
-const props = defineProps<{ open: boolean; enabledSourceIds?: readonly string[] }>()
+const props = withDefaults(defineProps<{ open: boolean; enabledSourceIds?: readonly string[]; ruleset?: RulesetId }>(), { ruleset: '5e-2014' })
 const emit = defineEmits<{
   close: []
   add: [payload: { itemId: string; quantity: number; equip: boolean }]
@@ -85,11 +86,13 @@ const visibleLimit = ref(80)
 /** 完整目录加载状态：主界面只带最小运行时索引，目录分块在弹窗打开时按需加载。 */
 const catalogState = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
 const catalogItems = ref<readonly EquipmentRule[]>([])
+/** 来源与物品解析按草稿版本（B09-06）：2024 草稿不得使用 2014 静态仓库。 */
+const repository = computed(() => getRulesRepository(props.ruleset))
 
 const sourceOptions = computed(() => [
-  ...rulesRepository.sources
+  ...repository.value.sources
     .filter((source) => (props.enabledSourceIds === undefined || source.category === 'core' || props.enabledSourceIds.includes(source.id))
-      && rulesRepository.equipment.some((item) => item.sourceIds.includes(source.id)))
+      && repository.value.equipment.some((item) => item.sourceIds.includes(source.id)))
     .map((source) => ({ id: source.id, label: source.shortTitle })),
 ])
 
@@ -113,7 +116,7 @@ async function ensureCatalog(): Promise<void> {
   if (catalogState.value === 'loading' || catalogState.value === 'ready') return
   catalogState.value = 'loading'
   try {
-    catalogItems.value = await loadItemCatalog()
+    catalogItems.value = await loadItemCatalog(props.ruleset)
     catalogState.value = 'ready'
   } catch {
     catalogState.value = 'error'
@@ -138,11 +141,11 @@ const catalogById = computed(() => {
   }
   return map
 })
-const fullItems = computed(() => rulesRepository.equipment.map((item) =>
+const fullItems = computed(() => repository.value.equipment.map((item) =>
   item.description === '' ? catalogById.value.get(item.id) ?? item : item))
 
 const filteredItems = computed(() => {
-  const availableItems = fullItems.value.filter((item) => isSourceEnabled(item.sourceIds, props.enabledSourceIds))
+  const availableItems = fullItems.value.filter((item) => isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value))
   return filterEquipmentCatalog(availableItems, {
     query: search.value,
     categories: selectedCategories.value,
@@ -172,7 +175,7 @@ watch(filteredItems, (items) => {
 
 const selectedItem = computed(() =>
   fullItems.value.find((item) => item.id === selectedItemId.value)
-  ?? rulesRepository.getEquipment(selectedItemId.value ?? ''))
+  ?? repository.value.getEquipment(selectedItemId.value ?? ''))
 
 /** 当前选中是否可装备：自定义物品与规则标记不可装备的物品均不可。 */
 const canEquip = computed(() => mode.value === 'library' && Boolean(selectedItem.value?.equippable))
