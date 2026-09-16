@@ -16,6 +16,7 @@ import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
@@ -412,6 +413,12 @@ function handleAdjustItem(payload: { action: 'decrease' | 'increase' | 'remove';
 /** 非冒险物品的来源徽标文案（不提供数量调整）。 */
 function inventorySourceLabel(entry: InventoryEntry): string {
   return entry.sourceKind === 'class' || entry.sourceKind === 'background' ? '起始装备' : '旧草稿'
+}
+/** 已持有物品的来源是否已全部关闭：保留物品与派生，仅提示（B07-05）。 */
+function isFromClosedSource(itemId: string): boolean {
+  const equipment = repository.value.getEquipment(itemId)
+  if (!equipment) return false
+  return !isSourceEnabled(equipment.sourceIds, props.draft.enabledSourceIds, repository.value)
 }
 /** 金币调整：操作冒险净增金币（adventureGold），持有总额 = currency.gp + adventureGold。 */
 const currencyInput = ref('')
@@ -989,7 +996,8 @@ function handleExportPdf(): void {
             <template #suffix>
               <span class="character-sheet__item-qty">×{{ entry.equippedQuantity }}</span>
               <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
-              <button v-else type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
+              <em v-if="isFromClosedSource(entry.itemId)" class="character-sheet__item-source character-sheet__item-source--closed">来源已关闭</em>
+              <button v-if="entry.sourceKind === 'adventure'" type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
             </template>
             <template #expanded>{{ repository.getEquipment(entry.itemId)?.description }}</template>
           </ExpandableOptionCard>
@@ -1009,7 +1017,8 @@ function handleExportPdf(): void {
             <template #suffix>
               <span class="character-sheet__item-qty">×{{ entry.quantity }}</span>
               <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
-              <button v-else type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
+              <em v-if="isFromClosedSource(entry.itemId)" class="character-sheet__item-source character-sheet__item-source--closed">来源已关闭</em>
+              <button v-if="entry.sourceKind === 'adventure'" type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
             </template>
             <template #expanded>{{ repository.getEquipment(entry.itemId)?.description }}</template>
           </ExpandableOptionCard>
@@ -1312,6 +1321,11 @@ function handleExportPdf(): void {
     font-size: 0.62rem;
     font-style: normal;
     white-space: nowrap;
+
+    &--closed {
+      border-color: var(--color-warning);
+      color: var(--color-warning);
+    }
   }
 
   &__spell-stats {

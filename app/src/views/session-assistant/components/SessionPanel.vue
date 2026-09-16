@@ -15,6 +15,7 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { getAvailableSlotLevels } from '@/rules/session-state'
+import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getEffectiveSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
@@ -139,6 +140,12 @@ function weaponBonusLabel(entry: InventoryEntry): string {
 }
 function inventorySourceLabel(entry: InventoryEntry): string {
   return entry.sourceKind === 'class' || entry.sourceKind === 'background' ? '起始装备' : '冒险获得'
+}
+/** 已持有物品的来源是否已全部关闭：保留物品与派生，仅提示（B07-05）。 */
+function isFromClosedSource(itemId: string): boolean {
+  const equipment = repository.value.getEquipment(itemId)
+  if (!equipment) return false
+  return !isSourceEnabled(equipment.sourceIds, props.draft.enabledSourceIds, repository.value)
 }
 
 // ---- 总览派生 ----
@@ -702,7 +709,8 @@ function openTranscribe(spellId?: string): void {
             <template #suffix>
               <span class="session-panel__qty">×{{ entry.quantity }}</span>
               <UiBadge v-if="entry.sourceKind !== 'adventure'">{{ inventorySourceLabel(entry) }}</UiBadge>
-              <button v-else type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
+              <UiBadge v-if="isFromClosedSource(entry.itemId)" tone="warning">来源已关闭</UiBadge>
+              <button v-if="entry.sourceKind === 'adventure'" type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
             </template>
             <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>
           </ExpandableOptionCard>
@@ -723,7 +731,8 @@ function openTranscribe(spellId?: string): void {
             <template #suffix>
               <span class="session-panel__qty">×{{ entry.quantity }}</span>
               <UiBadge v-if="entry.sourceKind !== 'adventure'">{{ inventorySourceLabel(entry) }}</UiBadge>
-              <button v-else type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
+              <UiBadge v-if="isFromClosedSource(entry.itemId)" tone="warning">来源已关闭</UiBadge>
+              <button v-if="entry.sourceKind === 'adventure'" type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
             </template>
             <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>
           </ExpandableOptionCard>

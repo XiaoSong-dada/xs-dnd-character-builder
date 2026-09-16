@@ -2,6 +2,8 @@ import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import AddItemModal from '@/components/AddItemModal.vue'
+import { equipment2024 } from '@/rules/data/equipment-2024'
+import { magicItems2024 } from '@/rules/data/magic-items-2024'
 import { loadItemCatalog } from '@/rules/item-catalog-loader'
 
 /** 弹窗通过 UiModal Teleport 到 body，操作统一走 document.body。 */
@@ -194,7 +196,8 @@ describe('AddItemModal', () => {
     await setSearch('Ammunition, +1/+2/+3')
     await clickCard(0)
     expect(buttonByText('加入物品栏')!.disabled).toBe(true)
-    expect(document.body.textContent).toContain('该索引包含多个型号')
+    // 聚合条目在 2014 目录中登记为 index-only，优先显示索引原因（同年份多型号拦截在 2024 用例覆盖）。
+    expect(document.body.textContent).toContain('仅索引条目：依赖内容未完成，暂不可加入')
   })
 
   it('每次重新打开恢复全选，打开期间切换面板与收起不清除条件', async () => {
@@ -352,5 +355,53 @@ describe('AddItemModal', () => {
 
     buttonByText('加入装备栏')!.click()
     expect(wrapper.emitted('add')![0][0]).toEqual({ itemId: 'longsword', quantity: 1, equip: true })
+  })
+
+  it('2024 草稿按 ruleset 加载 2024 目录（B07-05a）', async () => {
+    mockedLoad.mockImplementation(() => Promise.resolve([...equipment2024, ...magicItems2024]))
+    const wrapper = mount(AddItemModal, { props: { open: true, ruleset: '5e-2024', enabledSourceIds: [] }, attachTo: document.body })
+    await flush()
+
+    expect(mockedLoad).toHaveBeenCalledWith('5e-2024')
+    await setSearch('长剑')
+    const titles = Array.from(document.body.querySelectorAll('.expandable-option-card__title-line')).map((node) => node.textContent)
+    expect(titles).toContain('长剑')
+    await clickCard(0)
+    expect(buttonByText('加入装备栏')!.disabled).toBe(false)
+    buttonByText('加入装备栏')!.click()
+    expect(wrapper.emitted('add')![0][0]).toEqual({ itemId: 'equipment-2024-longsword', quantity: 1, equip: true })
+
+    // 2024 PHB 消耗品（治疗药水／法术卷轴）为固定价格条目，可加入。
+    await setSearch('equipment-2024-potion-of-healing')
+    await clickCard(0)
+    expect(document.body.textContent).toContain('治疗药水')
+    expect(buttonByText('加入物品栏')!.disabled).toBe(false)
+    await setSearch('equipment-2024-spell-scroll')
+    await clickCard(0)
+    expect(document.body.textContent).toContain('法术卷轴')
+    expect(buttonByText('加入物品栏')!.disabled).toBe(false)
+
+    // 多型号聚合索引（DMG 法术卷轴）可选但不可直接加入，提示具体型号。
+    await setSearch('equipment-2024-spell-scroll-varies')
+    await clickCard(0)
+    expect(buttonByText('加入物品栏')!.disabled).toBe(true)
+    expect(document.body.textContent).toContain('该索引包含多个型号')
+  })
+
+  it('index-only 条目置灰且不可加入（B07-05e，AC-14）', async () => {
+    mockedLoad.mockImplementation(() => Promise.resolve([...equipment2024, ...magicItems2024]))
+    mount(AddItemModal, { props: { open: true, ruleset: '5e-2024' }, attachTo: document.body })
+    await flush()
+
+    await setSearch('次元袋')
+    const titles = Array.from(document.body.querySelectorAll('.expandable-option-card__title-line')).map((node) => node.textContent)
+    expect(titles).toContain('次元袋')
+    const lockedMain = document.body.querySelector<HTMLButtonElement>('.expandable-option-card--locked .expandable-option-card__main')
+    expect(lockedMain?.disabled).toBe(true)
+    expect(document.body.textContent).toContain('仅索引条目：依赖内容未完成，暂不可加入')
+
+    // 点击锁定卡片不会选中，加入按钮保持禁用。
+    await clickCard(0)
+    expect(buttonByText('加入物品栏')!.disabled).toBe(true)
   })
 })

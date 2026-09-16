@@ -118,4 +118,35 @@ describe('2024 DMG 魔法物品（B07-04）', () => {
     const catalog = await loadItemCatalog()
     expect(catalog.every((item) => item.ruleset === '5e-2014')).toBe(true)
   })
+
+  it('AC-13 消耗品：治疗药水与法术卷轴两版可解析、2024 PHB 条目可按固定价格加入（B07-05e）', () => {
+    const potion2024 = rulesRepository2024.getEquipment('equipment-2024-potion-of-healing')
+    expect(potion2024).toMatchObject({ name: '治疗药水', category: 'potion', priceCp: 5000, equippable: false })
+    expect(rulesRepository.getEquipment('potion-of-healing')?.name).toBe('治疗药水')
+
+    const scroll2024 = rulesRepository2024.getEquipment('equipment-2024-spell-scroll')
+    expect(scroll2024).toMatchObject({ name: '法术卷轴', category: 'magic', priceCp: 3000 })
+    expect(scroll2024?.magicItemUsage?.consumable).toBe(true)
+    expect(rulesRepository.getEquipment('spell-scroll-cantrip-1st')?.name).toContain('法术卷轴')
+
+    // DMG 汇总条目保留为多型号范围索引（varies），不可直接加入。
+    expect(rulesRepository2024.getEquipment('equipment-2024-potions-of-healing')?.rarity).toBe('varies')
+    expect(rulesRepository2024.getEquipment('equipment-2024-spell-scroll-varies')?.rarity).toBe('varies')
+  })
+
+  it('AC-10 各类别可选无需同调物品：类别、稀有度、来源与 2014 隔离（B07-05e）', () => {
+    const noAttunement = magicItems2024.filter((item) => item.status === 'selectable' && item.attunement === 'none')
+    const categories = [...new Set(noAttunement.map((item) => item.magicItemCategory))]
+    expect(categories.length).toBeGreaterThanOrEqual(8)
+    for (const category of categories) {
+      const sample = noAttunement.find((item) => item.magicItemCategory === category)
+      expect(sample, String(category)).toBeDefined()
+      expect(sample?.category, String(category)).toBeTruthy()
+      expect(sample?.rarity, String(category)).toBeTruthy()
+      expect(sample?.sourceIds, String(category)).toContain('source-2024-dmg')
+      // 稳定 ID 为 2024 命名空间：2014 仓库不命中同名条目。
+      expect(rulesRepository.getEquipment(sample!.id), sample!.id).toBeUndefined()
+      expect(rulesRepository2024.getEquipment(sample!.id)?.name).toBe(sample!.name)
+    }
+  })
 })

@@ -281,6 +281,18 @@ describe('CharacterExportModel 2024 映射（B11-01）', () => {
     expect(legacy.resources).toEqual([])
   })
 
+  it('2024 装备／卸下影响导出攻击列表（B07-05c）', () => {
+    const inventory = [
+      { id: 'inv-armor', itemId: 'equipment-2024-leather-armor', quantity: 1, equippedQuantity: 1, sourceKind: 'class' as const },
+      { id: 'inv-sword', itemId: 'equipment-2024-longsword', quantity: 1, equippedQuantity: 1, sourceKind: 'class' as const },
+    ]
+    const equipped = modernDraft({ id: 'export-2024-equip', classId: 'class-2024-fighter', targetLevel: 1, inventory })
+    expect(buildCharacterExportModel(equipped, deriveCharacter(equipped)).attacks.map((attack) => attack.name)).toContain('长剑')
+
+    const unequipped = { ...equipped, inventory: inventory.map((entry) => ({ ...entry, equippedQuantity: 0 })) }
+    expect(buildCharacterExportModel(unequipped, deriveCharacter(unequipped)).attacks).toEqual([])
+  })
+
   it('版本隔离：失效或其他版本的选择不进入导出', () => {
     const isolated = modernDraft({
       id: 'export-2024-isolation',

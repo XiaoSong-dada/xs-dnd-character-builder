@@ -177,23 +177,32 @@ const selectedItem = computed(() =>
   fullItems.value.find((item) => item.id === selectedItemId.value)
   ?? repository.value.getEquipment(selectedItemId.value ?? ''))
 
+/** 索引条目（依赖生物／随机表／DM 等未完成内容）只展示不可选（B07-05，AC-14）。 */
+function isIndexOnly(item: EquipmentRule | undefined): boolean {
+  return item?.status === 'index-only'
+}
+
 /** 当前选中是否可装备：自定义物品与规则标记不可装备的物品均不可。 */
-const canEquip = computed(() => mode.value === 'library' && Boolean(selectedItem.value?.equippable))
+const canEquip = computed(() => mode.value === 'library' && Boolean(selectedItem.value?.equippable) && !isIndexOnly(selectedItem.value))
 const equipDisabledReason = computed(() => {
   if (!selectedItemId.value && mode.value === 'library') return '请先选择物品'
   if (mode.value === 'custom') return '自定义物品无法装备'
+  if (isIndexOnly(selectedItem.value)) return '仅索引条目：依赖内容未完成，暂不可加入'
   if (!canEquip.value) return '该物品无法装备'
   return ''
 })
 const canAdd = computed(() => {
   if (mode.value === 'custom') return customName.value.trim().length > 0
-  return Boolean(selectedItemId.value) && selectedItem.value?.rarity !== 'varies'
+  return Boolean(selectedItemId.value) && selectedItem.value?.rarity !== 'varies' && !isIndexOnly(selectedItem.value)
 })
-const actionHint = computed(() => selectedItem.value?.rarity === 'varies'
-  ? '该索引包含多个型号，请搜索具体型号或使用自定义物品。'
-  : equipDisabledReason.value)
+const actionHint = computed(() => isIndexOnly(selectedItem.value)
+  ? '仅索引条目：依赖内容未完成，暂不可加入'
+  : selectedItem.value?.rarity === 'varies'
+    ? '该索引包含多个型号，请搜索具体型号或使用自定义物品。'
+    : equipDisabledReason.value)
 
 function selectItem(itemId: string): void {
+  if (isIndexOnly(fullItems.value.find((item) => item.id === itemId))) return
   mode.value = 'library'
   selectedItemId.value = itemId
 }
@@ -323,7 +332,8 @@ function addItem(equip: boolean): void {
             :key="item.id"
             :title="item.name"
             :description="item.damageDice ? `${item.damageDice} ${item.damageType}伤害 · ${item.englishName}` : item.englishName"
-            :state="mode === 'library' && selectedItemId === item.id ? 'selected' : 'default'"
+            :state="isIndexOnly(item) ? 'locked' : mode === 'library' && selectedItemId === item.id ? 'selected' : 'default'"
+            :disabled-reason="isIndexOnly(item) ? '仅索引条目：依赖内容未完成，暂不可加入' : ''"
             expanded-label="装备详情"
             expand-on-select
             @select="selectItem(item.id)"

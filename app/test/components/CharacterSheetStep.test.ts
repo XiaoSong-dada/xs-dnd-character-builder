@@ -6,6 +6,7 @@ import { defineComponent, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
+import { rulesRepository2014 } from '@/rules/repository'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
 import CharacterSheetStep from '@/views/character-builder/components/CharacterSheetStep.vue'
@@ -647,6 +648,26 @@ describe('CharacterSheetStep 法术展示', () => {
     await main.trigger('click')
     expect(magicMissileCard!.find('.expandable-option-card__growth').exists()).toBe(true)
     expect(wrapper.emitted('changeSpellSelections')).toBeUndefined()
+  })
+
+  it('已持有物品的来源关闭后显示提示且数据保留（B07-05d）', async () => {
+    const item = rulesRepository2014.getEquipment('armor-of-gleaming')!
+    const closedDraft: CharacterDraft = {
+      ...draft,
+      enabledSourceIds: [],
+      inventory: [
+        { id: 'inv-closed-source', itemId: item.id, quantity: 1, equippedQuantity: 0, sourceKind: 'adventure' },
+        { id: 'inv-core', itemId: 'longsword', quantity: 1, equippedQuantity: 0, sourceKind: 'adventure' },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, { props: { draft: closedDraft, derived: deriveCharacter(closedDraft) } })
+    await wrapper.get('[role="tab"]:nth-child(5)').trigger('click')
+
+    const closedCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes(item.name))
+    expect(closedCard?.text()).toContain('来源已关闭')
+    const coreCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('长剑'))
+    expect(coreCard?.text()).not.toContain('来源已关闭')
+    expect(closedDraft.inventory).toHaveLength(2)
   })
 
   it('物品页签条目化并可展开装备详情（武器显示伤害摘要）', async () => {

@@ -28,8 +28,9 @@ describe('2024 首批装备闭环', () => {
     expect(rulesRepository2024.weaponMasteries).toHaveLength(8)
     expect(rulesRepository2014.weaponMasteries).toEqual([])
     expect(rulesRepository2024.equipment.filter((item) => item.category === 'weapon' && item.sourceIds.includes('source-2024-phb')).every((item) => item.masteryId)).toBe(true)
-    expect(rulesRepository2024.getEquipment('equipment-2024-potion-of-healing')).toBeUndefined()
-    expect(rulesRepository2024.getEquipment('equipment-2024-spell-scroll')).toBeUndefined()
+    // B07-05：PHB 冒险装备中的 EQ-135／EQ-147 按固定价格加入自由添加目录（档位仍由 DMG 汇总条目展开）。
+    expect(rulesRepository2024.getEquipment('equipment-2024-potion-of-healing')).toMatchObject({ category: 'potion', priceCp: 5000 })
+    expect(rulesRepository2024.getEquipment('equipment-2024-spell-scroll')).toMatchObject({ category: 'magic', priceCp: 3000 })
   })
 
   it('所有套组、背景装备和工具引用都能解析', () => {

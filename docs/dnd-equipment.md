@@ -10,7 +10,7 @@
 | 规则集 | 装备组织方式 | 程序支持状态 |
 | --- | --- | --- |
 | `5e-2014` | 普通装备（护甲/盾牌/武器/冒险装备/工具/法器/套组/坐骑货物）+ 魔法物品（按英文名 A–Z） | 普通装备 222 条；DMG 候选 247 条已全部装配，连同具体型号共 278 条 DMG 运行时实体 |
-| `5e-2024` | PHB 普通装备（父条目＋子规格＋套组＋武器精通）+ DMG 魔法物品（348 项目标条目） | 普通装备 210 条与 8 项精通已接入；DMG 魔法物品 348 条已装配进 2024 仓库（209 `selectable`／139 `index-only`），物品库 UI 仍固定 2014 目录（B07-05a） |
+| `5e-2024` | PHB 普通装备（父条目＋子规格＋套组＋武器精通）+ DMG 魔法物品（348 项目标条目） | 普通装备 212 条与 8 项精通已接入；DMG 魔法物品 348 条已装配进 2024 仓库（209 `selectable`／139 `index-only`）；物品库按草稿版本加载（B07-05） |
 
 - 2024 魔法物品的充能、一次性消耗与恢复时机登记在 `EquipmentRule.magicItemUsage`，动作边界登记在 `itemAction`，状态引用登记在 `stateReferences`；均有 B01《机制索引》依据，消耗与恢复结算归 B10。
 - 2024 魔法物品不保存固定价格：稀有度按 2024 规则登记（普通／珍稀／传说／神器／多种稀有度），价格由 DM 裁定。
@@ -75,11 +75,13 @@ docs/equipment/5e-2014/magic-items/artifacts.md 神器（artifact，8 件）
 - B07-04 按 B01《魔法物品-DMG2024》与《魔法物品-机制索引》全量登记 348 项（62 个分类文件），其中 209 项目标 `selectable`、139 项目标 `index-only`。
 - 条目登记类别、稀有度、同调（无需同调 178、需同调 136、条件同调 34，含仅限施法者 9）、动作边界、充能／一次性消耗与恢复时机及状态引用；效果细节以《城主指南（2024）》为准，不复制正文。
 - 情境依赖条目（生物、随机表、DM 裁定、智能或诅咒物品）保持 `index-only` 并说明原因；+1／+2／+3 聚合条目按型号区间登记。
+- B07-05：PHB 冒险装备中的 EQ-135 治疗药水与 EQ-147 法术卷轴按固定价格（50 GP／戏法 30 GP·一环 50 GP）接入 `equipment-2024.ts`，可在物品库自由添加；DMG 汇总条目（`equipment-2024-potions-of-healing`、`equipment-2024-spell-scroll-varies`）保留为多型号索引，`varies` 条目不直接加入。
+- 物品库规则：`index-only` 条目置灰并说明原因、不可加入；添加物品不扣金币（金币由角色卡金币面板单独管理）；已持有物品的来源被关闭时保留数据与派生，仅在界面显示“来源已关闭”。
 
 ## 与代码数据的关系
 
 - 数据实现文件：`equipment-2014.ts`（普通装备）、`magic-items-2014.ts`（手工核验 DMG 条目）、`magic-items-dmg-catalog-2014.ts`（247 条 A–Z/神器目录）、`magic-items-xgte-tcoe-2014.ts`（XGtE/TCoE）、`magic-items-expansions-2014.ts`（ERftLW/EGtW 索引与重印合并）、`equipment-metadata.ts`（迁移辅助）和 2024 侧的 `equipment-2024.ts`、`equipment-packs-2024.ts`、`magic-items-2024.ts`（由 `scripts/build-magic-items-2024.mjs` 从 B01 两份矩阵生成）。
-- `EquipmentRule` 公共字段包含 `id/name/englishName/ruleset/status/description/classIds/equippable/category/attunement/sourceIds`；魔法物品另含 `rarity/magicItemCategory/attunementCondition/magicBonus/itemAction/magicItemUsage/stateReferences`。**暂无价格与重量字段**。
-- **登记状态（2026-09-15）**：2014 运行时共 677 条，其中普通装备 222 条、魔法物品 455 条；DMG 来源实体 278 条（259 `selectable`、19 `index-only`），247 条文档候选均能对照到运行时实体；ERftLW 23 条与 EGtW 48 条来源索引已导入。重印内容保持单实体多来源。2024 侧装配 210 条普通装备与 348 条 DMG 魔法物品，均不进入 2014 仓库。
-- 弹窗候选来源为 `rulesRepository.equipment`（当前固定 2014 仓库），支持稀有度、护甲/药水/戒指/权杖/卷轴/法杖/魔杖/武器/奇物及普通盾牌/工具/杂物、同调和来源多选；未收录条目由“自定义物品”入口兜底。2024 物品库的版本化加载与来源关闭联验归 B07-05。
+- `EquipmentRule` 公共字段包含 `id/name/englishName/ruleset/status/description/classIds/equippable/category/attunement/sourceIds`；2024 普通装备另含 `priceCp/weightLb`（其中 PHB 消耗品 EQ-135／EQ-147 亦为固定价格），魔法物品另含 `rarity/magicItemCategory/attunementCondition/magicBonus/itemAction/magicItemUsage/stateReferences`（DMG 2024 魔法物品不保存固定价格）。
+- **登记状态（2026-09-15）**：2014 运行时共 677 条，其中普通装备 222 条、魔法物品 455 条；DMG 来源实体 278 条（259 `selectable`、19 `index-only`），247 条文档候选均能对照到运行时实体；ERftLW 23 条与 EGtW 48 条来源索引已导入。重印内容保持单实体多来源。2024 侧装配 212 条普通装备与 348 条 DMG 魔法物品，均不进入 2014 仓库。
+- 弹窗候选来源为草稿版本对应的仓库（2014 动态分块、2024 静态装配，B07-05），支持稀有度、护甲/药水/戒指/权杖/卷轴/法杖/魔杖/武器/奇物及普通盾牌/工具/杂物、同调和来源多选；未收录条目由“自定义物品”入口兜底；`index-only` 条目仅展示并说明原因。
 - 派生说明：装备栏 AC 计算（`app/src/rules/derive.ts`）目前只识别带 `armorBase` 的护甲；泛型魔法护甲（如"护甲 +1"）装备后按基础 10 计算，附着具体护甲后的 AC 增强属后续派生增强点。

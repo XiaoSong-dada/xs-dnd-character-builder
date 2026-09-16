@@ -122,4 +122,18 @@ describe('逐武器攻击派生', () => {
     })
     expect(deriveWeaponAttack(protector, deriveCharacter(protector), longsword)?.proficient).toBe(true)
   })
+
+  it('2024 护甲与盾牌参与 AC，武器装备后才有攻击数据（B07-05c）', () => {
+    const inventory = [
+      { id: 'inv-armor', itemId: 'equipment-2024-chain-mail', quantity: 1, equippedQuantity: 1, sourceKind: 'class' as const },
+      { id: 'inv-shield', itemId: 'equipment-2024-shield', quantity: 1, equippedQuantity: 1, sourceKind: 'class' as const },
+      { id: 'inv-sword', itemId: 'equipment-2024-longsword', quantity: 1, equippedQuantity: 1, sourceKind: 'class' as const },
+    ]
+    const fighter = draft2024({ id: 'equip-2024', targetLevel: 1, inventory })
+    const derived = deriveCharacter(fighter)
+    // 链甲 16 + 盾牌 2 = 18（重甲不叠敏捷）。
+    expect(derived.armorClass.value).toBe(18)
+    const longsword = rulesRepository2024.getEquipment('equipment-2024-longsword')!
+    expect(deriveWeaponAttack(fighter, derived, longsword)).toMatchObject({ damageDice: '1d8', proficient: true })
+  })
 })
