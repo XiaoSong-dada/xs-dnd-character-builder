@@ -227,6 +227,32 @@ describe('session-state 人工编辑协调', () => {
     expect(reconcileSessionLimits({ ...baseState, currentHp: 30 }, 40, 30, []).currentHp).toBe(20)
     expect(reconcileSessionLimits({ ...baseState, currentHp: 5 }, 40, 30, []).currentHp).toBe(0)
   })
+
+  it('编辑协调：资源已用量按新上限钳制、失效条目移除并同步休息快照（B10-04）', () => {
+    const state: SessionState = {
+      ...baseState,
+      resourceUsage: { keep: 5, trim: 3, gone: 2 },
+      lastRestSnapshot: {
+        currentHp: 20,
+        usedSpellSlots: {},
+        exhaustionLevel: 0,
+        debuffs: [],
+        resourceUsage: { keep: 4, gone: 1 },
+        at: '2026-08-01T00:30:00.000Z',
+      },
+    }
+    const reconciled = reconcileSessionLimits(state, 30, 30, [], undefined, [
+      { id: 'keep', max: 4 },
+      { id: 'trim', max: 1 },
+    ])
+    expect(reconciled.resourceUsage).toEqual({ keep: 4, trim: 1 })
+    expect(reconciled.lastRestSnapshot?.resourceUsage).toEqual({ keep: 4 })
+  })
+
+  it('未提供资源上限时保持既有 resourceUsage（兼容旧调用）', () => {
+    const reconciled = reconcileSessionLimits({ ...baseState, resourceUsage: { keep: 2 } }, 30, 30, [])
+    expect(reconciled.resourceUsage).toEqual({ keep: 2 })
+  })
 })
 
 describe('session-state 可施法环位（升环）', () => {

@@ -239,8 +239,9 @@ export function clampCurrentHp(state: SessionState, maxHp: number): SessionState
 }
 
 /**
- * 角色最大 HP / 环位上限变化时协调局内状态：保持已损失 HP，已用环位按新上限钳制。
- * 休息快照同步换算，保证撤回休息后仍落在新的角色上限内。
+ * 角色最大 HP / 环位／资源上限变化时协调局内状态：保持已损失 HP，已用环位与职业资源按新上限钳制，
+ * 已不存在的资源条目（换职业或降级失去特性）移除；休息快照同步换算，保证撤回休息后仍落在新上限内。
+ * `resources` 省略时跳过资源协调（兼容旧调用）。
  */
 export function reconcileSessionLimits(
   state: SessionState,
@@ -248,6 +249,7 @@ export function reconcileSessionLimits(
   newMaxHp: number,
   newSlots: readonly { level: number; count: number }[],
   hitDiceTotal?: number,
+  resources?: readonly { readonly id: string; readonly max: number }[],
 ): SessionState {
   const preserveDamage = (currentHp: number): number => clamp(newMaxHp - Math.max(0, oldMaxHp - currentHp), 0, newMaxHp)
   const slotMax = new Map(newSlots.map((slot) => [slot.level, slot.count]))
@@ -263,19 +265,35 @@ export function reconcileSessionLimits(
     const total = Math.max(0, hitDiceTotal ?? pool.total)
     return { total, spent: clamp(pool.spent, 0, total) }
   }
+  const resourceMax = new Map((resources ?? []).map((resource) => [resource.id, resource.max]))
+  const reconcileResources = (
+    usage: Readonly<Record<string, number>> | undefined,
+  ): Readonly<Record<string, number>> | undefined => {
+    if (!usage || !resources) return usage
+    return Object.fromEntries(
+      Object.entries(usage).flatMap(([id, used]) => {
+        const maximum = resourceMax.get(id)
+        if (maximum === undefined) return []
+        const next = clamp(used, 0, maximum)
+        return next > 0 ? [[id, next]] : []
+      }),
+    )
+  }
+  const resourceUsage = reconcileResources(state.resourceUsage)
+  const snapshotResourceUsage = reconcileResources(state.lastRestSnapshot?.resourceUsage)
   return {
     ...state,
     currentHp: preserveDamage(state.currentHp),
     usedSpellSlots: reconcileSlots(state.usedSpellSlots),
     ...(state.hitDice ? { hitDice: reconcileHitDice(state.hitDice) } : {}),
-    ...(state.resourceUsage ? { resourceUsage: state.resourceUsage } : {}),
+    ...(resourceUsage ? { resourceUsage } : {}),
     ...(state.lastRestSnapshot ? {
       lastRestSnapshot: {
         ...state.lastRestSnapshot,
         currentHp: preserveDamage(state.lastRestSnapshot.currentHp),
         usedSpellSlots: reconcileSlots(state.lastRestSnapshot.usedSpellSlots),
         ...(state.lastRestSnapshot.hitDice ? { hitDice: reconcileHitDice(state.lastRestSnapshot.hitDice) } : {}),
-        ...(state.lastRestSnapshot.resourceUsage ? { resourceUsage: state.lastRestSnapshot.resourceUsage } : {}),
+        ...(snapshotResourceUsage ? { resourceUsage: snapshotResourceUsage } : {}),
       },
     } : {}),
     updatedAt: new Date().toISOString(),

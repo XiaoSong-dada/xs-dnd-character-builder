@@ -109,6 +109,27 @@ describe('character drafts store', () => {
     expect(modern.targetLevel).toBe(10)
   })
 
+  it('降级与换职业时协调职业资源已用量（B10-04）', () => {
+    const store = useCharacterDraftsStore()
+    const draft = store.createDraft('5e-2024')
+    store.updateDraft({ classId: 'class-2024-barbarian', targetLevel: 9 })
+    SessionStateStorageService.save({
+      draftId: draft.id,
+      currentHp: 50,
+      usedSpellSlots: {},
+      exhaustionLevel: 0,
+      debuffs: [],
+      resourceUsage: { 'barbarian-2024-class-rage': 4 },
+      updatedAt: '',
+    })
+
+    store.updateDraft({ targetLevel: 3 })
+    expect(SessionStateStorageService.load(draft.id)?.resourceUsage).toEqual({ 'barbarian-2024-class-rage': 3 })
+
+    store.updateDraft({ classId: 'class-2024-fighter', targetLevel: 3 })
+    expect(SessionStateStorageService.load(draft.id)?.resourceUsage).toEqual({})
+  })
+
   it('两版草稿共存并在刷新后恢复', async () => {
     const store = useCharacterDraftsStore()
     store.createDraft()

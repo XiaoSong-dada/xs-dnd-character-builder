@@ -15,6 +15,7 @@ import { resolveInitialRuleset } from '@/services/ruleset-preference'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { getEffectiveSpellSlots } from '@/rules/spellcasting'
 import { reconcileSessionLimits } from '@/rules/session-state'
+import { listSessionResources } from '@/rules/session-resources'
 import { SessionStateStorageService } from '@/services/session-state-storage'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { DraftStorageService } from '@/services/draft-storage'
@@ -194,9 +195,18 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     next = { ...next, manualEdits: normalizeManualEdits(next.manualEdits) }
     const state = SessionStateStorageService.load(current.id)
     if (state) {
-      const oldMaxHp = deriveCharacter(current).hitPoints.value
-      const newMaxHp = deriveCharacter(next).hitPoints.value
-      SessionStateStorageService.save(reconcileSessionLimits(state, oldMaxHp, newMaxHp, getEffectiveSpellSlots(next), next.ruleset === '5e-2024' ? next.targetLevel : undefined))
+      const currentDerived = deriveCharacter(current)
+      const nextDerived = deriveCharacter(next)
+      // 资源上限随新草稿重算：降级／换职业后钳制已用量并移除失效条目（含免费施法）。
+      const resources = listSessionResources(next, nextDerived.modifiers)
+      SessionStateStorageService.save(reconcileSessionLimits(
+        state,
+        currentDerived.hitPoints.value,
+        nextDerived.hitPoints.value,
+        getEffectiveSpellSlots(next),
+        next.ruleset === '5e-2024' ? next.targetLevel : undefined,
+        resources,
+      ))
     }
     drafts.value[index] = next
   }

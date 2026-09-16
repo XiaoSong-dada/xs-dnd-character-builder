@@ -65,7 +65,7 @@ export interface SessionState {
   readonly debuffs: readonly string[]
   /** 生命骰池（仅 2024 角色初始化；2014 保持不追踪）。 */
   readonly hitDice?: HitDicePool
-  /** 职业资源／骰池已用数量（key = 特性 id；仅 2024 结算）。 */
+  /** 职业资源／骰池／免费施法已用数量（key = 特性 id 或 `sourceId:spellId`；仅 2024 结算）。 */
   readonly resourceUsage?: Readonly<Record<string, number>>
   /** 上次消耗生命骰前的快照（撤回生命骰消耗用）。 */
   readonly lastHitDiceSnapshot?: SessionRestSnapshot
