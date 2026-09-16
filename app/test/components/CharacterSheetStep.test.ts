@@ -6,6 +6,7 @@ import { defineComponent, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
+import { rulesRepository2014 } from '@/rules/repository'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
 import CharacterSheetStep from '@/views/character-builder/components/CharacterSheetStep.vue'
@@ -54,6 +55,35 @@ const draft: CharacterDraft = {
 describe('CharacterSheetStep', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+  })
+
+  it('2024 专长自带属性提升在特性列表显示中文标签（B09-09）', async () => {
+    const modern: CharacterDraft = {
+      ...draft,
+      ruleset: '5e-2024',
+      classId: 'class-2024-fighter',
+      targetLevel: 5,
+      selections: [
+        { checkpointId: 'class-2024-fighter-feat-4', optionIds: ['feat-2024-keen-mind'], confirmedAt: '' },
+        { checkpointId: 'feat-child:class-2024-fighter-feat-4:feat-2024-keen-mind:ability', optionIds: ['feat-bonus-int-1'], confirmedAt: '' },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, { props: { draft: modern, derived: deriveCharacter(modern) } })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('敏锐心灵 · 智力 +1')
+    expect(wrapper.text()).not.toContain('feat-bonus-int-1')
+  })
+
+  it('2024 草稿显示版本与支持范围（B11-05）', () => {
+    const modern: CharacterDraft = { ...draft, ruleset: '5e-2024', classId: 'class-2024-fighter' }
+    const wrapper = mount(CharacterSheetStep, { props: { draft: modern, derived: deriveCharacter(modern) } })
+
+    expect(wrapper.text()).toContain('规则预览 · 5e-2024')
+    expect(wrapper.text()).toContain('2024 支持')
+    expect(wrapper.text()).toContain('2024 车卡、跑团资源结算与导出已可用')
+    expect(wrapper.text()).toContain('魔法物品为自由添加、仅索引条目不可加入')
   })
 
   it('uses Chinese labels for abilities, saving throws, and skills', async () => {
@@ -619,6 +649,26 @@ describe('CharacterSheetStep 法术展示', () => {
     await main.trigger('click')
     expect(magicMissileCard!.find('.expandable-option-card__growth').exists()).toBe(true)
     expect(wrapper.emitted('changeSpellSelections')).toBeUndefined()
+  })
+
+  it('已持有物品的来源关闭后显示提示且数据保留（B07-05d）', async () => {
+    const item = rulesRepository2014.getEquipment('armor-of-gleaming')!
+    const closedDraft: CharacterDraft = {
+      ...draft,
+      enabledSourceIds: [],
+      inventory: [
+        { id: 'inv-closed-source', itemId: item.id, quantity: 1, equippedQuantity: 0, sourceKind: 'adventure' },
+        { id: 'inv-core', itemId: 'longsword', quantity: 1, equippedQuantity: 0, sourceKind: 'adventure' },
+      ],
+    }
+    const wrapper = mount(CharacterSheetStep, { props: { draft: closedDraft, derived: deriveCharacter(closedDraft) } })
+    await wrapper.get('[role="tab"]:nth-child(5)').trigger('click')
+
+    const closedCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes(item.name))
+    expect(closedCard?.text()).toContain('来源已关闭')
+    const coreCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('长剑'))
+    expect(coreCard?.text()).not.toContain('来源已关闭')
+    expect(closedDraft.inventory).toHaveLength(2)
   })
 
   it('物品页签条目化并可展开装备详情（武器显示伤害摘要）', async () => {

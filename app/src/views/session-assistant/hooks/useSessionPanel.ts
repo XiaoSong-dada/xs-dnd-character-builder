@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 
 import { deriveCharacter } from '@/rules/derive'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import { getEffectiveSpellSlots, getRequiredSpellCount, getSpellCandidates, getSpellcastingConfig, getUnpreparedManualSpellIds } from '@/rules/spellcasting'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import {
@@ -11,11 +11,16 @@ import {
   applyLongRest,
   applyShortRest,
   applySpellSlotChange,
+  averageHitDieValue,
   clampCurrentHp,
   createInitialSessionState,
+  ensureHitDicePool,
   restoreLastRest,
+  spendHitDice,
   toggleDebuff,
+  undoHitDiceSpend,
 } from '@/rules/session-state'
+import { applyResourceChange, applyRestRecovery, getResourceUsed, getShortRestExhaustionReduction, listSessionResources } from '@/rules/session-resources'
 import { SessionStateStorageService } from '@/services/session-state-storage'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft } from '@/types/character'
@@ -28,10 +33,17 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   // ---- 派生数据 ----
   const derived = computed(() => deriveCharacter(draft.value))
   const maxHp = computed(() => derived.value.hitPoints.value)
-  const className = computed(() => draft.value.classId ? (rulesRepository.getClass(draft.value.classId)?.name ?? '') : '')
+  /** 名称与条目解析按草稿版本（2024 草稿不得使用 2014 静态仓库）。 */
+  const repository = computed(() => getRulesRepository(draft.value.ruleset))
+  const className = computed(() => draft.value.classId ? (repository.value.getClass(draft.value.classId)?.name ?? '') : '')
   const spellcastingConfig = computed(() => getSpellcastingConfig(draft.value))
   const spellSlots = computed(() => getEffectiveSpellSlots(draft.value))
   const pactSlotLevels = computed(() => spellSlots.value.filter((slot) => slot.pact).map((slot) => slot.level))
+  /** 2024 角色追踪生命骰池（总数＝职业等级）；2014 保持既有行为不追踪。 */
+  const tracksHitDice = computed(() => draft.value.ruleset === '5e-2024')
+  const classHitDie = computed(() => draft.value.classId
+    ? repository.value.getClass(draft.value.classId)?.hitDie ?? 8
+    : 8)
 
   // ---- 法术书（spellbook 模式）：未准备法术与准备切换 ----
   const requiredSpellCount = computed(() =>
@@ -42,7 +54,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     const config = spellcastingConfig.value
     const normal = config ? getSpellCandidates(draft.value, config).prepareFromBook : []
     return [...new Set([...normal, ...getUnpreparedManualSpellIds(draft.value)])]
-      .map((id) => rulesRepository.getSpell(id))
+      .map((id) => repository.value.getSpell(id))
       .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell))
   })
   const canPrepareMore = computed(() =>
@@ -87,8 +99,8 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     if (existing) return existing
     const loaded = SessionStateStorageService.load(draft.value.id)
     const next = loaded
-      ? clampCurrentHp(loaded, maxHp.value)
-      : createInitialSessionState(draft.value.id, maxHp.value)
+      ? clampCurrentHp(tracksHitDice.value ? ensureHitDicePool(loaded, draft.value.targetLevel) : loaded, maxHp.value)
+      : createInitialSessionState(draft.value.id, maxHp.value, tracksHitDice.value ? draft.value.targetLevel : undefined)
     sessionState.value = next
     return next
   }
@@ -160,12 +172,74 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   }
 
   // ---- 休息与撤回 ----
+  /** 生命骰池视图：剩余数量、骰面与“直接回”平均值（仅 2024）。 */
+  const hitDice = computed(() => {
+    if (!tracksHitDice.value) return undefined
+    const pool = ensureState().hitDice
+    if (!pool) return undefined
+    return {
+      total: pool.total,
+      spent: pool.spent,
+      remaining: Math.max(0, pool.total - pool.spent),
+      die: classHitDie.value,
+      average: averageHitDieValue(classHitDie.value),
+    }
+  })
+  const hitDiceSnapshotAvailable = computed(() => Boolean(ensureState().lastHitDiceSnapshot))
+
+  /** 短休花费生命骰：mode = roll 掷骰（随机骰点）或 average 直接回（骰面平均值）。 */
+  function spendHitDiceAction(count: number, mode: 'roll' | 'average'): void {
+    const state = ensureState()
+    const pool = state.hitDice
+    if (!pool) return
+    const remaining = Math.max(0, pool.total - pool.spent)
+    const spendCount = Math.min(count, remaining)
+    if (spendCount <= 0) {
+      operationError.value = '生命骰已用完。'
+      return
+    }
+    const die = classHitDie.value
+    const outcomes = Array.from({ length: spendCount }, () => mode === 'roll'
+      ? Math.floor(Math.random() * die) + 1
+      : averageHitDieValue(die))
+    const next = spendHitDice(state, { count: spendCount, outcomes, conModifier: derived.value.modifiers.con, maxHp: maxHp.value })
+    operationError.value = ''
+    persist(next)
+  }
+
+  function undoHitDice(): void {
+    persist(undoHitDiceSpend(ensureState()))
+  }
+
+  /** 可消耗资源（仅 2024 有登记；2014 为空列表）。 */
+  const sessionResources = computed(() => listSessionResources(draft.value, derived.value.modifiers))
+
+  /** 资源已用/剩余视图。 */
+  const resourceViews = computed(() => sessionResources.value.map((resource) => ({
+    ...resource,
+    used: getResourceUsed(ensureState(), resource.id),
+    remaining: Math.max(0, resource.max - getResourceUsed(ensureState(), resource.id)),
+  })))
+
+  function changeResource(id: string, delta: number): void {
+    const resource = sessionResources.value.find((item) => item.id === id)
+    if (!resource) return
+    const result = applyResourceChange(ensureState(), id, delta, resource.max)
+    operationError.value = result.clamped ? '已达到该资源的数量上限。' : ''
+    persist(result.state)
+  }
+
   function shortRest(): void {
-    persist(applyShortRest(ensureState(), pactSlotLevels.value, maxHp.value))
+    const rested = applyShortRest(ensureState(), pactSlotLevels.value, maxHp.value, {
+      ruleset: draft.value.ruleset,
+      exhaustionReduction: getShortRestExhaustionReduction(draft.value),
+    })
+    persist(applyRestRecovery(rested, sessionResources.value, 'short-rest'))
   }
 
   function longRest(): void {
-    persist(applyLongRest(ensureState(), maxHp.value))
+    const rested = applyLongRest(ensureState(), maxHp.value, { ruleset: draft.value.ruleset })
+    persist(applyRestRecovery(rested, sessionResources.value, 'long-rest'))
   }
 
   function undoRest(): void {
@@ -225,6 +299,12 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     changeSpellSlot,
     changeExhaustion,
     toggleStatus,
+    hitDice,
+    hitDiceSnapshotAvailable,
+    resourceViews,
+    changeResource,
+    spendHitDice: spendHitDiceAction,
+    undoHitDice,
     shortRest,
     longRest,
     undoRest,

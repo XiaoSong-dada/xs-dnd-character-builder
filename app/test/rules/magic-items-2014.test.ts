@@ -111,12 +111,12 @@ describe('magic-items-2014 数据完整性', () => {
 
   it('2024 批次与 2014 可编辑仓库严格隔离', async () => {
     const { magicItems2024 } = await import('@/rules/data/magic-items-2024')
-    expect(magicItems2024.length).toBeGreaterThanOrEqual(6)
+    expect(magicItems2024).toHaveLength(348)
     for (const item of magicItems2024) {
       expect(item.ruleset).toBe('5e-2024')
       expect(rulesRepository.getEquipment(item.id)).toBeUndefined()
     }
-    for (const id of ['enspelled-staff', 'enspelled-weapon', 'enspelled-amulet', 'wraps-of-unarmed-power-+1']) {
+    for (const id of ['equipment-2024-enspelled-staff', 'equipment-2024-enspelled-weapon', 'equipment-2024-enspelled-armor', 'equipment-2024-wraps-of-unarmed-power']) {
       expect(rulesRepository.getEquipment(id), id).toBeUndefined()
     }
   })

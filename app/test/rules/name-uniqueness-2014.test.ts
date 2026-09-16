@@ -25,10 +25,12 @@ describe('规则条目中文名唯一性（5e-2014）', () => {
     expect(new Set(keys).size).toBe(keys.length)
   })
 
-  it('装备与魔法物品 name 全量唯一（含 2014/XGtE/TCoE/2024 各表）', () => {
-    const names = [...equipment2014, ...magicItems2014, ...magicItemsXgteTcoe2014, ...magicItems2024]
+  it('装备与魔法物品 name 在每个规则集内唯一（2014 各表 / 2024 各表；跨版本同名由独立稳定 ID 区分）', () => {
+    const names2014 = [...equipment2014, ...magicItems2014, ...magicItemsXgteTcoe2014]
       .map((entry) => entry.name)
-    expect(new Set(names).size).toBe(names.length)
+    expect(new Set(names2014).size).toBe(names2014.length)
+    const names2024 = magicItems2024.map((entry) => entry.name)
+    expect(new Set(names2024).size).toBe(names2024.length)
   })
 
   it('专长 name 全量唯一（5e-2014，更名后防回归）', () => {

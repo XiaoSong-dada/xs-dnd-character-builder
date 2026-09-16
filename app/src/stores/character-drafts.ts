@@ -6,15 +6,21 @@ import { buildTimeline } from '@/rules/timeline'
 import { validateDraft } from '@/rules/validate'
 import { validateSpellSelections } from '@/rules/spellcasting'
 import { EMPTY_CURRENCY, isStartingEquipmentComplete } from '@/rules/starting-equipment'
+import { isOriginStepComplete } from '@/rules/origins'
 import { getDefaultEnabledSourceIds } from '@/rules/source-books'
+import { getCheckpointSelectionBounds } from '@/rules/feats'
+import { getRulesRepository, isRulesetOpen } from '@/rules/repositories'
+import { hasBuildChoices } from '@/rules/draft-progress'
+import { resolveInitialRuleset } from '@/services/ruleset-preference'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { getEffectiveSpellSlots } from '@/rules/spellcasting'
 import { reconcileSessionLimits } from '@/rules/session-state'
+import { listSessionResources } from '@/rules/session-resources'
 import { SessionStateStorageService } from '@/services/session-state-storage'
-import { CharacterJsonService } from '@/services/character-json'
+import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { DraftStorageService } from '@/services/draft-storage'
 import { CharacterMediaStorageService } from '@/services/character-media-storage'
-import { CharacterPackageService } from '@/services/character-package'
+import { CharacterPackageError, CharacterPackageService } from '@/services/character-package'
 import type {
   AbilityScores,
   CharacterManualEdits,
@@ -22,25 +28,28 @@ import type {
   ChoiceSelection,
   DraftStep,
   LegacyDraftRecord,
+  RulesetId,
 } from '@/types/character'
 
 const DEFAULT_ABILITIES: AbilityScores = { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 }
+
+const UNOPENED_RULESET_MESSAGE = '该规则版本的角色尚未开放，暂不能导入。'
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `draft-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-function createCharacterDraft(): CharacterDraft {
+function createCharacterDraft(ruleset: RulesetId): CharacterDraft {
   const now = new Date().toISOString()
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
     id: newId(),
-    ruleset: '5e-2014',
+    ruleset,
     createdAt: now,
     updatedAt: now,
     targetLevel: 10,
     abilityMethod: 'standard-array',
-    enabledSourceIds: getDefaultEnabledSourceIds(),
+    enabledSourceIds: ruleset === '5e-2014' ? getDefaultEnabledSourceIds() : [],
     raceAbilityChoices: [],
     backgroundSkillIds: [],
     backgroundToolIds: [],
@@ -60,6 +69,7 @@ function createCharacterDraft(): CharacterDraft {
       preparedSpellIds: [],
       spellbookSpellIds: [],
       transcribedSpellIds: [],
+      spellbookExtraSpellIds: [],
     },
     manualEdits: EMPTY_MANUAL_EDITS,
     name: '',
@@ -79,11 +89,12 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
   const completion = computed(() => {
     const draft = activeDraft.value
     if (!draft) return 0
-    const timeline = draft.classId ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections }) : []
+    const timeline = draft.classId ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId }) : []
     const timelineComplete = timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const count = selection?.optionIds.length ?? 0
-      return count >= checkpoint.minSelections && count <= checkpoint.maxSelections
+      const bounds = getCheckpointSelectionBounds(draft, checkpoint)
+      return count >= bounds.min && count <= bounds.max
     })
     const abilitiesValid = Object.values(draft.baseAbilities).every((score) => score >= 3 && score <= 20)
     const hasErrors = validationIssues.value.some((item) => item.severity === 'error')
@@ -92,7 +103,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
       draft.targetLevel >= 1 && draft.targetLevel <= 20,
       true,
       Boolean(draft.classId),
-      Boolean(draft.backgroundId && draft.raceId),
+      isOriginStepComplete(draft, getRulesRepository(draft.ruleset)),
       abilitiesValid,
       timelineComplete,
       isStartingEquipmentComplete(draft) && !draft.equipmentNeedsReview,
@@ -106,8 +117,29 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
 
   watch(drafts, (value) => DraftStorageService.saveAll(value), { deep: true })
 
-  function createDraft(): CharacterDraft {
-    const draft = createCharacterDraft()
+  function createDraft(ruleset?: RulesetId): CharacterDraft {
+    const draft = createCharacterDraft(ruleset ?? resolveInitialRuleset().ruleset)
+    drafts.value.push(draft)
+    activeDraftId.value = draft.id
+    return draft
+  }
+
+  /**
+   * 改用另一版本时另建角色（B00-04）：不原地转换；原卡完整保留，
+   * 只复制与规则版本无关的资料（角色名、图片），构筑字段全部留空。
+   */
+  function duplicateAsRuleset(ruleset: RulesetId): CharacterDraft | undefined {
+    const current = activeDraft.value
+    if (!current || current.ruleset === ruleset) return undefined
+    const now = new Date().toISOString()
+    const draft: CharacterDraft = {
+      ...createCharacterDraft(ruleset),
+      id: newId(),
+      name: current.name,
+      createdAt: now,
+      updatedAt: now,
+      ...(current.media ? { media: current.media } : {}),
+    }
     drafts.value.push(draft)
     activeDraftId.value = draft.id
     return draft
@@ -141,13 +173,40 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     replaceDraft(index, current, { ...current, ...patch, updatedAt: new Date().toISOString() })
   }
 
+  /**
+   * 切换活动草稿的规则版本（B00-04）：仅在尚未产生构筑选择时允许；
+   * 已有构筑的版本变更走另建流程（B09-03），不在此处原地转换。
+   */
+  function changeRuleset(ruleset: RulesetId): boolean {
+    const index = drafts.value.findIndex((draft) => draft.id === activeDraftId.value)
+    if (index < 0) return false
+    const current = drafts.value[index]
+    if (!current || current.ruleset === ruleset || hasBuildChoices(current)) return false
+    replaceDraft(index, current, {
+      ...current,
+      ruleset,
+      enabledSourceIds: ruleset === '5e-2014' ? getDefaultEnabledSourceIds() : [],
+      updatedAt: new Date().toISOString(),
+    })
+    return true
+  }
+
   function replaceDraft(index: number, current: CharacterDraft, next: CharacterDraft): void {
     next = { ...next, manualEdits: normalizeManualEdits(next.manualEdits) }
     const state = SessionStateStorageService.load(current.id)
     if (state) {
-      const oldMaxHp = deriveCharacter(current).hitPoints.value
-      const newMaxHp = deriveCharacter(next).hitPoints.value
-      SessionStateStorageService.save(reconcileSessionLimits(state, oldMaxHp, newMaxHp, getEffectiveSpellSlots(next)))
+      const currentDerived = deriveCharacter(current)
+      const nextDerived = deriveCharacter(next)
+      // 资源上限随新草稿重算：降级／换职业后钳制已用量并移除失效条目（含免费施法）。
+      const resources = listSessionResources(next, nextDerived.modifiers)
+      SessionStateStorageService.save(reconcileSessionLimits(
+        state,
+        currentDerived.hitPoints.value,
+        nextDerived.hitPoints.value,
+        getEffectiveSpellSlots(next),
+        next.ruleset === '5e-2024' ? next.targetLevel : undefined,
+        resources,
+      ))
     }
     drafts.value[index] = next
   }
@@ -198,6 +257,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
 
   function importDraft(raw: string): CharacterDraft {
     const imported = CharacterJsonService.importDraft(raw)
+    if (!isRulesetOpen(imported.ruleset)) throw new CharacterImportError('ruleset-mismatch', UNOPENED_RULESET_MESSAGE)
     const draft = { ...imported, id: newId(), updatedAt: new Date().toISOString() }
     drafts.value.push(draft)
     activeDraftId.value = draft.id
@@ -206,6 +266,11 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
 
   async function importPackage(file: Blob): Promise<CharacterDraft> {
     const draft = await CharacterPackageService.import(file)
+    if (!isRulesetOpen(draft.ruleset)) {
+      const mediaIds = CharacterPackageService.mediaIds(draft.media)
+      if (mediaIds.length > 0) void CharacterMediaStorageService.removeMany(mediaIds).catch(() => undefined)
+      throw new CharacterPackageError(UNOPENED_RULESET_MESSAGE)
+    }
     drafts.value.push(draft)
     activeDraftId.value = draft.id
     return draft
@@ -230,6 +295,8 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     validationIssues,
     completion,
     createDraft,
+    changeRuleset,
+    duplicateAsRuleset,
     activateDraft,
     closeActiveDraft,
     deleteDraft,

@@ -1,4 +1,4 @@
-export type RulesetId = '5e-2014'
+export type RulesetId = '5e-2014' | '5e-2024'
 export type CompatibilityStatus = 'implemented' | 'selectable' | 'index-only' | 'dm-only' | 'unavailable'
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 export type AbilityMethod = 'standard-array' | 'point-buy' | 'custom'
@@ -69,6 +69,8 @@ export interface SpellSelections {
   readonly spellbookSpellIds: readonly string[]
   /** 通过抄录写入法术书的法术 ID（spellbookSpellIds 的子集）；升级自动获得的不在此列。 */
   readonly transcribedSpellIds: readonly string[]
+  /** 通过子职额外入书规则写入法术书的法术 ID（spellbookSpellIds 的子集，如 2024 塑能学者）。 */
+  readonly spellbookExtraSpellIds?: readonly string[]
 }
 
 export interface ManualAddedSpell {
@@ -137,14 +139,14 @@ export interface CharacterMedia {
 }
 
 export interface CharacterDraft {
-  readonly schemaVersion: 7
+  readonly schemaVersion: 8
   readonly id: string
-  readonly ruleset: '5e-2014'
+  readonly ruleset: RulesetId
   readonly createdAt: string
   readonly updatedAt: string
   readonly targetLevel: number
   readonly abilityMethod: AbilityMethod
-  /** 当前角色允许使用的可选 2014 来源；Basic Rules 与 PHB 始终启用，不写入此数组。 */
+  /** 当前角色允许使用的可选来源；Basic Rules 与 PHB 始终启用，不写入此数组；按草稿规则版本分别解释。 */
   readonly enabledSourceIds: readonly string[]
   readonly classId?: string
   readonly subclassId?: string
@@ -153,6 +155,10 @@ export interface CharacterDraft {
   readonly backgroundId?: string
   readonly backgroundVariantId?: string
   readonly raceAbilityChoices: readonly AbilityKey[]
+  /** 2024 背景三项候选属性的分配结果（+2/+1 或各 +1）；2014 草稿缺省。 */
+  readonly backgroundAbilityAllocation?: Readonly<Partial<Record<AbilityKey, number>>>
+  /** 2024 物种创建时选择的体型；固定体型的物种不需要。 */
+  readonly speciesSizeChoice?: 'small' | 'medium'
   /** 种族自选技能熟练结果（如半精灵 2 项、兽人 7 选 2）；旧草稿缺省为空。 */
   readonly raceSkillChoices?: readonly string[]
   /** 种族自选工具熟练结果（矮人/战俑/维达肯/吉斯洋基）；展示级，不参与派生。 */

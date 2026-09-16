@@ -13,9 +13,9 @@ import {
   getFeatEligibility,
   type AbilityImprovementMode,
 } from '@/rules/feats'
-import { rulesRepository } from '@/rules/repository'
+import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
+import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
-import { getSpellcastingConfig } from '@/rules/spellcasting'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
 
 const props = defineProps<{
@@ -27,6 +27,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ select: [optionId?: string] }>()
+/** 专长候选按草稿版本解析（B09-02）：不得固定 2014 仓库。 */
+const repository = computed(() => getRulesRepository(props.draft.ruleset))
 const selectedImprovement = computed(() => props.selectedOptionId
   ? decodeAbilityImprovement(props.selectedOptionId)
   : undefined)
@@ -42,24 +44,18 @@ const tagFilters = ['all', '战斗', '施法', '属性', '探索', '支援'] as 
 const tagFilterOptions = tagFilters.map((id) => ({ id, label: id === 'all' ? '全部' : id }))
 
 const abilitiesBeforeCheckpoint = computed(() => deriveAbilities(props.draft, props.checkpointId))
-const canCastSpells = computed(() => {
-  const spellcasting = getSpellcastingConfig(props.draft)
-  return Boolean(spellcasting && props.checkpointLevel >= spellcasting.startsAtLevel)
-})
-const featEntries = computed(() => rulesRepository.feats.map((feat) => ({
+const featEntries = computed(() => repository.value.feats.map((feat) => ({
   feat,
-  eligibility: getFeatEligibility(feat, {
-    abilities: abilitiesBeforeCheckpoint.value,
-    classId: props.draft.classId ?? '',
-    canCastSpells: canCastSpells.value,
-    raceId: props.draft.raceId,
-    subraceId: props.draft.subraceId,
-  }),
+  // 资格上下文与 validateDraft 同源（B09-08）：包含 2024 的节点等级、护甲训练与战斗风格前置。
+  eligibility: getFeatEligibility(feat, getFeatEligibilityContext(props.draft, {
+    checkpointId: props.checkpointId,
+    checkpointLevel: props.checkpointLevel,
+  })),
 })))
 const visibleFeats = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('zh-CN')
   return featEntries.value.filter(({ feat, eligibility }) => {
-    if (!isSourceEnabled(feat.sourceIds, props.draft.enabledSourceIds)) return false
+    if (!isSourceEnabled(feat.sourceIds, props.draft.enabledSourceIds, repository.value)) return false
     if (availableOnly.value && !eligibility.available) return false
     if (tagFilter.value !== 'all' && !feat.tags.includes(tagFilter.value)) return false
     if (!query) return true
@@ -177,7 +173,7 @@ function selectFeat(featId: string, available: boolean): void {
 
     <template v-else>
       <ListShell
-        :count="`${visibleFeats.length}/${rulesRepository.feats.length}`"
+        :count="`${visibleFeats.length}/${repository.feats.length}`"
         searchable
         search-label=""
         search-placeholder="搜索专长名称、英文名或用途"
@@ -195,7 +191,7 @@ function selectFeat(featId: string, available: boolean): void {
               <input v-model="availableOnly" type="checkbox">
               <span>只看当前可选</span>
             </label>
-            <UiBadge>2014 · {{ visibleFeats.length }}/{{ rulesRepository.feats.length }}</UiBadge>
+            <UiBadge>{{ props.draft.ruleset === '5e-2024' ? '2024' : '2014' }} · {{ visibleFeats.length }}/{{ repository.feats.length }}</UiBadge>
           </div>
         </template>
         <ExpandableOptionCard

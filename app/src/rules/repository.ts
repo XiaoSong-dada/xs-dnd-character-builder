@@ -18,6 +18,8 @@ import { fullCasterClasses2014 } from '@/rules/data/full-casters-2014'
 import { metamagicOptions2014 } from '@/rules/data/metamagic-2014'
 import { subclassChoiceOptions2014 } from '@/rules/data/subclass-choice-options-2014'
 import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
+import { raceFeatures2014 } from '@/rules/data/race-features-2014'
+import { backgroundFeatures2014 } from '@/rules/data/background-features-2014'
 import { backgroundStartingEquipment2014, classStartingEquipment2014 } from '@/rules/data/starting-equipment-2014'
 import { subclasses2014, subclassOptions2014 } from '@/rules/data/subclasses-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
@@ -29,7 +31,8 @@ import type { CharacterDraft } from '@/types/character'
 const withoutLegacySubclassOptions = <T extends { readonly id: string }>(options: readonly T[]): readonly T[] =>
   options.filter((option) => !option.id.startsWith('subclass-2014-'))
 
-export const rulesRepository: RulesRepository = {
+export const rulesRepository2014: RulesRepository = {
+  ruleset: '5e-2014',
   sources: sources2014,
   classes: classPreviews2014.map((item) => {
     const classRule = [artificerClass2014, fighterRule, ...martialClasses2014, ...halfCasterClasses2014, ...arcaneCasterClasses2014, ...fullCasterClasses2014].find((classRule) => classRule.id === item.id)
@@ -39,6 +42,8 @@ export const rulesRepository: RulesRepository = {
   subclasses: subclasses2014,
   races: races2014,
   backgrounds: backgrounds2014,
+  raceFeatures: raceFeatures2014,
+  backgroundFeatures: backgroundFeatures2014,
   options: [
     ...abilityImprovementOptions2014,
     ...featChoiceOptions2014,
@@ -60,6 +65,7 @@ export const rulesRepository: RulesRepository = {
   classStartingEquipment: classStartingEquipment2014,
   backgroundStartingEquipment: backgroundStartingEquipment2014,
   spells: spells2014,
+  weaponMasteries: [],
   getClass(id) {
     return this.classes.find((item) => item.id === id)
   },
@@ -85,6 +91,12 @@ export const rulesRepository: RulesRepository = {
   getBackground(id) {
     return this.backgrounds.find((item) => item.id === id)
   },
+  getRaceFeatures(raceId) {
+    return this.raceFeatures.filter((feature) => feature.raceId === raceId)
+  },
+  getBackgroundFeatures(backgroundId) {
+    return this.backgroundFeatures.filter((feature) => feature.backgroundId === backgroundId)
+  },
   getEquipment(id) {
     return this.equipment.find((item) => item.id === id)
   },
@@ -102,4 +114,10 @@ export const rulesRepository: RulesRepository = {
   getSpell(id) {
     return this.spells.find((item) => item.id === id)
   },
+  getWeaponMastery() {
+    return undefined
+  },
 }
+
+/** B02 兼容入口：现有调用方在 B03 前继续固定使用 2014 仓库。 */
+export const rulesRepository = rulesRepository2014

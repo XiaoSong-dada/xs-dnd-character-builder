@@ -1,3 +1,6 @@
+import { equipment2024 } from '@/rules/data/equipment-2024'
+import { magicItems2024 } from '@/rules/data/magic-items-2024'
+import type { RulesetId } from '@/types/character'
 import type { EquipmentRule } from '@/types/rules'
 
 /**
@@ -14,7 +17,13 @@ import type { EquipmentRule } from '@/types/rules'
  */
 let catalogPromise: Promise<readonly EquipmentRule[]> | undefined
 
-export function loadItemCatalog(): Promise<readonly EquipmentRule[]> {
+/**
+ * 按草稿版本取物品目录（B09-06 最小版本分派）：
+ * 2014 走完整目录分块动态加载；2024 用普通装备与 DMG 2024 魔法物品的静态装配。
+ * 完整的购买、增删改与来源关闭语义仍归 B07-05。
+ */
+export function loadItemCatalog(ruleset: RulesetId = '5e-2014'): Promise<readonly EquipmentRule[]> {
+  if (ruleset === '5e-2024') return Promise.resolve([...equipment2024, ...magicItems2024])
   catalogPromise ??= import('@/rules/data/generated/magic-items-catalog-2014')
     .then((module) => module.magicItemsCatalog2014)
     .catch((error) => {

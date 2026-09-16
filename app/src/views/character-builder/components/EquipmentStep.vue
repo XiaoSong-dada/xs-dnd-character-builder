@@ -5,7 +5,7 @@ import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
 import {
   buildStartingEquipmentState,
@@ -22,6 +22,7 @@ import type {
 } from '@/types/character'
 
 const props = defineProps<{ draft: CharacterDraft }>()
+const rulesRepository = computed(() => getRulesRepository(props.draft.ruleset))
 const emit = defineEmits<{
   change: [
     selections: readonly StartingEquipmentSelection[],
@@ -32,10 +33,10 @@ const emit = defineEmits<{
 }>()
 
 const classProfile = computed(() =>
-  props.draft.classId ? rulesRepository.getClassStartingEquipment(props.draft.classId) : undefined)
+  props.draft.classId ? rulesRepository.value.getClassStartingEquipment(props.draft.classId) : undefined)
 const backgroundProfile = computed(() =>
   props.draft.backgroundVariantId || props.draft.backgroundId
-    ? rulesRepository.getBackgroundStartingEquipment(props.draft.backgroundVariantId ?? props.draft.backgroundId!)
+    ? rulesRepository.value.getBackgroundStartingEquipment(props.draft.backgroundVariantId ?? props.draft.backgroundId!)
     : undefined)
 const complete = computed(() => isStartingEquipmentComplete(props.draft))
 const backgroundEntries = computed(() => props.draft.inventory.filter((entry) => entry.sourceKind === 'background'))
@@ -53,7 +54,7 @@ function legalInfusionEntries(infusionId: string): readonly InventoryEntry[] {
   const infusion = artificerInfusions2014.find((item) => item.id === infusionId)
   if (!infusion) return []
   return props.draft.inventory.filter((entry) => {
-    const item = rulesRepository.getEquipment(entry.itemId)
+    const item = rulesRepository.value.getEquipment(entry.itemId)
     return Boolean(item && infusion.eligibleCategories.includes(item.category as never))
   })
 }
@@ -64,7 +65,7 @@ function bindInfusion(infusionId: string, inventoryEntryId: string): void {
 }
 
 function itemName(itemId: string): string {
-  return rulesRepository.getEquipment(itemId)?.name ?? itemId
+  return rulesRepository.value.getEquipment(itemId)?.name ?? itemId
 }
 
 function selectionFor(groupId: string): StartingEquipmentSelection | undefined {
@@ -137,7 +138,7 @@ function sourceLabel(entry: InventoryEntry): string {
           <h2>{{ rulesRepository.getClass(draft.classId ?? '')?.name ?? '尚未选择职业' }}</h2>
         </div>
         <UiBadge :tone="complete ? 'success' : 'warning'">
-          {{ complete ? '已完成' : `${draft.startingEquipmentSelections.length}/${classProfile?.groups.length ?? 0}` }}
+          {{ complete ? '已完成' : `${draft.startingEquipmentSelections.length}/${(classProfile?.groups.length ?? 0) + (backgroundProfile?.groups?.length ?? 0)}` }}
         </UiBadge>
       </header>
 
@@ -181,7 +182,7 @@ function sourceLabel(entry: InventoryEntry): string {
             count-label="已选 "
           >
             <ExpandableOptionCard
-              v-for="item in getAllowedPickItems(group.options.find((option) => option.id === selectionFor(group.id)?.optionId)!.pick!)"
+              v-for="item in getAllowedPickItems(group.options.find((option) => option.id === selectionFor(group.id)?.optionId)!.pick!, rulesRepository)"
               :key="item.id"
               :title="item.name"
               :description="item.damageDice ? `${item.damageDice} ${item.damageType}伤害` : ''"
@@ -246,11 +247,31 @@ function sourceLabel(entry: InventoryEntry): string {
     <section class="equipment-step__section">
       <header>
         <div>
-          <p>背景固定装备</p>
+          <p>{{ backgroundProfile?.groups?.length ? '背景起始装备' : '背景固定装备' }}</p>
           <h2>{{ rulesRepository.getBackground(draft.backgroundId ?? '')?.name ?? '尚未选择背景' }}</h2>
         </div>
-        <UiBadge v-if="backgroundProfile" tone="success">自动加入</UiBadge>
+        <UiBadge v-if="backgroundProfile" :tone="complete ? 'success' : 'warning'">{{ backgroundProfile.groups?.length ? '二选一' : '自动加入' }}</UiBadge>
       </header>
+      <article v-for="group in backgroundProfile?.groups ?? []" :key="group.id" class="equipment-step__group">
+        <h3>{{ group.title }}</h3>
+        <ListShell>
+          <ExpandableOptionCard
+            v-for="option in group.options"
+            :key="option.id"
+            :title="option.label"
+            :description="option.currency?.gp ? `获得 ${option.currency.gp} GP，不再领取本背景装备` : '领取本背景装备包'"
+            expanded-label="方案详情"
+            :state="selectionFor(group.id)?.optionId === option.id ? 'selected' : 'default'"
+            @select="selectOption(group.id, option.id)"
+          >
+            <template #expanded>
+              <ul v-if="option.grants.length" class="equipment-step__grant-list">
+                <li v-for="grant in option.grants" :key="grant.itemId">{{ itemName(grant.itemId) }}<template v-if="grant.quantity > 1"> ×{{ grant.quantity }}</template></li>
+              </ul>
+            </template>
+          </ExpandableOptionCard>
+        </ListShell>
+      </article>
       <p v-if="!backgroundEntries.length" class="equipment-step__empty">选择背景后会自动加入对应物品。</p>
       <ul v-else class="equipment-step__compact-list">
         <li v-for="entry in backgroundEntries" :key="entry.id">

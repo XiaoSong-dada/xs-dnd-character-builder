@@ -1,5 +1,7 @@
 # 牧师 Cleric
 
+> 运行时名称采用 5e 不全书译名（圣职、保护者、奇术使、受祝击（神圣打击／强力施法）、灼净亡灵、神圣干预、进阶神圣干预）；本页早期旧译名（神圣职分、守护者、奇术师）仅作对照。
+
 ## 1. 文档范围
 
 本文档记录牧师的基础职业资料、等级成长、车卡选择与项目实现边界。默认规则集为 `5e-2024`，公开规则依据 2024 Free Rules 与 SRD 5.2.1。
@@ -157,4 +159,4 @@
 - [SRD 5.2.1](https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf)
 - [2024 Cleric vs. 2014 Cleric: What’s New](https://www.dndbeyond.com/posts/1767-2024-cleric-vs-2014-cleric-whats-new)
 
-最后核验日期：2026-07-24。
+最后核验日期：2026-09-15。

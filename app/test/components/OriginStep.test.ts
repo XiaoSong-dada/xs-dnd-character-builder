@@ -147,3 +147,16 @@ describe('OriginStep 种族熟练自选', () => {
     expect(wrapper.text()).not.toContain('熟练选择')
   })
 })
+
+describe('OriginStep 起源未完成原因清单（B09-07）', () => {
+  it('展示阻塞项与处理建议，为空时不渲染', () => {
+    const blocker = { id: 'background-languages', message: '语言选择尚未完成。', resolution: '请选择2种不同的额外语言。' }
+    const wrapper = mount(OriginStep, { props: { ruleset: '5e-2024', languages: [], blockers: [blocker] } })
+    expect(wrapper.text()).toContain('还差 1 项才能继续')
+    expect(wrapper.text()).toContain('语言选择尚未完成。')
+    expect(wrapper.text()).toContain('请选择2种不同的额外语言。')
+
+    const empty = mount(OriginStep, { props: { ruleset: '5e-2024', languages: [] } })
+    expect(empty.text()).not.toContain('还差')
+  })
+})

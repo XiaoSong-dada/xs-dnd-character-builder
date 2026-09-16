@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+import { buildCharacterExportModel } from '@/features/character-export/build-export-data'
+import { deriveCharacter } from '@/rules/derive'
 import { CHARACTER_SHEET_PDF_MAPPING_VERSION, fillPdfTemplate, inspectPdfSpellTemplate, layoutPdfTreasureItems, wrapPdfText } from '@/services/export-pdf'
+import { draft2024, selection } from '../fixtures/draft-2024'
 import { fighterExportModel, levelSixWizardExportModel, wizardExportModel } from '../fixtures/export-character'
 import { inspectGeneratedPdfFont } from '../fixtures/pdf-font'
 
@@ -152,6 +155,29 @@ describe('export-pdf v7 国内 5E 术语版表单适配器', () => {
     expect(output.getPageCount()).toBe(3)
     expect(output.getForm().getFields()).toHaveLength(0)
     expect(result.bytes.byteLength).toBeLessThanOrEqual(5 * 1024 * 1024)
+    expect(await inspectGeneratedPdfFont(result.bytes)).toEqual({ embeddedRegularFontCount: 1, hasNeedAppearances: false, widgetCount: 0 })
+  }, 30_000)
+
+  it('2024 样例（含资源与武器精通）填充后不产生阻断诊断（B11-01/03）', async () => {
+    const draft = draft2024({
+      id: 'pdf-2024',
+      classId: 'class-2024-ranger',
+      subclassId: 'subclass-2024-ranger-hunter',
+      targetLevel: 5,
+      enabledSourceIds: ['source-2024-phb'],
+      selections: [
+        selection('class-2024-ranger-mastery-1', ['equipment-2024-longbow', 'equipment-2024-shortsword']),
+        selection('subclass-feature-ranger-2024-hunter-hunters-prey', ['hunter-2024-prey-colossus-slayer']),
+      ],
+    })
+    const model = buildCharacterExportModel(draft, deriveCharacter(draft))
+    expect(model.resources.length).toBeGreaterThan(0)
+    const result = await fillPdfTemplate(template(), font(), model)
+    expect(result.diagnostics.filter((item) => item.severity === 'error')).toEqual([])
+    const { PDFDocument } = await import('pdf-lib')
+    const output = await PDFDocument.load(result.bytes)
+    expect(output.getPageCount()).toBe(3)
+    expect(output.getForm().getFields()).toHaveLength(0)
     expect(await inspectGeneratedPdfFont(result.bytes)).toEqual({ embeddedRegularFontCount: 1, hasNeedAppearances: false, widgetCount: 0 })
   }, 30_000)
 

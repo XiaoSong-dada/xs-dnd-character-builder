@@ -5,8 +5,25 @@ import type { RulesRepository } from '@/types/rules'
 const coreIds = new Set(CORE_SOURCE_IDS)
 const selectableIds = new Set(SELECTABLE_SOURCE_IDS)
 
-export function isSourceEnabled(sourceIds: readonly string[], enabledSourceIds?: readonly string[]): boolean {
+/**
+ * 来源是否启用。传入 `repository` 时按其规则集来源判定（2024 核心书始终启用）；
+ * 省略时保持 2014 白名单行为。
+ */
+export function isSourceEnabled(
+  sourceIds: readonly string[],
+  enabledSourceIds?: readonly string[],
+  repository?: RulesRepository,
+): boolean {
   if (sourceIds.length === 0) return true
+  if (repository) {
+    const repositoryCoreIds = new Set(
+      repository.sources.filter((source) => source.category === 'core').map((source) => source.id),
+    )
+    if (sourceIds.some((id) => repositoryCoreIds.has(id))) return true
+    if (enabledSourceIds === undefined) return true
+    const enabled = new Set(enabledSourceIds)
+    return sourceIds.some((id) => enabled.has(id))
+  }
   if (sourceIds.some((id) => coreIds.has(id))) return true
   if (enabledSourceIds === undefined) return true
   const enabled = new Set(enabledSourceIds)

@@ -1,6 +1,7 @@
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
+import { isWeaponTrainingCovered } from '@/rules/weapon-training'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
-import type { EquipmentRule } from '@/types/rules'
+import type { EquipmentRule, WeaponTraining } from '@/types/rules'
 
 export interface WeaponAttackResult {
   readonly itemId: string
@@ -15,12 +16,8 @@ export interface WeaponAttackResult {
   readonly range?: readonly [number, number]
 }
 
-interface WeaponProficiencyRule {
-  readonly categories?: readonly ('simple' | 'martial')[]
-  readonly itemIds?: readonly string[]
-}
-
-const CLASS_WEAPON_PROFICIENCIES: Readonly<Record<string, WeaponProficiencyRule>> = {
+/** 2014 职业武器熟练映射；2024 改用 `ClassRule.weaponTraining`，此表仅作 2014 回退。 */
+const CLASS_WEAPON_PROFICIENCIES: Readonly<Record<string, WeaponTraining>> = {
   'class-2014-barbarian': { categories: ['simple', 'martial'] },
   'class-2014-bard': { categories: ['simple'], itemIds: ['hand-crossbow', 'longsword', 'rapier', 'shortsword'] },
   'class-2014-cleric': { categories: ['simple'] },
@@ -35,18 +32,28 @@ const CLASS_WEAPON_PROFICIENCIES: Readonly<Record<string, WeaponProficiencyRule>
   'class-2014-wizard': { itemIds: ['dagger', 'dart', 'sling', 'quarterstaff', 'light-crossbow'] },
 }
 
-function weaponCategory(equipment: EquipmentRule): 'simple' | 'martial' | undefined {
-  if (equipment.weaponKind?.startsWith('simple')) return 'simple'
-  if (equipment.weaponKind?.startsWith('martial')) return 'martial'
-  return undefined
-}
-
 function isProficient(draft: CharacterDraft, equipment: EquipmentRule): boolean {
-  const classRule = draft.classId ? CLASS_WEAPON_PROFICIENCIES[draft.classId] : undefined
-  const category = weaponCategory(equipment)
-  if (classRule?.itemIds?.includes(equipment.id) || (category && classRule?.categories?.includes(category))) return true
-  const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+  const repository = getRulesRepository(draft.ruleset)
+  const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
+  // 2024 使用职业数据中的武器训练；2014 回退兼容映射。
+  const training = classRule?.weaponTraining
+    ?? (draft.classId ? CLASS_WEAPON_PROFICIENCIES[draft.classId] : undefined)
+  if (isWeaponTrainingCovered(training, equipment)) return true
+  // 选择类特性可附带武器训练（如 2024 牧师圣职·保护者）。
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt) continue
+    for (const optionId of selection.optionIds) {
+      if (isWeaponTrainingCovered(repository.getOption(optionId)?.weaponTraining, equipment)) return true
+    }
+  }
+  // 子职特性可授予武器训练（如 2024 勇气学院·战争训练）。
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  for (const feature of subclass?.features ?? []) {
+    if (feature.level > draft.targetLevel) continue
+    if (isWeaponTrainingCovered(feature.weaponTraining, equipment)) return true
+  }
+  const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
+  const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
   return [race, subrace].some((item) => item?.weaponArmorProficiencies?.includes(equipment.id))
 }
 

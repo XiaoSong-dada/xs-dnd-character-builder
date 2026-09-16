@@ -8,11 +8,11 @@ import { CharacterMediaStorageService } from '@/services/character-media-storage
 import { CharacterPackageService } from '@/services/character-package'
 import type { CharacterDraft } from '@/types/character'
 
-function draftWith(media?: CharacterDraft['media']): CharacterDraft {
+function draftWith(media?: CharacterDraft['media'], ruleset: CharacterDraft['ruleset'] = '5e-2014'): CharacterDraft {
   return CharacterJsonService.importDraft(JSON.stringify({
-    schemaVersion: 7,
+    schemaVersion: 8,
     id: 'package-character',
-    ruleset: '5e-2014',
+    ruleset,
     name: '包内角色',
     baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
     selections: [],
@@ -64,6 +64,25 @@ describe('完整角色包', () => {
     const imported = await CharacterPackageService.import(new Blob([bytes as BlobPart], { type: 'application/zip' }))
     expect(imported.name).toBe('包内角色')
     expect(imported.media).toBeUndefined()
+  })
+
+  it('2024 角色包往返保留规则版本', async () => {
+    const draft = draftWith(undefined, '5e-2024')
+    const bytes = await CharacterPackageService.build(draft)
+    const imported = await CharacterPackageService.import(new Blob([bytes as BlobPart], { type: 'application/zip' }))
+    expect(imported.ruleset).toBe('5e-2024')
+    expect(imported.schemaVersion).toBe(8)
+    expect(imported.enabledSourceIds).toEqual([])
+  })
+
+  it('2024 角色包含图片往返保留版本与媒体（B11-02）', async () => {
+    await CharacterMediaStorageService.save(new NodeBlob(['avatar-2024'], { type: 'image/webp' }) as Blob, 'avatar-2024-old')
+    const draft = draftWith({ avatar: { mediaId: 'avatar-2024-old', mimeType: 'image/webp', width: 256, height: 256 } }, '5e-2024')
+    const bytes = await CharacterPackageService.build(draft)
+    const imported = await CharacterPackageService.import(new Blob([bytes as BlobPart], { type: 'application/zip' }))
+    expect(imported.ruleset).toBe('5e-2024')
+    expect(imported.media?.avatar?.mediaId).not.toBe('avatar-2024-old')
+    expect(await readText(await CharacterMediaStorageService.load(imported.media!.avatar!.mediaId))).toBe('avatar-2024')
   })
 
   it('区分损坏 ZIP 与缺少 character.json', async () => {

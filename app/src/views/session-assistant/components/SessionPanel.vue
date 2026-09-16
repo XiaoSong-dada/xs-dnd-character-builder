@@ -12,13 +12,10 @@ import UiModal from '@/components/ui/UiModal.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
-import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
-import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
-import { getRaceFeatures2014 } from '@/rules/data/race-features-2014'
-import { getBackgroundFeatures2014 } from '@/rules/data/background-features-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
 import { getAvailableSlotLevels } from '@/rules/session-state'
+import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getEffectiveSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
@@ -30,6 +27,9 @@ import { formatSpellLabel } from '@/utils/format-spell-label'
 import { useSessionPanel } from '../hooks/useSessionPanel'
 
 const props = defineProps<{ draft: CharacterDraft }>()
+
+/** 名称与条目解析按草稿版本（2024 草稿不得使用 2014 静态仓库）。 */
+const repository = computed(() => getRulesRepository(props.draft.ruleset))
 
 const panel = useSessionPanel(computed(() => props.draft))
 
@@ -91,7 +91,7 @@ const showAdjustItemModal = ref(false)
 
 function handleAddItem(payload: { itemId: string; quantity: number; equip: boolean }): void {
   // 防御：非可装备物品（如自定义物品）不允许装备。
-  const equip = payload.equip && Boolean(rulesRepository.getEquipment(payload.itemId)?.equippable)
+  const equip = payload.equip && Boolean(repository.value.getEquipment(payload.itemId)?.equippable)
   const inventory = addAdventureItem(props.draft.inventory, props.draft.id, {
     itemId: payload.itemId,
     quantity: payload.quantity,
@@ -120,13 +120,13 @@ function updateInventory(inventory: readonly InventoryEntry[]): void {
 }
 
 function equipmentName(itemId: string): string {
-  return rulesRepository.getEquipment(itemId)?.name ?? itemId
+  return repository.value.getEquipment(itemId)?.name ?? itemId
 }
 function equipmentDescription(itemId: string): string {
-  return rulesRepository.getEquipment(itemId)?.description ?? ''
+  return repository.value.getEquipment(itemId)?.description ?? ''
 }
 function equipmentSummary(itemId: string): string {
-  const equipment = rulesRepository.getEquipment(itemId)
+  const equipment = repository.value.getEquipment(itemId)
   if (!equipment) return ''
   if (equipment.damageDice) return `${equipment.damageDice} ${equipment.damageType ?? ''}伤害`
   if (equipment.armorBase) return `AC ${equipment.armorBase}${equipment.addsDexterityToArmor ? ' + 敏捷调整' : ''}`
@@ -134,12 +134,18 @@ function equipmentSummary(itemId: string): string {
 }
 /** 武器条目：命中/伤害加值标签。 */
 function weaponBonusLabel(entry: InventoryEntry): string {
-  const equipment = rulesRepository.getEquipment(entry.itemId)
+  const equipment = repository.value.getEquipment(entry.itemId)
   if (equipment?.category !== 'weapon') return ''
   return `命中 +${panel.derived.value.attackBonus.value} · 伤害 +${panel.derived.value.attackDamageBonus.value}`
 }
 function inventorySourceLabel(entry: InventoryEntry): string {
   return entry.sourceKind === 'class' || entry.sourceKind === 'background' ? '起始装备' : '冒险获得'
+}
+/** 已持有物品的来源是否已全部关闭：保留物品与派生，仅提示（B07-05）。 */
+function isFromClosedSource(itemId: string): boolean {
+  const equipment = repository.value.getEquipment(itemId)
+  if (!equipment) return false
+  return !isSourceEnabled(equipment.sourceIds, props.draft.enabledSourceIds, repository.value)
 }
 
 // ---- 总览派生 ----
@@ -152,58 +158,58 @@ function abilityLabel(key: string): string {
   return ABILITY_LABELS[key as AbilityKey] ?? key
 }
 function skillLabel(skillId: string): string {
-  return rulesRepository.getOption(skillId)?.name ?? skillId
+  return repository.value.getOption(skillId)?.name ?? skillId
 }
-const className = computed(() => props.draft.classId ? (rulesRepository.getClass(props.draft.classId)?.name ?? '') : '')
+const className = computed(() => props.draft.classId ? (repository.value.getClass(props.draft.classId)?.name ?? '') : '')
 const classFeatures = computed(() =>
   props.draft.classId
-    ? getClassFeatures2014(props.draft.classId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? (repository.value.getClass(props.draft.classId)?.features ?? []).filter((feature) => feature.level <= props.draft.targetLevel)
     : [],
 )
-const subclassName = computed(() => props.draft.subclassId ? (rulesRepository.getSubclass(props.draft.subclassId)?.name ?? '') : '')
+const subclassName = computed(() => props.draft.subclassId ? (repository.value.getSubclass(props.draft.subclassId)?.name ?? '') : '')
 const subclassFeatures = computed(() =>
   props.draft.subclassId
-    ? getSubclassFeatures2014(props.draft.subclassId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? (repository.value.getSubclass(props.draft.subclassId)?.features ?? []).filter((feature) => feature.level <= props.draft.targetLevel)
     : [],
 )
-const raceName = computed(() => props.draft.raceId ? (rulesRepository.getRace(props.draft.raceId)?.name ?? '') : '')
+const raceName = computed(() => props.draft.raceId ? (repository.value.getRace(props.draft.raceId)?.name ?? '') : '')
 const raceFeatures = computed(() =>
   props.draft.raceId
-    ? getRaceFeatures2014(props.draft.raceId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? getRulesRepository(props.draft.ruleset).getRaceFeatures(props.draft.raceId).filter((feature) => feature.level <= props.draft.targetLevel)
     : [],
 )
 const subraceName = computed(() =>
   props.draft.subraceId && props.draft.subraceId !== props.draft.raceId
-    ? (rulesRepository.getRace(props.draft.subraceId)?.name ?? '')
+    ? (repository.value.getRace(props.draft.subraceId)?.name ?? '')
     : '',
 )
 const subraceFeatures = computed(() =>
   props.draft.subraceId && props.draft.subraceId !== props.draft.raceId
-    ? getRaceFeatures2014(props.draft.subraceId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? getRulesRepository(props.draft.ruleset).getRaceFeatures(props.draft.subraceId).filter((feature) => feature.level <= props.draft.targetLevel)
     : [],
 )
 const backgroundName = computed(() => {
   const id = props.draft.backgroundId ?? props.draft.backgroundVariantId
-  return id ? (rulesRepository.getBackground(id)?.name ?? '') : ''
+  return id ? (repository.value.getBackground(id)?.name ?? '') : ''
 })
 const backgroundFeatures = computed(() => {
   const id = props.draft.backgroundId ?? props.draft.backgroundVariantId
   if (!id) return []
-  const background = rulesRepository.getBackground(id)
+  const background = repository.value.getBackground(id)
   const ownerId = background?.parentBackgroundId ?? id
-  return getBackgroundFeatures2014(ownerId)
+  return getRulesRepository(props.draft.ruleset).getBackgroundFeatures(ownerId)
 })
 const featAndAsiEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
   const entries: { id: string; level: number; label: string; detail?: string }[] = []
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
     const checkpoint = timeline.find((item) => item.id === selection.checkpointId)
     for (const optionId of selection.optionIds) {
       if (optionId.startsWith('feat-')) {
-        const feat = rulesRepository.feats.find((item) => item.id === optionId)
+        const feat = repository.value.getFeat(optionId)
         if (feat) entries.push({ id: feat.id, level: checkpoint?.level ?? 1, label: `${feat.name} · ${feat.englishName}`, detail: feat.detail })
       } else if (optionId.startsWith('asi-')) {
         const improvement = decodeAbilityImprovement(optionId)
@@ -225,12 +231,12 @@ const preparedOrKnownLabel = computed(() =>
 )
 const selectedSpells = computed(() => {
   return getEffectiveSelectedSpellIds(props.draft)
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell && spell.level > 0))
 })
 const cantripSpells = computed(() =>
   getEffectiveSelectedSpellIds(props.draft)
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell && spell.level === 0)),
 )
 const spellGroups = computed(() => {
@@ -251,6 +257,15 @@ const castSpell = ref<SpellRule>()
 const castNotice = ref('')
 function openCastModal(spell: SpellRule): void {
   castSpell.value = spell
+}
+/** 该法术当前可用的免费施法条目（专长／物种／职业特性／祈唤）。 */
+function freeCastsForSpell(spell: SpellRule) {
+  return panel.resourceViews.value.filter((resource) => resource.spellId === spell.id && resource.remaining > 0)
+}
+function consumeFreeCast(resource: { id: string; name: string }): void {
+  panel.changeResource(resource.id, 1)
+  castNotice.value = `已免费施展：${resource.name}`
+  castSpell.value = undefined
 }
 function confirmCast(level: number): void {
   if (!castSpell.value) return
@@ -362,6 +377,25 @@ function openTranscribe(spellId?: string): void {
               撤回上次休息
             </button>
           </div>
+          <div v-if="panel.hitDice.value" class="session-panel__hit-dice">
+            <p>
+              生命骰 d{{ panel.hitDice.value.die }}：剩余
+              <b>{{ panel.hitDice.value.remaining }}</b> / {{ panel.hitDice.value.total }} 颗
+              <small>短休可花费生命骰恢复生命（骰点＋消耗数×体质调整值）。</small>
+            </p>
+            <div class="session-panel__rest-actions">
+              <button type="button" class="session-panel__rest-button" :disabled="panel.hitDice.value.remaining === 0" @click="panel.spendHitDice(1, 'roll')">掷骰消耗 1 颗</button>
+              <button type="button" class="session-panel__rest-button" :disabled="panel.hitDice.value.remaining === 0" @click="panel.spendHitDice(1, 'average')">直接回 1 颗（{{ panel.hitDice.value.average }}）</button>
+              <button
+                v-if="panel.hitDiceSnapshotAvailable.value"
+                type="button"
+                class="session-panel__rest-button session-panel__rest-button--undo"
+                @click="panel.undoHitDice()"
+              >
+                撤回生命骰消耗
+              </button>
+            </div>
+          </div>
         </div>
         <div class="session-panel__footer" />
       </div>
@@ -385,6 +419,21 @@ function openTranscribe(spellId?: string): void {
           <span>当前层数：{{ panel.sessionState.value?.exhaustionLevel ?? 0 }}</span>
           <button type="button" class="session-panel__step" aria-label="减少力竭层数" @click="panel.changeExhaustion(-1)">−</button>
           <button type="button" class="session-panel__step" aria-label="增加力竭层数" @click="panel.changeExhaustion(1)">＋</button>
+        </div>
+      </section>
+      <section v-if="panel.resourceViews.value.length" class="session-panel__section">
+        <h3>资源</h3>
+        <div class="session-panel__resource-list">
+          <div v-for="resource in panel.resourceViews.value" :key="resource.id" class="session-panel__resource">
+            <span>
+              {{ resource.name }}
+              <small>剩余 {{ resource.remaining }} / {{ resource.max }} {{ resource.dice ? resource.unit : '次' }}</small>
+            </span>
+            <div class="session-panel__resource-actions">
+              <button type="button" class="session-panel__step" :aria-label="`恢复${resource.name}`" @click="panel.changeResource(resource.id, -1)">＋</button>
+              <button type="button" class="session-panel__step" :aria-label="`消耗${resource.name}`" @click="panel.changeResource(resource.id, 1)">−</button>
+            </div>
+          </div>
         </div>
       </section>
       <section class="session-panel__section">
@@ -559,6 +608,16 @@ function openTranscribe(spellId?: string): void {
         </div>
         <p v-else class="session-panel__empty">该角色没有法术位</p>
       </section>
+
+      <section class="session-panel__section">
+        <h3>情境规则提示</h3>
+        <ul class="session-panel__hints">
+          <li>武器精通：仅所选武器类型生效，长休可更换；不自动改写命中或伤害。</li>
+          <li>擒抱／推撞：以无甲打击发动，目标进行力量或敏捷豁免；结果按当次结算，不写入长期状态。</li>
+          <li>突袭：被突袭方先攻检定具有劣势（2024）；不自动调整先攻或跳过回合。</li>
+          <li>施法限制：每回合只能消耗一个法术位施法；免费施放与戏法不受此限。</li>
+        </ul>
+      </section>
     </div>
 
     <div v-else-if="activeTab === 'spells'" class="session-panel__tab">
@@ -599,7 +658,7 @@ function openTranscribe(spellId?: string): void {
               <button
                 type="button"
                 class="session-panel__adjust"
-                :disabled="!castableLevels(spell).length"
+                :disabled="!castableLevels(spell).length && !freeCastsForSpell(spell).length"
                 @click="openCastModal(spell)"
               >
                 施法
@@ -650,7 +709,8 @@ function openTranscribe(spellId?: string): void {
             <template #suffix>
               <span class="session-panel__qty">×{{ entry.quantity }}</span>
               <UiBadge v-if="entry.sourceKind !== 'adventure'">{{ inventorySourceLabel(entry) }}</UiBadge>
-              <button v-else type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
+              <UiBadge v-if="isFromClosedSource(entry.itemId)" tone="warning">来源已关闭</UiBadge>
+              <button v-if="entry.sourceKind === 'adventure'" type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
             </template>
             <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>
           </ExpandableOptionCard>
@@ -671,7 +731,8 @@ function openTranscribe(spellId?: string): void {
             <template #suffix>
               <span class="session-panel__qty">×{{ entry.quantity }}</span>
               <UiBadge v-if="entry.sourceKind !== 'adventure'">{{ inventorySourceLabel(entry) }}</UiBadge>
-              <button v-else type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
+              <UiBadge v-if="isFromClosedSource(entry.itemId)" tone="warning">来源已关闭</UiBadge>
+              <button v-if="entry.sourceKind === 'adventure'" type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
             </template>
             <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>
           </ExpandableOptionCard>
@@ -697,8 +758,22 @@ function openTranscribe(spellId?: string): void {
         >
           消耗 {{ level }} 环法术位
         </button>
-        <p v-if="castSpell && !castableLevels(castSpell).length" class="session-panel__empty">没有可用的法术位。</p>
+        <p v-if="castSpell && !castableLevels(castSpell).length && !freeCastsForSpell(castSpell).length" class="session-panel__empty">没有可用的法术位。</p>
       </div>
+      <template v-if="castSpell && freeCastsForSpell(castSpell).length">
+        <p class="session-panel__cast-hint">也可以免费施放：</p>
+        <div class="session-panel__cast-levels">
+          <button
+            v-for="free in freeCastsForSpell(castSpell)"
+            :key="free.id"
+            type="button"
+            class="session-panel__cast-level"
+            @click="consumeFreeCast(free)"
+          >
+            免费施放（剩余 {{ free.remaining }} 次）
+          </button>
+        </div>
+      </template>
     </UiModal>
 
     <UiModal :open="showLongRestConfirm" title="长休息" @close="showLongRestConfirm = false">
@@ -715,7 +790,7 @@ function openTranscribe(spellId?: string): void {
       :preselect-spell-id="transcribePreselectId"
       @close="showTranscribeModal = false"
     />
-    <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" @close="showAddItemModal = false" @add="handleAddItem" />
+    <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" :ruleset="draft.ruleset" @close="showAddItemModal = false" @add="handleAddItem" />
     <AdjustItemModal
       v-if="adjustEntry"
       :open="showAdjustItemModal"
@@ -1083,6 +1158,16 @@ function openTranscribe(spellId?: string): void {
     margin: 0;
     color: var(--color-text-muted);
     font-size: 0.8rem;
+  }
+
+  &__hints {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.25rem;
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
   }
 
   &__feature-choice {

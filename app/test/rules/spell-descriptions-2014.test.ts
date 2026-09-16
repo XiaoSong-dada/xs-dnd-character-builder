@@ -225,4 +225,10 @@ describe('2014 法术效果摘要登记', () => {
       }
     }
   })
+
+  it('详情使用中文属性与生命值（与 2024 口径一致，B09-10）', () => {
+    const forbidden = /(?<![A-Za-z])(STR|DEX|CON|INT|WIS|CHA|HP|HD)(?![A-Za-z])/
+    const offenders = spells2014.filter((spell) => forbidden.test(spell.description))
+    expect(offenders.map((spell) => spell.id)).toEqual([])
+  })
 })

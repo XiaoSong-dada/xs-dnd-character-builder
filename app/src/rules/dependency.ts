@@ -1,5 +1,6 @@
 import { deriveCharacter, proficiencyBonus } from '@/rules/derive'
-import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
+import { getRulesRepository } from '@/rules/repositories'
+import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { buildTimeline } from '@/rules/timeline'
 import { getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
 import type { CharacterDraft, DependencyCheckpointRef, DependencyImpact } from '@/types/character'
@@ -26,13 +27,13 @@ function completedSelectionCount(draft: CharacterDraft, checkpointId: string): n
 
 /** 统计某目标等级时间线中指定类型检查点的数量。 */
 function countCheckpointKind(draft: CharacterDraft, level: number, kind: CheckpointKind): number {
-  return buildTimeline(draft.classId ?? '', level, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  return buildTimeline(draft.classId ?? '', level, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
     .filter((checkpoint) => checkpoint.kind === kind).length
 }
 
 /** 统计某目标等级时间线中战技选择检查点的数量（战技选项统一 maneuver- 前缀）。 */
 function countManeuverCheckpoints(draft: CharacterDraft, level: number): number {
-  return buildTimeline(draft.classId ?? '', level, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  return buildTimeline(draft.classId ?? '', level, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
     .filter((checkpoint) => checkpoint.optionIds.length > 0 && checkpoint.optionIds.every((optionId) => optionId.startsWith('maneuver-')))
     .length
 }
@@ -75,11 +76,20 @@ function buildLevelReductionReviews(draft: CharacterDraft, newLevel: number): re
   const newManeuvers = countManeuverCheckpoints(draft, newLevel)
   if (newManeuvers < oldManeuvers) reviews.push(`战技数量由 ${oldManeuvers} 项减少为 ${newManeuvers} 项，需移除多余战技`)
   if (draft.subclassId) {
+    const subclassFeatures = getRulesRepository(draft.ruleset).getSubclass(draft.subclassId)?.features ?? []
     const featureCount = (level: number): number =>
-      getSubclassFeatures2014(draft.subclassId ?? '').filter((feature) => feature.level <= level).length
+      subclassFeatures.filter((feature) => feature.level <= level).length
     const oldFeatures = featureCount(oldLevel)
     const newFeatures = featureCount(newLevel)
     if (newFeatures < oldFeatures) reviews.push(`子职特性由 ${oldFeatures} 项减少为 ${newFeatures} 项（更高等级的特性不再生效）`)
+  }
+  // 按等级变化的检查点（如 2024 战士武器精通）：降级后数量减少时提示移除多余选择。
+  const masteryCheckpoint = buildTimeline(draft.classId ?? '', oldLevel, { ruleset: draft.ruleset })
+    .find((checkpoint) => checkpoint.candidateKind === 'weapon-mastery')
+  if (masteryCheckpoint) {
+    const oldBound = getCheckpointSelectionBounds(draft, masteryCheckpoint).max
+    const newBound = getCheckpointSelectionBounds({ ...draft, targetLevel: newLevel }, masteryCheckpoint).max
+    if (newBound < oldBound) reviews.push(`武器精通数量由 ${oldBound} 项减少为 ${newBound} 项，需移除多余精通`)
   }
   const spellcasting = getSpellcastingConfig(draft)
   const knownByLevel = spellcasting?.mode === 'known' ? spellcasting.spellsKnownByLevel : undefined
@@ -120,7 +130,7 @@ export function getDependencyImpact(draft: CharacterDraft, change: DraftChange):
         preserved: ['职业', '起源', '基础属性'],
       }
     }
-    const context = { subraceId: draft.subraceId, subclassId: draft.subclassId }
+    const context = { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId }
     const oldTimeline = buildTimeline(draft.classId ?? '', draft.targetLevel, context)
     const newTimeline = buildTimeline(draft.classId ?? '', change.value, context)
     const validIds = new Set(newTimeline.map((item) => item.id))
@@ -150,16 +160,20 @@ export function getDependencyImpact(draft: CharacterDraft, change: DraftChange):
   if (change.kind === 'race' || change.kind === 'subrace') {
     return {
       invalidated: draft.selections
-        .filter((item) => item.checkpointId.startsWith('race-2014-'))
+        .filter((item) => item.checkpointId.startsWith('race-2014-') || item.checkpointId.includes('-origin-feat') || item.checkpointId.includes('-spellcasting-ability'))
         .map((item) => item.checkpointId),
-      review: ['种族属性加值', '专长前置条件', '生命值、护甲等级与攻击'],
+      review: draft.ruleset === '5e-2024'
+        ? ['物种体型与语言', '血统／传承法术', '专长前置条件', '生命值、护甲等级与攻击']
+        : ['种族属性加值', '专长前置条件', '生命值、护甲等级与攻击'],
       preserved: ['职业选择', '背景选择', '姓名与人物细节'],
     }
   }
   if (change.kind === 'background') {
     return {
       invalidated: [],
-      review: ['背景技能、工具与语言', '重复熟练替换'],
+      review: draft.ruleset === '5e-2024'
+        ? ['背景属性加值', '背景技能、工具与语言', '背景授予的起源专长与重复选择', '重复熟练替换']
+        : ['背景技能、工具与语言', '重复熟练替换'],
       preserved: ['职业选择', '种族选择', '等级时间线'],
     }
   }

@@ -364,7 +364,7 @@ describe('三分之一施法者（奥法骑士 / 诡术师）', () => {
     // 3 级熟练 +2，智力 16 调整 +3。
     expect(derived.spellAttackBonus?.value).toBe(5)
     expect(derived.spellSaveDc?.value).toBe(13)
-    expect(derived.spellAttackBonus?.sources.some((source) => source.label.includes('INT'))).toBe(true)
+    expect(derived.spellAttackBonus?.sources.some((source) => source.label.includes('智力'))).toBe(true)
   })
 })
 

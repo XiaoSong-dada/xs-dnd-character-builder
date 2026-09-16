@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
 import type { CharacterDraft } from '@/types/character'
+import { draft2024 } from '../fixtures/draft-2024'
 
 const draft: CharacterDraft = {
   schemaVersion: 4,
@@ -89,5 +90,32 @@ describe('FeatChoicePanel', () => {
 
     expect(wrapper.text()).toContain('警觉 · Alert')
     expect(wrapper.text()).not.toContain('仅索引')
+  })
+})
+
+describe('FeatChoicePanel 2024 等级前置（B09-08）', () => {
+  function mountModern() {
+    return mount(FeatChoicePanel, {
+      props: {
+        checkpointId: 'class-2024-fighter-feat-4',
+        checkpointLevel: 4,
+        draft: draft2024({ classId: 'class-2024-fighter', targetLevel: 5 }),
+        allowAbilityImprovement: false,
+      },
+    })
+  }
+
+  it('5 级角色在 4 级节点可选 4 级专长，19 级恩惠仍锁定', async () => {
+    const wrapper = mountModern()
+    await wrapper.get('input[type="search"]').setValue('重甲运用')
+    const armored = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('重甲运用'))
+    expect(armored).toBeTruthy()
+    expect(armored!.classes()).not.toContain('expandable-option-card--locked')
+    expect(armored!.text()).not.toContain('不可选')
+
+    await wrapper.get('input[type="search"]').setValue('英勇战斗之恩惠')
+    const boon = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('英勇战斗之恩惠'))
+    expect(boon).toBeTruthy()
+    expect(boon!.text()).toContain('需要19级')
   })
 })

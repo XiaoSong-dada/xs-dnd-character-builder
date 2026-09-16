@@ -14,14 +14,11 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-media'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
-import { decodeAbilityImprovement } from '@/rules/feats'
-import { rulesRepository } from '@/rules/repository'
-import { getRaceFeatures2014 } from '@/rules/data/race-features-2014'
-import { getBackgroundFeatures2014 } from '@/rules/data/background-features-2014'
+import { decodeAbilityImprovement, formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
+import { getRulesRepository } from '@/rules/repositories'
+import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
-import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
-import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
 import { buildTimeline } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
 import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, DerivedCharacter, InventoryEntry, ManualAddedSpell, SpellSelections } from '@/types/character'
@@ -47,6 +44,8 @@ const emit = defineEmits<{
   changeManualEdits: [manualEdits: CharacterManualEdits]
   changeMedia: [media: CharacterMedia | undefined]
 }>()
+/** 角色卡解析与名称一律使用草稿版本仓库（B09-02）。 */
+const repository = computed(() => getRulesRepository(props.draft.ruleset))
 const showMediaEditor = ref(false)
 const showMoreActions = ref(false)
 const moreButtonRef = ref<HTMLButtonElement>()
@@ -94,7 +93,7 @@ function abilityLabel(key: string): string {
   return ABILITY_LABELS[key as AbilityKey] ?? key
 }
 function skillLabel(skillId: string): string {
-  return rulesRepository.getOption(skillId)?.name ?? skillId
+  return getRulesRepository(props.draft.ruleset).getOption(skillId)?.name ?? skillId
 }
 function sourceNote(sources: DerivedCharacter['armorClass']['sources']): string {
   return sources.map((source) => `${source.label} ${source.value >= 0 ? '+' : ''}${source.value}`).join(' · ')
@@ -107,12 +106,12 @@ function abilityNote(key: AbilityKey): string {
 const identityLine = computed(() => {
   const draft = props.draft
   const names = [
-    draft.classId ? rulesRepository.getClass(draft.classId)?.name : undefined,
-    draft.subclassId ? rulesRepository.getSubclass(draft.subclassId)?.name : undefined,
-    draft.raceId ? rulesRepository.getRace(draft.raceId)?.name : undefined,
-    draft.subraceId ? rulesRepository.getRace(draft.subraceId)?.name : undefined,
-    draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId)?.name : undefined,
-    draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId)?.name : undefined,
+    draft.classId ? repository.value.getClass(draft.classId)?.name : undefined,
+    draft.subclassId ? repository.value.getSubclass(draft.subclassId)?.name : undefined,
+    draft.raceId ? repository.value.getRace(draft.raceId)?.name : undefined,
+    draft.subraceId ? repository.value.getRace(draft.subraceId)?.name : undefined,
+    draft.backgroundId ? repository.value.getBackground(draft.backgroundId)?.name : undefined,
+    draft.backgroundVariantId ? repository.value.getBackground(draft.backgroundVariantId)?.name : undefined,
   ].filter(Boolean)
   return `${draft.targetLevel}级 · ${names.join(' · ')}`
 })
@@ -133,7 +132,7 @@ const spellSlotsLabel = computed(() => {
 const manualSpellIds = computed(() => new Set(editing.manual.value.addedSpells.map((item) => item.spellId)))
 const cantripSpells = computed(() => props.draft.spellSelections.cantripIds
   .filter((id) => !manualSpellIds.value.has(id))
-  .map((id) => rulesRepository.getSpell(id))
+  .map((id) => repository.value.getSpell(id))
   .filter((spell): spell is SpellRule => Boolean(spell)))
 const preparedOrKnownSpells = computed(() => {
   const config = spellcastingConfig.value
@@ -141,11 +140,11 @@ const preparedOrKnownSpells = computed(() => {
   // 已准备 / 已掌握法术以规则层 getSelectedSpellIds 为唯一事实源（覆盖 spellbook/prepared/known/pact 四种模式）。
   return getSelectedSpellIds(props.draft, config)
     .filter((id) => !manualSpellIds.value.has(id))
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
 const manualAddedSpells = computed(() => editing.manual.value.addedSpells
-  .map((entry) => ({ entry, spell: rulesRepository.getSpell(entry.spellId) }))
+  .map((entry) => ({ entry, spell: repository.value.getSpell(entry.spellId) }))
   .filter((item): item is { entry: ManualAddedSpell; spell: SpellRule } => Boolean(item.spell)))
 const existingSpellIds = computed(() => [...new Set([
   ...props.draft.spellSelections.cantripIds,
@@ -161,12 +160,16 @@ const spellbookSpells = computed(() => {
   if (spellcastingConfig.value?.mode !== 'spellbook') return []
   return props.draft.spellSelections.spellbookSpellIds
     .filter((id) => !manualSpellIds.value.has(id))
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
 const requiredCantripCount = computed(() => (spellcastingConfig.value ? getRequiredCantripCount(props.draft, spellcastingConfig.value) : 0))
 const requiredSpellCount = computed(() => (spellcastingConfig.value ? getRequiredSpellCount(props.draft, spellcastingConfig.value) : 0))
 const requiredSpellbookCount = computed(() => (spellcastingConfig.value ? getRequiredSpellbookCount(props.draft, spellcastingConfig.value) : 0))
+const spellbookExtraIds = computed(() => props.draft.spellSelections.spellbookExtraSpellIds ?? [])
+/** 升级名额内的法术数：排除抄录与子职额外入书。 */
+const normalSpellbookCount = computed(() => props.draft.spellSelections.spellbookSpellIds
+  .filter((id) => !props.draft.spellSelections.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
 /** 已准备 / 已掌握法术按环级分组（戏法由 cantripSpells 单独展示）。 */
 const spellGroups = computed(() => {
   const config = spellcastingConfig.value
@@ -182,7 +185,7 @@ const preparedCandidates = computed(() => {
   const config = spellcastingConfig.value
   if (!config) return []
   return getSpellCandidates(props.draft, config).prepared
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
 /** 法师候选准备：法术书中未准备（长休可换入准备）。 */
@@ -190,7 +193,7 @@ const wizardPrepareFromBook = computed(() => {
   const config = spellcastingConfig.value
   if (!config) return []
   return getSpellCandidates(props.draft, config).prepareFromBook
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
 /** 法师候选写入：职业池中未写入法术书（升级时可扩充入书，只读展示）。 */
@@ -198,7 +201,7 @@ const wizardWriteToBook = computed(() => {
   const config = spellcastingConfig.value
   if (!config) return []
   return getSpellCandidates(props.draft, config).writeToBook
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
 /** 候选按环级分组。 */
@@ -215,7 +218,7 @@ const allPreparedSpells = computed(() => {
   const config = spellcastingConfig.value
   if (!config || config.mode !== 'prepared') return []
   const knownCantrips = props.draft.spellSelections.cantripIds
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
   const leveled = getAvailableSpells(props.draft, config).filter((spell) => spell.level > 0)
   return [...knownCantrips, ...leveled]
@@ -266,7 +269,7 @@ const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || prepa
 /** 魔法奥秘法术（来自时间线检查点选择，不计入已知法术上限）。 */
 const magicalSecretsSpells = computed(() => getMagicalSecretsSpellIds(props.draft)
   .filter((id) => !manualSpellIds.value.has(id))
-  .map((id) => rulesRepository.getSpell(id))
+  .map((id) => repository.value.getSpell(id))
   .filter((spell): spell is SpellRule => Boolean(spell)))
 
 function manualSpellDestinationLabel(entry: ManualAddedSpell): string {
@@ -293,7 +296,7 @@ function isAlsoNormallyAcquired(spellId: string): boolean {
 const selectedOptionEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
   const choiceCheckpointIds = [
     ...(classInfo.value?.features ?? []).flatMap((feature) => feature.checkpointIds ?? []),
     ...(subclassInfo.value?.features ?? [])
@@ -310,13 +313,14 @@ const selectedOptionEntries = computed(() => {
   for (const checkpointId of choiceCheckpointIds) {
     if (!timeline.some((item) => item.id === checkpointId)) continue
     const selection = draft.selections.find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)
+    const repository = getRulesRepository(draft.ruleset)
     for (const optionId of selection?.optionIds ?? []) {
-      const spell = rulesRepository.getSpell(optionId)
+      const spell = repository.getSpell(optionId)
       if (spell) {
         entries.push({ id: optionId, name: spell.name, caption: formatSpellLabel(spell), detail: spell.description, expandedLabel: '法术效果' })
         continue
       }
-      const option = rulesRepository.getOption(optionId)
+      const option = repository.getOption(optionId)
       if (option) {
         entries.push({
           id: optionId,
@@ -324,6 +328,19 @@ const selectedOptionEntries = computed(() => {
           caption: option.englishName ?? '',
           detail: option.description,
           expandedLabel: optionId.startsWith('metamagic-') ? '超魔效果' : '选项详情',
+        })
+        continue
+      }
+      // 武器精通等选择保存的是装备 ID：显示武器名与精通词条。
+      const equipment = repository.getEquipment(optionId)
+      if (equipment) {
+        const mastery = equipment.masteryId ? repository.getWeaponMastery(equipment.masteryId) : undefined
+        entries.push({
+          id: optionId,
+          name: equipment.name,
+          caption: mastery?.name ?? equipment.englishName,
+          detail: mastery ? `${mastery.name}（${mastery.englishName}）：${mastery.summary}` : equipment.description,
+          expandedLabel: '物品详情',
         })
       }
     }
@@ -337,11 +354,11 @@ function featureChoiceLabel(feature: ClassFeature): string {
   if (checkpointIds.length === 0) return '需选择'
   const draft = props.draft
   if (!draft.classId) return '需选择'
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
   const unlocked = checkpointIds
     .map((checkpointId) => timeline.find((item) => item.id === checkpointId))
     .filter((checkpoint): checkpoint is NonNullable<typeof checkpoint> => Boolean(checkpoint))
-  const total = unlocked.reduce((sum, checkpoint) => sum + checkpoint.minSelections, 0)
+  const total = unlocked.reduce((sum, checkpoint) => sum + getCheckpointSelectionBounds(draft, checkpoint).min, 0)
   const done = unlocked.reduce((sum, checkpoint) => sum
     + (draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds.length ?? 0), 0)
   return total === 0 ? '需选择' : done >= total ? `已选择 ${total} 项` : `需选择 ${done}/${total}`
@@ -352,17 +369,17 @@ function isPreparedSpell(id: string): boolean {
 /** 物品页签：已装备（equippedQuantity > 0）与全部物品栏条目。 */
 const equippedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity > 0))
 function equipmentName(itemId: string): string {
-  return rulesRepository.getEquipment(itemId)?.name ?? itemId
+  return repository.value.getEquipment(itemId)?.name ?? itemId
 }
 function equipmentSummary(itemId: string): string {
-  const equipment = rulesRepository.getEquipment(itemId)
+  const equipment = repository.value.getEquipment(itemId)
   return equipment?.damageDice ? `${equipment.damageDice} ${equipment.damageType}伤害` : ''
 }
 /** 添加物品弹窗开关。 */
 const showAddItemModal = ref(false)
 function handleAddItem(payload: { itemId: string; quantity: number; equip: boolean }): void {
   // 防御：非可装备物品（如自定义物品）不允许装备。
-  const equip = payload.equip && Boolean(rulesRepository.getEquipment(payload.itemId)?.equippable)
+  const equip = payload.equip && Boolean(repository.value.getEquipment(payload.itemId)?.equippable)
   const inventory = addAdventureItem(props.draft.inventory, props.draft.id, {
     itemId: payload.itemId,
     quantity: payload.quantity,
@@ -397,6 +414,12 @@ function handleAdjustItem(payload: { action: 'decrease' | 'increase' | 'remove';
 function inventorySourceLabel(entry: InventoryEntry): string {
   return entry.sourceKind === 'class' || entry.sourceKind === 'background' ? '起始装备' : '旧草稿'
 }
+/** 已持有物品的来源是否已全部关闭：保留物品与派生，仅提示（B07-05）。 */
+function isFromClosedSource(itemId: string): boolean {
+  const equipment = repository.value.getEquipment(itemId)
+  if (!equipment) return false
+  return !isSourceEnabled(equipment.sourceIds, props.draft.enabledSourceIds, repository.value)
+}
 /** 金币调整：操作冒险净增金币（adventureGold），持有总额 = currency.gp + adventureGold。 */
 const currencyInput = ref('')
 const currencyError = ref('')
@@ -425,10 +448,10 @@ function applyCurrency(mode: 'add' | 'set' | 'decrease'): void {
 const classInfo = computed(() => {
   const classId = props.draft.classId
   if (!classId) return undefined
-  const classRule = rulesRepository.getClass(classId)
+  const classRule = getRulesRepository(props.draft.ruleset).getClass(classId)
   if (!classRule) return undefined
   // 角色卡只展示当前等级已解锁的特性（更高等级的特性不显示）。
-  const features = getClassFeatures2014(classId)
+  const features = (classRule.features ?? [])
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { classRule, features }
 })
@@ -436,7 +459,7 @@ const classInfo = computed(() => {
 const featAndAsiEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
   const entries: {
     id: string
     level: number
@@ -447,8 +470,20 @@ const featAndAsiEntries = computed(() => {
     if (selection.invalidatedAt) continue
     const checkpoint = timeline.find((item) => item.id === selection.checkpointId)
     for (const optionId of selection.optionIds) {
-      if (optionId.startsWith('feat-')) {
-        const feat = rulesRepository.feats.find((item) => item.id === optionId)
+      const bonusLabel = formatFeatBonusOption(getRulesRepository(props.draft.ruleset), optionId)
+      if (bonusLabel) {
+        // 专长自带属性提升子选项（feat-child 检查点）：显示“专长名 · 智力 +1”（B09-09）。
+        const parentName = checkpoint?.parentOptionId
+          ? getRulesRepository(props.draft.ruleset).getFeat(checkpoint.parentOptionId)?.name
+          : undefined
+        entries.push({
+          id: optionId,
+          level: checkpoint?.level ?? 1,
+          label: parentName ? `${parentName} · ${bonusLabel}` : bonusLabel,
+          detail: getRulesRepository(props.draft.ruleset).getOption(optionId)?.description,
+        })
+      } else if (optionId.startsWith('feat-')) {
+        const feat = getRulesRepository(props.draft.ruleset).feats.find((item) => item.id === optionId)
         if (feat) {
           entries.push({ id: feat.id, level: checkpoint?.level ?? 1, label: `${feat.name} · ${feat.englishName}`, detail: feat.detail })
         }
@@ -467,10 +502,10 @@ const featAndAsiEntries = computed(() => {
 const subclassInfo = computed(() => {
   const subclassId = props.draft.subclassId
   if (!subclassId) return undefined
-  const subclass = rulesRepository.getSubclass(subclassId)
+  const subclass = getRulesRepository(props.draft.ruleset).getSubclass(subclassId)
   if (!subclass) return undefined
   // 角色卡只展示当前等级已解锁的特性（更高等级的特性不显示）。
-  const features = getSubclassFeatures2014(subclassId)
+  const features = subclass.features
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { subclass, features }
 })
@@ -478,9 +513,9 @@ const subclassInfo = computed(() => {
 const raceInfo = computed(() => {
   const raceId = props.draft.raceId
   if (!raceId) return undefined
-  const race = rulesRepository.getRace(raceId)
+  const race = repository.value.getRace(raceId)
   if (!race) return undefined
-  const features = getRaceFeatures2014(raceId)
+  const features = getRulesRepository(props.draft.ruleset).getRaceFeatures(raceId)
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { race, features }
 })
@@ -488,9 +523,9 @@ const raceInfo = computed(() => {
 const subraceInfo = computed(() => {
   const subraceId = props.draft.subraceId
   if (!subraceId || subraceId === props.draft.raceId) return undefined
-  const race = rulesRepository.getRace(subraceId)
+  const race = repository.value.getRace(subraceId)
   if (!race) return undefined
-  const features = getRaceFeatures2014(subraceId)
+  const features = getRulesRepository(props.draft.ruleset).getRaceFeatures(subraceId)
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { race, features }
 })
@@ -498,10 +533,10 @@ const subraceInfo = computed(() => {
 const backgroundInfo = computed(() => {
   const backgroundId = props.draft.backgroundId ?? props.draft.backgroundVariantId
   if (!backgroundId) return undefined
-  const background = rulesRepository.getBackground(backgroundId)
+  const background = repository.value.getBackground(backgroundId)
   if (!background) return undefined
   const ownerId = background.parentBackgroundId ?? backgroundId
-  const features = getBackgroundFeatures2014(ownerId)
+  const features = getRulesRepository(props.draft.ruleset).getBackgroundFeatures(ownerId)
   return { background, features }
 })
 /** 存在失效选择或未完成的时间线检查点时，角色卡标记为"待补全"。 */
@@ -509,7 +544,7 @@ const needsReview = computed(() => {
   const draft = props.draft
   const hasInvalidated = draft.selections.some((item) => Boolean(item.invalidatedAt))
   if (!draft.classId) return hasInvalidated
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
   const incomplete = timeline.some((checkpoint) => {
     const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
     return (selection?.optionIds.length ?? 0) < checkpoint.minSelections
@@ -535,11 +570,14 @@ function handleExportPdf(): void {
 
 <template>
   <section class="character-sheet">
+    <UiNotice v-if="draft.ruleset === '5e-2024'" tone="info" title="2024 支持">
+      2024 车卡、跑团资源结算与导出已可用；魔法物品为自由添加、仅索引条目不可加入；生物／召唤数据与多职业不在本轮。
+    </UiNotice>
     <header :class="{ 'character-sheet__header--media': draft.media?.avatar || draft.media?.portrait }">
       <div class="character-sheet__header-content" :class="{ 'character-sheet__header-content--portrait': draft.media?.portrait }">
         <CharacterMediaImage v-if="draft.media?.avatar" class="character-sheet__avatar" :media-id="draft.media.avatar.mediaId" :alt="`${draft.name || '角色'}头像`" />
         <div>
-          <span>规则预览 · 5e-2014</span>
+          <span>规则预览 · {{ draft.ruleset }}</span>
           <h2>{{ draft.name || '未命名角色' }}</h2>
           <p>{{ identityLine }}</p>
           <div v-if="draft.classId" class="character-sheet__header-actions">
@@ -896,7 +934,7 @@ function handleExportPdf(): void {
         </section>
         <section v-if="spellbookSpells.length" class="character-sheet__spell-section">
           <div class="character-sheet__spell-section-header">
-            <h4>法术书 · {{ draft.spellSelections.spellbookSpellIds.filter((id) => !draft.spellSelections.transcribedSpellIds.includes(id)).length }} / {{ requiredSpellbookCount }}{{ draft.spellSelections.transcribedSpellIds.length ? `（抄录 ${draft.spellSelections.transcribedSpellIds.length}）` : '' }}</h4>
+            <h4>法术书 · {{ normalSpellbookCount }} / {{ requiredSpellbookCount }}{{ draft.spellSelections.transcribedSpellIds.length ? `（抄录 ${draft.spellSelections.transcribedSpellIds.length}）` : '' }}{{ spellbookExtraIds.length ? `（子职额外 ${spellbookExtraIds.length}）` : '' }}</h4>
             <button v-if="spellcastingConfig?.mode === 'spellbook'" type="button" class="character-sheet__spell-action" aria-label="抄录法术书" @click="openTranscribe()">抄录法术</button>
           </div>
           <ListShell>
@@ -958,9 +996,10 @@ function handleExportPdf(): void {
             <template #suffix>
               <span class="character-sheet__item-qty">×{{ entry.equippedQuantity }}</span>
               <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
-              <button v-else type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
+              <em v-if="isFromClosedSource(entry.itemId)" class="character-sheet__item-source character-sheet__item-source--closed">来源已关闭</em>
+              <button v-if="entry.sourceKind === 'adventure'" type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
             </template>
-            <template #expanded>{{ rulesRepository.getEquipment(entry.itemId)?.description }}</template>
+            <template #expanded>{{ repository.getEquipment(entry.itemId)?.description }}</template>
           </ExpandableOptionCard>
         </ListShell>
       </div>
@@ -978,9 +1017,10 @@ function handleExportPdf(): void {
             <template #suffix>
               <span class="character-sheet__item-qty">×{{ entry.quantity }}</span>
               <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
-              <button v-else type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
+              <em v-if="isFromClosedSource(entry.itemId)" class="character-sheet__item-source character-sheet__item-source--closed">来源已关闭</em>
+              <button v-if="entry.sourceKind === 'adventure'" type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
             </template>
-            <template #expanded>{{ rulesRepository.getEquipment(entry.itemId)?.description }}</template>
+            <template #expanded>{{ repository.getEquipment(entry.itemId)?.description }}</template>
           </ExpandableOptionCard>
         </ListShell>
       </div>
@@ -1011,10 +1051,11 @@ function handleExportPdf(): void {
       :open="showManualSpellModal"
       :mode="editing.spellMode.value"
       :existing-ids="existingSpellIds"
+      :ruleset="draft.ruleset"
       @close="showManualSpellModal = false"
       @add="editing.addSpell"
     />
-    <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" @close="showAddItemModal = false" @add="handleAddItem" />
+    <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" :ruleset="draft.ruleset" @close="showAddItemModal = false" @add="handleAddItem" />
     <AdjustItemModal
       v-if="adjustEntry"
       :open="showAdjustItemModal"
@@ -1280,6 +1321,11 @@ function handleExportPdf(): void {
     font-size: 0.62rem;
     font-style: normal;
     white-space: nowrap;
+
+    &--closed {
+      border-color: var(--color-warning);
+      color: var(--color-warning);
+    }
   }
 
   &__spell-stats {

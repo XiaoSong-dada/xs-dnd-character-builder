@@ -2,7 +2,7 @@ import type { PDFCheckBox, PDFField, PDFFont, PDFForm, PDFTextField } from 'pdf-
 
 import { baseUrl } from '@/config/site'
 
-import { formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
+import { formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
 import type { AbilityKey } from '@/types/character'
 
 export const CHARACTER_SHEET_PDF_TEMPLATE_URL = `${baseUrl}templates/character-sheet-zh-plus.pdf`
@@ -342,15 +342,15 @@ function fitWholeEntries(entries: readonly (readonly string[])[], capacity: numb
   return { lines, count }
 }
 
-function layoutFeatures(features: CharacterExportModel['features'], primaryField: PDFTextField, additionalField: PDFTextField, font: PDFFont, fontSize: number): FeatureFieldLayout {
+function layoutFeatureEntries(entries: readonly string[], primaryField: PDFTextField, additionalField: PDFTextField, font: PDFFont, fontSize: number): FeatureFieldLayout {
   const primaryWidth = fieldTextWidth(primaryField)
   const additionalWidth = fieldTextWidth(additionalField)
-  const primaryEntries = features.map((feature) => wrapPdfText(featureEntryText(feature), font, fontSize, primaryWidth))
+  const primaryEntries = entries.map((entry) => wrapPdfText(entry, font, fontSize, primaryWidth))
   const primary = fitWholeEntries(primaryEntries, fieldLineCapacity(primaryField, fontSize))
-  const remainingFeatures = features.slice(primary.count)
-  if (!remainingFeatures.length) return { primaryText: primary.lines.join('\n'), additionalText: '', omittedCount: 0 }
+  const remainingEntries = entries.slice(primary.count)
+  if (!remainingEntries.length) return { primaryText: primary.lines.join('\n'), additionalText: '', omittedCount: 0 }
 
-  const additionalEntries = remainingFeatures.map((feature) => wrapPdfText(featureEntryText(feature), font, fontSize, additionalWidth))
+  const additionalEntries = remainingEntries.map((entry) => wrapPdfText(entry, font, fontSize, additionalWidth))
   const additionalCapacity = fieldLineCapacity(additionalField, fontSize)
   const fullAdditional = fitWholeEntries(additionalEntries, additionalCapacity)
   if (fullAdditional.count === additionalEntries.length) {
@@ -645,7 +645,11 @@ export async function fillPdfTemplate(templateBytes: Uint8Array, fontBytes: Uint
     setFieldFontSize(primaryFeatureField, 8)
     additionalFeatureField.enableMultiline()
     setFieldFontSize(additionalFeatureField, 8)
-    const featureLayout = layoutFeatures(model.features, primaryFeatureField, additionalFeatureField, font, 8)
+    const featureEntries = [
+      ...model.features.map(featureEntryText),
+      ...(model.resources.length ? [formatExportResources(model.resources)] : []),
+    ]
+    const featureLayout = layoutFeatureEntries(featureEntries, primaryFeatureField, additionalFeatureField, font, 8)
     primaryFeatureField.setText(featureLayout.primaryText)
     additionalFeatureField.setText(featureLayout.additionalText)
     if (featureLayout.omittedCount) {

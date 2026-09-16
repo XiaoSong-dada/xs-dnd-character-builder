@@ -36,12 +36,20 @@ export const EXHAUSTION_MAX_LEVEL = 6
 export const EXHAUSTION_DESCRIPTION =
   '每叠 1 层力竭承受对应层级的负面效果：1 层感知检定劣势；2 层速度减半；3 层攻击检定与豁免劣势；4 层生命值上限减半；5 层速度降为 0；6 层死亡。'
 
+/** 生命骰池：总数＝职业等级；spent = 已花费数量（B10-01，仅 2024 角色使用）。 */
+export interface HitDicePool {
+  readonly total: number
+  readonly spent: number
+}
+
 /** 休息前状态快照（撤回上次休息用，仅保留最近一次）。 */
 export interface SessionRestSnapshot {
   readonly currentHp: number
   readonly usedSpellSlots: Readonly<Record<number, number>>
   readonly exhaustionLevel: number
   readonly debuffs: readonly string[]
+  readonly hitDice?: HitDicePool
+  readonly resourceUsage?: Readonly<Record<string, number>>
   readonly at: string
 }
 
@@ -55,6 +63,12 @@ export interface SessionState {
   readonly exhaustionLevel: number
   /** 已挂载的普通 debuff 状态 ID 列表。 */
   readonly debuffs: readonly string[]
+  /** 生命骰池（仅 2024 角色初始化；2014 保持不追踪）。 */
+  readonly hitDice?: HitDicePool
+  /** 职业资源／骰池／免费施法已用数量（key = 特性 id 或 `sourceId:spellId`；仅 2024 结算）。 */
+  readonly resourceUsage?: Readonly<Record<string, number>>
+  /** 上次消耗生命骰前的快照（撤回生命骰消耗用）。 */
+  readonly lastHitDiceSnapshot?: SessionRestSnapshot
   /** 上次休息前的状态快照（用于撤回）；未执行过休息或无可用快照时为 undefined。 */
   readonly lastRestSnapshot?: SessionRestSnapshot
   readonly updatedAt: string

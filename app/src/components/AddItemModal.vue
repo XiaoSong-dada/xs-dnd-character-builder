@@ -13,11 +13,12 @@ import {
   type EquipmentFilterRarity,
 } from '@/rules/equipment-filter'
 import { loadItemCatalog } from '@/rules/item-catalog-loader'
-import { rulesRepository } from '@/rules/repository'
+import type { RulesetId } from '@/types/character'
+import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { EquipmentRule } from '@/types/rules'
 
-const props = defineProps<{ open: boolean; enabledSourceIds?: readonly string[] }>()
+const props = withDefaults(defineProps<{ open: boolean; enabledSourceIds?: readonly string[]; ruleset?: RulesetId }>(), { ruleset: '5e-2014' })
 const emit = defineEmits<{
   close: []
   add: [payload: { itemId: string; quantity: number; equip: boolean }]
@@ -85,11 +86,13 @@ const visibleLimit = ref(80)
 /** 完整目录加载状态：主界面只带最小运行时索引，目录分块在弹窗打开时按需加载。 */
 const catalogState = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
 const catalogItems = ref<readonly EquipmentRule[]>([])
+/** 来源与物品解析按草稿版本（B09-06）：2024 草稿不得使用 2014 静态仓库。 */
+const repository = computed(() => getRulesRepository(props.ruleset))
 
 const sourceOptions = computed(() => [
-  ...rulesRepository.sources
+  ...repository.value.sources
     .filter((source) => (props.enabledSourceIds === undefined || source.category === 'core' || props.enabledSourceIds.includes(source.id))
-      && rulesRepository.equipment.some((item) => item.sourceIds.includes(source.id)))
+      && repository.value.equipment.some((item) => item.sourceIds.includes(source.id)))
     .map((source) => ({ id: source.id, label: source.shortTitle })),
 ])
 
@@ -113,7 +116,7 @@ async function ensureCatalog(): Promise<void> {
   if (catalogState.value === 'loading' || catalogState.value === 'ready') return
   catalogState.value = 'loading'
   try {
-    catalogItems.value = await loadItemCatalog()
+    catalogItems.value = await loadItemCatalog(props.ruleset)
     catalogState.value = 'ready'
   } catch {
     catalogState.value = 'error'
@@ -138,11 +141,11 @@ const catalogById = computed(() => {
   }
   return map
 })
-const fullItems = computed(() => rulesRepository.equipment.map((item) =>
+const fullItems = computed(() => repository.value.equipment.map((item) =>
   item.description === '' ? catalogById.value.get(item.id) ?? item : item))
 
 const filteredItems = computed(() => {
-  const availableItems = fullItems.value.filter((item) => isSourceEnabled(item.sourceIds, props.enabledSourceIds))
+  const availableItems = fullItems.value.filter((item) => isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value))
   return filterEquipmentCatalog(availableItems, {
     query: search.value,
     categories: selectedCategories.value,
@@ -172,25 +175,34 @@ watch(filteredItems, (items) => {
 
 const selectedItem = computed(() =>
   fullItems.value.find((item) => item.id === selectedItemId.value)
-  ?? rulesRepository.getEquipment(selectedItemId.value ?? ''))
+  ?? repository.value.getEquipment(selectedItemId.value ?? ''))
+
+/** 索引条目（依赖生物／随机表／DM 等未完成内容）只展示不可选（B07-05，AC-14）。 */
+function isIndexOnly(item: EquipmentRule | undefined): boolean {
+  return item?.status === 'index-only'
+}
 
 /** 当前选中是否可装备：自定义物品与规则标记不可装备的物品均不可。 */
-const canEquip = computed(() => mode.value === 'library' && Boolean(selectedItem.value?.equippable))
+const canEquip = computed(() => mode.value === 'library' && Boolean(selectedItem.value?.equippable) && !isIndexOnly(selectedItem.value))
 const equipDisabledReason = computed(() => {
   if (!selectedItemId.value && mode.value === 'library') return '请先选择物品'
   if (mode.value === 'custom') return '自定义物品无法装备'
+  if (isIndexOnly(selectedItem.value)) return '仅索引条目：依赖内容未完成，暂不可加入'
   if (!canEquip.value) return '该物品无法装备'
   return ''
 })
 const canAdd = computed(() => {
   if (mode.value === 'custom') return customName.value.trim().length > 0
-  return Boolean(selectedItemId.value) && selectedItem.value?.rarity !== 'varies'
+  return Boolean(selectedItemId.value) && selectedItem.value?.rarity !== 'varies' && !isIndexOnly(selectedItem.value)
 })
-const actionHint = computed(() => selectedItem.value?.rarity === 'varies'
-  ? '该索引包含多个型号，请搜索具体型号或使用自定义物品。'
-  : equipDisabledReason.value)
+const actionHint = computed(() => isIndexOnly(selectedItem.value)
+  ? '仅索引条目：依赖内容未完成，暂不可加入'
+  : selectedItem.value?.rarity === 'varies'
+    ? '该索引包含多个型号，请搜索具体型号或使用自定义物品。'
+    : equipDisabledReason.value)
 
 function selectItem(itemId: string): void {
+  if (isIndexOnly(fullItems.value.find((item) => item.id === itemId))) return
   mode.value = 'library'
   selectedItemId.value = itemId
 }
@@ -320,7 +332,8 @@ function addItem(equip: boolean): void {
             :key="item.id"
             :title="item.name"
             :description="item.damageDice ? `${item.damageDice} ${item.damageType}伤害 · ${item.englishName}` : item.englishName"
-            :state="mode === 'library' && selectedItemId === item.id ? 'selected' : 'default'"
+            :state="isIndexOnly(item) ? 'locked' : mode === 'library' && selectedItemId === item.id ? 'selected' : 'default'"
+            :disabled-reason="isIndexOnly(item) ? '仅索引条目：依赖内容未完成，暂不可加入' : ''"
             expanded-label="装备详情"
             expand-on-select
             @select="selectItem(item.id)"

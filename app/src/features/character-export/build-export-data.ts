@@ -1,12 +1,14 @@
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
-import { SUBCLASS_CHOICE_OPTION_IDS } from '@/rules/data/subclass-choice-options-2014'
-import { decodeAbilityImprovement } from '@/rules/feats'
-import { rulesRepository } from '@/rules/repository'
+import { decodeAbilityImprovement, formatFeatBonusOption } from '@/rules/feats'
+import { getRulesRepository } from '@/rules/repositories'
 import { normalizeManualEdits } from '@/rules/manual-edits'
-import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
+import { listSessionResources } from '@/rules/session-resources'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpellcastingConfig, usesPreparedSelection } from '@/rules/spellcasting'
 import { isSourceEnabled } from '@/rules/source-books'
+import { buildTimeline } from '@/rules/timeline'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import type { AbilityKey, CharacterDraft, DerivedCharacter } from '@/types/character'
+import type { RulesRepository } from '@/types/rules'
 
 export type ExportDiagnosticCode =
   | 'missing-rule-data'
@@ -56,6 +58,17 @@ export interface ExportFeature {
   readonly priority: number
 }
 
+/** 跑团结算登记的可消耗资源（B10）：导出为上限与恢复说明，不包含局内已用数量。 */
+export interface ExportResource {
+  readonly id: string
+  readonly name: string
+  readonly max: number
+  readonly unit: string
+  readonly recovery: 'short-rest' | 'long-rest' | 'none' | 'special'
+  /** 短休只恢复固定数量（如狂暴短休回 1 次）。 */
+  readonly shortRestRecovery?: number
+}
+
 export interface ExportSpell {
   readonly id: string
   readonly name: string
@@ -94,6 +107,7 @@ export interface CharacterExportModel {
   readonly inventory: readonly { readonly itemId: string; readonly name: string; readonly quantity: number; readonly equippedQuantity: number }[]
   readonly currency: { readonly cp: number; readonly sp: number; readonly ep: number; readonly gp: number; readonly pp: number }
   readonly features: readonly ExportFeature[]
+  readonly resources: readonly ExportResource[]
   readonly spellcasting?: {
     readonly className: string
     readonly abilityLabel: string
@@ -112,18 +126,67 @@ function signed(value: number): string {
   return `${value >= 0 ? '+' : ''}${value}`
 }
 
-function optionName(id: string): string {
-  return rulesRepository.getOption(id)?.name ?? id
+function optionName(repository: RulesRepository, id: string): string {
+  return repository.getOption(id)?.name ?? id
+}
+
+/** 展示类选择所在检查点类型（技能、专长、子职与属性提升另有管道）。 */
+const DISPLAY_SELECTION_KINDS: ReadonlySet<string> = new Set([
+  'class-choice',
+  'subclass-feature',
+  'weapon-mastery',
+  'fighting-style',
+  'feat-feature',
+  'infusion',
+])
+
+/** 法术精通与招牌法术的选择法术在导出特性列表单列（其余法术由法术列表承载）。 */
+const SPELL_FEATURE_CHECKPOINT_PREFIXES: readonly string[] = [
+  'wizard-2014-spell-mastery-',
+  'wizard-2014-signature-spells-',
+  'class-2024-wizard-spell-mastery-',
+  'class-2024-wizard-signature-spells-',
+]
+
+/** 选择是否写入导出特性列表：技能、物种施法属性、语言与工具仅影响派生，不重复列出。 */
+function isDisplayableSelection(kind: string | undefined, optionId: string): boolean {
+  if (optionId.startsWith('skill-') || optionId.startsWith('spell-ability-') || optionId.startsWith('language-') || optionId.startsWith('tool-')) {
+    return false
+  }
+  if (kind && DISPLAY_SELECTION_KINDS.has(kind)) return true
+  // 检查点信息缺失时的稳定前缀兜底（超魔与注法选项）。
+  return optionId.startsWith('metamagic-') || optionId.startsWith('infusion-')
 }
 
 function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
+  const repository = getRulesRepository(draft.ruleset)
   const features: ExportFeature[] = []
+  const seen = new Set<string>()
+  const push = (entry: ExportFeature): void => {
+    if (seen.has(entry.id)) return
+    seen.add(entry.id)
+    features.push(entry)
+  }
+  const timeline = draft.classId
+    ? buildTimeline(draft.classId, draft.targetLevel, {
+        subraceId: draft.subraceId,
+        subclassId: draft.subclassId,
+        enabledSourceIds: draft.enabledSourceIds,
+        selections: draft.selections,
+        ruleset: draft.ruleset,
+        raceId: draft.raceId,
+      })
+    : []
+  const checkpointById = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint]))
+
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
+    const checkpoint = checkpointById.get(selection.checkpointId)
     for (const optionId of selection.optionIds) {
-      const feat = rulesRepository.getFeat(optionId)
+      // 专长与属性提升：任何检查点都展示。
+      const feat = repository.getFeat(optionId)
       if (feat) {
-        features.push({ id: feat.id, category: 'feat', name: feat.name, summary: feat.detail, priority: 10 })
+        push({ id: feat.id, category: 'feat', name: feat.name, summary: feat.detail, priority: 10 })
         continue
       }
       const abilityImprovement = decodeAbilityImprovement(optionId)
@@ -131,59 +194,131 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
         const summary = abilityImprovement.mode === 'single'
           ? `${ABILITY_LABELS[abilityImprovement.abilities[0]]} +2`
           : abilityImprovement.abilities.map((ability) => `${ABILITY_LABELS[ability]} +1`).join('、')
-        features.push({ id: optionId, category: 'feat', name: '属性值提升', summary, priority: 10 })
+        push({ id: optionId, category: 'feat', name: '属性值提升', summary, priority: 10 })
         continue
       }
-      // 已选选择类选项（超魔、战技与其余子职选项、法术精通/招牌法术）进入导出
-      const isMetamagic = optionId.startsWith('metamagic-')
-      const isInfusion = optionId.startsWith('infusion-2014-')
-      const isSpellMasterySelection = selection.checkpointId.startsWith('wizard-2014-spell-mastery-')
-        || selection.checkpointId.startsWith('wizard-2014-signature-spells-')
-      if (isMetamagic || isInfusion || isSpellMasterySelection || SUBCLASS_CHOICE_OPTION_IDS.includes(optionId)) {
-        const spell = rulesRepository.getSpell(optionId)
-        if (spell) {
-          features.push({ id: spell.id, category: 'class', name: spell.name, summary: spell.description, priority: 10 })
-          continue
-        }
-        const option = rulesRepository.getOption(optionId)
-        if (option) {
-          const assignment = isInfusion ? (draft.infusionAssignments ?? []).find((item) => item.infusionId === optionId) : undefined
-          const entry = assignment ? draft.inventory.find((item) => item.id === assignment.inventoryEntryId) : undefined
-          const boundItem = entry ? rulesRepository.getEquipment(entry.itemId) : undefined
-          features.push({
-            id: option.id,
-            category: isMetamagic || isInfusion ? 'class' : 'subclass',
-            name: option.name,
-            summary: isInfusion
-              ? `${option.description}${assignment ? ` 当前绑定：${boundItem?.name ?? assignment.inventoryEntryId}。` : ' 当前未生效。'}`
-              : option.description,
-            priority: 10,
-          })
-        }
+      // 专长自带属性提升子选项（feat-bonus-*）进入导出特性列表（B09-09）。
+      const featBonusLabel = formatFeatBonusOption(repository, optionId)
+      if (featBonusLabel) {
+        push({
+          id: optionId,
+          category: 'feat',
+          name: featBonusLabel,
+          summary: repository.getOption(optionId)?.description ?? '由专长授予的属性提升。',
+          priority: 10,
+        })
+        continue
       }
+      // 展示类选择按检查点类型数据驱动：2014／2024 的超魔、战技、子职选项、祈唤、圣职与武器精通共用一条管道。
+      if (!isDisplayableSelection(checkpoint?.kind, optionId)) continue
+      const spell = repository.getSpell(optionId)
+      if (spell) {
+        if (SPELL_FEATURE_CHECKPOINT_PREFIXES.some((prefix) => selection.checkpointId.startsWith(prefix))) {
+          push({ id: spell.id, category: 'class', name: spell.name, summary: spell.description, priority: 10 })
+        }
+        continue
+      }
+      const equipment = repository.getEquipment(optionId)
+      if (equipment) {
+        const mastery = equipment.masteryId ? repository.getWeaponMastery(equipment.masteryId) : undefined
+        push({
+          id: equipment.id,
+          category: 'class',
+          name: `武器精通：${equipment.name}`,
+          summary: mastery ? `${mastery.name}——${mastery.summary}` : '武器精通选择。',
+          priority: 10,
+        })
+        continue
+      }
+      const option = repository.getOption(optionId)
+      if (!option) continue
+      const isInfusion = optionId.startsWith('infusion-2014-')
+      const assignment = isInfusion ? (draft.infusionAssignments ?? []).find((item) => item.infusionId === optionId) : undefined
+      const entry = assignment ? draft.inventory.find((item) => item.id === assignment.inventoryEntryId) : undefined
+      const boundItem = entry ? repository.getEquipment(entry.itemId) : undefined
+      push({
+        id: option.id,
+        category: checkpoint?.kind === 'subclass-feature' ? 'subclass' : 'class',
+        name: option.name,
+        summary: isInfusion
+          ? `${option.description}${assignment ? ` 当前绑定：${boundItem?.name ?? assignment.inventoryEntryId}。` : ' 当前未生效。'}`
+          : option.description,
+        priority: 10,
+      })
     }
   }
   return features
 }
 
 function buildFeatures(draft: CharacterDraft): ExportFeature[] {
-  const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
-  const subclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
-  const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
+  const repository = getRulesRepository(draft.ruleset)
+  const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
+  const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
   const background = draft.backgroundVariantId
-    ? rulesRepository.getBackground(draft.backgroundVariantId)
-    : draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
-  return [
+    ? repository.getBackground(draft.backgroundVariantId)
+    : draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
+  const originFeat = background?.originFeatId ? repository.getFeat(background.originFeatId) : undefined
+  const allocation = draft.backgroundAbilityAllocation ?? {}
+  const allocationText = Object.entries(allocation).length
+    ? `属性分配：${Object.entries(allocation).map(([key, value]) => `${ABILITY_LABELS[key as AbilityKey]}${value >= 0 ? '+' : ''}${value}`).join('、')}`
+    : ''
+  // 2024 物种特性（含血统）逐条导出；种族名称已在身份区展示。
+  const raceFeatures = [race, subrace]
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .flatMap((item) => repository.getRaceFeatures(item.id)
+      .filter((feature) => feature.level <= draft.targetLevel)
+      .map((feature) => ({ id: feature.id, category: 'race' as const, name: feature.name, summary: feature.summary, priority: 40 })))
+  const entries: ExportFeature[] = [
     ...resolveSelectedFeatures(draft),
+    ...(originFeat ? [{ id: originFeat.id, category: 'feat' as const, name: `${originFeat.name}（起源专长）`, summary: originFeat.detail, priority: 12 }] : []),
     ...(subclass?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'subclass' as const, name: feature.name, summary: feature.summary, priority: 20 })),
     ...(classRule?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'class' as const, name: feature.name, summary: feature.summary, priority: 30 })),
-    ...[race, subrace].filter((item): item is NonNullable<typeof item> => Boolean(item)).map((item) => ({ id: item.id, category: 'race' as const, name: item.name, summary: item.summary, priority: 40 })),
-    ...(background ? [{ id: background.id, category: 'background' as const, name: background.featureName || background.name, summary: background.summary, priority: 50 }] : []),
-  ].sort((left, right) => left.priority - right.priority)
+    ...raceFeatures,
+    ...(background ? [{ id: background.id, category: 'background' as const, name: background.featureName || background.name, summary: allocationText ? `${background.summary}；${allocationText}` : background.summary, priority: 50 }] : []),
+  ]
+  const seen = new Set<string>()
+  return entries.sort((left, right) => left.priority - right.priority).filter((entry) => {
+    if (seen.has(entry.id)) return false
+    seen.add(entry.id)
+    return true
+  })
+}
+
+/** 跑团资源：导出上限与恢复说明（不含局内已用数量）。 */
+function buildResources(draft: CharacterDraft, derived: DerivedCharacter): readonly ExportResource[] {
+  return listSessionResources(draft, derived.modifiers).map((resource) => ({
+    id: resource.id,
+    name: resource.name,
+    max: resource.max,
+    unit: resource.unit,
+    recovery: resource.recovery,
+    ...(resource.shortRestRecovery !== undefined ? { shortRestRecovery: resource.shortRestRecovery } : {}),
+  }))
+}
+
+const RESOURCE_RECOVERY_LABELS: Readonly<Record<ExportResource['recovery'], string>> = {
+  'short-rest': '短休恢复',
+  'long-rest': '长休恢复',
+  none: '无次数限制',
+  special: '特殊恢复',
+}
+
+/** 资源区块文本：`资源：狂暴 3次（短休回1）；引导神力 2次（短休恢复）`；空列表返回空串。 */
+export function formatExportResources(resources: readonly ExportResource[]): string {
+  if (!resources.length) return ''
+  const text = resources.map((resource) => {
+    const count = `${resource.max}${resource.unit}`
+    return resource.shortRestRecovery !== undefined
+      ? `${resource.name} ${count}（短休回${resource.shortRestRecovery}）`
+      : `${resource.name} ${count}（${RESOURCE_RECOVERY_LABELS[resource.recovery]}）`
+  }).join('；')
+  return `资源：${text}`
 }
 
 function buildInventory(draft: CharacterDraft, diagnostics: ExportDiagnostic[]) {
+  const repository = getRulesRepository(draft.ruleset)
   const grouped = new Map<string, { quantity: number; equippedQuantity: number }>()
   for (const entry of draft.inventory) {
     const current = grouped.get(entry.itemId) ?? { quantity: 0, equippedQuantity: 0 }
@@ -192,17 +327,18 @@ function buildInventory(draft: CharacterDraft, diagnostics: ExportDiagnostic[]) 
     grouped.set(entry.itemId, current)
   }
   return [...grouped.entries()].map(([itemId, totals]) => {
-    const equipment = rulesRepository.getEquipment(itemId)
+    const equipment = repository.getEquipment(itemId)
     if (!equipment) diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `inventory.${itemId}`, message: `无法解析物品 ${itemId}，已使用原始 ID。` })
     return { itemId, name: equipment?.name ?? itemId, ...totals }
   })
 }
 
 function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): readonly ExportSpell[] {
+  const repository = getRulesRepository(draft.ruleset)
   const config = getSpellcastingConfig(draft)
   const baseIds = config?.mode === 'spellbook'
     ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.spellbookSpellIds]
-    : config?.mode === 'prepared'
+    : config && usesPreparedSelection(config)
       ? [...draft.spellSelections.cantripIds, ...getAvailableSpells(draft, config).filter((spell) => spell.level > 0).map((spell) => spell.id)]
       : [...draft.spellSelections.cantripIds, ...draft.spellSelections.knownSpellIds]
   const alwaysPrepared = getAlwaysPreparedSpellIds(draft)
@@ -210,7 +346,7 @@ function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): read
   const ids = [...new Set([...baseIds, ...alwaysPrepared, ...getMagicalSecretsSpellIds(draft), ...manual.map((item) => item.spellId)])]
   const prepared = new Set([...draft.spellSelections.preparedSpellIds, ...alwaysPrepared, ...manual.filter((item) => item.prepared).map((item) => item.spellId)])
   return ids.map((id) => {
-    const spell = rulesRepository.getSpell(id)
+    const spell = repository.getSpell(id)
     if (!spell) diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `spell.${id}`, message: `无法解析法术 ${id}。` })
     return spell ? { id, name: spell.name, level: spell.level, prepared: prepared.has(id) } : undefined
   }).filter((spell): spell is ExportSpell => Boolean(spell)).sort((left, right) =>
@@ -220,21 +356,22 @@ function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): read
 }
 
 export function buildCharacterExportModel(draft: CharacterDraft, derived: DerivedCharacter): CharacterExportModel {
+  const repository = getRulesRepository(draft.ruleset)
   const diagnostics: ExportDiagnostic[] = []
-  const classRule = draft.classId ? rulesRepository.getClass(draft.classId) : undefined
-  const subclass = draft.subclassId ? rulesRepository.getSubclass(draft.subclassId) : undefined
-  const race = draft.raceId ? rulesRepository.getRace(draft.raceId) : undefined
-  const subrace = draft.subraceId ? rulesRepository.getRace(draft.subraceId) : undefined
-  const background = draft.backgroundId ? rulesRepository.getBackground(draft.backgroundId) : undefined
-  const backgroundVariant = draft.backgroundVariantId ? rulesRepository.getBackground(draft.backgroundVariantId) : undefined
+  const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  const race = draft.raceId ? repository.getRace(draft.raceId) : undefined
+  const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
+  const background = draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
+  const backgroundVariant = draft.backgroundVariantId ? repository.getBackground(draft.backgroundVariantId) : undefined
   if (draft.classId && !classRule) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.class', message: '无法解析角色职业。' })
-  if (classRule && !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.class', message: `职业“${classRule.name}”的来源已关闭，导出已阻止。` })
-  if (subclass && !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.subclass', message: `子职“${subclass.name}”的来源已关闭，导出已阻止。` })
+  if (classRule && !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds, repository)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.class', message: `职业“${classRule.name}”的来源已关闭，导出已阻止。` })
+  if (subclass && !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.subclass', message: `子职“${subclass.name}”的来源已关闭，导出已阻止。` })
   if (draft.raceId && !race) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.race', message: '无法解析角色种族。' })
 
   const inventory = buildInventory(draft, diagnostics)
   const attacks = inventory.filter((entry) => entry.equippedQuantity > 0).flatMap((entry) => {
-    const equipment = rulesRepository.getEquipment(entry.itemId)
+    const equipment = repository.getEquipment(entry.itemId)
     if (!equipment) return []
     const attack = deriveWeaponAttack(draft, derived, equipment)
     if (!attack) {
@@ -256,9 +393,9 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
   }])) as Record<AbilityKey, ExportAbility>
   const skills = Object.entries(derived.skills).map(([id, value]) => {
     const labels = value.sources.map((source) => source.label)
-    return { id, name: optionName(id), value: value.value, proficiency: labels.includes('专精') ? 'expertise' as const : labels.includes('技能熟练') ? 'proficient' as const : 'none' as const }
+    return { id, name: optionName(repository, id), value: value.value, proficiency: labels.includes('专精') ? 'expertise' as const : labels.includes('技能熟练') ? 'proficient' as const : 'none' as const }
   })
-  const languages = draft.languages.map(optionName)
+  const languages = draft.languages.map((id) => optionName(repository, id))
   const spellcastingConfig = getSpellcastingConfig(draft)
 
   return {
@@ -279,6 +416,7 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
     inventory,
     currency: { ...draft.currency, gp: draft.currency.gp + draft.adventureGold },
     features: buildFeatures(draft),
+    resources: buildResources(draft, derived),
     ...(spellcastingConfig || normalizeManualEdits(draft.manualEdits).addedSpells.length > 0 || getEffectiveSpellSlots(draft).length > 0 ? {
       spellcasting: {
         className: classRule?.name ?? subclass?.name ?? '人工施法', abilityLabel: spellcastingConfig ? ABILITY_LABELS[spellcastingConfig.ability] : '人工', saveDc: derived.spellSaveDc?.value ?? 0,

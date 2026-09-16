@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
+import UiNotice from '@/components/ui/UiNotice.vue'
 import { getBackgroundRecommendationReason, getRaceRecommendationReason } from '@/rules/recommend'
-import { rulesRepository } from '@/rules/repository'
+import { getRulesRepository } from '@/rules/repositories'
+import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
 import { isSourceEnabled } from '@/rules/source-books'
 import { SKILL_IDS } from '@/rules/derive'
+import type { AbilityKey, RulesetId } from '@/types/character'
 
 const props = withDefaults(defineProps<{
+  ruleset?: RulesetId
   classId?: string
   raceId?: string
   subraceId?: string
@@ -19,38 +23,61 @@ const props = withDefaults(defineProps<{
   raceSkillChoices?: readonly string[]
   raceToolChoice?: string
   enabledSourceIds?: readonly string[]
-}>(), { raceSkillChoices: () => [] })
+  sizeChoice?: 'small' | 'medium'
+  backgroundAbilities?: Readonly<Partial<Record<AbilityKey, number>>>
+  /** 起源步骤未完成原因（与门禁同源，B09-07）。 */
+  blockers?: readonly { readonly id: string; readonly message: string; readonly resolution: string }[]
+}>(), { raceSkillChoices: () => [], ruleset: '5e-2014', blockers: () => [] })
+
+const emit = defineEmits<{
+  race: [id: string]
+  subrace: [id: string | undefined]
+  background: [id: string]
+  variant: [id: string | undefined]
+  languages: [ids: readonly string[]]
+  raceSkills: [ids: readonly string[]]
+  raceTool: [id: string | undefined]
+  size: [size: 'small' | 'medium']
+  backgroundAbilities: [allocation: Readonly<Partial<Record<AbilityKey, number>>>]
+}>()
+
+const repository = computed(() => getRulesRepository(props.ruleset))
 const raceSearch = ref('')
 const backgroundSearch = ref('')
-const classRule = computed(() => props.classId ? rulesRepository.getClass(props.classId) : undefined)
-const baseRaces = computed(() => rulesRepository.races
-  .filter((item) => !item.parentRaceId && isSourceEnabled(item.sourceIds, props.enabledSourceIds) && `${item.name}${item.englishName}`.toLowerCase().includes(raceSearch.value.trim().toLowerCase()))
+const classRule = computed(() => props.classId ? repository.value.getClass(props.classId) : undefined)
+const baseRaces = computed(() => repository.value.races
+  .filter((item) => !item.parentRaceId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value) && `${item.name}${item.englishName}`.toLowerCase().includes(raceSearch.value.trim().toLowerCase()))
   .sort((a, b) => Number(b.recommendedClassIds.includes(props.classId ?? '')) - Number(a.recommendedClassIds.includes(props.classId ?? ''))))
 const subraces = computed(() => props.raceId
-  ? rulesRepository.races.filter((item) => item.parentRaceId === props.raceId && isSourceEnabled(item.sourceIds, props.enabledSourceIds))
+  ? repository.value.races.filter((item) => item.parentRaceId === props.raceId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value))
   : [])
-const baseBackgrounds = computed(() => rulesRepository.backgrounds
-  .filter((item) => !item.parentBackgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds) && `${item.name}${item.englishName}`.toLowerCase().includes(backgroundSearch.value.trim().toLowerCase()))
+const baseBackgrounds = computed(() => repository.value.backgrounds
+  .filter((item) => !item.parentBackgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value) && `${item.name}${item.englishName}`.toLowerCase().includes(backgroundSearch.value.trim().toLowerCase()))
   .sort((a, b) => Number(b.recommendedClassIds.includes(props.classId ?? '')) - Number(a.recommendedClassIds.includes(props.classId ?? ''))))
 const variants = computed(() => props.backgroundId
-  ? rulesRepository.backgrounds.filter((item) => item.parentBackgroundId === props.backgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds))
+  ? repository.value.backgrounds.filter((item) => item.parentBackgroundId === props.backgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value))
   : [])
-const languageChoiceCount = computed(() => props.backgroundId ? rulesRepository.getBackground(props.backgroundId)?.languageChoices ?? 0 : 0)
-const languageOptions = ['矮人语', '精灵语', '巨人语', '侏儒语', '地精语', '半身人语', '兽人语', '龙语', '炼狱语', '天界语'] as const
+const languageChoiceCount = computed(() => getRequiredLanguageCount({
+  ruleset: props.ruleset,
+  classId: props.classId,
+  backgroundId: props.backgroundId,
+  backgroundVariantId: props.backgroundVariantId,
+}, repository.value))
+const languageOptions = computed(() => getLanguageOptions(props.ruleset))
 
-/** 当前种族（子种族优先）：提供熟练选择规格。 */
+/** 当前物种（子种族优先）：提供熟练选择规格。 */
 const currentRace = computed(() => props.subraceId
-  ? rulesRepository.getRace(props.subraceId)
+  ? repository.value.getRace(props.subraceId)
   : props.raceId
-    ? rulesRepository.getRace(props.raceId)
+    ? repository.value.getRace(props.raceId)
     : undefined)
-/** 沿父链查找熟练规格（子种族未登记时继承父种族，如山地矮人继承矮人工具熟练）。 */
+/** 沿父链查找熟练规格（子种族未登记时继承父物种，如山地矮人继承矮人工具熟练）。 */
 function findProficiencySpec(key: 'skillProficiencyChoices' | 'toolProficiencyChoices'): { readonly count: number; readonly optionIds?: readonly string[] } | undefined {
   const visited = new Set<string>()
   const visit = (raceId: string | undefined): { readonly count: number; readonly optionIds?: readonly string[] } | undefined => {
     if (!raceId || visited.has(raceId)) return undefined
     visited.add(raceId)
-    const race = rulesRepository.getRace(raceId)
+    const race = repository.value.getRace(raceId)
     if (!race) return undefined
     const own = race[key]
     if (own !== undefined) return own
@@ -65,11 +92,64 @@ const raceSkillOptions = computed(() => {
   const spec = raceSkillSpec.value
   if (!spec) return []
   return (spec.optionIds ?? SKILL_IDS)
-    .map((id) => ({ id, name: rulesRepository.getOption(id)?.name ?? id }))
+    .map((id) => ({ id, name: repository.value.getOption(id)?.name ?? id }))
 })
-const raceToolOptions = computed(() => rulesRepository.options
+const raceToolOptions = computed(() => repository.value.options
   .filter((option) => option.id.startsWith('tool-'))
   .map((option) => ({ id: option.id, name: option.name })))
+
+/** 沿父链查找物种可选体型（2024 阿斯莫、人类、提夫林）。 */
+const speciesSizeChoices = computed(() => {
+  const visited = new Set<string>()
+  const visit = (raceId: string | undefined): readonly ('small' | 'medium')[] | undefined => {
+    if (!raceId || visited.has(raceId)) return undefined
+    visited.add(raceId)
+    const race = repository.value.getRace(raceId)
+    if (!race) return undefined
+    if (race.sizeChoices?.length) return race.sizeChoices
+    return visit(race.parentRaceId)
+  }
+  return visit(currentRace.value?.id)
+})
+
+function sizeLabel(size: 'small' | 'medium'): string {
+  return size === 'small' ? '小型' : '中型'
+}
+
+/** 2024 背景属性分配（+2/+1 或三项各 +1）。 */
+const backgroundRule = computed(() => props.backgroundId ? repository.value.getBackground(props.backgroundId) : undefined)
+const abilityCandidates = computed(() => backgroundRule.value?.abilityChoices ?? [])
+const abilityLabels: Readonly<Record<AbilityKey, string>> = { str: '力量', dex: '敏捷', con: '体质', int: '智力', wis: '感知', cha: '魅力' }
+const allocationMode = ref<'split' | 'even'>('split')
+const allocation = ref<Partial<Record<AbilityKey, number>>>({ ...(props.backgroundAbilities ?? {}) })
+watch(() => props.backgroundAbilities, (value: Readonly<Partial<Record<AbilityKey, number>>> | undefined) => {
+  allocation.value = { ...(value ?? {}) }
+})
+
+function setAllocationMode(mode: 'split' | 'even'): void {
+  if (allocationMode.value === mode) return
+  allocationMode.value = mode
+  allocation.value = {}
+  emit('backgroundAbilities', allocation.value)
+}
+
+function toggleBackgroundAbility(key: AbilityKey): void {
+  if (!abilityCandidates.value.includes(key)) return
+  const next: Partial<Record<AbilityKey, number>> = { ...allocation.value }
+  const current = next[key] ?? 0
+  if (allocationMode.value === 'even') {
+    if (current > 0) delete next[key]
+    else if (Object.keys(next).length < 3) next[key] = 1
+  } else if (current > 0) {
+    delete next[key]
+  } else if (!Object.values(next).includes(2)) {
+    next[key] = 2
+  } else if (!Object.values(next).includes(1)) {
+    next[key] = 1
+  }
+  allocation.value = next
+  emit('backgroundAbilities', next)
+}
 
 function toggleRaceSkill(id: string): void {
   const spec = raceSkillSpec.value
@@ -96,24 +176,14 @@ function toggleLanguage(id: string): void {
     : [...props.languages, id].slice(-languageChoiceCount.value)
   emit('languages', next)
 }
-
-const emit = defineEmits<{
-  race: [id: string]
-  subrace: [id: string | undefined]
-  background: [id: string]
-  variant: [id: string | undefined]
-  languages: [ids: readonly string[]]
-  raceSkills: [ids: readonly string[]]
-  raceTool: [id: string | undefined]
-}>()
 </script>
 
 <template>
   <section class="origin-step">
     <header>
-      <span>2014种族</span>
-      <h2>选择种族</h2>
-      <p>职业只提供推荐，所有种族均可自由选择。</p>
+      <span>{{ ruleset === '5e-2024' ? '2024物种' : '2014种族' }}</span>
+      <h2>{{ ruleset === '5e-2024' ? '选择物种' : '选择种族' }}</h2>
+      <p>{{ ruleset === '5e-2024' ? '物种不提供属性加值；属性提升来自背景。职业只提供推荐。' : '职业只提供推荐，所有种族均可自由选择。' }}</p>
     </header>
     <ListShell
       searchable
@@ -140,7 +210,7 @@ const emit = defineEmits<{
     </ListShell>
 
     <div v-if="subraces.length" class="origin-step__branches">
-      <strong>选择子种族</strong>
+      <strong>{{ ruleset === '5e-2024' ? '选择血统／传承' : '选择子种族' }}</strong>
       <ExpandableOptionCard
         v-for="subrace in subraces"
         :key="subrace.id"
@@ -156,6 +226,21 @@ const emit = defineEmits<{
         </template>
         <template #expanded>{{ subrace.description }}</template>
       </ExpandableOptionCard>
+    </div>
+
+    <div v-if="speciesSizeChoices?.length" class="origin-step__branches">
+      <strong>选择体型</strong>
+      <div class="origin-step__choices">
+        <button
+          v-for="size in speciesSizeChoices"
+          :key="size"
+          type="button"
+          :aria-pressed="sizeChoice === size"
+          @click="$emit('size', size)"
+        >
+          {{ sizeChoice === size ? '✓ ' : '' }}{{ sizeLabel(size) }}
+        </button>
+      </div>
     </div>
 
     <div v-if="raceSkillSpec || raceToolSpec" class="origin-step__race-choices">
@@ -191,9 +276,9 @@ const emit = defineEmits<{
     </div>
 
     <header>
-      <span>2014背景</span>
+      <span>{{ ruleset === '5e-2024' ? '2024背景' : '2014背景' }}</span>
       <h2>选择背景</h2>
-      <p>背景不提供属性加值；它提供技能、工具、语言和背景特性。</p>
+      <p>{{ ruleset === '5e-2024' ? '背景提供属性加值、起源专长、技能、工具与初始装备。' : '背景不提供属性加值；它提供技能、工具、语言和背景特性。' }}</p>
     </header>
     <ListShell
       searchable
@@ -231,8 +316,42 @@ const emit = defineEmits<{
       </ExpandableOptionCard>
     </div>
 
+    <div v-if="abilityCandidates.length" class="origin-step__branches">
+      <strong>背景属性加值</strong>
+      <div class="origin-step__choices">
+        <button
+          type="button"
+          :aria-pressed="allocationMode === 'split'"
+          @click="setAllocationMode('split')"
+        >
+          一项 +2、另一项 +1
+        </button>
+        <button
+          type="button"
+          :aria-pressed="allocationMode === 'even'"
+          @click="setAllocationMode('even')"
+        >
+          三项各 +1
+        </button>
+      </div>
+      <div class="origin-step__choices">
+        <button
+          v-for="key in abilityCandidates"
+          :key="key"
+          type="button"
+          :aria-pressed="(allocation[key] ?? 0) > 0"
+          @click="toggleBackgroundAbility(key)"
+        >
+          {{ abilityLabels[key] }}{{ allocation[key] ? ` +${allocation[key]}` : '' }}
+        </button>
+      </div>
+      <p v-if="backgroundRule?.toolChoices" class="origin-step__hint">
+        该背景还需选择 1 项工具；具体工具由装备库接入后提供（B07）。
+      </p>
+    </div>
+
     <div v-if="languageChoiceCount" class="origin-step__languages">
-      <strong>背景允许选择{{ languageChoiceCount }}种额外语言</strong>
+      <strong>{{ ruleset === '5e-2024' ? `从标准表选择${languageChoiceCount}种语言（通用语已掌握）` : `背景允许选择${languageChoiceCount}种额外语言` }}</strong>
       <button
         v-for="language in languageOptions"
         :key="language"
@@ -243,6 +362,18 @@ const emit = defineEmits<{
         {{ languages.includes(language) ? '✓ ' : '' }}{{ language }}
       </button>
     </div>
+    <UiNotice
+      v-if="blockers.length"
+      class="origin-step__blockers"
+      tone="warning"
+      :title="`还差 ${blockers.length} 项才能继续`"
+    >
+      <ul>
+        <li v-for="blocker in blockers" :key="blocker.id">
+          {{ blocker.message }}<small>{{ blocker.resolution }}</small>
+        </li>
+      </ul>
+    </UiNotice>
   </section>
 </template>
 
@@ -267,6 +398,14 @@ const emit = defineEmits<{
     background: var(--color-gold-soft);
 
     > strong { font-size: 0.8rem; }
+  }
+
+  &__blockers {
+    margin-top: 0.5rem;
+
+    ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.35rem; }
+    li { line-height: 1.5; }
+    small { display: block; color: var(--color-text-muted); }
   }
 
   &__languages {

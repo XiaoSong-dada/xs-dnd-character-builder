@@ -61,7 +61,9 @@
 
 ## 子职索引
 
-2024：[慈悲宗](monk-mercy.md)、[暗影宗](monk-shadow.md)、[元素宗](monk-elements.md)、[敞手宗](monk-open-hand.md)。
+> 运行时名称采用 5e 不全书译名（命流武者、四象武者、散打武者、暗影武者）与职业特性译名（武僧武功、运转周天、轻身坠、真力注拳、飞檐走壁、出神入化、返本还元、圆融自在、明镜止水、无懈可击、天人合一），资源名称采用“功力”；本页早期的旧译名（慈悲宗、元素宗、敞手宗、暗影宗、武僧专注、超常代谢等）仅作对照。
+
+2024：[命流武者](monk-mercy.md)、[暗影武者](monk-shadow.md)、[四象武者](monk-elements.md)、[散打武者](monk-open-hand.md)。
 
 2014扩展：[永亡宗](monk-long-death.md)、[醉拳宗](monk-drunken-master.md)、[剑圣宗](monk-kensei.md)、[日魂宗](monk-sun-soul.md)、[星我宗](monk-astral-self.md)、[神龙宗](monk-ascendant-dragon.md)。
 
@@ -70,5 +72,5 @@
 - [2024 Free Rules](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes)
 - [SRD 5.2.1](https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf)
 - [官方2024武僧更新](https://www.dndbeyond.com/posts/1758-2024-monk-vs-2014-monk-whats-new)
-- 开放规则整理到实现级；商业子职只记录索引、原创摘要和兼容提示。最后核验：2026-07-24。
+- 开放规则整理到实现级；商业子职只记录索引、原创摘要和兼容提示。基础职业与 4 个核心子职已由 B08-05 接入运行时（`app/src/rules/data/monk-2024.ts`）。最后核验：2026-09-15。
 

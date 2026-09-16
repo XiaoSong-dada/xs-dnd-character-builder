@@ -28,7 +28,7 @@ const template = readFileSync(resolve(__dirname, '../../public/templates/charact
 const font = readFileSync(resolve(__dirname, '../../public/templates/fonts/noto-sans-sc-subset.ttf'))
 
 const anonymousWizard: CharacterDraft = {
-  ...fighterDraft, id: 'pdf-row-regression', name: '测试法师', notes: '', schemaVersion: 7,
+  ...fighterDraft, id: 'pdf-row-regression', name: '测试法师', notes: '', schemaVersion: 8,
   targetLevel: 10, abilityMethod: 'custom', classId: 'class-2014-wizard',
   subclassId: 'subclass-2014-wizard-chronurgy', enabledSourceIds: ['egtw-2020-index'],
   raceId: 'race-2014-elf', subraceId: 'race-2014-elf-high', backgroundId: 'background-2014-noble',

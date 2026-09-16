@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import BaseButton from '@/components/ui/BaseButton.vue'
 import UiModal from '@/components/ui/UiModal.vue'
@@ -22,6 +22,7 @@ import StartPanel from '@/views/character-builder/components/StartPanel.vue'
 import TimelineStep from '@/views/character-builder/components/TimelineStep.vue'
 import ValidationStep from '@/views/character-builder/components/ValidationStep.vue'
 import { useCharacterBuilderPage } from '@/views/character-builder/hooks/useCharacterBuilderPage'
+import { hasBuildChoices } from '@/rules/draft-progress'
 import type { AbilityMethod, DraftStep } from '@/types/character'
 
 const {
@@ -44,7 +45,14 @@ const {
   stepMeta,
   stepNumber,
   canContinue,
+  originBlockers,
   createDraft,
+  defaultRuleset,
+  rulesetFallbackNotice,
+  rulesetRebuild,
+  updateRuleset,
+  confirmRulesetRebuild,
+  cancelRulesetRebuild,
   openDraft,
   returnToStart,
   deleteDraft,
@@ -87,6 +95,9 @@ const {
 /** 等级调整弹窗：仅由角色卡页发起，目标始终为当前活动草稿。 */
 const levelModalOpen = ref(false)
 
+/** 已有构筑选择的草稿锁定版本卡片：不原地转换（B00-04；另建流程归 B09-03）。 */
+const rulesetLocked = computed(() => activeDraft.value ? hasBuildChoices(activeDraft.value) : false)
+
 function openLevelModal(): void {
   levelModalOpen.value = true
 }
@@ -121,6 +132,7 @@ function updateMethod(value: AbilityMethod): void {
     v-if="!activeDraft"
     :drafts="drafts"
     :legacy-drafts="legacyDrafts"
+    :default-ruleset="defaultRuleset"
     @create="createDraft"
     @open="openDraft"
     @delete="deleteDraft"
@@ -145,16 +157,29 @@ function updateMethod(value: AbilityMethod): void {
     <div v-if="levelAdjustNotice" class="builder-level-notice" @click="goToLevelAdjustStep">
       <UiNotice :tone="levelAdjustNotice.tone" :title="levelAdjustNotice.message">点击前往对应步骤处理。</UiNotice>
     </div>
-    <SetupStep v-if="step === 'setup'" :target-level="activeDraft.targetLevel" :ability-method="activeDraft.abilityMethod" @level="updateLevel" @method="updateMethod" />
-    <SourcesStep v-else-if="step === 'sources'" :selected="activeDraft.enabledSourceIds" @change="updateSources" />
+    <SetupStep
+      v-if="step === 'setup'"
+      :target-level="activeDraft.targetLevel"
+      :ability-method="activeDraft.abilityMethod"
+      :ruleset="activeDraft.ruleset"
+      :ruleset-locked="rulesetLocked"
+      :ruleset-fallback="rulesetFallbackNotice"
+      @level="updateLevel"
+      @method="updateMethod"
+      @ruleset="updateRuleset"
+    />
+    <SourcesStep v-else-if="step === 'sources'" :selected="activeDraft.enabledSourceIds" :ruleset="activeDraft.ruleset" @change="updateSources" />
     <ClassStep
       v-else-if="step === 'class'"
       :selected="activeDraft.classId"
       :enabled-source-ids="activeDraft.enabledSourceIds"
+      :ruleset="activeDraft.ruleset"
       @select="selectClass"
     />
     <OriginStep
       v-else-if="step === 'origin'"
+      :blockers="originBlockers"
+      :ruleset="activeDraft.ruleset"
       :class-id="activeDraft.classId"
       :race-id="activeDraft.raceId"
       :subrace-id="activeDraft.subraceId"
@@ -164,6 +189,8 @@ function updateMethod(value: AbilityMethod): void {
       :languages="activeDraft.languages"
       :race-skill-choices="activeDraft.raceSkillChoices ?? []"
       :race-tool-choice="activeDraft.raceToolChoice"
+      :size-choice="activeDraft.speciesSizeChoice"
+      :background-abilities="activeDraft.backgroundAbilityAllocation ?? {}"
       @race="selectRace"
       @subrace="selectSubrace"
       @background="selectBackground"
@@ -171,9 +198,12 @@ function updateMethod(value: AbilityMethod): void {
       @languages="updateDraft({ languages: $event })"
       @race-skills="updateDraft({ raceSkillChoices: $event })"
       @race-tool="updateDraft({ raceToolChoice: $event })"
+      @size="updateDraft({ speciesSizeChoice: $event })"
+      @background-abilities="updateDraft({ backgroundAbilityAllocation: $event })"
     />
     <AbilitiesStep
       v-else-if="step === 'abilities'"
+      :ruleset="activeDraft.ruleset"
       :scores="activeDraft.baseAbilities"
       :method="activeDraft.abilityMethod"
       :bonuses="raceAbilityBonuses"
@@ -202,7 +232,7 @@ function updateMethod(value: AbilityMethod): void {
     />
     <SpellcastingStep v-else-if="step === 'spells'" :draft="activeDraft" @change="updateSpells" />
     <IdentityStep v-else-if="step === 'identity'" :draft="activeDraft" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" @change-media="updateDraft({ media: $event })" />
-    <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" @go="setStep($event as DraftStep)" />
+    <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" :ruleset="activeDraft.ruleset" @go="setStep($event as DraftStep)" />
     <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" :exporting-format="exportingFormat" :export-notice="exportNotice" @export="exportDraft" @export-package="exportPackage" @export-pdf="exportPdf" @export-xlsx="exportXlsx" @adjust-level="openLevelModal" @reedit="startReedit" @change-spell-selections="updateSpells" @change-inventory="updateInventory" @change-adventure-gold="updateAdventureGold" @change-manual-edits="updateManualEdits" @change-media="updateDraft({ media: $event })" />
 
     <template v-if="step !== 'sheet' && derivedSummary" #drawer>
@@ -261,6 +291,31 @@ function updateMethod(value: AbilityMethod): void {
     <template #footer>
       <BaseButton variant="secondary" @click="cancelPendingChange">取消</BaseButton>
       <BaseButton variant="danger" @click="confirmPendingChange">确认调整</BaseButton>
+    </template>
+  </UiModal>
+  <UiModal
+    :open="Boolean(rulesetRebuild)"
+    title="改用另一版本？"
+    @close="cancelRulesetRebuild"
+  >
+    <p>已有构筑的角色不会原地转换。确认后将另建一张 {{ rulesetRebuild === '5e-2024' ? '2024' : '2014' }} 角色卡：</p>
+    <section class="builder-impact">
+      <h4>保留</h4>
+      <ul>
+        <li>原角色卡（{{ activeDraft?.name || '未命名角色' }}）及其全部选择</li>
+        <li>复制到新卡的资料：角色名与图片</li>
+      </ul>
+    </section>
+    <section class="builder-impact">
+      <h4>新卡从空白开始</h4>
+      <ul>
+        <li>等级、属性、起源、职业、法术、装备等构筑选择不复制</li>
+        <li>版本相关选择不复制，需在对应步骤重新完成</li>
+      </ul>
+    </section>
+    <template #footer>
+      <BaseButton variant="secondary" @click="cancelRulesetRebuild">取消</BaseButton>
+      <BaseButton @click="confirmRulesetRebuild">另建角色</BaseButton>
     </template>
   </UiModal>
   <LevelAdjustModal

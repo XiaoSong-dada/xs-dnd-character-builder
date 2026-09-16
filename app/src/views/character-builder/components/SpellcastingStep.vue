@@ -12,23 +12,30 @@ import {
   getRequiredSpellCount,
   getSelectedSpellIds,
   getSpellSlots,
+  getSpellbookExtraAllowance,
+  getSpellbookExtraCandidates,
   getSpellcastingConfig,
   getAlwaysPreparedSpellIds,
+  usesPreparedSelection,
 } from '@/rules/spellcasting'
-import { rulesRepository } from '@/rules/repository'
+import { ABILITY_LABELS } from '@/rules/data/ability-labels'
+import { getRulesRepository } from '@/rules/repositories'
+import type { SpellRule } from '@/types/rules'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{ draft: CharacterDraft }>()
 const emit = defineEmits<{ change: [value: SpellSelections] }>()
 const config = computed(() => getSpellcastingConfig(props.draft))
+/** 法术候选、来源与名称按草稿版本解析（B09-02）。 */
+const repository = computed(() => getRulesRepository(props.draft.ruleset))
 const search = ref('')
 const sourceFilter = ref('all')
 const sourceOptions = computed(() => [
   { id: 'all', label: '全部来源' },
-  ...rulesRepository.sources.filter((source) => source.category === 'core' || (props.draft.enabledSourceIds ?? []).includes(source.id)).map((source) => ({ id: source.id, label: source.shortTitle })),
+  ...repository.value.sources.filter((source) => source.category === 'core' || (props.draft.enabledSourceIds ?? []).includes(source.id)).map((source) => ({ id: source.id, label: source.shortTitle })),
 ])
-const matchesView = (spell: NonNullable<ReturnType<typeof rulesRepository.getSpell>>): boolean => {
+const matchesView = (spell: SpellRule): boolean => {
   const keyword = search.value.trim().toLocaleLowerCase('zh-CN')
   return (sourceFilter.value === 'all' || spell.sourceIds.includes(sourceFilter.value))
     && (!keyword || `${spell.name}${spell.englishName}`.toLocaleLowerCase('zh-CN').includes(keyword))
@@ -36,16 +43,22 @@ const matchesView = (spell: NonNullable<ReturnType<typeof rulesRepository.getSpe
 /** 施法来源名称（子职施法优先，如奥法骑士/诡术师；否则职业）。 */
 const castingSourceName = computed(() => {
   if (props.draft.subclassId) {
-    const subclass = rulesRepository.getSubclass(props.draft.subclassId)
+    const subclass = repository.value.getSubclass(props.draft.subclassId)
     if (subclass?.spellcasting) return subclass.name
   }
-  return props.draft.classId ? rulesRepository.getClass(props.draft.classId)?.name ?? '' : ''
+  return props.draft.classId ? repository.value.getClass(props.draft.classId)?.name ?? '' : ''
 })
 const requiredCount = computed(() => config.value ? getRequiredSpellCount(props.draft, config.value) : 0)
 const requiredCantripCount = computed(() => config.value ? getRequiredCantripCount(props.draft, config.value) : 0)
 const requiredSpellbookCount = computed(() => config.value ? getRequiredSpellbookCount(props.draft, config.value) : 0)
+const spellbookExtraIds = computed(() => props.draft.spellSelections.spellbookExtraSpellIds ?? [])
+const spellbookExtraAllowance = computed(() => config.value ? getSpellbookExtraAllowance(props.draft, config.value) : 0)
+const spellbookExtraCandidates = computed(() => config.value ? getSpellbookExtraCandidates(props.draft, config.value) : [])
+/** 升级名额内的法术数：排除抄录与子职额外入书。 */
+const normalSpellbookCount = computed(() => props.draft.spellSelections.spellbookSpellIds
+  .filter((id) => !props.draft.spellSelections.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
 const selectedIds = computed(() => config.value ? getSelectedSpellIds(props.draft, config.value) : [])
-const alwaysPreparedSpells = computed(() => getAlwaysPreparedSpellIds(props.draft).map((id) => rulesRepository.getSpell(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell)))
+const alwaysPreparedSpells = computed(() => getAlwaysPreparedSpellIds(props.draft).map((id) => repository.value.getSpell(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell)))
 const cantrips = computed(() => config.value ? getAvailableSpells(props.draft, config.value).filter((spell) => spell.level === 0 && matchesView(spell)) : [])
 const maximumLevel = computed(() => config.value ? getMaximumSpellLevel(config.value, props.draft.targetLevel) : 0)
 const spellSlots = computed(() => config.value ? getSpellSlots(config.value, props.draft.targetLevel) : [])
@@ -85,7 +98,7 @@ function toggleSpell(id: string): void {
   if (!config.value) return
   emit('change', {
     ...props.draft.spellSelections,
-    ...(config.value.mode === 'prepared' || config.value.mode === 'spellbook' ? { preparedSpellIds: next } : { knownSpellIds: next }),
+    ...(usesPreparedSelection(config.value) ? { preparedSpellIds: next } : { knownSpellIds: next }),
   })
 }
 
@@ -100,20 +113,44 @@ function toggleCantrip(id: string): void {
 function toggleSpellbook(id: string): void {
   const current = props.draft.spellSelections.spellbookSpellIds
   const transcribed = props.draft.spellSelections.transcribedSpellIds
+  const extras = spellbookExtraIds.value
   const removing = current.includes(id)
-  // 抄录所得的法术不可移除（不可撤销约定）；升级名额按非抄录法术数计算。
+  // 抄录所得的法术不可移除（不可撤销约定）；升级名额按非抄录、非额外法术数计算。
   if (removing && transcribed.includes(id)) return
   const nextBook = removing
     ? current.filter((spellId) => spellId !== id)
-    : current.filter((spellId) => !transcribed.includes(spellId)).length < requiredSpellbookCount.value
+    : normalSpellbookCount.value < requiredSpellbookCount.value
       ? [...current, id]
       : current
+  if (nextBook === current) return
   emit('change', {
     ...props.draft.spellSelections,
     spellbookSpellIds: nextBook,
+    ...(removing ? { spellbookExtraSpellIds: extras.filter((spellId) => spellId !== id) } : {}),
     preparedSpellIds: removing
       ? props.draft.spellSelections.preparedSpellIds.filter((spellId) => spellId !== id)
       : props.draft.spellSelections.preparedSpellIds,
+  })
+}
+
+/** 子职额外入书（如塑能学者）：与升级名额分开计数，移除时同时移出法术书与准备列表。 */
+function toggleSpellbookExtra(id: string): void {
+  const currentBook = props.draft.spellSelections.spellbookSpellIds
+  const extras = spellbookExtraIds.value
+  if (extras.includes(id)) {
+    emit('change', {
+      ...props.draft.spellSelections,
+      spellbookSpellIds: currentBook.filter((spellId) => spellId !== id),
+      spellbookExtraSpellIds: extras.filter((spellId) => spellId !== id),
+      preparedSpellIds: props.draft.spellSelections.preparedSpellIds.filter((spellId) => spellId !== id),
+    })
+    return
+  }
+  if (currentBook.includes(id) || extras.length >= spellbookExtraAllowance.value) return
+  emit('change', {
+    ...props.draft.spellSelections,
+    spellbookSpellIds: [...currentBook, id],
+    spellbookExtraSpellIds: [...extras, id],
   })
 }
 </script>
@@ -135,7 +172,7 @@ function toggleSpellbook(id: string): void {
       </div>
       <header>
         <div>
-          <span>{{ config.ability.toUpperCase() }}施法 · 最高{{ maximumLevel }}环</span>
+          <span>{{ ABILITY_LABELS[config.ability] }}施法 · 最高{{ maximumLevel }}环</span>
           <p v-if="spellSlots.length" class="spellcasting-step__slots">{{ spellSlotsLabel }}</p>
           <h3>{{ modeLabel }}法术</h3>
         </div>
@@ -149,7 +186,7 @@ function toggleSpellbook(id: string): void {
           : config.mode === 'prepared'
           ? '准备数量由施法属性与职业等级计算；誓言法术后续将作为始终准备法术单独列出。'
           : config.mode === 'pact'
-            ? '契约法术位按短休恢复；本页负责戏法与已知法术，玄奥秘法在后续职业资源批次接入。'
+            ? '契约法术位按短休恢复；准备数量按职业表，玄奥秘法作为始终准备法术单独列出。'
             : '掌握数量来自2014职业表，所选法术必须在当前可用环级内。' }}
       </UiNotice>
       <UiNotice v-if="alwaysPreparedSpells.length" tone="success" title="子职始终准备法术">
@@ -181,7 +218,7 @@ function toggleSpellbook(id: string): void {
       <ListShell
         v-if="config.mode === 'spellbook'"
         title="法术书"
-        :count="`${draft.spellSelections.spellbookSpellIds.filter((id) => !draft.spellSelections.transcribedSpellIds.includes(id)).length} / ${requiredSpellbookCount}${draft.spellSelections.transcribedSpellIds.length ? `（抄录 ${draft.spellSelections.transcribedSpellIds.length}）` : ''}`"
+        :count="`${normalSpellbookCount} / ${requiredSpellbookCount}${draft.spellSelections.transcribedSpellIds.length ? `（抄录 ${draft.spellSelections.transcribedSpellIds.length}）` : ''}${spellbookExtraIds.length ? `（子职额外 ${spellbookExtraIds.length}）` : ''}`"
       >
         <ExpandableOptionCard
           v-for="spell in groupedSpells.flatMap((group) => group.spells)"
@@ -194,9 +231,34 @@ function toggleSpellbook(id: string): void {
         >
           <template #suffix>
             <span v-if="draft.spellSelections.transcribedSpellIds.includes(spell.id)">在书中（抄录）</span>
+            <span v-else-if="spellbookExtraIds.includes(spell.id)">在书中（子职额外）</span>
             <span v-else-if="draft.spellSelections.spellbookSpellIds.includes(spell.id)">在书中</span>
-            <span v-else-if="draft.spellSelections.spellbookSpellIds.filter((id) => !draft.spellSelections.transcribedSpellIds.includes(id)).length >= requiredSpellbookCount">已满</span>
+            <span v-else-if="normalSpellbookCount >= requiredSpellbookCount">已满</span>
             <span v-else>写入</span>
+          </template>
+          <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+        </ExpandableOptionCard>
+      </ListShell>
+      <ListShell
+        v-if="config.mode === 'spellbook' && spellbookExtraAllowance > 0"
+        title="子职额外入书"
+        :count="`${spellbookExtraIds.length} / ${spellbookExtraAllowance}`"
+      >
+        <p class="spellcasting-step__extra-hint">子职授予的额外入书名额，不占升级名额，也不同于抄录；只可从限定学派的法师法术中选择。</p>
+        <ExpandableOptionCard
+          v-for="spell in spellbookExtraCandidates"
+          expanded-label="法术效果"
+          :key="`extra-${spell.id}`"
+          :title="spell.name"
+          :description="formatSpellLabel(spell)"
+          :state="spellbookExtraIds.includes(spell.id) ? 'selected' : 'default'"
+          @select="toggleSpellbookExtra(spell.id)"
+        >
+          <template #suffix>
+            <span v-if="spellbookExtraIds.includes(spell.id)">已选（额外）</span>
+            <span v-else-if="draft.spellSelections.spellbookSpellIds.includes(spell.id)">已在法术书</span>
+            <span v-else-if="spellbookExtraIds.length >= spellbookExtraAllowance">已满</span>
+            <span v-else>额外入书</span>
           </template>
           <template v-if="spell.description" #expanded>{{ spell.description }}</template>
         </ExpandableOptionCard>
@@ -257,6 +319,13 @@ function toggleSpellbook(id: string): void {
       background: var(--color-primary-soft);
       text-align: center;
     }
+  }
+
+  &__extra-hint {
+    margin: 0 0 0.4rem;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    line-height: 1.5;
   }
 
   &__slots {
