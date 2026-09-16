@@ -1,5 +1,5 @@
 import { getRulesRepository } from '@/rules/repositories'
-import { getDicePoolCount, getDicePoolDie, getResourceMax } from '@/rules/resources'
+import { getDicePoolCount, getDicePoolDie, getResourceMax, getResourceRecovery } from '@/rules/resources'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
 import type { ClassFeature, ClassResource, RulesRepository, SubclassFeature } from '@/types/rules'
 import type { SessionState } from '@/types/session-state'
@@ -76,7 +76,9 @@ export function listSessionResources(
       id: feature.id,
       name: feature.name,
       max,
-      recovery: feature.resource?.recovery ?? feature.dicePool?.recovery ?? 'none',
+      recovery: feature.resource
+        ? getResourceRecovery(feature.resource, draft.targetLevel)
+        : feature.dicePool?.recovery ?? 'none',
       unit: feature.resource?.unit ?? (poolDie || '次'),
       dice: Boolean(feature.dicePool && !feature.resource),
       ...(shortRestRecovery !== undefined ? { shortRestRecovery } : {}),

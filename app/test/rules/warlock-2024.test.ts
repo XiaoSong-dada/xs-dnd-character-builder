@@ -5,7 +5,7 @@ import { invocations2024, INVOCATION_2024_OPTION_IDS } from '@/rules/data/invoca
 import { warlockFeatures2024, warlockRule2024, warlockSubclasses2024 } from '@/rules/data/warlock-2024'
 import { classStartingEquipment2024 } from '@/rules/data/starting-equipment-2024'
 import { getCheckpointCandidates, getSpellcastingConfig, getSpellSlots, getRequiredSpellCount, getRequiredCantripCount, getMaximumSpellLevel, getAlwaysPreparedSpellIds, getSelectedSpellIds, getSpellCandidates, usesPreparedSelection } from '@/rules/spellcasting'
-import { formatResourceText, getDicePoolCount, getDicePoolDie, getResourceMax } from '@/rules/resources'
+import { getDicePoolCount, getDicePoolDie } from '@/rules/resources'
 import { buildTimeline } from '@/rules/timeline'
 import { validateDraft } from '@/rules/validate'
 import { draft2024, selection } from '../fixtures/draft-2024'
@@ -47,11 +47,9 @@ describe('2024 魔契师与 4 宗主数据（B08-10）', () => {
     expect(choiceFeatures.every((feature) => (feature.checkpointIds?.length ?? 0) > 0)).toBe(true)
   })
 
-  it('契约法术位资源与契约环级按职业表', () => {
-    const pact = warlockFeatures2024.find((feature) => feature.id === 'warlock-2024-class-pact-magic')?.resource
-    if (!pact) throw new Error('缺少契约魔法资源')
-    expect([1, 2, 11, 17, 20].map((level) => getResourceMax(pact, level))).toEqual([1, 2, 3, 4, 4])
-    expect(formatResourceText(pact, 11)).toBe('3 个契约法术位 · 短休恢复')
+  it('契约法术位由法术位系统结算，不重复登记为可消耗资源', () => {
+    const pact = warlockFeatures2024.find((feature) => feature.id === 'warlock-2024-class-pact-magic')
+    expect(pact?.resource).toBeUndefined()
 
     const config = getSpellcastingConfig({ classId: 'class-2024-warlock', enabledSourceIds: [], ruleset: '5e-2024' })
     if (!config) throw new Error('缺少魔契师施法配置')

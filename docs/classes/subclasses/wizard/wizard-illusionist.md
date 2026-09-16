@@ -21,7 +21,7 @@
 | 3 | 3 | 幻术学者（Illusion Savant） | 无次数限制 |
 | 3 | 3 | 精进幻术（Improved Illusions） | 无次数限制 |
 | 6 | 6 | 幻影生物（Phantasmal Creatures） | 含一次免费施放或法术位消耗 |
-| 10 | 10 | 幻象自我（Illusory Self） | 使用后按休息或资源恢复 |
+| 10 | 10 | 幻象自我（Illusory Self） | 每次长休 1 次，可消耗二环及以上法术位恢复 |
 | 14 | 14 | 幻象成真（Illusory Reality） | 受每次法术与持续限制 |
 
 ## 特性详解

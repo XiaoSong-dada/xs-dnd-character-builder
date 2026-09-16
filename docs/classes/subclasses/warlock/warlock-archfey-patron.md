@@ -22,8 +22,8 @@
 |---:|---:|---|---|
 | 3 | 3 | 妖精宗主法术（Archfey Spells） | 不占普通准备数 |
 | 3 | 3 | 妖精步伐（Steps of the Fey） | 免费施放次数按魅力/长休，另可用法术位 |
-| 6 | 6 | 迷雾遁逃（Misty Escape） | 按特性恢复 |
-| 10 | 10 | 惑控防御（Beguiling Defenses） | 反应受每轮限制 |
+| 6 | 6 | 迷雾遁逃（Misty Escape） | 每次长休 1 次，可消耗契约法术位重置 |
+| 10 | 10 | 惑控防御（Beguiling Defenses） | 每次长休 1 次，可消耗契约法术位重置 |
 | 14 | 14 | 惑控魔法（Bewitching Magic） | 每回合受限 |
 
 ## 特性详解

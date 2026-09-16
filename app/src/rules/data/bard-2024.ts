@@ -87,6 +87,10 @@ const BARD_SPELL_SLOTS = [
   [4, 3, 3, 3, 3, 2, 2, 1, 1],
 ] as const
 
+/** N 级起每次长休 1 次（用于限次子职资源的等级表）。 */
+const onceFromLevel = (level: number): readonly number[] =>
+  Array.from({ length: 20 }, (_, index) => (index + 1 >= level ? 1 : 0))
+
 /** 诗人激励骰：1—4 级 d6、5—9 级 d8、10—14 级 d10、15 级起 d12。 */
 const BARDIC_INSPIRATION_DIE = [
   'd6', 'd6', 'd6', 'd6', 'd8', 'd8', 'd8', 'd8', 'd8', 'd10',
@@ -121,10 +125,10 @@ export const bardFeatures2024: readonly ClassFeature[] = [
   {
     id: 'bard-2024-class-bardic-inspiration', classId: 'class-2024-bard', name: '吟游诗人激励', englishName: 'Bardic Inspiration', level: 1,
     summary: '附赠动作授予 60 尺内一个生物一枚激励骰（1—4 级 d6、5 级 d8、10 级 d10、15 级 d12）；使用次数＝魅力调整值（至少 1 次）。',
-    description: '你可以用语言、音乐或舞蹈对他人进行超自然激励。以一个附赠动作，你可以激励 60 尺内一个能听见或看见你的生物；该生物获得一枚诗人激励骰（同一生物同时只能持有一枚）。在接下来的 1 小时内，该生物一次 d20 检定失败时，可以投掷激励骰并把结果加到该次 d20 上，这可能把失败变为成功；骰子随即消耗。可授予次数等于你的魅力调整值（至少 1 次），完成长休时重获全部次数。激励骰随等级变化：1—4 级 d6、5—9 级 d8、10—14 级 d10、15 级起 d12。',
+    description: '你可以用语言、音乐或舞蹈对他人进行超自然激励。以一个附赠动作，你可以激励 60 尺内一个能听见或看见你的生物；该生物获得一枚诗人激励骰（同一生物同时只能持有一枚）。在接下来的 1 小时内，该生物一次 d20 检定失败时，可以投掷激励骰并把结果加到该次 d20 上，这可能把失败变为成功；骰子随即消耗。可授予次数等于你的魅力调整值（至少 1 次）；1—4 级完成长休时重获全部次数，5 级起完成短休或长休均可重获全部次数。激励骰随等级变化：1—4 级 d6、5—9 级 d8、10—14 级 d10、15 级起 d12。',
     kind: 'resource', status: 'implemented', sourceIds,
     dicePool: { diceByLevel: Array.from({ length: 20 }, () => 1), dieByLevel: BARDIC_INSPIRATION_DIE, recovery: 'none', note: '附赠动作授予 60 尺内可见或可听见的生物；1 小时内用于失败的 d20 检定' },
-    resource: { recovery: 'long-rest', maxFromAbility: { ability: 'cha', minimum: 1 }, note: '5 级起短休或长休全部恢复，也可消耗法术位（无需动作）回复 1 次' },
+    resource: { recovery: 'long-rest', shortRestFromLevel: 5, maxFromAbility: { ability: 'cha', minimum: 1 }, note: '1—4 级仅长休；5 级起短休或长休全部恢复，也可消耗法术位（无需动作）回复 1 次' },
   },
   {
     id: 'bard-2024-class-spellcasting', classId: 'class-2024-bard', name: '施法', englishName: 'Spellcasting', level: 1,
@@ -341,6 +345,7 @@ export const bardSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '始终准备魅惑类人与镜影术；用法术位施展惑控或幻术法术后可迫使 60 尺内生物豁免，失败被魅惑或恐慌 1 分钟（每次长休 1 次）。',
     description: '你始终准备法术魅惑类人与镜影术（不占准备上限）。此外，在你使用法术位施展一道惑控或幻术学派的法术后，你可以立即使一名位于你 60 尺内你可见的生物进行一次感知豁免（对抗你的施法 DC）：失败则目标陷入魅惑或恐慌状态（由你选择），持续 1 分钟，目标在其每个回合结束时可以重新豁免，成功则效应提前结束。此增益每次长休 1 次；你也可以消耗一次诗人激励使用次数（无需动作）重置其使用权。',
     kind: 'passive', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(3), recovery: 'long-rest', note: '每次长休 1 次；可消耗 1 次诗人激励重置（手动）' },
   },
   {
     id: 'bard-2024-glamour-mantle-of-inspiration', subclassId: 'subclass-2024-bard-college-of-glamour', name: '灵感织衣', englishName: 'Mantle of Insipration', level: 3,
@@ -353,12 +358,14 @@ export const bardSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '始终准备命令术；附赠动作无需法术位施展命令术并获得威仪 1 分钟，期间每回合可再免费施展；受你魅惑者对其豁免自动失败（每次长休 1 次）。',
     description: '你始终准备法术命令术（不占准备上限）。以一个附赠动作，你无需法术位地施展命令术，随后获得超凡脱俗的容貌，持续 1 分钟或直到你的专注终止；在此期间，你可以用一个附赠动作无需法术位地施展命令术。任何因你而陷入魅惑状态的生物，在对抗你以此特性施展的命令术时豁免自动失败。此特性每次长休 1 次；你也可以消耗一个三环或更高的法术位（无需动作）重置其使用权。',
     kind: 'bonus-action', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(6), recovery: 'long-rest', note: '每次长休 1 次；可消耗一个三环及以上法术位重置（手动）' },
   },
   {
     id: 'bard-2024-glamour-unbreakable-majesty', subclassId: 'subclass-2024-bard-college-of-glamour', name: '不破威仪', englishName: 'Unbreakable Majesty', level: 14,
     summary: '附赠动作获得威仪 1 分钟：每回合首次命中你的攻击者须通过魅力豁免，否则该次攻击失手。',
     description: '以一个附赠动作，你可以魔法性地呈现出庄严的姿态，持续 1 分钟或直至你陷入失能状态。在此期间，任何生物在一个回合中的攻击检定首次命中你时，攻击者必须通过一次对抗你施法 DC 的魅力豁免，否则这次攻击将因畏惧你的威仪而失手。一旦你呈现出这庄严的姿态，直至完成短休或长休前都无法再次如此做。',
     kind: 'bonus-action', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(14), recovery: 'short-rest', note: '短休或长休后恢复' },
   },
 ]
 

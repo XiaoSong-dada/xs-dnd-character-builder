@@ -66,9 +66,11 @@ describe('2024 吟游诗人与 4 学院数据（B08-08）', () => {
       'd6', 'd6', 'd8', 'd8', 'd10', 'd10', 'd12', 'd12',
     ])
     expect(resource.maxFromAbility).toEqual({ ability: 'cha', minimum: 1 })
+    expect(resource.shortRestFromLevel).toBe(5)
     expect(getResourceMax(resource, 1, 4)).toBe(4)
     expect(getResourceMax(resource, 1, -2)).toBe(1)
     expect(formatResourceText(resource, 1, 3)).toBe('3 次 · 长休恢复')
+    expect(formatResourceText(resource, 5, 3)).toBe('3 次 · 短休恢复')
   })
 
   it('施法配置为魅力准备制，准备数量、戏法与法术位按职业表', () => {

@@ -23,7 +23,7 @@
 | 3 | 3 | 龙族韧性（Draconic Resilience） | 无次数限制 |
 | 3 | 3 | 龙族法术（Draconic Spells） | 自动常备 |
 | 6 | 6 | 元素亲和（Elemental Affinity） | 按特性结算 |
-| 14 | 14 | 龙翼（Dragon Wings） | 无次数限制 |
+| 14 | 14 | 龙翼（Dragon Wings） | 每次长休 1 次，可消耗 3 点术法点恢复 |
 | 18 | 18 | 巨龙伙伴（Dragon Companion） | 依赖法术位或免费施放 |
 
 ## 特性详解

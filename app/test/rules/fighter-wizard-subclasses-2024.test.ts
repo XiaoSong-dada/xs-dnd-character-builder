@@ -120,7 +120,7 @@ describe('2024 战士与法师补齐子职（B08-13）', () => {
 
     const portent = wizardSubclassFeatures2024.find((feature) => feature.id === 'wizard-2024-diviner-portent')?.resource
     if (!portent) throw new Error('缺少预兆资源')
-    expect([3, 14].map((level) => getResourceMax(portent, level))).toEqual([2, 2])
+    expect([3, 13, 14].map((level) => getResourceMax(portent, level))).toEqual([2, 2, 3])
     expect(portent.recovery).toBe('long-rest')
   })
 

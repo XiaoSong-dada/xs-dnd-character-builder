@@ -61,6 +61,10 @@ const TIDE_OF_CHAOS_USES = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 /** 归复平衡：次数＝魅力调整值（至少 1 次），长休全部恢复。 */
 const RESTORE_BALANCE_MIN_USES = { ability: 'cha', minimum: 1 } as const
 
+/** N 级起每次长休 1 次（用于限次特性资源登记）。 */
+const onceFromLevel = (level: number): readonly number[] =>
+  Array.from({ length: 20 }, (_, index) => (index + 1 >= level ? 1 : 0))
+
 const sorcererClassSpellIds2024 = spells2024
   .filter((spell) => spell.classIds.includes('class-2024-sorcerer'))
   .map((spell) => spell.id)
@@ -126,6 +130,7 @@ export const sorcererFeatures2024: readonly ClassFeature[] = [
     summary: '短休恢复不超过术士等级一半（向下取整）的术法点；每次长休 1 次。',
     description: '当你完成一次短休时，你可以恢复不大于你术士等级一半（向下取整）的已消耗术法点。此特性一经使用，直到完成一次长休为止不能再次使用。',
     kind: 'passive', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(5), recovery: 'long-rest', note: '短休时手动恢复不超过术士等级一半（向下取整）的术法点；每次长休 1 次' },
   },
   {
     id: 'sorcerer-2024-class-sorcery-incarnate', classId: 'class-2024-sorcerer', name: '术法化身', englishName: 'Sorcery Incarnate', level: 7,
@@ -238,12 +243,14 @@ export const sorcererSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '附赠动作消耗 1 点以上术法点变形 10 分钟，每点选择一项：水下适应、闪耀飞翔、识破隐形或蠕行移动。',
     description: '以一个附赠动作，你使用 1 点或更多术法点魔法性地转变形态，持续 10 分钟。每消耗 1 点术法点，你从以下效应中选择一项并在持续期间同时获得：水生适应——获得两倍行走速度的游泳速度并可在水下呼吸；闪耀飞翔——获得等于你速度的飞行速度并可悬浮；识破隐形——能看见 60 尺内处于隐形状态的生物（全身掩护除外）；蠕行移动——可穿过最窄 1 寸宽的狭窄空间，并可消耗 5 尺移动力脱离非魔法束缚或受擒状态。',
     kind: 'bonus-action', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(14), recovery: 'long-rest', note: '变形本身按术法点消耗；每次长休 1 次，可消耗 5 点术法点重置（手动）' },
   },
   {
     id: 'sorcerer-2024-aberrant-warping-implosion', subclassId: 'subclass-2024-sorcerer-aberrant-sorcery', name: '扭曲内爆', englishName: 'Warping Implosion', level: 18,
     summary: '魔法动作传送 120 尺并牵引周围生物：30 尺内生物力量豁免失败受 3d10 力场伤害并被拉向原位置；每次长休 1 次，可消耗 5 点术法点重置。',
     description: '以一个魔法动作，你传送到 120 尺内你可见的一个未被占据的位置；随后你消失位置 30 尺内的每个生物必须进行一次对抗你施法 DC 的力量豁免：失败受到 3d10 力场伤害并被立即拉向你原本的位置（停在最靠近的未占据空间），成功则只受一半伤害。此特性每次长休 1 次；你也可以消耗 5 点术法点（无需动作）重置其使用权。',
     kind: 'action', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(18), recovery: 'long-rest', note: '每次长休 1 次；可消耗 5 点术法点重置（手动）' },
   },
 
   // ============ 时械术法 ============
@@ -271,12 +278,14 @@ export const sorcererSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '附赠动作进入 1 分钟状态：攻击检定无法对你具有优势，d20 的 9 及以下视为 10；每次长休 1 次，可消耗 5 点术法点重置。',
     description: '以一个附赠动作，你可以进入与机械境计算同步的状态 1 分钟。期间对你进行的攻击检定无法具有优势，且每当你进行一次 d20 检定时，可以把 d20 掷出的 9 或以下视为 10。此特性每次长休 1 次；你也可以消耗 5 点术法点（无需动作）重置其使用权。',
     kind: 'bonus-action', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(14), recovery: 'long-rest', note: '每次长休 1 次；可消耗 5 点术法点重置（手动）' },
   },
   {
     id: 'sorcerer-2024-clockwork-clockwork-cavalcade', subclassId: 'subclass-2024-sorcerer-clockwork-sorcery', name: '时械矩阵', englishName: 'Clockwork Cavalcade', level: 18,
     summary: '魔法动作召唤精魂：30 尺立方内分配至多 100 点治疗、修复物件、解除六环及以下法术；每次长休 1 次，可消耗 7 点术法点重置。',
     description: '以一个魔法动作，你在以你为源点的 30 尺立方范围内召唤秩序精魂（无实体、不可摧毁），在其消失前产生以下效应：治愈——合计提供至多恢复 100 生命值，由你分配给范围内任意数量的生物；修复——范围内损坏的物件立即修复；破法——你选择范围内任意数量的生物或物件，其承受的六环或以下法术结束。此特性每次长休 1 次；你也可以消耗 7 点术法点（无需动作）恢复其使用次数。',
     kind: 'action', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(18), recovery: 'long-rest', note: '每次长休 1 次；可消耗 7 点术法点重置（手动）' },
   },
 
   // ============ 龙族术法 ============
@@ -303,6 +312,7 @@ export const sorcererSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '附赠动作张开龙翼 1 小时，获得 60 尺飞行速度；每次长休 1 次，可消耗 3 点术法点重置。',
     description: '以一个附赠动作，你可以在背后张开一对龙翼，持续 1 小时（或直至你无需动作将其解散）。持续期间你获得 60 尺飞行速度。此特性每次长休 1 次；你也可以消耗 3 点术法点（无需动作）重置其使用权。',
     kind: 'bonus-action', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(14), recovery: 'long-rest', note: '每次长休 1 次；可消耗 3 点术法点重置（手动）' },
   },
   {
     id: 'sorcerer-2024-draconic-dragon-companion', subclassId: 'subclass-2024-sorcerer-draconic-sorcery', name: '龙族伙伴', englishName: 'Dragon Companion', level: 18,
@@ -342,6 +352,7 @@ export const sorcererSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '用法术位施展术士法术后可从浪涌表中自选一种效应（末行除外）；每次长休 1 次。',
     description: '你使用法术位施展一道术士法术之后，可以立即创造一种从狂野魔法浪涌表中选择的效应，而非在其上掷骰。你可以选择表中除最后一行外的任何效应；若所选效应包含掷骰，则你必须掷骰。此特性每次长休 1 次。',
     kind: 'passive', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(18), recovery: 'long-rest', note: '每次长休 1 次' },
   },
 ]
 

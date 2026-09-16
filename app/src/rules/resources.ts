@@ -19,11 +19,20 @@ export function getResourceMax(resource: ClassResource, level: number, abilityMo
   return resource.abilityBonus ? Math.max(0, base + abilityModifier) : base
 }
 
+/**
+ * 按等级取有效恢复时机：达到 `shortRestFromLevel` 后视为短休恢复（如 2024 诗人激励 5 级起），
+ * 其余情况沿用 `resource.recovery`。
+ */
+export function getResourceRecovery(resource: ClassResource, level: number): ClassResource['recovery'] {
+  if (resource.shortRestFromLevel !== undefined && level >= resource.shortRestFromLevel) return 'short-rest'
+  return resource.recovery
+}
+
 /** 资源展示文本：`2 次 · 短休恢复`（单位缺省为“次”）；上限为 0 时返回空串。 */
 export function formatResourceText(resource: ClassResource, level: number, abilityModifier = 0): string {
   const max = getResourceMax(resource, level, abilityModifier)
   if (max <= 0) return ''
-  return `${max} ${resource.unit ?? '次'} · ${RECOVERY_LABELS[resource.recovery]}`
+  return `${max} ${resource.unit ?? '次'} · ${RECOVERY_LABELS[getResourceRecovery(resource, level)]}`
 }
 
 /** 按角色等级取骰池骰数；越界等级按最近端点处理。 */

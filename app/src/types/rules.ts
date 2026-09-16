@@ -64,6 +64,8 @@ export interface ClassResource {
   readonly abilityBonus?: AbilityKey
   /** 短休只恢复固定数量（如 2024 狂暴／回气短休恢复 1 次）；缺省为短休全部恢复。 */
   readonly shortRestRecovery?: number
+  /** 达到该等级后短休也恢复（如 2024 诗人激励 5 级起短休或长休全恢复）；缺省只按 `recovery`。 */
+  readonly shortRestFromLevel?: number
 }
 
 /**

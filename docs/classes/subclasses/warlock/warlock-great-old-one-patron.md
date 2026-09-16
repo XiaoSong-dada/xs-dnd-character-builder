@@ -23,7 +23,7 @@
 | 3 | 3 | 旧日宗主法术（Great Old One Spells） | 不占普通准备数 |
 | 3 | 3 | 心灵法术（Psychic Spells） | 无固定次数 |
 | 3 | 3 | 觉醒心智（Awakened Mind） | 同一时间受连接数量限制 |
-| 6 | 6 | 千里眼战斗者（Clairvoyant Combatant） | 目标与持续受限 |
+| 6 | 6 | 千里眼战斗者（Clairvoyant Combatant） | 每次短休或长休 1 次，可消耗契约法术位重置 |
 | 10 | 10 | 魔能邪咒（Eldritch Hex） | 依赖邪术/法术资源 |
 | 10 | 10 | 思想护盾（Thought Shield） | 无次数限制 |
 | 14 | 14 | 创造奴仆（Create Thrall） | 含一次免费施放/长休 |

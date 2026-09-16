@@ -31,7 +31,6 @@ const PACT_SLOTS: readonly (readonly [number, number])[] = [
   [1, 1], [2, 1], [2, 2], [2, 2], [2, 3], [2, 3], [2, 4], [2, 4], [2, 5], [2, 5],
   [3, 5], [3, 5], [3, 5], [3, 5], [3, 5], [3, 5], [4, 5], [4, 5], [4, 5], [4, 5],
 ]
-const PACT_SLOT_COUNTS = [1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4] as const
 /** 可准备法术的环级上限＝契约环级（1—5）；六至九环由玄奥秘法提供。 */
 const PACT_LEVELS = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5] as const
 
@@ -49,6 +48,10 @@ const INVOCATION_CHECKPOINTS = [
 
 /** 天界宗主治愈之光：等级 +1 枚 d6，长休全部恢复。 */
 const HEALING_LIGHT_DICE = [0, 0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21] as const
+
+/** N 级起每次长休 1 次（用于限次特性资源登记）。 */
+const onceFromLevel = (level: number): readonly number[] =>
+  Array.from({ length: 20 }, (_, index) => (index + 1 >= level ? 1 : 0))
 
 const warlockClassSpellIds2024 = spells2024
   .filter((spell) => spell.classIds.includes('class-2024-warlock'))
@@ -102,13 +105,14 @@ export const warlockFeatures2024: readonly ClassFeature[] = [
     summary: '魅力施法：1 级 2 戏法、2 道准备法术；契约法术位同环级（1—5 环），短休或长休全部恢复。',
     description: '施法属性为魅力，可使用奥术法器作为施法法器。1 级时知晓 2 道魔契师戏法，并准备 2 道魔契师法术；4 级与 10 级各额外习得一道戏法。契约法术位全部属于同一环级（1 级 1 枚一环、3 级 2 枚二环……17 级 4 枚五环），完成短休或长休时全部恢复；施展低环法术时须按契约环级施展。准备法术数量按职业表提升，所选法术环级不得高于契约环级。每获得一级魔契师等级可替换一道准备法术。其他特性授予的始终准备法术不计入准备数量。',
     kind: 'resource', status: 'implemented', sourceIds,
-    resource: { maxByLevel: PACT_SLOT_COUNTS, recovery: 'short-rest', unit: '个契约法术位', note: '契约环级 1—5 按职业表；短休或长休全部恢复' },
+    // 契约法术位由 `usedSpellSlots`／契约环级结算（B10-01）；不再重复登记为资源（B10-02 第 4 批去重）。
   },
   {
     id: 'warlock-2024-class-magical-cunning', classId: 'class-2024-warlock', name: '秘法回流', englishName: 'Magical Cunning', level: 2,
     summary: '1 分钟秘传仪式后重获一半已消耗的契约法术位（向上取整）；每次长休 1 次。',
     description: '你可以举行一道耗时 1 分钟的秘传仪式，并在仪式结束后重获一半已消耗的契约法术位（向上取整）。此特性一经使用，直至完成长休前都无法再次使用。',
     kind: 'passive', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(2), recovery: 'long-rest', note: '仪式后手动恢复一半契约法术位（向上取整）；每次长休 1 次' },
   },
   {
     id: 'warlock-2024-class-subclass', classId: 'class-2024-warlock', name: '魔契师子职', englishName: 'Warlock Subclass', level: 3,
@@ -226,12 +230,14 @@ export const warlockSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '受到伤害时可用反应施展迷踪步；妖精步伐追加无踪步伐（隐形）与惊惧步伐（2d10 心灵伤害）。',
     description: '当你受到伤害时，你可以用反应施展迷踪步。此外，你的妖精步伐获得新选项：无踪步伐——你获得隐形状态直到你的下回合开始或你进行攻击检定、造成伤害或施展法术后；惊惧步伐——传送前或后空间 5 尺内的生物感知豁免失败受 2d10 心灵伤害。',
     kind: 'reaction', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(6), recovery: 'long-rest', note: '每次长休 1 次；可消耗 1 个契约法术位重置（手动）' },
   },
   {
     id: 'warlock-2024-archfey-beguiling-defenses', subclassId: 'subclass-2024-warlock-archfey-patron', name: '斗转星移', englishName: 'Beguiling Defenses', level: 10,
     summary: '免疫魅惑；被命中时可用反应使该次伤害减半，并迫使攻击者感知豁免失败受等量心灵伤害（每次长休 1 次，可消耗契约法术位重置）。',
     description: '你获得对魅惑状态的免疫。此外，当一个你能看见的敌人的攻击检定命中你后，你可以立即用反应令该次攻击伤害减半（向下取整），并迫使攻击者进行一次对抗你法术豁免 DC 的感知豁免，失败则受到等于你实际承受伤害的心灵伤害。此反应每次长休 1 次；你也可以消耗一枚契约法术位（无需动作）重置其使用权。',
     kind: 'reaction', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(10), recovery: 'long-rest', note: '每次长休 1 次；可消耗 1 个契约法术位重置（手动）' },
   },
   {
     id: 'warlock-2024-archfey-bewitching-magic', subclassId: 'subclass-2024-warlock-archfey-patron', name: '醉心魔法', englishName: 'Bewitching Magic', level: 14,
@@ -271,6 +277,7 @@ export const warlockSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '自身或 60 尺内盟友将进行死亡豁免时，可令其恢复半血生命并可选结束倒地；周围 30 尺内选定生物受 2d8＋魅力光耀并目盲至本回合结束；每次长休 1 次。',
     description: '当你或位于你 60 尺内的一名盟友将要进行死亡豁免时，你可以释放光能：该生物恢复等于其生命上限一半的生命值，并可以选择结束自身的倒地状态；随后每个由你选择、位于该生物 30 尺内的生物受到 2d8 + 你的魅力调整值的光耀伤害，并陷入目盲直至当前回合结束。此特性每次长休 1 次。',
     kind: 'reaction', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(14), recovery: 'long-rest', note: '每次长休 1 次' },
   },
 
   // ============ 邪魔宗主 ============
@@ -304,6 +311,7 @@ export const warlockSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '每回合一次，攻击命中时可迫使目标魅力豁免：失败则消失并于下回合结束返回，非邪魔额外受 8d10 心灵伤害；每次长休 1 次，可消耗契约法术位重置。',
     description: '每回合一次，当你以攻击检定命中一个生物时，你可以迫使其进行一次对抗你法术豁免 DC 的魅力豁免：失败则目标立刻消失并坠入噩梦景象，非邪魔额外受到 8d10 心灵伤害；目标陷入失能直至你的下回合结束，随后返回先前或最近的未被占据空间。此特性每次长休 1 次；你也可以消耗一枚契约法术位（无需动作）重置其使用权。',
     kind: 'passive', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(14), recovery: 'long-rest', note: '每次长休 1 次；可消耗 1 个契约法术位重置（手动）' },
   },
 
   // ============ 旧日支配者宗主 ============
@@ -330,6 +338,7 @@ export const warlockSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '以唤醒心灵建立链接时可迫使对方感知豁免：失败则链接期间对你攻击具有劣势、你对它攻击具有优势；每次短休或长休 1 次，可消耗契约法术位重置。',
     description: '当你用唤醒心灵与一个生物形成心灵链接时，你可以迫使对方进行一次对抗你法术豁免 DC 的感知豁免：失败则链接期间该生物对你进行的攻击检定具有劣势，而你对它的攻击检定具有优势。此特性每次短休或长休 1 次；你也可以消耗一枚契约法术位（无需动作）重置其使用权。',
     kind: 'passive', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(6), recovery: 'short-rest', note: '短休或长休后恢复；可消耗 1 个契约法术位重置（手动）' },
   },
   {
     id: 'warlock-2024-goo-eldritch-hex', subclassId: 'subclass-2024-warlock-great-old-one-patron', name: '骇异恶咒', englishName: 'Eldritch Hex', level: 10,

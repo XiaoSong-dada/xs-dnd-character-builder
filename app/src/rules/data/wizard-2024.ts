@@ -61,6 +61,10 @@ const ARCANE_RECOVERY_BUDGET = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 
 /** 超限导能：14 级获得，每个长休周期首次无副作用，重复使用按环级累积反噬。 */
 const OVERCHANNEL_MAX = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1] as const
 
+/** N 级起每次长休 1 次（用于限次子职资源的等级表）。 */
+const onceFromLevel = (level: number): readonly number[] =>
+  Array.from({ length: 20 }, (_, index) => (index + 1 >= level ? 1 : 0))
+
 export const wizardFeatures2024: readonly ClassFeature[] = [
   {
     id: 'wizard-2024-class-spellcasting', classId: 'class-2024-wizard', name: '施法', englishName: 'Spellcasting', level: 1,
@@ -248,9 +252,10 @@ export const wizardSubclassFeatures2024: readonly SubclassFeature[] = [
   },
   {
     id: 'wizard-2024-illusionist-illusory-self', subclassId: 'subclass-2024-wizard-illusionist', name: '幻影化形', englishName: 'Illusory Self', level: 10,
-    summary: '被攻击命中时可用反应创造幻影替身使攻击自动失手；每次短休或长休 1 次。',
-    description: '当一次攻击检定命中你时，你可以用反应创造一个你自己的幻影替身，使该次攻击自动失手。此特性每次短休或长休 1 次。',
+    summary: '被攻击命中时可用反应创造幻影替身使攻击自动失手；每次长休 1 次，可消耗二环及以上法术位重置。',
+    description: '当一次攻击检定命中你时，你可以用反应创造一个你自己的幻影替身，使该次攻击自动失手。此特性每次长休 1 次；你也可以消耗一个二环或更高环阶的法术位（无需动作）重置其使用权。',
     kind: 'reaction', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(10), recovery: 'long-rest', note: '每次长休 1 次；可消耗一个二环及以上法术位重置（手动）' },
   },
   {
     id: 'wizard-2024-illusionist-illusory-reality', subclassId: 'subclass-2024-wizard-illusionist', name: '亦真亦幻', englishName: 'Illusory Reality', level: 14,
@@ -301,10 +306,10 @@ export const wizardSubclassFeatures2024: readonly SubclassFeature[] = [
   },
   {
     id: 'wizard-2024-diviner-portent', subclassId: 'subclass-2024-wizard-diviner', name: '预兆', englishName: 'Portent', level: 3,
-    summary: '每次长休后掷 2 个 d20 作为预兆骰；可用一颗替换你或可见生物的 d20 检定（每回合一次，掷前决定）。',
-    description: '预知未来的片段在你意识中闪过：每次长休后掷两次 d20 并记录为预兆骰。你可以用其中一颗替换你或你可见生物的 d20 检定；必须在检定前宣布，每回合只能替换一次，每颗预兆骰只能使用一次；长休时失去所有未使用的预兆骰。',
+    summary: '每次长休后掷 2 个 d20 作为预兆骰（14 级高等预兆起 3 个）；可用一颗替换你或可见生物的 d20 检定（每回合一次，掷前决定）。',
+    description: '预知未来的片段在你意识中闪过：每次长休后掷两次 d20 并记录为预兆骰。你可以用其中一颗替换你或你可见生物的 d20 检定；必须在检定前宣布，每回合只能替换一次，每颗预兆骰只能使用一次；长休时失去所有未使用的预兆骰。14 级获得高等预兆后，你改为掷三次 d20。',
     kind: 'resource', status: 'implemented', sourceIds,
-    resource: { maxByLevel: Array.from({ length: 20 }, () => 2), recovery: 'long-rest', note: '长休后掷 2 个 d20；每回合最多使用一次' },
+    resource: { maxByLevel: Array.from({ length: 20 }, (_, index) => (index >= 13 ? 3 : 2)), recovery: 'long-rest', note: '长休后掷 2 个 d20（14 级高等预兆起 3 个）；每回合最多使用一次' },
   },
   {
     id: 'wizard-2024-diviner-expert-divination', subclassId: 'subclass-2024-wizard-diviner', name: '专业预言', englishName: 'Expert Divination', level: 6,
@@ -314,9 +319,10 @@ export const wizardSubclassFeatures2024: readonly SubclassFeature[] = [
   },
   {
     id: 'wizard-2024-diviner-the-third-eye', subclassId: 'subclass-2024-wizard-diviner', name: '天眼通', englishName: 'The Third Eye', level: 10,
-    summary: '附赠动作获得 60 尺黑暗视觉、识破隐形或读心之一，持续至短休或长休；每次短休或长休 1 次。',
-    description: '以一个附赠动作，你选择获得以下增益之一，持续 1 小时或直至你主动结束：黑暗视觉（60 尺）、识破隐形（10 尺内隐形生物可见）、读心（10 尺内生物的浅层思想可读）。每次短休或长休后可使用 1 次。',
+    summary: '附赠动作获得 120 尺黑暗视觉、读懂任何语言或识破隐形之一，持续至短休或长休；每次短休或长休 1 次。',
+    description: '以一个附赠动作，你从以下增益中选择其一，持续至你开始一次短休或长休：黑暗视觉——你具有 120 尺黑暗视觉；高等通晓——你可以读懂任何语言；识破隐形——你可以不消耗法术位地施展识破隐形。此特性一经使用，直至完成短休或长休你都无法再次使用。',
     kind: 'bonus-action', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(10), recovery: 'short-rest', note: '短休或长休后恢复' },
   },
   {
     id: 'wizard-2024-diviner-greater-portent', subclassId: 'subclass-2024-wizard-diviner', name: '高等预兆', englishName: 'Greater Portent', level: 14,

@@ -24,7 +24,7 @@
 | 3 | 3 | 心灵传讯（Telepathic Speech） | 一次一条连接，持续时间与术士等级相关 |
 | 6 | 6 | 灵能施法（Psionic Sorcery） | 消耗等同法术环阶的术法点 |
 | 6 | 6 | 心灵防御（Psychic Defenses） | 无次数限制 |
-| 14 | 14 | 血肉启示（Revelation in Flesh） | 每项异变消耗术法点，持续一段时间 |
+| 14 | 14 | 血肉启示（Revelation in Flesh） | 每项异变消耗术法点；每次长休 1 次，可消耗 5 点术法点恢复 |
 | 18 | 18 | 扭曲内爆（Warping Implosion） | 长休一次；可消耗术法点恢复 |
 
 ## 特性详解

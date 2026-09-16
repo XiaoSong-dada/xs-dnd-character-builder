@@ -283,3 +283,169 @@ describe('B10-02 跑团资源结算（游荡者／游侠批次）', () => {
     expect(getShortRestExhaustionReduction(legacy)).toBe(0)
   })
 })
+
+describe('B10-02 跑团资源结算（奥术批次）', () => {
+  it('诗人：激励 1—4 级仅长休、5 级起短休回满；魅心三项限次资源', () => {
+    const at4 = listSessionResources(draftFor('class-2024-bard', 4), MODIFIERS)
+    const at5 = listSessionResources(draftFor('class-2024-bard', 5), MODIFIERS)
+    const inspiration = at5.find((item) => item.id === 'bard-2024-class-bardic-inspiration')!
+    expect(at4.find((item) => item.id === inspiration.id)).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(inspiration).toMatchObject({ max: 1, recovery: 'short-rest' })
+
+    const spent = { ...createInitialSessionState('a1', 40), resourceUsage: { [inspiration.id]: 2 } }
+    expect(getResourceUsed(applyRestRecovery(spent, at4, 'short-rest'), inspiration.id)).toBe(2)
+    expect(getResourceUsed(applyRestRecovery(spent, at5, 'short-rest'), inspiration.id)).toBe(0)
+
+    const glamour = listSessionResources(
+      draftFor('class-2024-bard', 14, { subclassId: 'subclass-2024-bard-college-of-glamour' }),
+      MODIFIERS,
+    )
+    const beguiling = glamour.find((item) => item.id === 'bard-2024-glamour-beguiling-magic')!
+    const majesty = glamour.find((item) => item.id === 'bard-2024-glamour-mantle-of-majesty')!
+    const unbreakable = glamour.find((item) => item.id === 'bard-2024-glamour-unbreakable-majesty')!
+    expect(beguiling).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(majesty).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(unbreakable).toMatchObject({ max: 1, recovery: 'short-rest' })
+
+    const spentGlamour = { ...createInitialSessionState('a2', 60), resourceUsage: { [beguiling.id]: 1, [majesty.id]: 1, [unbreakable.id]: 1 } }
+    const shortRested = applyRestRecovery(spentGlamour, glamour, 'short-rest')
+    expect([beguiling, majesty, unbreakable].map((item) => getResourceUsed(shortRested, item.id))).toEqual([1, 1, 0])
+    const longRested = applyRestRecovery(spentGlamour, glamour, 'long-rest')
+    expect([beguiling, majesty, unbreakable].map((item) => getResourceUsed(longRested, item.id))).toEqual([0, 0, 0])
+  })
+
+  it('术士：术法点与先天术法长休回满；术法复苏每次长休 1 次', () => {
+    const resources = listSessionResources(draftFor('class-2024-sorcerer', 5), MODIFIERS)
+    const points = resources.find((item) => item.id === 'sorcerer-2024-class-font-of-magic')!
+    const innate = resources.find((item) => item.id === 'sorcerer-2024-class-innate-sorcery')!
+    const restoration = resources.find((item) => item.id === 'sorcerer-2024-class-sorcerous-restoration')!
+    expect(points).toMatchObject({ max: 5, recovery: 'long-rest' })
+    expect(innate).toMatchObject({ max: 2, recovery: 'long-rest' })
+    expect(restoration).toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const spent = { ...createInitialSessionState('a3', 40), resourceUsage: { [points.id]: 3, [restoration.id]: 1 } }
+    const shortRested = applyRestRecovery(spent, resources, 'short-rest')
+    expect([points, restoration].map((item) => getResourceUsed(shortRested, item.id))).toEqual([3, 1])
+    const longRested = applyRestRecovery(spent, resources, 'long-rest')
+    expect([points, restoration].map((item) => getResourceUsed(longRested, item.id))).toEqual([0, 0])
+  })
+
+  it('术士子职：时械／畸变／龙族／狂野限次资源均为长休 1 次', () => {
+    const clockwork = listSessionResources(
+      draftFor('class-2024-sorcerer', 18, { subclassId: 'subclass-2024-sorcerer-clockwork-sorcery' }),
+      MODIFIERS,
+    )
+    const order = clockwork.find((item) => item.id === 'sorcerer-2024-clockwork-trance-of-order')!
+    const cavalcade = clockwork.find((item) => item.id === 'sorcerer-2024-clockwork-clockwork-cavalcade')!
+    expect(order).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(cavalcade).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(listSessionResources(
+      draftFor('class-2024-sorcerer', 13, { subclassId: 'subclass-2024-sorcerer-clockwork-sorcery' }),
+      MODIFIERS,
+    ).some((item) => item.id === order.id)).toBe(false)
+
+    const aberrant = listSessionResources(
+      draftFor('class-2024-sorcerer', 18, { subclassId: 'subclass-2024-sorcerer-aberrant-sorcery' }),
+      MODIFIERS,
+    )
+    expect(aberrant.find((item) => item.id === 'sorcerer-2024-aberrant-revelation-in-flesh')).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(aberrant.find((item) => item.id === 'sorcerer-2024-aberrant-warping-implosion')).toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const draconic = listSessionResources(
+      draftFor('class-2024-sorcerer', 14, { subclassId: 'subclass-2024-sorcerer-draconic-sorcery' }),
+      MODIFIERS,
+    )
+    expect(draconic.find((item) => item.id === 'sorcerer-2024-draconic-dragon-wings')).toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const wild = listSessionResources(
+      draftFor('class-2024-sorcerer', 18, { subclassId: 'subclass-2024-sorcerer-wild-magic-sorcery' }),
+      MODIFIERS,
+    )
+    const tamed = wild.find((item) => item.id === 'sorcerer-2024-wild-tamed-surge')!
+    expect(tamed).toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const spent = { ...createInitialSessionState('a4', 80), resourceUsage: { [tamed.id]: 1 } }
+    expect(getResourceUsed(applyRestRecovery(spent, wild, 'short-rest'), tamed.id)).toBe(1)
+    expect(getResourceUsed(applyRestRecovery(spent, wild, 'long-rest'), tamed.id)).toBe(0)
+  })
+
+  it('魔契师：契约法术位不进入资源列表；秘法回流与子职限次资源', () => {
+    const base = listSessionResources(draftFor('class-2024-warlock', 10), MODIFIERS)
+    expect(base.some((item) => item.id === 'warlock-2024-class-pact-magic')).toBe(false)
+    expect(base.find((item) => item.id === 'warlock-2024-class-magical-cunning')).toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const archfey = listSessionResources(
+      draftFor('class-2024-warlock', 10, { subclassId: 'subclass-2024-warlock-archfey-patron' }),
+      MODIFIERS,
+    )
+    expect(archfey.find((item) => item.id === 'warlock-2024-archfey-misty-escape')).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(archfey.find((item) => item.id === 'warlock-2024-archfey-beguiling-defenses')).toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const celestial = listSessionResources(
+      draftFor('class-2024-warlock', 14, { subclassId: 'subclass-2024-warlock-celestial-patron' }),
+      MODIFIERS,
+    )
+    expect(celestial.find((item) => item.id === 'warlock-2024-celestial-searing-vengeance')).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(celestial.find((item) => item.id === 'warlock-2024-celestial-healing-light')).toMatchObject({ dice: true, recovery: 'long-rest' })
+
+    const fiend = listSessionResources(
+      draftFor('class-2024-warlock', 14, { subclassId: 'subclass-2024-warlock-fiend-patron' }),
+      MODIFIERS,
+    )
+    const hurl = fiend.find((item) => item.id === 'warlock-2024-fiend-hurl-through-hell')!
+    expect(hurl).toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const goo = listSessionResources(
+      draftFor('class-2024-warlock', 6, { subclassId: 'subclass-2024-warlock-great-old-one-patron' }),
+      MODIFIERS,
+    )
+    const clairvoyant = goo.find((item) => item.id === 'warlock-2024-goo-clairvoyant-combatant')!
+    expect(clairvoyant).toMatchObject({ max: 1, recovery: 'short-rest' })
+
+    const spent = { ...createInitialSessionState('a5', 60), resourceUsage: { [hurl.id]: 1, [clairvoyant.id]: 1 } }
+    const resources = [...fiend, ...goo]
+    const shortRested = applyRestRecovery(spent, resources, 'short-rest')
+    expect([hurl, clairvoyant].map((item) => getResourceUsed(shortRested, item.id))).toEqual([1, 0])
+    const longRested = applyRestRecovery(spent, resources, 'long-rest')
+    expect([hurl, clairvoyant].map((item) => getResourceUsed(longRested, item.id))).toEqual([0, 0])
+  })
+
+  it('法师：预兆 14 级起 3 枚；幻影化形长休、天眼通短休；奥术回想超限导能保留', () => {
+    const portentAt13 = listSessionResources(
+      draftFor('class-2024-wizard', 13, { subclassId: 'subclass-2024-wizard-diviner' }),
+      MODIFIERS,
+    ).find((item) => item.id === 'wizard-2024-diviner-portent')!
+    const diviner = listSessionResources(
+      draftFor('class-2024-wizard', 14, { subclassId: 'subclass-2024-wizard-diviner' }),
+      MODIFIERS,
+    )
+    const portentAt14 = diviner.find((item) => item.id === 'wizard-2024-diviner-portent')!
+    expect(portentAt13.max).toBe(2)
+    expect(portentAt14.max).toBe(3)
+
+    const eye = diviner.find((item) => item.id === 'wizard-2024-diviner-the-third-eye')!
+    expect(eye).toMatchObject({ max: 1, recovery: 'short-rest' })
+
+    const illusionist = listSessionResources(
+      draftFor('class-2024-wizard', 10, { subclassId: 'subclass-2024-wizard-illusionist' }),
+      MODIFIERS,
+    )
+    const illusorySelf = illusionist.find((item) => item.id === 'wizard-2024-illusionist-illusory-self')!
+    expect(illusorySelf).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(listSessionResources(
+      draftFor('class-2024-wizard', 9, { subclassId: 'subclass-2024-wizard-illusionist' }),
+      MODIFIERS,
+    ).some((item) => item.id === illusorySelf.id)).toBe(false)
+
+    const spent = { ...createInitialSessionState('a6', 70), resourceUsage: { [eye.id]: 1, [illusorySelf.id]: 1 } }
+    const shortRested = applyRestRecovery(spent, [...diviner, ...illusionist], 'short-rest')
+    expect([eye, illusorySelf].map((item) => getResourceUsed(shortRested, item.id))).toEqual([0, 1])
+
+    const evoker = listSessionResources(
+      draftFor('class-2024-wizard', 14, { subclassId: 'subclass-2024-wizard-evoker' }),
+      MODIFIERS,
+    )
+    expect(evoker.find((item) => item.id === 'wizard-2024-evoker-overchannel')).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(evoker.find((item) => item.id === 'wizard-2024-class-arcane-recovery')).toMatchObject({ unit: '环级', recovery: 'long-rest' })
+  })
+})
