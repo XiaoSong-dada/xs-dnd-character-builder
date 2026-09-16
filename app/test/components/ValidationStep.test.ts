@@ -38,6 +38,7 @@ describe('ValidationStep 提示级校验呈现（B09-04）', () => {
 
     expect(wrapper.text()).toContain('2024 支持')
     expect(wrapper.text()).toContain('跑团资源结算与导出已完成')
+    expect(wrapper.text()).toContain('魔法物品为自由添加、仅索引条目不可加入')
     const legacy = mount(ValidationStep, { props: { issues: [] } })
     expect(legacy.text()).not.toContain('2024 支持')
   })

@@ -83,6 +83,7 @@ describe('CharacterSheetStep', () => {
     expect(wrapper.text()).toContain('规则预览 · 5e-2024')
     expect(wrapper.text()).toContain('2024 支持')
     expect(wrapper.text()).toContain('2024 车卡、跑团资源结算与导出已可用')
+    expect(wrapper.text()).toContain('魔法物品为自由添加、仅索引条目不可加入')
   })
 
   it('uses Chinese labels for abilities, saving throws, and skills', async () => {

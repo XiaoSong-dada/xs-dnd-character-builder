@@ -571,7 +571,7 @@ function handleExportPdf(): void {
 <template>
   <section class="character-sheet">
     <UiNotice v-if="draft.ruleset === '5e-2024'" tone="info" title="2024 支持">
-      2024 车卡、跑团资源结算与导出已可用；数值与来源以规则层登记为准。
+      2024 车卡、跑团资源结算与导出已可用；魔法物品为自由添加、仅索引条目不可加入；生物／召唤数据与多职业不在本轮。
     </UiNotice>
     <header :class="{ 'character-sheet__header--media': draft.media?.avatar || draft.media?.portrait }">
       <div class="character-sheet__header-content" :class="{ 'character-sheet__header-content--portrait': draft.media?.portrait }">
