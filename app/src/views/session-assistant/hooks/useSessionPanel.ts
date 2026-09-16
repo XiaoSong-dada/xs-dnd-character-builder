@@ -2,7 +2,6 @@ import { computed, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 
 import { deriveCharacter } from '@/rules/derive'
-import { rulesRepository } from '@/rules/repository'
 import { getRulesRepository } from '@/rules/repositories'
 import { getEffectiveSpellSlots, getRequiredSpellCount, getSpellCandidates, getSpellcastingConfig, getUnpreparedManualSpellIds } from '@/rules/spellcasting'
 import { normalizeManualEdits } from '@/rules/manual-edits'
@@ -34,14 +33,16 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   // ---- 派生数据 ----
   const derived = computed(() => deriveCharacter(draft.value))
   const maxHp = computed(() => derived.value.hitPoints.value)
-  const className = computed(() => draft.value.classId ? (rulesRepository.getClass(draft.value.classId)?.name ?? '') : '')
+  /** 名称与条目解析按草稿版本（2024 草稿不得使用 2014 静态仓库）。 */
+  const repository = computed(() => getRulesRepository(draft.value.ruleset))
+  const className = computed(() => draft.value.classId ? (repository.value.getClass(draft.value.classId)?.name ?? '') : '')
   const spellcastingConfig = computed(() => getSpellcastingConfig(draft.value))
   const spellSlots = computed(() => getEffectiveSpellSlots(draft.value))
   const pactSlotLevels = computed(() => spellSlots.value.filter((slot) => slot.pact).map((slot) => slot.level))
   /** 2024 角色追踪生命骰池（总数＝职业等级）；2014 保持既有行为不追踪。 */
   const tracksHitDice = computed(() => draft.value.ruleset === '5e-2024')
   const classHitDie = computed(() => draft.value.classId
-    ? getRulesRepository(draft.value.ruleset).getClass(draft.value.classId)?.hitDie ?? 8
+    ? repository.value.getClass(draft.value.classId)?.hitDie ?? 8
     : 8)
 
   // ---- 法术书（spellbook 模式）：未准备法术与准备切换 ----
@@ -53,7 +54,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     const config = spellcastingConfig.value
     const normal = config ? getSpellCandidates(draft.value, config).prepareFromBook : []
     return [...new Set([...normal, ...getUnpreparedManualSpellIds(draft.value)])]
-      .map((id) => rulesRepository.getSpell(id))
+      .map((id) => repository.value.getSpell(id))
       .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell))
   })
   const canPrepareMore = computed(() =>

@@ -12,10 +12,7 @@ import UiModal from '@/components/ui/UiModal.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
-import { getClassFeatures2014 } from '@/rules/data/class-features-2014'
-import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { decodeAbilityImprovement } from '@/rules/feats'
-import { rulesRepository } from '@/rules/repository'
 import { getRulesRepository } from '@/rules/repositories'
 import { getAvailableSlotLevels } from '@/rules/session-state'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
@@ -29,6 +26,9 @@ import { formatSpellLabel } from '@/utils/format-spell-label'
 import { useSessionPanel } from '../hooks/useSessionPanel'
 
 const props = defineProps<{ draft: CharacterDraft }>()
+
+/** 名称与条目解析按草稿版本（2024 草稿不得使用 2014 静态仓库）。 */
+const repository = computed(() => getRulesRepository(props.draft.ruleset))
 
 const panel = useSessionPanel(computed(() => props.draft))
 
@@ -90,7 +90,7 @@ const showAdjustItemModal = ref(false)
 
 function handleAddItem(payload: { itemId: string; quantity: number; equip: boolean }): void {
   // 防御：非可装备物品（如自定义物品）不允许装备。
-  const equip = payload.equip && Boolean(rulesRepository.getEquipment(payload.itemId)?.equippable)
+  const equip = payload.equip && Boolean(repository.value.getEquipment(payload.itemId)?.equippable)
   const inventory = addAdventureItem(props.draft.inventory, props.draft.id, {
     itemId: payload.itemId,
     quantity: payload.quantity,
@@ -119,13 +119,13 @@ function updateInventory(inventory: readonly InventoryEntry[]): void {
 }
 
 function equipmentName(itemId: string): string {
-  return rulesRepository.getEquipment(itemId)?.name ?? itemId
+  return repository.value.getEquipment(itemId)?.name ?? itemId
 }
 function equipmentDescription(itemId: string): string {
-  return rulesRepository.getEquipment(itemId)?.description ?? ''
+  return repository.value.getEquipment(itemId)?.description ?? ''
 }
 function equipmentSummary(itemId: string): string {
-  const equipment = rulesRepository.getEquipment(itemId)
+  const equipment = repository.value.getEquipment(itemId)
   if (!equipment) return ''
   if (equipment.damageDice) return `${equipment.damageDice} ${equipment.damageType ?? ''}伤害`
   if (equipment.armorBase) return `AC ${equipment.armorBase}${equipment.addsDexterityToArmor ? ' + 敏捷调整' : ''}`
@@ -133,7 +133,7 @@ function equipmentSummary(itemId: string): string {
 }
 /** 武器条目：命中/伤害加值标签。 */
 function weaponBonusLabel(entry: InventoryEntry): string {
-  const equipment = rulesRepository.getEquipment(entry.itemId)
+  const equipment = repository.value.getEquipment(entry.itemId)
   if (equipment?.category !== 'weapon') return ''
   return `命中 +${panel.derived.value.attackBonus.value} · 伤害 +${panel.derived.value.attackDamageBonus.value}`
 }
@@ -151,21 +151,21 @@ function abilityLabel(key: string): string {
   return ABILITY_LABELS[key as AbilityKey] ?? key
 }
 function skillLabel(skillId: string): string {
-  return rulesRepository.getOption(skillId)?.name ?? skillId
+  return repository.value.getOption(skillId)?.name ?? skillId
 }
-const className = computed(() => props.draft.classId ? (rulesRepository.getClass(props.draft.classId)?.name ?? '') : '')
+const className = computed(() => props.draft.classId ? (repository.value.getClass(props.draft.classId)?.name ?? '') : '')
 const classFeatures = computed(() =>
   props.draft.classId
-    ? getClassFeatures2014(props.draft.classId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? (repository.value.getClass(props.draft.classId)?.features ?? []).filter((feature) => feature.level <= props.draft.targetLevel)
     : [],
 )
-const subclassName = computed(() => props.draft.subclassId ? (rulesRepository.getSubclass(props.draft.subclassId)?.name ?? '') : '')
+const subclassName = computed(() => props.draft.subclassId ? (repository.value.getSubclass(props.draft.subclassId)?.name ?? '') : '')
 const subclassFeatures = computed(() =>
   props.draft.subclassId
-    ? getSubclassFeatures2014(props.draft.subclassId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? (repository.value.getSubclass(props.draft.subclassId)?.features ?? []).filter((feature) => feature.level <= props.draft.targetLevel)
     : [],
 )
-const raceName = computed(() => props.draft.raceId ? (rulesRepository.getRace(props.draft.raceId)?.name ?? '') : '')
+const raceName = computed(() => props.draft.raceId ? (repository.value.getRace(props.draft.raceId)?.name ?? '') : '')
 const raceFeatures = computed(() =>
   props.draft.raceId
     ? getRulesRepository(props.draft.ruleset).getRaceFeatures(props.draft.raceId).filter((feature) => feature.level <= props.draft.targetLevel)
@@ -173,7 +173,7 @@ const raceFeatures = computed(() =>
 )
 const subraceName = computed(() =>
   props.draft.subraceId && props.draft.subraceId !== props.draft.raceId
-    ? (rulesRepository.getRace(props.draft.subraceId)?.name ?? '')
+    ? (repository.value.getRace(props.draft.subraceId)?.name ?? '')
     : '',
 )
 const subraceFeatures = computed(() =>
@@ -183,12 +183,12 @@ const subraceFeatures = computed(() =>
 )
 const backgroundName = computed(() => {
   const id = props.draft.backgroundId ?? props.draft.backgroundVariantId
-  return id ? (rulesRepository.getBackground(id)?.name ?? '') : ''
+  return id ? (repository.value.getBackground(id)?.name ?? '') : ''
 })
 const backgroundFeatures = computed(() => {
   const id = props.draft.backgroundId ?? props.draft.backgroundVariantId
   if (!id) return []
-  const background = rulesRepository.getBackground(id)
+  const background = repository.value.getBackground(id)
   const ownerId = background?.parentBackgroundId ?? id
   return getRulesRepository(props.draft.ruleset).getBackgroundFeatures(ownerId)
 })
@@ -202,7 +202,7 @@ const featAndAsiEntries = computed(() => {
     const checkpoint = timeline.find((item) => item.id === selection.checkpointId)
     for (const optionId of selection.optionIds) {
       if (optionId.startsWith('feat-')) {
-        const feat = rulesRepository.feats.find((item) => item.id === optionId)
+        const feat = repository.value.getFeat(optionId)
         if (feat) entries.push({ id: feat.id, level: checkpoint?.level ?? 1, label: `${feat.name} · ${feat.englishName}`, detail: feat.detail })
       } else if (optionId.startsWith('asi-')) {
         const improvement = decodeAbilityImprovement(optionId)
@@ -224,12 +224,12 @@ const preparedOrKnownLabel = computed(() =>
 )
 const selectedSpells = computed(() => {
   return getEffectiveSelectedSpellIds(props.draft)
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell && spell.level > 0))
 })
 const cantripSpells = computed(() =>
   getEffectiveSelectedSpellIds(props.draft)
-    .map((id) => rulesRepository.getSpell(id))
+    .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell && spell.level === 0)),
 )
 const spellGroups = computed(() => {
@@ -781,7 +781,7 @@ function openTranscribe(spellId?: string): void {
       :preselect-spell-id="transcribePreselectId"
       @close="showTranscribeModal = false"
     />
-    <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" @close="showAddItemModal = false" @add="handleAddItem" />
+    <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" :ruleset="draft.ruleset" @close="showAddItemModal = false" @add="handleAddItem" />
     <AdjustItemModal
       v-if="adjustEntry"
       :open="showAdjustItemModal"

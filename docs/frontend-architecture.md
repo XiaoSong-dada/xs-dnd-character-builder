@@ -247,7 +247,7 @@ src/views/about/index.vue
 src/views/not-found/index.vue  -> src/views/not-found/hooks/useNotFoundPage.ts（-> vue-router useRouter）
 ```
 
-跑团助手（`/assistant`）为页面内聚模块（列表视图 ⇄ 局内面板视图）：
+跑团助手（`/assistant`）为页面内聚模块（列表视图 ⇄ 局内面板视图）。面板的名称与条目查询（职业／子职／种族／背景／专长／法术／装备）一律按 `draft.ruleset` 通过 `getRulesRepository` 解析；该目录禁止导入 2014 单例 `@/rules/repository`，由 `test/architecture/session-assistant-repository.test.ts` 守卫：
 
 ```text
 src/views/session-assistant/index.vue
@@ -261,7 +261,7 @@ src/views/session-assistant/hooks/useSessionAssistantPage.ts
   -> src/services/character-json.ts（CharacterImportError）
 
 src/views/session-assistant/hooks/useSessionPanel.ts
-  -> src/rules/{derive,repository,spellcasting,session-resources,session-state}
+  -> src/rules/{derive,manual-edits,repositories,spellcasting,session-resources,session-state}
   -> src/services/session-state-storage.ts
   -> src/stores/character-drafts.ts（updateDraftById：金币/物品写回）
   -> src/types/{character,session-state}
@@ -271,7 +271,7 @@ src/views/session-assistant/components/SessionPanel.vue
   -> src/features/spellbook-transcription（抄录弹层：同一草稿的 spellSelections 与 adventureGold）
   -> src/components/{AddItemModal,AdjustItemModal}
   -> src/components/ui/{ExpandableOptionCard,ListShell,StatTile,UiBadge,UiModal,UiTabs}
-  -> src/rules/{data/class-features-2014,data/feats-2014,data/subclass-features-2014,feats,repository,session-state,spellcasting,starting-equipment,timeline}
+  -> src/rules/{data/feats-2014,feats,repositories,session-state,spellcasting,starting-equipment,timeline}
   -> src/stores/session-assistant.ts（activeTab 持久化）
   -> src/types/{character,rules,session-state}
   -> src/utils/format-spell-label.ts（法术环位、英文名与仪式标签）
