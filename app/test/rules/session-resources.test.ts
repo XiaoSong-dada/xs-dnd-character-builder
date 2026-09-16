@@ -4,7 +4,7 @@ import { getRulesRepository } from '@/rules/repositories'
 import { applyResourceChange, applyRestRecovery, getResourceUsed, getShortRestExhaustionReduction, listSessionResources } from '@/rules/session-resources'
 import { createInitialSessionState } from '@/rules/session-state'
 import type { CharacterDraft } from '@/types/character'
-import { draft2024 } from '../fixtures/draft-2024'
+import { draft2024, selection } from '../fixtures/draft-2024'
 
 const MODIFIERS = { str: 3, dex: 2, con: 2, int: 0, wis: 1, cha: 1 }
 
@@ -410,7 +410,7 @@ describe('B10-02 跑团资源结算（奥术批次）', () => {
     expect([hurl, clairvoyant].map((item) => getResourceUsed(longRested, item.id))).toEqual([0, 0])
   })
 
-  it('法师：预兆 14 级起 3 枚；幻影化形长休、天眼通短休；奥术回想超限导能保留', () => {
+  it('法师：预兆 14 级起 3 枚；幻影化形长休、天眼通短休；奥术回想超限导能保留（B10-02 第 4 批）', () => {
     const portentAt13 = listSessionResources(
       draftFor('class-2024-wizard', 13, { subclassId: 'subclass-2024-wizard-diviner' }),
       MODIFIERS,
@@ -447,5 +447,117 @@ describe('B10-02 跑团资源结算（奥术批次）', () => {
     )
     expect(evoker.find((item) => item.id === 'wizard-2024-evoker-overchannel')).toMatchObject({ max: 1, recovery: 'long-rest' })
     expect(evoker.find((item) => item.id === 'wizard-2024-class-arcane-recovery')).toMatchObject({ unit: '环级', recovery: 'long-rest' })
+  })
+})
+
+describe('B10-03 免费施法结算', () => {
+  const FEAT_PARENT = 'class-2024-fighter-feat-4'
+  const featChild = (featId: string, choiceId: string) => `feat-child:${FEAT_PARENT}:${featId}:${choiceId}`
+
+  it('专长固定免费施法并入资源列表，可按长休回充且不越界', () => {
+    const draft = draftFor('class-2024-fighter', 5, {
+      selections: [
+        selection(FEAT_PARENT, ['feat-2024-fey-touched']),
+        selection(featChild('feat-2024-fey-touched', 'ability'), ['feat-bonus-wis-1']),
+        selection(featChild('feat-2024-fey-touched', 'spell'), ['spell-2024-charm-person']),
+      ],
+    })
+    const resources = listSessionResources(draft, MODIFIERS)
+    const misty = resources.find((item) => item.spellId === 'spell-2024-misty-step' && item.id.includes('fey-touched'))!
+    const charm = resources.find((item) => item.spellId === 'spell-2024-charm-person')!
+    expect(misty).toMatchObject({ max: 1, recovery: 'long-rest', unit: '次', dice: false })
+    expect(misty.name).toContain('迷踪步')
+    expect(charm).toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const spent = { ...createInitialSessionState('fc1', 40), resourceUsage: { [misty.id]: 1 } }
+    expect(getResourceUsed(applyRestRecovery(spent, resources, 'short-rest'), misty.id)).toBe(1)
+    expect(getResourceUsed(applyRestRecovery(spent, resources, 'long-rest'), misty.id)).toBe(0)
+    expect(applyResourceChange(spent, misty.id, 1, misty.max).clamped).toBe(true)
+  })
+
+  it('物种免费施法随熟练加值并入资源列表（森林侏儒动物交谈）', () => {
+    const draft = draftFor('class-2024-fighter', 5, {
+      raceId: 'species-2024-gnome',
+      subraceId: 'species-2024-gnome-forest-lineage',
+      selections: [selection('species-2024-gnome-spellcasting-ability', ['spell-ability-wis'])],
+    })
+    const speak = listSessionResources(draft, MODIFIERS).find((item) => item.spellId === 'spell-2024-speak-with-animals')!
+    expect(speak).toMatchObject({ max: 3, recovery: 'long-rest' })
+    expect(speak.name).toContain('森林侏儒')
+  })
+
+  it('职业与子职特性的固定免费施法按特性登记', () => {
+    const paladin = listSessionResources(draftFor('class-2024-paladin', 5), MODIFIERS)
+    expect(paladin.find((item) => item.id === 'paladin-2024-class-paladins-smite:spell-2024-divine-smite'))
+      .toMatchObject({ max: 1, recovery: 'long-rest', spellId: 'spell-2024-divine-smite' })
+    expect(paladin.find((item) => item.id === 'paladin-2024-class-faithful-steed:spell-2024-find-steed'))
+      .toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const ranger = listSessionResources(
+      draftFor('class-2024-ranger', 11, { subclassId: 'subclass-2024-ranger-fey-wanderer' }),
+      MODIFIERS,
+    )
+    expect(ranger.find((item) => item.id === 'ranger-2024-fey-wanderer-fey-reinforcements:spell-2024-summon-fey'))
+      .toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const sorcerer = listSessionResources(
+      draftFor('class-2024-sorcerer', 18, { subclassId: 'subclass-2024-sorcerer-draconic-sorcery' }),
+      MODIFIERS,
+    )
+    expect(sorcerer.find((item) => item.id === 'sorcerer-2024-draconic-dragon-companion:spell-2024-summon-dragon'))
+      .toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const warlock = listSessionResources(draftFor('class-2024-warlock', 9), MODIFIERS)
+    expect(warlock.find((item) => item.id === 'warlock-2024-class-contact-patron:spell-2024-contact-other-plane'))
+      .toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const land = listSessionResources(
+      draftFor('class-2024-druid', 6, { subclassId: 'subclass-2024-druid-circle-of-the-land' }),
+      MODIFIERS,
+    )
+    expect(land.find((item) => item.id === 'druid-2024-land-natural-recovery')).toMatchObject({ max: 1, recovery: 'long-rest' })
+  })
+
+  it('法师幻术师免费施法与星图感知型次数', () => {
+    const wizard = listSessionResources(
+      draftFor('class-2024-wizard', 10, { subclassId: 'subclass-2024-wizard-illusionist' }),
+      MODIFIERS,
+    )
+    expect(wizard.find((item) => item.id === 'wizard-2024-illusionist-improved-illusions:spell-2024-silent-image'))
+      .toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(wizard.find((item) => item.id === 'wizard-2024-illusionist-phantasmal-creatures:spell-2024-summon-beast'))
+      .toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(wizard.find((item) => item.id === 'wizard-2024-illusionist-phantasmal-creatures:spell-2024-summon-fey'))
+      .toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(listSessionResources(
+      draftFor('class-2024-wizard', 5, { subclassId: 'subclass-2024-wizard-illusionist' }),
+      MODIFIERS,
+    ).some((item) => item.id.includes('phantasmal-creatures'))).toBe(false)
+
+    const stars = listSessionResources(
+      draftFor('class-2024-druid', 6, {
+        subclassId: 'subclass-2024-druid-circle-of-the-stars',
+        baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 16, cha: 10 },
+      }),
+      { ...MODIFIERS, wis: 3 },
+    )
+    const guiding = stars.find((item) => item.id === 'druid-2024-stars-star-map:spell-2024-guiding-bolt')!
+    expect(guiding).toMatchObject({ max: 3, recovery: 'long-rest' })
+
+    const spent = { ...createInitialSessionState('fc2', 60), resourceUsage: { [guiding.id]: 2 } }
+    expect(getResourceUsed(applyRestRecovery(spent, stars, 'short-rest'), guiding.id)).toBe(2)
+    expect(getResourceUsed(applyRestRecovery(spent, stars, 'long-rest'), guiding.id)).toBe(0)
+  })
+
+  it('已选祈唤的固定免费施法（深海馈赠·水下呼吸）', () => {
+    const draft = draftFor('class-2024-warlock', 9, {
+      selections: [selection('class-2024-warlock-invocations-5', ['invocation-2024-gift-of-the-depths'])],
+    })
+    const breathing = listSessionResources(draft, MODIFIERS).find((item) => item.spellId === 'spell-2024-water-breathing')!
+    expect(breathing).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(breathing.name).toContain('深海馈赠')
+
+    const withoutInvocation = listSessionResources(draftFor('class-2024-warlock', 9), MODIFIERS)
+    expect(withoutInvocation.some((item) => item.spellId === 'spell-2024-water-breathing')).toBe(false)
   })
 })

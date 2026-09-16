@@ -319,6 +319,7 @@ export const sorcererSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '无需材料成分施展龙类召唤术，并可无需法术位施展一次（长休恢复）；可改为无需专注、持续 1 分钟。',
     description: '你可以无需材料成分施展龙类召唤术，并且可以无需法术位施展它一次；以此法施展后需完成一次长休才能再次如此施展。每当你开始施展该法术时，都可以修改该法术使其无需专注；以此法施展时，法术持续时间变为 1 分钟。召唤生物的数据卡未装配前，本条目只登记规则边界，不生成召唤物数值。',
     kind: 'passive', status: 'implemented', sourceIds,
+    grantedSpells: [{ spellId: 'spell-2024-summon-dragon', freeCastings: 1, recovery: 'long-rest' }],
   },
 
   // ============ 狂野术法 ============

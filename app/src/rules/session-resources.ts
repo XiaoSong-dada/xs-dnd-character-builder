@@ -1,5 +1,6 @@
 import { getRulesRepository } from '@/rules/repositories'
 import { getDicePoolCount, getDicePoolDie, getResourceMax, getResourceRecovery } from '@/rules/resources'
+import { getSpellFreeCastings } from '@/rules/spellcasting'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
 import type { ClassFeature, ClassResource, RulesRepository, SubclassFeature } from '@/types/rules'
 import type { SessionState } from '@/types/session-state'
@@ -23,6 +24,8 @@ export interface SessionResource {
   readonly dice: boolean
   /** 短休只恢复固定数量；缺省为全部恢复。 */
   readonly shortRestRecovery?: number
+  /** 免费施法条目对应的法术 id（用于施法弹窗绑定免费施放按钮）。 */
+  readonly spellId?: string
 }
 
 function abilityModifierOf(modifiers: Partial<Record<AbilityKey, number>>, ability: AbilityKey): number {
@@ -82,6 +85,23 @@ export function listSessionResources(
       unit: feature.resource?.unit ?? (poolDie || '次'),
       dice: Boolean(feature.dicePool && !feature.resource),
       ...(shortRestRecovery !== undefined ? { shortRestRecovery } : {}),
+    })
+  }
+  // 免费施法（专长／物种／职业与子职特性／选项）：复用同一已用计数与休息回充管道。
+  for (const grant of getSpellFreeCastings(draft, repository)) {
+    const key = `${grant.sourceId}:${grant.spellId}`
+    if (seen.has(key)) continue
+    const spell = repository.getSpell(grant.spellId)
+    if (!spell || grant.count <= 0) continue
+    seen.add(key)
+    resources.push({
+      id: key,
+      name: `${spell.name}（${grant.sourceName}）`,
+      max: grant.count,
+      recovery: grant.recovery,
+      unit: '次',
+      dice: false,
+      spellId: grant.spellId,
     })
   }
   return resources

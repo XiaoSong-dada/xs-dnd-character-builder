@@ -53,6 +53,10 @@ const DRUID_SPELL_SLOTS = [
 /** 荒野变形使用次数：2 级起 2 次，6 级起 3 次，17 级起 4 次。 */
 const WILD_SHAPE_USES = [0, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4] as const
 
+/** N 级起每次长休 1 次（用于限次特性资源登记）。 */
+const onceFromLevel = (level: number): readonly number[] =>
+  Array.from({ length: 20 }, (_, index) => (index + 1 >= level ? 1 : 0))
+
 const druidClassSpellIds2024 = spells2024
   .filter((spell) => spell.classIds.includes('class-2024-druid'))
   .map((spell) => spell.id)
@@ -288,6 +292,7 @@ export const druidSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '每长休 1 次免费施展一道结社法术；短休可恢复总环级不超过半数德鲁伊等级的法术位（每次长休 1 次）。',
     description: '你可以施展一道你以结社法术特性准备的、一环或更高环阶的法术，而无须消耗法术位；此效果每次长休 1 次。此外，当你完成一次短休时，你可以恢复已消耗的法术位：所恢复法术位的环阶总和不超过你德鲁伊等级的一半（向上取整），且不能恢复六环或更高环阶的法术位。此恢复每次长休 1 次。',
     kind: 'resource', status: 'implemented', sourceIds,
+    resource: { maxByLevel: onceFromLevel(6), recovery: 'long-rest', note: '免费施展一道结社法术（手动标记消耗）；短休恢复法术位（总环级 ≤ 等级一半）同样每次长休 1 次' },
   },
   {
     id: 'druid-2024-land-natures-ward', subclassId: 'subclass-2024-druid-circle-of-the-land', name: '自然守御', englishName: "Nature's Ward", level: 10,
@@ -308,6 +313,7 @@ export const druidSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '持握星图时始终准备神导术与光导箭，并可免费施展光导箭等于感知调整值次（至少 1 次，长休恢复）。',
     description: '你创造一张星图（微型物件，可作德鲁伊法器）。持握星图期间，你视作始终准备神导术与光导箭，并可施展光导箭而无需消耗法术位；免费施展次数等于你的感知调整值（至少 1 次），完成长休时重获全部次数。若星图丢失，可通过 1 小时仪式（可在短休或长休中进行）重造并摧毁原星图。形态掷 1d6 决定。',
     kind: 'resource', status: 'implemented', sourceIds,
+    grantedSpells: [{ spellId: 'spell-2024-guiding-bolt', freeCastingsFrom: { ability: 'wis', minimum: 1 }, recovery: 'long-rest' }],
   },
   {
     id: 'druid-2024-stars-starry-form', subclassId: 'subclass-2024-druid-circle-of-the-stars', name: '星耀形态', englishName: 'Starry Form', level: 3,

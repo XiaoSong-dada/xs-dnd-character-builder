@@ -124,6 +124,7 @@ export const paladinFeatures2024: readonly ClassFeature[] = [
     summary: '始终准备至圣斩；可不消耗法术位施展一次（长休恢复）。',
     description: '你始终准备着法术至圣斩。此外，你可以不消耗法术位地施展该法术一次，随后必须完成一次长休才能再次如此施展。',
     kind: 'passive', status: 'implemented', sourceIds,
+    grantedSpells: [{ spellId: 'spell-2024-divine-smite', freeCastings: 1, recovery: 'long-rest' }],
   },
   {
     id: 'paladin-2024-class-channel-divinity', classId: 'class-2024-paladin', name: '引导神力', englishName: 'Channel Divinity', level: 3,
@@ -149,6 +150,7 @@ export const paladinFeatures2024: readonly ClassFeature[] = [
     summary: '始终准备寻获坐骑；可不消耗法术位施展一次（长休恢复）。',
     description: '你始终准备着法术寻获坐骑。此外，你可以不消耗法术位地施展该法术一次，随后必须完成一次长休才能再次如此施展。坐骑数值未装配前，本条目只登记规则边界。',
     kind: 'passive', status: 'implemented', sourceIds,
+    grantedSpells: [{ spellId: 'spell-2024-find-steed', freeCastings: 1, recovery: 'long-rest' }],
   },
   {
     id: 'paladin-2024-class-aura-of-protection', classId: 'class-2024-paladin', name: '守护灵光', englishName: 'Aura of Protection', level: 6,

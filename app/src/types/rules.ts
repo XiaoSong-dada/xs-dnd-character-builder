@@ -99,6 +99,8 @@ export interface RuleOption {
   readonly cantripBonus?: number
   /** 超魔选项的术法点消耗（2024 超魔数据；B10 结算输入）。 */
   readonly sorceryPointCost?: number
+  /** 选项授予的固定法术免费次数（如 2024 深海馈赠的水下呼吸，每次长休 1 次）。 */
+  readonly grantedSpells?: readonly FixedSpellGrant[]
   /** 选项的职业等级先决（如 2024 魔能祈唤等级要求）；候选与校验按此筛选。 */
   readonly minimumLevel?: number
   /** 依赖的已选选项（如魔能斩需先选刃之魔契）。 */
@@ -159,13 +161,16 @@ export interface SpellPoolSpec {
   readonly fromListChoiceId?: string
 }
 
-/** 专长固定授予的法术（不可选择，随专长生效）。 */
+/** 固定授予的法术（不可选择，随专长、物种特性、职业／子职特性或祈唤生效）。 */
 export interface FixedSpellGrant {
   readonly spellId: string
   readonly alwaysPrepared?: boolean
   readonly freeCastings?: number
-  /** 免费次数随熟练加值变化（如森林侏儒动物交谈）。 */
-  readonly freeCastingsFrom?: 'proficiency-bonus'
+  /**
+   * 免费次数随熟练加值或属性调整值变化（如森林侏儒动物交谈随熟练加值、星图光导箭随感知调整值）。
+   * 属性形式时 `minimum` 为最低次数。
+   */
+  readonly freeCastingsFrom?: 'proficiency-bonus' | { readonly ability: AbilityKey; readonly minimum: number }
   readonly recovery?: 'long-rest' | 'short-rest'
   readonly ability?: AbilityKey
 }
@@ -466,6 +471,8 @@ export interface SubclassFeature {
   readonly dicePool?: DicePoolRule
   /** 短休额外降低的力竭层数（缺省 0）。 */
   readonly shortRestExhaustionReduction?: number
+  /** 本特性固定授予的免费施法（如 2024 精宸所与的妖精召唤术长休免费 1 次）。 */
+  readonly grantedSpells?: readonly FixedSpellGrant[]
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }
@@ -490,6 +497,8 @@ export interface ClassFeature {
   readonly dicePool?: DicePoolRule
   /** 短休额外降低的力竭层数（如 2024 游侠·不知疲倦短休力竭 −1；缺省 0）。 */
   readonly shortRestExhaustionReduction?: number
+  /** 本特性固定授予的免费施法（如 2024 圣武斩的至圣斩长休免费 1 次）。 */
+  readonly grantedSpells?: readonly FixedSpellGrant[]
   /** 本特性额外授予的“自选语言”数量（如 2024 游荡者盗贼黑话额外掌握一门语言）。 */
   readonly languageChoices?: number
   readonly status: CompatibilityStatus

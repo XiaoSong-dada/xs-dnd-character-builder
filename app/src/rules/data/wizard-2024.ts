@@ -243,12 +243,17 @@ export const wizardSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '幻术法术施法距离+60 尺；幻术无须言语成分；可免费施展一次无声幻影。',
     description: '你施展施法距离至少 10 尺的幻术系法师法术时，其射程提升 60 尺；你施展幻术系法师法术时可以忽略言语成分；此外，你始终准备着无声幻影，并可无需法术位施展一次（每次长休恢复）。',
     kind: 'passive', status: 'implemented', sourceIds,
+    grantedSpells: [{ spellId: 'spell-2024-silent-image', freeCastings: 1, recovery: 'long-rest' }],
   },
   {
     id: 'wizard-2024-illusionist-phantasmal-creatures', subclassId: 'subclass-2024-wizard-illusionist', name: '魅影生灵', englishName: 'Phantasmal Creatures', level: 6,
-    summary: '始终准备幻象生物类法术（如召唤幻影），并使其无需专注（依规则文本）。',
-    description: '你始终准备着召唤幻影等幻象生物类法术；具体召唤物与边界以规则文本为准，生物数据未装配时不生成数值。',
+    summary: '始终准备野兽召唤术与妖精召唤术，可将其视为幻术学派；两道的幻术版本各可免费施展一次（长休恢复，召唤生物半血）。',
+    description: '你总是准备了野兽召唤术与妖精召唤术。你施展其中任意一道法术时，可以选择将其学派变为幻术学派，这会使召唤出的生物变得虚幻。你可以不消耗法术位地施展这两道法术的幻术版本各一次，但以此法施展会使其召唤出的生物只有一半生命值。一旦你无需法术位地施展了其中任意一道法术，直至完成长休你都无法再以此法施展那道法术。召唤生物的数据卡未装配前，本条目只登记规则边界，不生成数值。',
     kind: 'passive', status: 'implemented', sourceIds,
+    grantedSpells: [
+      { spellId: 'spell-2024-summon-beast', freeCastings: 1, recovery: 'long-rest' },
+      { spellId: 'spell-2024-summon-fey', freeCastings: 1, recovery: 'long-rest' },
+    ],
   },
   {
     id: 'wizard-2024-illusionist-illusory-self', subclassId: 'subclass-2024-wizard-illusionist', name: '幻影化形', englishName: 'Illusory Self', level: 10,

@@ -125,6 +125,7 @@ export const warlockFeatures2024: readonly ClassFeature[] = [
     summary: '始终准备异界探知；可无需法术位施展一次联系宗主并自动通过豁免，每次长休恢复。',
     description: '你始终准备着法术异界探知。你可以无需消耗法术位地以此特性施展该法术联系宗主，并自动通过该法术的豁免。一旦以此法施展，直至完成长休前都无法再次以此法施展。',
     kind: 'passive', status: 'implemented', sourceIds,
+    grantedSpells: [{ spellId: 'spell-2024-contact-other-plane', freeCastings: 1, recovery: 'long-rest' }],
   },
   {
     id: 'warlock-2024-class-mystic-arcanum', classId: 'class-2024-warlock', name: '玄奥秘法', englishName: 'Mystic Arcanum', level: 11,

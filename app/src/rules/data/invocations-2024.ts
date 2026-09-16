@@ -137,6 +137,7 @@ export const invocations2024: readonly RuleOption[] = [
     id: 'invocation-2024-gift-of-the-depths', name: '深海馈赠', englishName: 'Gift of the Depths',
     description: '【被动】你可在水下呼吸并获得等于速度的游泳速度；还可无需法术位施展一次水下呼吸，每次长休恢复。',
     status: 'implemented', sourceIds, minimumLevel: 5,
+    grantedSpells: [{ spellId: 'spell-2024-water-breathing', freeCastings: 1, recovery: 'long-rest' }],
   },
   {
     id: 'invocation-2024-investment-of-the-chain-master', name: '链主赋能', englishName: 'Investment of the Chain Master',

@@ -251,6 +251,15 @@ const castNotice = ref('')
 function openCastModal(spell: SpellRule): void {
   castSpell.value = spell
 }
+/** 该法术当前可用的免费施法条目（专长／物种／职业特性／祈唤）。 */
+function freeCastsForSpell(spell: SpellRule) {
+  return panel.resourceViews.value.filter((resource) => resource.spellId === spell.id && resource.remaining > 0)
+}
+function consumeFreeCast(resource: { id: string; name: string }): void {
+  panel.changeResource(resource.id, 1)
+  castNotice.value = `已免费施展：${resource.name}`
+  castSpell.value = undefined
+}
 function confirmCast(level: number): void {
   if (!castSpell.value) return
   // 内部已用 +1 = 可用 −1（施法消耗）
@@ -592,6 +601,16 @@ function openTranscribe(spellId?: string): void {
         </div>
         <p v-else class="session-panel__empty">该角色没有法术位</p>
       </section>
+
+      <section class="session-panel__section">
+        <h3>情境规则提示</h3>
+        <ul class="session-panel__hints">
+          <li>武器精通：仅所选武器类型生效，长休可更换；不自动改写命中或伤害。</li>
+          <li>擒抱／推撞：以无甲打击发动，目标进行力量或敏捷豁免；结果按当次结算，不写入长期状态。</li>
+          <li>突袭：被突袭方先攻检定具有劣势（2024）；不自动调整先攻或跳过回合。</li>
+          <li>施法限制：每回合只能消耗一个法术位施法；免费施放与戏法不受此限。</li>
+        </ul>
+      </section>
     </div>
 
     <div v-else-if="activeTab === 'spells'" class="session-panel__tab">
@@ -632,7 +651,7 @@ function openTranscribe(spellId?: string): void {
               <button
                 type="button"
                 class="session-panel__adjust"
-                :disabled="!castableLevels(spell).length"
+                :disabled="!castableLevels(spell).length && !freeCastsForSpell(spell).length"
                 @click="openCastModal(spell)"
               >
                 施法
@@ -730,8 +749,22 @@ function openTranscribe(spellId?: string): void {
         >
           消耗 {{ level }} 环法术位
         </button>
-        <p v-if="castSpell && !castableLevels(castSpell).length" class="session-panel__empty">没有可用的法术位。</p>
+        <p v-if="castSpell && !castableLevels(castSpell).length && !freeCastsForSpell(castSpell).length" class="session-panel__empty">没有可用的法术位。</p>
       </div>
+      <template v-if="castSpell && freeCastsForSpell(castSpell).length">
+        <p class="session-panel__cast-hint">也可以免费施放：</p>
+        <div class="session-panel__cast-levels">
+          <button
+            v-for="free in freeCastsForSpell(castSpell)"
+            :key="free.id"
+            type="button"
+            class="session-panel__cast-level"
+            @click="consumeFreeCast(free)"
+          >
+            免费施放（剩余 {{ free.remaining }} 次）
+          </button>
+        </div>
+      </template>
     </UiModal>
 
     <UiModal :open="showLongRestConfirm" title="长休息" @close="showLongRestConfirm = false">
@@ -1116,6 +1149,16 @@ function openTranscribe(spellId?: string): void {
     margin: 0;
     color: var(--color-text-muted);
     font-size: 0.8rem;
+  }
+
+  &__hints {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.25rem;
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
   }
 
   &__feature-choice {

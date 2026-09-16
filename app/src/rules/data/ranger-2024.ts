@@ -329,6 +329,7 @@ export const rangerSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '始终准备妖精召唤术且可不消耗法术位施展一次（长休恢复）；但以此法召唤时无需专注且持续 1 分钟。',
     description: '你始终准备着妖精召唤术，并且可以无需法术位施展它一次，完成长休后恢复该能力。当你以该方式施展妖精召唤术时，法术无需专注且持续时间变为 1 分钟。',
     kind: 'passive', status: 'implemented', sourceIds,
+    grantedSpells: [{ spellId: 'spell-2024-summon-fey', freeCastings: 1, recovery: 'long-rest' }],
   },
   {
     id: 'ranger-2024-fey-wanderer-misty-wanderer', subclassId: 'subclass-2024-ranger-fey-wanderer', name: '雾行漫游', englishName: 'Misty Wanderer', level: 15,

@@ -1,4 +1,4 @@
-import { abilityModifier, deriveAbilities, proficiencyBonus } from '@/rules/derive'
+import { abilityModifier, deriveAbilities, deriveCharacter, proficiencyBonus } from '@/rules/derive'
 import { getFeatChosenAbility, listActiveFeats, listFeatGrants } from '@/rules/feats'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getDraftSpeciesRules } from '@/rules/origins'
@@ -8,7 +8,7 @@ import { isWeaponTrainingCovered } from '@/rules/weapon-training'
 import { abilityFromSpeciesSpellAbilityOption, classIdFromSpellListOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, CharacterDraft, ChoiceSelection } from '@/types/character'
-import type { ChoiceCheckpoint, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant, SpellRule } from '@/types/rules'
+import type { ChoiceCheckpoint, FixedSpellGrant, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant, SpellRule } from '@/types/rules'
 
 type SpellcraftDraft = Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds' | 'ruleset'>
 
@@ -395,41 +395,56 @@ export function getAlwaysPreparedSpellIds(draft: CharacterDraft): readonly strin
   return [...ids]
 }
 
-/** 免费施法资源（每休息次数）：来自专长／检查点声明；消耗与恢复操作由跑团批次接入。 */
+/** 免费施法资源（每休息次数）：来自专长／物种／职业与子职特性／选项声明；跑团结算见 `session-resources`。 */
 export interface FreeCastingGrant {
   readonly spellId: string
+  /** 稳定来源标识（特性 id、专长／检查点组合键、物种 id 或选项 id）。 */
   readonly sourceId: string
+  /** 来源展示名（用于跑团资源列表），如“宿敌”“妖精漫游者”“森林侏儒”。 */
+  readonly sourceName: string
   readonly count: number
   readonly recovery: 'long-rest' | 'short-rest'
   readonly ability?: AbilityKey
 }
 
-export function getSpellFreeCastings(draft: CharacterDraft): readonly FreeCastingGrant[] {
-  const repository = getRulesRepository(draft.ruleset)
+export function getSpellFreeCastings(
+  draft: CharacterDraft,
+  repository: RulesRepository = getRulesRepository(draft.ruleset),
+): readonly FreeCastingGrant[] {
   const grants: FreeCastingGrant[] = []
   const seen = new Set<string>()
+  const modifiers = deriveCharacter(draft).modifiers
+  /** 免费次数：熟练加值、属性调整值（至少 minimum）或固定值。 */
+  const countOf = (grant: FixedSpellGrant): number => {
+    if (grant.freeCastingsFrom === 'proficiency-bonus') return proficiencyBonus(draft.targetLevel)
+    if (grant.freeCastingsFrom) {
+      return Math.max(grant.freeCastingsFrom.minimum, modifiers[grant.freeCastingsFrom.ability] ?? 0)
+    }
+    return grant.freeCastings ?? 0
+  }
   const push = (
     spellId: string,
     sourceId: string,
+    sourceName: string,
     count: number,
     recovery: 'long-rest' | 'short-rest',
     ability?: AbilityKey,
   ): void => {
     const key = `${sourceId}:${spellId}`
-    if (seen.has(key)) return
+    if (seen.has(key) || count <= 0) return
     if (!repository.getSpell(spellId)) return
     seen.add(key)
-    grants.push({ spellId, sourceId, count, recovery, ability })
+    grants.push({ spellId, sourceId, sourceName, count, recovery, ability })
   }
   // 专长固定授予
   for (const featGrant of listFeatGrants(draft, repository)) {
     const feat = repository.getFeat(featGrant.featId)
     for (const granted of feat?.grantedSpells ?? []) {
-      if (!granted.freeCastings) continue
       push(
         granted.spellId,
         `${featGrant.sourceId}:${featGrant.featId}`,
-        granted.freeCastings,
+        feat?.name ?? featGrant.featId,
+        countOf(granted),
         granted.recovery ?? 'long-rest',
         granted.ability ?? getFeatChosenAbility(draft, featGrant.checkpointId, featGrant.featId),
       )
@@ -439,22 +454,49 @@ export function getSpellFreeCastings(draft: CharacterDraft): readonly FreeCastin
   for (const selection of draft.selections) {
     if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:')) continue
     const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
-    const choice = featId ? repository.getFeat(featId)?.choices?.find((item) => item.id === choiceId) : undefined
+    const feat = featId ? repository.getFeat(featId) : undefined
+    const choice = feat?.choices?.find((item) => item.id === choiceId)
     const grant = choice?.spellGrant
     if (!grant?.freeCastings || grant.freeCastings <= 0) continue
     const ability = grant.ability ?? (featId ? getFeatChosenAbility(draft, parentCheckpointId, featId) : undefined)
     for (const spellId of selection.optionIds) {
-      push(spellId, selection.checkpointId, grant.freeCastings, grant.recovery ?? 'long-rest', ability)
+      push(spellId, selection.checkpointId, feat?.name ?? choiceId ?? '', grant.freeCastings, grant.recovery ?? 'long-rest', ability)
     }
   }
-  // 检查点授予（法术精通、招牌法术等）
+  // 检查点授予（法术精通、招牌法术、玄奥秘法等）
   for (const selection of draft.selections) {
     if (selection.invalidatedAt || selection.checkpointId.startsWith('feat-child:')) continue
     const checkpoint = findClassCheckpoint(repository, selection.checkpointId)
     const grant = checkpoint?.spellGrant
     if (!grant?.freeCastings || grant.freeCastings <= 0) continue
     for (const spellId of selection.optionIds) {
-      push(spellId, selection.checkpointId, grant.freeCastings, grant.recovery ?? 'long-rest', grant.ability)
+      push(spellId, selection.checkpointId, checkpoint?.title ?? selection.checkpointId, grant.freeCastings, grant.recovery ?? 'long-rest', grant.ability)
+    }
+  }
+  // 职业特性固定授予
+  const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
+  for (const feature of classRule?.features ?? []) {
+    if (feature.level > draft.targetLevel) continue
+    for (const granted of feature.grantedSpells ?? []) {
+      push(granted.spellId, feature.id, feature.name, countOf(granted), granted.recovery ?? 'long-rest', granted.ability)
+    }
+  }
+  // 子职特性固定授予
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  for (const feature of subclass?.features ?? []) {
+    if (feature.level > draft.targetLevel) continue
+    for (const granted of feature.grantedSpells ?? []) {
+      push(granted.spellId, feature.id, feature.name, countOf(granted), granted.recovery ?? 'long-rest', granted.ability)
+    }
+  }
+  // 已选选项（魔能祈唤等）固定授予
+  for (const selection of draft.selections) {
+    if (selection.invalidatedAt) continue
+    for (const optionId of selection.optionIds) {
+      const option = repository.getOption(optionId)
+      for (const granted of option?.grantedSpells ?? []) {
+        push(granted.spellId, optionId, option?.name ?? optionId, countOf(granted), granted.recovery ?? 'long-rest', granted.ability)
+      }
     }
   }
   // 物种授予（血统法术的免费次数）；施法属性从物种链上的属性选择解析。
@@ -464,11 +506,7 @@ export function getSpellFreeCastings(draft: CharacterDraft): readonly FreeCastin
     .find((ability): ability is AbilityKey => Boolean(ability))
   for (const race of speciesRules) {
     for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel)) {
-      const count = grant.freeCastingsFrom === 'proficiency-bonus'
-        ? proficiencyBonus(draft.targetLevel)
-        : grant.freeCastings ?? 0
-      if (count <= 0) continue
-      push(grant.spellId, race.id, count, grant.recovery ?? 'long-rest', grant.ability ?? speciesAbility)
+      push(grant.spellId, race.id, race.name, countOf(grant), grant.recovery ?? 'long-rest', grant.ability ?? speciesAbility)
     }
   }
   return grants
