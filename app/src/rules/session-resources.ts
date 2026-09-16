@@ -1,7 +1,7 @@
 import { getRulesRepository } from '@/rules/repositories'
 import { getDicePoolCount, getDicePoolDie, getResourceMax } from '@/rules/resources'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
-import type { ClassResource, RulesRepository } from '@/types/rules'
+import type { ClassFeature, ClassResource, RulesRepository, SubclassFeature } from '@/types/rules'
 import type { SessionState } from '@/types/session-state'
 
 /**
@@ -29,16 +29,30 @@ function abilityModifierOf(modifiers: Partial<Record<AbilityKey, number>>, abili
   return modifiers[ability] ?? 0
 }
 
+/** 收集草稿已获得的职业与子职特性（按目标等级过滤）。 */
+function grantedFeatures(draft: CharacterDraft, repository: RulesRepository): readonly (ClassFeature | SubclassFeature)[] {
+  return [
+    ...(draft.classId ? repository.getClass(draft.classId)?.features ?? [] : []),
+    ...(draft.subclassId ? repository.getSubclass(draft.subclassId)?.features ?? [] : []),
+  ].filter((feature) => feature.level <= draft.targetLevel)
+}
+
+/** 短休额外降低的力竭层数（如 2024 游侠·不知疲倦）；多个来源取最大值，2014 无登记时为 0。 */
+export function getShortRestExhaustionReduction(
+  draft: CharacterDraft,
+  repository: RulesRepository = getRulesRepository(draft.ruleset),
+): number {
+  return grantedFeatures(draft, repository)
+    .reduce((max, feature) => Math.max(max, feature.shortRestExhaustionReduction ?? 0), 0)
+}
+
 /** 枚举当前角色的可消耗资源（上限为 0 的不进入列表）。 */
 export function listSessionResources(
   draft: CharacterDraft,
   modifiers: Partial<Record<AbilityKey, number>> = {},
   repository: RulesRepository = getRulesRepository(draft.ruleset),
 ): readonly SessionResource[] {
-  const features = [
-    ...(draft.classId ? repository.getClass(draft.classId)?.features ?? [] : []),
-    ...(draft.subclassId ? repository.getSubclass(draft.subclassId)?.features ?? [] : []),
-  ].filter((feature) => feature.level <= draft.targetLevel)
+  const features = grantedFeatures(draft, repository)
 
   const resources: SessionResource[] = []
   const seen = new Set<string>()
@@ -57,6 +71,7 @@ export function listSessionResources(
     const max = feature.resource ? count : poolCount
     if (max <= 0) continue
     seen.add(feature.id)
+    const shortRestRecovery = feature.resource?.shortRestRecovery ?? feature.dicePool?.shortRestRecovery
     resources.push({
       id: feature.id,
       name: feature.name,
@@ -64,7 +79,7 @@ export function listSessionResources(
       recovery: feature.resource?.recovery ?? feature.dicePool?.recovery ?? 'none',
       unit: feature.resource?.unit ?? (poolDie || '次'),
       dice: Boolean(feature.dicePool && !feature.resource),
-      ...(feature.resource?.shortRestRecovery !== undefined ? { shortRestRecovery: feature.resource.shortRestRecovery } : {}),
+      ...(shortRestRecovery !== undefined ? { shortRestRecovery } : {}),
     })
   }
   return resources

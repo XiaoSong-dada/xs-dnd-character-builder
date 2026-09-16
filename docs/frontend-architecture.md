@@ -261,7 +261,7 @@ src/views/session-assistant/hooks/useSessionAssistantPage.ts
   -> src/services/character-json.ts（CharacterImportError）
 
 src/views/session-assistant/hooks/useSessionPanel.ts
-  -> src/rules/{derive,repository,spellcasting,session-state}
+  -> src/rules/{derive,repository,spellcasting,session-resources,session-state}
   -> src/services/session-state-storage.ts
   -> src/stores/character-drafts.ts（updateDraftById：金币/物品写回）
   -> src/types/{character,session-state}
@@ -491,6 +491,8 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 
 草稿替换由 `character-drafts` Store 统一协调：写入前归一化人工编辑；若已有局内状态，则比较变更前后有效最大生命值与环位，并通过 `rules/session-state.ts` 同步当前状态和休息快照。页面组件不得直接改写 localStorage 或自行复制协调公式。
 
+跑团局内状态的休息与资源结算由 `rules/session-state.ts` 与 `rules/session-resources.ts` 分工：前者负责 HP、法术位、力竭、生命骰与两版休息口径，后者按草稿枚举 2024 职业／子职的资源与可消耗骰池（上限、恢复时机与 `shortRestRecovery`），并负责消耗／恢复与短休力竭差额。已用量以稳定特性 id 存入 `SessionState.resourceUsage`，与休息快照共用撤回语义；2014 没有资源登记，天然为空（Q-B10-1）。
+
 ### 8.7 rules 层
 
 ```text
@@ -509,6 +511,7 @@ src/rules/weapon-mastery.ts      -> src/types/rules（2024 精通候选与选择
 src/rules/weapon-training.ts     （无依赖，纯函数：武器类别与训练覆盖判定，含词条覆盖的军用武器）
 src/rules/weapon-attacks.ts      -> src/rules/{repositories,weapon-training}（按草稿版本解析职业武器训练；2014 回退兼容映射）
 src/rules/resources.ts           （无依赖，纯函数：资源上限／恢复文本与骰池文本）
+src/rules/session-resources.ts   -> src/rules/{repositories,resources} + src/types/{character,rules,session-state}（跑团资源结算：枚举 2024 职业资源与可消耗骰池、消耗／恢复 reducer、休息回充与短休力竭差额；2014 无登记保持为空）
 src/rules/feats.ts               -> src/rules/{repositories,source-books} + src/rules/data/{feats-2014,feats-2024}（双版本专长能力：授予、候选池、前置、复选、属性上限与护甲训练）
 src/rules/origins.ts             -> src/rules/{repositories,source-books}（物种链、背景属性分配与校验、物种生命值）
 src/rules/languages.ts           （无 rules 内部依赖，纯函数：2024 标准语言表与 2014 候选；必选数＝规则基础值＋职业特性追加 `ClassFeature.languageChoices`）

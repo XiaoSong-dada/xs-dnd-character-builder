@@ -134,14 +134,15 @@ function snapshot(state: SessionState): SessionRestSnapshot {
 }
 
 /**
- * 短休息：先保存快照，再结算——回一半损失血量（向上取整）、
- * 契约法术位（pactSlotLevels 中的环级）已用归零；普通环、debuff、力竭不动。
+ * 短休息：先保存快照，再结算——2014 回一半损失血量（向上取整）；2024 不自动治疗（由生命骰恢复）。
+ * 契约法术位（pactSlotLevels 中的环级）已用归零；普通环、debuff 不动。
+ * 仅 2024 应用 `exhaustionReduction`（如游侠·不知疲倦的短休力竭 −1），2014 保持既有行为。
  */
 export function applyShortRest(
   state: SessionState,
   pactSlotLevels: readonly number[],
   maxHp: number,
-  options: { readonly ruleset?: RulesetId } = {},
+  options: { readonly ruleset?: RulesetId; readonly exhaustionReduction?: number } = {},
 ): SessionState {
   // 2024：短休不自动治疗，生命值由玩家自行花费生命骰恢复（B10-01）；2014 保持既有“回一半损失”行为。
   const lost = options.ruleset === '5e-2024' ? 0 : Math.max(0, maxHp - state.currentHp)
@@ -153,10 +154,13 @@ export function applyShortRest(
       pactSet.has(Number(level)) ? 0 : used,
     ]),
   )
+  const exhaustionReduction = options.ruleset === '5e-2024' ? Math.max(0, options.exhaustionReduction ?? 0) : 0
+  const exhaustionLevel = Math.max(0, state.exhaustionLevel - exhaustionReduction)
   return {
     ...state,
     currentHp: Math.min(maxHp, currentHp),
     usedSpellSlots,
+    exhaustionLevel,
     lastRestSnapshot: snapshot(state),
     updatedAt: new Date().toISOString(),
   }

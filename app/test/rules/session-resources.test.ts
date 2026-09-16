@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { getRulesRepository } from '@/rules/repositories'
-import { applyResourceChange, applyRestRecovery, getResourceUsed, listSessionResources } from '@/rules/session-resources'
+import { applyResourceChange, applyRestRecovery, getResourceUsed, getShortRestExhaustionReduction, listSessionResources } from '@/rules/session-resources'
 import { createInitialSessionState } from '@/rules/session-state'
 import type { CharacterDraft } from '@/types/character'
 import { draft2024 } from '../fixtures/draft-2024'
@@ -61,18 +61,22 @@ describe('B10-02 跑团资源结算（武职批次）', () => {
     expect([secondWind, actionSurge, indomitable].map((item) => getResourceUsed(longRested, item.id))).toEqual([0, 0, 0])
   })
 
-  it('战士子职：卓越战技与灵能骰池短休全部恢复', () => {
+  it('战士子职：卓越战技短休全部恢复；灵能骰池短休只回 1 枚', () => {
     const battleMaster = listSessionResources(draftFor('class-2024-fighter', 10, { subclassId: 'subclass-2024-fighter-battle-master' }), MODIFIERS)
     const superiority = battleMaster.find((item) => item.id === 'fighter-2024-battle-master-combat-superiority')
     expect(superiority).toMatchObject({ dice: true, unit: 'd10', recovery: 'short-rest', max: 5 })
 
     const psi = listSessionResources(draftFor('class-2024-fighter', 11, { subclassId: 'subclass-2024-fighter-psi-warrior' }), MODIFIERS)
     const psiPool = psi.find((item) => item.id === 'fighter-2024-psi-warrior-psionic-power')
-    expect(psiPool).toMatchObject({ dice: true, recovery: 'short-rest', max: 8 })
+    expect(psiPool).toMatchObject({ dice: true, recovery: 'short-rest', shortRestRecovery: 1, max: 8 })
 
     const spent = { ...createInitialSessionState('d4', 60), resourceUsage: { [superiority!.id]: 5, [psiPool!.id]: 3 } }
     const rested = applyRestRecovery(spent, battleMaster, 'short-rest')
     expect(getResourceUsed(rested, superiority!.id)).toBe(0)
+
+    const psiSpent = { ...createInitialSessionState('d4b', 60), resourceUsage: { [psiPool!.id]: 3 } }
+    expect(getResourceUsed(applyRestRecovery(psiSpent, psi, 'short-rest'), psiPool!.id)).toBe(2)
+    expect(getResourceUsed(applyRestRecovery(psiSpent, psi, 'long-rest'), psiPool!.id)).toBe(0)
   })
 
   it('武僧：武功点短休全部恢复；武艺骰池（recovery none）不进入结算', () => {
@@ -164,4 +168,118 @@ describe('B10-02 跑团资源结算（神术批次）', () => {
     }
   })
 })
+})
+
+describe('B10-02 跑团资源结算（游荡者／游侠批次）', () => {
+  it('游荡者：幸运一击 20 级起短休或长休恢复 1 次', () => {
+    const at20 = listSessionResources(draftFor('class-2024-rogue', 20), MODIFIERS)
+    const stroke = at20.find((item) => item.id === 'rogue-2024-class-stroke-of-luck')!
+    expect(stroke).toMatchObject({ max: 1, recovery: 'short-rest' })
+
+    const spent = { ...createInitialSessionState('r1', 100), resourceUsage: { [stroke.id]: 1 } }
+    expect(getResourceUsed(applyRestRecovery(spent, at20, 'short-rest'), stroke.id)).toBe(0)
+    expect(getResourceUsed(applyRestRecovery(spent, at20, 'long-rest'), stroke.id)).toBe(0)
+
+    expect(listSessionResources(draftFor('class-2024-rogue', 19), MODIFIERS)
+      .some((item) => item.id === stroke.id)).toBe(false)
+  })
+
+  it('魂刃：灵能骰池短休只回 1 枚、长休全部恢复', () => {
+    const level3 = listSessionResources(
+      draftFor('class-2024-rogue', 3, { subclassId: 'subclass-2024-rogue-soulknife' }),
+      MODIFIERS,
+    )
+    const dice = level3.find((item) => item.id === 'rogue-2024-soulknife-psionic-power')!
+    expect(dice).toMatchObject({ dice: true, unit: 'd6', recovery: 'short-rest', shortRestRecovery: 1, max: 4 })
+
+    const level9 = listSessionResources(
+      draftFor('class-2024-rogue', 9, { subclassId: 'subclass-2024-rogue-soulknife' }),
+      MODIFIERS,
+    ).find((item) => item.id === 'rogue-2024-soulknife-psionic-power')!
+    expect(level9).toMatchObject({ unit: 'd8', max: 8 })
+
+    const spent = { ...createInitialSessionState('r2', 80), resourceUsage: { [dice.id]: 3 } }
+    expect(getResourceUsed(applyRestRecovery(spent, level3, 'short-rest'), dice.id)).toBe(2)
+    expect(getResourceUsed(applyRestRecovery(spent, level3, 'long-rest'), dice.id)).toBe(0)
+  })
+
+  it('魂刃：灵能面纱与撕裂心智为长休 1 次（短休不回）', () => {
+    const at13 = listSessionResources(
+      draftFor('class-2024-rogue', 13, { subclassId: 'subclass-2024-rogue-soulknife' }),
+      MODIFIERS,
+    )
+    const veil = at13.find((item) => item.id === 'rogue-2024-soulknife-psychic-veil')!
+    expect(veil).toMatchObject({ max: 1, recovery: 'long-rest' })
+    expect(at13.some((item) => item.id === 'rogue-2024-soulknife-rend-mind')).toBe(false)
+
+    const at17 = listSessionResources(
+      draftFor('class-2024-rogue', 17, { subclassId: 'subclass-2024-rogue-soulknife' }),
+      MODIFIERS,
+    )
+    const rendMind = at17.find((item) => item.id === 'rogue-2024-soulknife-rend-mind')!
+    expect(rendMind).toMatchObject({ max: 1, recovery: 'long-rest' })
+
+    const spent = { ...createInitialSessionState('r3', 120), resourceUsage: { [veil.id]: 1, [rendMind.id]: 1 } }
+    const shortRested = applyRestRecovery(spent, at17, 'short-rest')
+    expect([veil, rendMind].map((item) => getResourceUsed(shortRested, item.id))).toEqual([1, 1])
+    const longRested = applyRestRecovery(spent, at17, 'long-rest')
+    expect([veil, rendMind].map((item) => getResourceUsed(longRested, item.id))).toEqual([0, 0])
+  })
+
+  it('游侠：宿敌次数按等级成长且仅长休恢复', () => {
+    const resourcesAt = (level: number) => listSessionResources(draftFor('class-2024-ranger', level), MODIFIERS)
+    const enemyAt = (level: number) => resourcesAt(level).find((item) => item.id === 'ranger-2024-class-favored-enemy')!
+    expect([1, 5, 9, 13, 17].map((level) => enemyAt(level).max)).toEqual([2, 3, 4, 5, 6])
+    expect(enemyAt(17).recovery).toBe('long-rest')
+
+    const spent = { ...createInitialSessionState('r4', 80), resourceUsage: { [enemyAt(17).id]: 2 } }
+    expect(getResourceUsed(applyRestRecovery(spent, resourcesAt(17), 'short-rest'), enemyAt(17).id)).toBe(2)
+    expect(getResourceUsed(applyRestRecovery(spent, resourcesAt(17), 'long-rest'), enemyAt(17).id)).toBe(0)
+  })
+
+  it('游侠：感知型资源（不知疲倦、自然面纱、雾行漫游）按感知调整值且长休恢复', () => {
+    const wisModifiers = { ...MODIFIERS, wis: 3 }
+    const base = listSessionResources(draftFor('class-2024-ranger', 14), wisModifiers)
+    const tireless = base.find((item) => item.id === 'ranger-2024-class-tireless')!
+    const veil = base.find((item) => item.id === 'ranger-2024-class-natures-veil')!
+    expect([tireless.max, veil.max]).toEqual([3, 3])
+
+    const fey = listSessionResources(
+      draftFor('class-2024-ranger', 15, { subclassId: 'subclass-2024-ranger-fey-wanderer' }),
+      wisModifiers,
+    )
+    const misty = fey.find((item) => item.id === 'ranger-2024-fey-wanderer-misty-wanderer')!
+    expect(misty).toMatchObject({ max: 3, recovery: 'long-rest' })
+
+    const spent = { ...createInitialSessionState('r5', 90), resourceUsage: { [tireless.id]: 2, [veil.id]: 1, [misty.id]: 2 } }
+    const resources = [...base, ...fey]
+    const shortRested = applyRestRecovery(spent, resources, 'short-rest')
+    expect([tireless, veil, misty].map((item) => getResourceUsed(shortRested, item.id))).toEqual([2, 1, 2])
+    const longRested = applyRestRecovery(spent, resources, 'long-rest')
+    expect([tireless, veil, misty].map((item) => getResourceUsed(longRested, item.id))).toEqual([0, 0, 0])
+  })
+
+  it('游侠：恐惧打击归幽域追猎者；妖精漫游者哀惧灵袭不再产生资源', () => {
+    const wisModifiers = { ...MODIFIERS, wis: 2 }
+    const gloom = listSessionResources(
+      draftFor('class-2024-ranger', 3, { subclassId: 'subclass-2024-ranger-gloom-stalker' }),
+      wisModifiers,
+    )
+    const dreadful = gloom.find((item) => item.id === 'ranger-2024-gloom-stalker-dread-ambusher')!
+    expect(dreadful).toMatchObject({ max: 2, recovery: 'long-rest' })
+
+    const fey = listSessionResources(
+      draftFor('class-2024-ranger', 3, { subclassId: 'subclass-2024-ranger-fey-wanderer' }),
+      wisModifiers,
+    )
+    expect(fey.some((item) => item.id === 'ranger-2024-fey-wanderer-dreadful-strikes')).toBe(false)
+  })
+
+  it('不知疲倦：2024 游侠短休额外降低力竭 1 级，其他职业与 2014 无此效果', () => {
+    expect(getShortRestExhaustionReduction(draftFor('class-2024-ranger', 10))).toBe(1)
+    expect(getShortRestExhaustionReduction(draftFor('class-2024-ranger', 9))).toBe(0)
+    expect(getShortRestExhaustionReduction(draftFor('class-2024-fighter', 10))).toBe(0)
+    const legacy: CharacterDraft = { ...draftFor('class-2024-ranger', 10), ruleset: '5e-2014', classId: 'class-2014-ranger' }
+    expect(getShortRestExhaustionReduction(legacy)).toBe(0)
+  })
 })

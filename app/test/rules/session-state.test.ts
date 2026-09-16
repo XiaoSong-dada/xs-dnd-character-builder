@@ -280,6 +280,19 @@ describe('B10-01 两版休息与生命骰', () => {
     expect(rested.lastRestSnapshot?.currentHp).toBe(10)
   })
 
+  it('2024 短休按特性差额降低力竭并可撤回；2014 忽略该差额、最低为 0', () => {
+    const state = { ...modern(), exhaustionLevel: 2 }
+    const rested = applyShortRest(state, [], 30, { ruleset: '5e-2024', exhaustionReduction: 1 })
+    expect(rested.exhaustionLevel).toBe(1)
+    expect(restoreLastRest(rested).exhaustionLevel).toBe(2)
+
+    const floor = applyShortRest({ ...state, exhaustionLevel: 0 }, [], 30, { ruleset: '5e-2024', exhaustionReduction: 2 })
+    expect(floor.exhaustionLevel).toBe(0)
+
+    const legacy = applyShortRest(state, [], 30, { ruleset: '5e-2014', exhaustionReduction: 1 })
+    expect(legacy.exhaustionLevel).toBe(2)
+  })
+
   it('2024 长休：回满血、法术位与生命骰恢复、力竭 −1、debuff 保持', () => {
     const state = { ...modern(), currentHp: 8, usedSpellSlots: { 2: 3 }, exhaustionLevel: 2, debuffs: ['prone'], hitDice: { total: 5, spent: 4 } }
     const rested = applyLongRest(state, 30, { ruleset: '5e-2024' })

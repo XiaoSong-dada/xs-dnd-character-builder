@@ -58,6 +58,13 @@ const SOULKNIFE_DIE_BY_LEVEL = [
   'd10', 'd10', 'd10', 'd10', 'd10', 'd10', 'd12', 'd12', 'd12', 'd12',
 ] as const
 
+/** 幸运一击：20 级起每次短休或长休后恢复 1 次。 */
+const STROKE_OF_LUCK_USES = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1] as const
+/** 魂刃·灵能面纱：13 级起每次长休 1 次（可消耗灵能骰手动重置）。 */
+const SOULKNIFE_VEIL_USES = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1] as const
+/** 魂刃·撕裂心智：17 级起每次长休 1 次（可消耗 3 枚灵能骰手动重置）。 */
+const SOULKNIFE_REND_MIND_USES = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1] as const
+
 // 2024 诡术师施法表（B01 CV-044 与不全书）：三分之一施法者、准备制、智力施法。
 const ARCANE_TRICKSTER_PREPARED = [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13] as const
 const ARCANE_TRICKSTER_CANTRIPS = [0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4] as const
@@ -171,9 +178,10 @@ export const rogueFeatures2024: readonly ClassFeature[] = [
   },
   {
     id: 'rogue-2024-class-stroke-of-luck', classId: 'class-2024-rogue', name: '幸运一击', englishName: 'Stroke of Luck', level: 20,
-    summary: 'd20 检定失败时可将结果改为 20。',
-    description: '当你在一次 d20 检定中失败时，你可以把该次结果改为 20。',
-    kind: 'passive', status: 'implemented', sourceIds,
+    summary: 'd20 检定失败时可将结果改为 20；每次短休或长休后恢复。',
+    description: '当你在一次 d20 检定中失败时，你可以把该次结果改为 20。此特性一经使用，直至完成短休或长休你都无法再次使用。',
+    kind: 'resource', status: 'implemented', sourceIds,
+    resource: { maxByLevel: STROKE_OF_LUCK_USES, recovery: 'short-rest', note: '每次短休或长休后恢复 1 次' },
   },
 ]
 
@@ -330,7 +338,7 @@ export const rogueSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '灵能骰池（3 级 4d6 → 17 级 12d12）；长休全满、短休恢复 1 枚；可用于失败检定加值或心灵低语。',
     description: '你获得若干灵能骰，骰数与骰面随游荡者等级变化：3 级 4d6、5 级 6d8、9 级 8d8、11 级 8d10、13 级 10d10、17 级 12d12。完成长休重获全部已消耗骰，完成短休额外恢复 1 枚。灵振诀窍——使用已熟练的技能或工具检定失败时，可掷一枚灵能骰加在结果上；只有加值使检定成功时才消耗该骰。心灵低语——以一个魔法动作，选择至多等于熟练加值数量的可见生物，掷一枚灵能骰，在掷值小时内与之建立一里内的心灵感应；每次长休后有一次免费使用，其余使用需消耗灵能骰。',
     kind: 'resource', status: 'implemented', sourceIds,
-    dicePool: { diceByLevel: SOULKNIFE_DICE, dieByLevel: SOULKNIFE_DIE_BY_LEVEL, recovery: 'short-rest', note: '长休全部恢复；短休恢复 1 枚' },
+    dicePool: { diceByLevel: SOULKNIFE_DICE, dieByLevel: SOULKNIFE_DIE_BY_LEVEL, recovery: 'short-rest', shortRestRecovery: 1, note: '长休全部恢复；短休恢复 1 枚' },
   },
   {
     id: 'rogue-2024-soulknife-psychic-blades', subclassId: 'subclass-2024-rogue-soulknife', name: '念刃', englishName: 'Psychic Blades', level: 3,
@@ -349,12 +357,14 @@ export const rogueSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '魔法动作隐形至多 1 小时；造成伤害或迫使豁免即结束；每次长休 1 次，可消耗 1 枚灵能骰重置。',
     description: '以一个魔法动作，你获得隐形状态，持续至多 1 小时或直到你主动解除（无需动作）。造成伤害或迫使生物进行豁免检定会立即结束该隐形。该特性使用后需完成长休才能再次使用；你也可以消耗一枚灵能骰（无需动作）重置其使用权。',
     kind: 'action', status: 'implemented', sourceIds,
+    resource: { maxByLevel: SOULKNIFE_VEIL_USES, recovery: 'long-rest', note: '每次长休 1 次；可消耗 1 枚灵能骰重置（手动扣减）' },
   },
   {
     id: 'rogue-2024-soulknife-rend-mind', subclassId: 'subclass-2024-rogue-soulknife', name: '撕裂心智', englishName: 'Rend Mind', level: 17,
     summary: '念刃造成偷袭伤害时，目标感知豁免失败陷入震慑 1 分钟；每次长休 1 次，可消耗 3 枚灵能骰重置。',
     description: '当你使用念刃对一个生物造成偷袭伤害时，可以迫使该生物进行一次感知豁免（DC=8＋熟练加值＋敏捷调整值）：失败则陷入震慑，持续至多 1 分钟，并在其每个回合结束时重复豁免，成功则结束。该特性使用后需完成长休才能再次使用；你也可以消耗三枚灵能骰（无需动作）重置其使用权。',
     kind: 'passive', status: 'implemented', sourceIds,
+    resource: { maxByLevel: SOULKNIFE_REND_MIND_USES, recovery: 'long-rest', note: '每次长休 1 次；可消耗 3 枚灵能骰重置（手动扣减）' },
   },
 ]
 

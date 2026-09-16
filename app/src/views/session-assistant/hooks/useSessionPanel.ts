@@ -21,7 +21,7 @@ import {
   toggleDebuff,
   undoHitDiceSpend,
 } from '@/rules/session-state'
-import { applyResourceChange, applyRestRecovery, getResourceUsed, listSessionResources } from '@/rules/session-resources'
+import { applyResourceChange, applyRestRecovery, getResourceUsed, getShortRestExhaustionReduction, listSessionResources } from '@/rules/session-resources'
 import { SessionStateStorageService } from '@/services/session-state-storage'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft } from '@/types/character'
@@ -229,7 +229,10 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   }
 
   function shortRest(): void {
-    const rested = applyShortRest(ensureState(), pactSlotLevels.value, maxHp.value, { ruleset: draft.value.ruleset })
+    const rested = applyShortRest(ensureState(), pactSlotLevels.value, maxHp.value, {
+      ruleset: draft.value.ruleset,
+      exhaustionReduction: getShortRestExhaustionReduction(draft.value),
+    })
     persist(applyRestRecovery(rested, sessionResources.value, 'short-rest'))
   }
 

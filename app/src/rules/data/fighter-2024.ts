@@ -327,7 +327,7 @@ export const fighterSubclassFeatures2024: readonly SubclassFeature[] = [
     summary: '灵能骰池（3 级 4d6 → 17 级 12d12；短休恢复 1 枚、长休全部）；庇护力场、灵能打击与念力控物。',
     description: '你获得灵能骰池：3 级 4d6、5 级 6d8、9 级 8d8、11 级 8d10、13 级 10d10、17 级 12d12；完成短休时可重获 1 枚已消耗骰，完成长休时全部重获。可用能力：庇护力场——反应消耗 1 枚灵能骰，为你或 30 尺内一个可见生物降低骰值＋智力调整值的伤害（至少 1）；灵能打击——每回合一次，武器命中 30 尺内目标后消耗 1 枚骰，追加骰值＋智力调整值的力场伤害；念力控物——魔法动作将 30 尺内一个自愿生物或至多大型的未固定物件移动至多 30 尺，每次短休或长休 1 次（可消耗 1 枚灵能骰重置）。',
     kind: 'resource', status: 'implemented', sourceIds,
-    dicePool: { diceByLevel: [0, 0, 4, 4, 6, 6, 6, 6, 8, 8, 8, 8, 10, 10, 10, 10, 12, 12, 12, 12], dieByLevel: ['', '', 'd6', 'd6', 'd8', 'd8', 'd8', 'd8', 'd8', 'd8', 'd10', 'd10', 'd10', 'd10', 'd10', 'd10', 'd12', 'd12', 'd12', 'd12'], recovery: 'short-rest', note: '短休恢复 1 枚，长休全部恢复' },
+    dicePool: { diceByLevel: [0, 0, 4, 4, 6, 6, 6, 6, 8, 8, 8, 8, 10, 10, 10, 10, 12, 12, 12, 12], dieByLevel: ['', '', 'd6', 'd6', 'd8', 'd8', 'd8', 'd8', 'd8', 'd8', 'd10', 'd10', 'd10', 'd10', 'd10', 'd10', 'd12', 'd12', 'd12', 'd12'], recovery: 'short-rest', shortRestRecovery: 1, note: '短休恢复 1 枚，长休全部恢复' },
   },
   {
     id: 'fighter-2024-psi-warrior-telekinetic-adept', subclassId: 'subclass-2024-fighter-psi-warrior', name: '念力精通', englishName: 'Telekinetic Adept', level: 7,

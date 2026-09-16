@@ -165,6 +165,7 @@ export const rangerFeatures2024: readonly ClassFeature[] = [
     description: '原初力量帮你重整旗鼓：以一个魔法动作，你获得 1d8 + 你的感知调整值（至少 1）的临时生命值，使用次数等于你的感知调整值（至少 1 次），完成长休时重获全部次数；此外，当你完成一次短休时，你的力竭等级减少 1 级（若有）。',
     kind: 'resource', status: 'implemented', sourceIds,
     resource: { recovery: 'long-rest', maxFromAbility: { ability: 'wis', minimum: 1 }, note: '魔法动作获得 1d8＋感知临时生命；短休减少 1 级力竭' },
+    shortRestExhaustionReduction: 1,
   },
   {
     id: 'ranger-2024-class-relentless-hunter', classId: 'class-2024-ranger', name: '永恒追猎', englishName: 'Relentless Hunter', level: 13,
@@ -301,10 +302,9 @@ export const rangerSubclassFeatures2024: readonly SubclassFeature[] = [
   // ============ 妖精漫游者 ============
   {
     id: 'ranger-2024-fey-wanderer-dreadful-strikes', subclassId: 'subclass-2024-ranger-fey-wanderer', name: '哀惧灵袭', englishName: 'Dreadful Strikes', level: 3,
-    summary: '武器命中时可追加 2d6 心灵伤害；每回合一次，次数＝感知调整值（至少 1），长休恢复。',
-    description: '当你用武器对生物攻击并命中时，你可以额外对目标造成 2d6 心灵伤害。你每回合只能使用一次该增益，使用次数等于你的感知调整值（至少 1 次），完成长休时重获全部次数。',
-    kind: 'resource', status: 'implemented', sourceIds,
-    resource: { recovery: 'long-rest', maxFromAbility: { ability: 'wis', minimum: 1 }, note: '武器命中追加 2d6 心灵伤害；每回合一次' },
+    summary: '武器命中可追加 1d4 心灵伤害（11 级起 1d6）；每个生物每回合只能受到一次。',
+    description: '当你用一把武器击中一个生物时，你可以对目标造成额外的 1d4 点心灵伤害。每个生物在每个回合只能够受到这一额外伤害一次；你的游侠等级达到 11 级时，这一额外伤害变为 1d6。',
+    kind: 'passive', status: 'implemented', sourceIds,
   },
   {
     id: 'ranger-2024-fey-wanderer-magic', subclassId: 'subclass-2024-ranger-fey-wanderer', name: '妖精漫游者魔法', englishName: 'Fey Wanderer Magic', level: 3,
@@ -341,9 +341,10 @@ export const rangerSubclassFeatures2024: readonly SubclassFeature[] = [
   // ============ 幽域追猎者 ============
   {
     id: 'ranger-2024-gloom-stalker-dread-ambusher', subclassId: 'subclass-2024-ranger-gloom-stalker', name: '恐惧伏击', englishName: 'Dread Ambusher', level: 3,
-    summary: '先攻检定加感知调整值；首回合移动 +10 尺，若该回合执行攻击动作可额外攻击一次并追加 2d6 伤害。',
-    description: '当你投掷先攻时，可以加入你的感知调整值。此外，在你的第一个回合中：移动速度提升 10 尺；若你该回合执行攻击动作，可以额外发动一次武器攻击，该次命中追加 2d6 伤害（类型与武器相同）。',
-    kind: 'passive', status: 'implemented', sourceIds,
+    summary: '先攻加感知调整值；首回合移动 +10 尺；武器命中追加 2d6 心灵伤害（次数＝感知调整值，长休恢复）。',
+    description: '你精通于伏击的恐怖技艺，获得以下增益：伏击者之跃——每场战斗你的第一个回合开始时，你的移动速度增加 10 尺，直到该回合结束；恐惧打击——当你用武器对一个生物攻击并命中时，你可以额外对目标造成 2d6 点心灵伤害，你在每回合中只能使用一次该增益，使用次数等于你的感知调整值（至少 1 次），完成一次长休后重获全部已消耗的次数；先攻加值——当你投掷先攻时，可以在那次掷骰中加入你的感知调整值。',
+    kind: 'resource', status: 'implemented', sourceIds,
+    resource: { recovery: 'long-rest', maxFromAbility: { ability: 'wis', minimum: 1 }, note: '武器命中追加 2d6 心灵伤害；每回合一次，长休恢复全部次数' },
   },
   {
     id: 'ranger-2024-gloom-stalker-magic', subclassId: 'subclass-2024-ranger-gloom-stalker', name: '幽域追猎者魔法', englishName: 'Gloom Stalker Magic', level: 3,

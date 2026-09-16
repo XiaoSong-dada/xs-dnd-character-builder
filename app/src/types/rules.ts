@@ -37,6 +37,8 @@ export interface DicePoolRule {
   readonly dieByLevel?: readonly string[]
   /** 骰池恢复方式（缺省 none，表示不是可消耗池）。 */
   readonly recovery?: 'short-rest' | 'long-rest' | 'none' | 'special'
+  /** 短休只恢复固定枚数（如 2024 灵能骰短休恢复 1 枚）；缺省为短休全部恢复。 */
+  readonly shortRestRecovery?: number
   readonly note?: string
 }
 
@@ -460,6 +462,8 @@ export interface SubclassFeature {
   readonly resource?: ClassResource
   /** 骰池派生数据（按等级变化的骰数与骰面；与消耗池分开）。 */
   readonly dicePool?: DicePoolRule
+  /** 短休额外降低的力竭层数（缺省 0）。 */
+  readonly shortRestExhaustionReduction?: number
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }
@@ -482,6 +486,8 @@ export interface ClassFeature {
   readonly resource?: ClassResource
   /** 骰池派生数据（按等级变化的骰数与骰面；与消耗池分开）。 */
   readonly dicePool?: DicePoolRule
+  /** 短休额外降低的力竭层数（如 2024 游侠·不知疲倦短休力竭 −1；缺省 0）。 */
+  readonly shortRestExhaustionReduction?: number
   /** 本特性额外授予的“自选语言”数量（如 2024 游荡者盗贼黑话额外掌握一门语言）。 */
   readonly languageChoices?: number
   readonly status: CompatibilityStatus
