@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { buildCharacterExportModel } from '@/features/character-export/build-export-data'
 import { deriveCharacter } from '@/rules/derive'
 import { EMPTY_MANUAL_EDITS } from '@/rules/manual-edits'
+import { draft2024, emptySpellSelections, selection } from '../../fixtures/draft-2024'
 import { fighterDraft, fighterExportModel, wizardExportModel } from '../../fixtures/export-character'
 
 describe('CharacterExportModel', () => {
@@ -175,5 +176,124 @@ describe('CharacterExportModel', () => {
     expect(model.spellcasting).toMatchObject({ className: '战士', saveDc: 15, attackBonus: 7 })
     expect(model.spellcasting?.slots).toEqual([{ level: 1, count: 2, pact: false }])
     expect(model.spellcasting?.spells).toContainEqual(expect.objectContaining({ id: 'spell-2014-magic-missile', prepared: true }))
+  })
+})
+
+describe('CharacterExportModel 2024 映射（B11-01）', () => {
+  function modernDraft(overrides: Parameters<typeof draft2024>[0] = {}) {
+    return draft2024({ enabledSourceIds: ['source-2024-phb'], targetLevel: 5, ...overrides })
+  }
+
+  it('选择类特性按检查点类型数据驱动导出：武器精通、子职选项、祈唤与圣职', () => {
+    const ranger = modernDraft({
+      id: 'export-2024-ranger',
+      classId: 'class-2024-ranger',
+      subclassId: 'subclass-2024-ranger-hunter',
+      selections: [
+        selection('class-2024-ranger-mastery-1', ['equipment-2024-longbow', 'equipment-2024-shortsword']),
+        selection('subclass-feature-ranger-2024-hunter-hunters-prey', ['hunter-2024-prey-colossus-slayer']),
+      ],
+    })
+    const rangerModel = buildCharacterExportModel(ranger, deriveCharacter(ranger))
+    expect(rangerModel.features.map((feature) => feature.name)).toEqual(expect.arrayContaining([
+      '武器精通：长弓',
+      '武器精通：短剑',
+      '巨像屠夫',
+    ]))
+    expect(rangerModel.features.find((feature) => feature.name === '武器精通：长弓')?.summary).toContain('缓速')
+
+    const warlock = modernDraft({
+      id: 'export-2024-warlock',
+      classId: 'class-2024-warlock',
+      targetLevel: 2,
+      selections: [selection('class-2024-warlock-invocations-2', ['invocation-2024-armor-of-shadows'])],
+    })
+    const warlockModel = buildCharacterExportModel(warlock, deriveCharacter(warlock))
+    expect(warlockModel.features.map((feature) => feature.name)).toContain('幽影护甲')
+
+    const cleric = modernDraft({
+      id: 'export-2024-cleric',
+      classId: 'class-2024-cleric',
+      targetLevel: 1,
+      selections: [selection('class-2024-cleric-divine-order-1', ['cleric-2024-divine-order-protector'])],
+    })
+    const clericModel = buildCharacterExportModel(cleric, deriveCharacter(cleric))
+    expect(clericModel.features.map((feature) => feature.name)).toContain('保护者')
+  })
+
+  it('2024 法术精通选择单列，技能与物种施法属性不误入特性列表', () => {
+    const wizard = modernDraft({
+      id: 'export-2024-wizard',
+      classId: 'class-2024-wizard',
+      targetLevel: 18,
+      spellSelections: { ...emptySpellSelections(), spellbookSpellIds: ['spell-2024-magic-missile'] },
+      selections: [selection('class-2024-wizard-spell-mastery-1', ['spell-2024-magic-missile'])],
+    })
+    const model = buildCharacterExportModel(wizard, deriveCharacter(wizard))
+    expect(model.features.map((feature) => feature.name)).toContain('魔法飞弹')
+
+    const elf = modernDraft({
+      id: 'export-2024-elf',
+      classId: 'class-2024-fighter',
+      targetLevel: 1,
+      raceId: 'species-2024-elf',
+      subraceId: 'species-2024-elf-drow-lineage',
+      selections: [
+        selection('class-2024-fighter-skills-1', ['skill-perception']),
+        selection('species-2024-elf-spellcasting-ability', ['spell-ability-cha']),
+      ],
+    })
+    const elfModel = buildCharacterExportModel(elf, deriveCharacter(elf))
+    const names = elfModel.features.map((feature) => feature.name)
+    expect(names).not.toContain('察觉')
+    expect(names).not.toContain('魅力')
+  })
+
+  it('2024 物种特性、起源专长与背景属性分配进入导出', () => {
+    const elf = modernDraft({
+      id: 'export-2024-elf-bg',
+      classId: 'class-2024-fighter',
+      targetLevel: 1,
+      raceId: 'species-2024-elf',
+      subraceId: 'species-2024-elf-drow-lineage',
+      backgroundId: 'background-2024-sage',
+      backgroundAbilityAllocation: { int: 2, wis: 1 },
+    })
+    const model = buildCharacterExportModel(elf, deriveCharacter(elf))
+    const names = model.features.map((feature) => feature.name)
+    expect(names).toEqual(expect.arrayContaining(['黑暗视觉', '卓尔魔法', '妖精血统']))
+    expect(names).toContain('魔法学徒（起源专长）')
+    const background = model.features.find((feature) => feature.category === 'background')
+    expect(background?.summary).toContain('属性分配：智力+2、感知+1')
+  })
+
+  it('资源区块按 2024 结算登记（上限与恢复），2014 为空', () => {
+    const barbarian = modernDraft({ id: 'export-2024-barbarian', classId: 'class-2024-barbarian' })
+    const model = buildCharacterExportModel(barbarian, deriveCharacter(barbarian))
+    expect(model.resources.find((resource) => resource.name === '狂暴')).toMatchObject({
+      max: 3,
+      unit: '次',
+      recovery: 'short-rest',
+      shortRestRecovery: 1,
+    })
+
+    const legacy = buildCharacterExportModel(fighterDraft, deriveCharacter(fighterDraft))
+    expect(legacy.resources).toEqual([])
+  })
+
+  it('版本隔离：失效或其他版本的选择不进入导出', () => {
+    const isolated = modernDraft({
+      id: 'export-2024-isolation',
+      classId: 'class-2024-fighter',
+      targetLevel: 4,
+      selections: [
+        { checkpointId: 'fighter-2014-style-1', optionIds: ['style-defense'], confirmedAt: '', invalidatedAt: '2026-09-15T00:00:00.000Z', invalidatedReason: '改版' },
+        selection('fighter-2014-skills-1', ['skill-acrobatics']),
+      ],
+    })
+    const model = buildCharacterExportModel(isolated, deriveCharacter(isolated))
+    const names = model.features.map((feature) => feature.name)
+    expect(names).not.toContain('防御')
+    expect(names).not.toContain('特技')
   })
 })

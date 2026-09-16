@@ -75,13 +75,13 @@ describe('CharacterSheetStep', () => {
     expect(wrapper.text()).not.toContain('feat-bonus-int-1')
   })
 
-  it('2024 草稿显示版本与车卡预览边界（B09-04）', () => {
+  it('2024 草稿显示版本与支持范围（B11-05）', () => {
     const modern: CharacterDraft = { ...draft, ruleset: '5e-2024', classId: 'class-2024-fighter' }
     const wrapper = mount(CharacterSheetStep, { props: { draft: modern, derived: deriveCharacter(modern) } })
 
     expect(wrapper.text()).toContain('规则预览 · 5e-2024')
-    expect(wrapper.text()).toContain('2024 车卡预览')
-    expect(wrapper.text()).toContain('跑团资源结算与导出承载尚未完成')
+    expect(wrapper.text()).toContain('2024 支持')
+    expect(wrapper.text()).toContain('2024 车卡、跑团资源结算与导出已可用')
   })
 
   it('uses Chinese labels for abilities, saving throws, and skills', async () => {

@@ -20,6 +20,7 @@ export function pdfFontBytes(): Uint8Array {
 export function pdfExportCharacterCorpus(): readonly string[] {
   const files = [
     ...collectTypeScriptFiles(resolve(__dirname, '../../src/rules')),
+    resolve(__dirname, '../../src/features/character-export/build-export-data.ts'),
     resolve(__dirname, '../../src/services/export-pdf.ts'),
     resolve(__dirname, 'export-character.ts'),
     resolve(__dirname, 'vv-ff800d07-a8b9-4c1b-a51d-5b4cd25efe24.json'),

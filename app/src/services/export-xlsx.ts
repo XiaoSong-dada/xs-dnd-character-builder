@@ -1,7 +1,7 @@
 import type { Workbook } from 'exceljs'
 
 import { baseUrl } from '@/config/site'
-import { formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
+import { formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
 
 export const CHARACTER_SHEET_TEMPLATE_URL = `${baseUrl}templates/character-sheet-zh.xlsx`
 export const CHARACTER_SHEET_TEMPLATE_VERSION = 4
@@ -44,7 +44,10 @@ function compactFeature(feature: CharacterExportModel['features'][number]): stri
 }
 
 function splitFeatureText(model: CharacterExportModel): { primary: string; additional: string; truncated: boolean } {
-  const entries = model.features.map(compactFeature)
+  const entries = [
+    ...model.features.map(compactFeature),
+    ...(model.resources.length ? [formatExportResources(model.resources)] : []),
+  ]
   const primary: string[] = []
   const additional: string[] = []
   let primaryLength = 0

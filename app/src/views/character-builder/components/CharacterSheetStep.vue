@@ -563,8 +563,8 @@ function handleExportPdf(): void {
 
 <template>
   <section class="character-sheet">
-    <UiNotice v-if="draft.ruleset === '5e-2024'" tone="info" title="2024 车卡预览">
-      2024 车卡流程已可用；跑团资源结算与导出承载尚未完成，数值以规则层登记为准。
+    <UiNotice v-if="draft.ruleset === '5e-2024'" tone="info" title="2024 支持">
+      2024 车卡、跑团资源结算与导出已可用；数值与来源以规则层登记为准。
     </UiNotice>
     <header :class="{ 'character-sheet__header--media': draft.media?.avatar || draft.media?.portrait }">
       <div class="character-sheet__header-content" :class="{ 'character-sheet__header-content--portrait': draft.media?.portrait }">

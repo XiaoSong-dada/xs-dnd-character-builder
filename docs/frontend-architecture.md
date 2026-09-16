@@ -448,9 +448,9 @@ src/services/export-pdf.ts
   -> src/features/character-export/build-export-data（消费唯一 CharacterExportModel，不导入 rules）
 
 src/features/character-export/build-export-data.ts
-  -> src/rules/{repository,spellcasting,weapon-attacks} + src/rules/data/feats-2014（ABILITY_LABELS）
+  -> src/rules/{feats,manual-edits,repositories,session-resources,spellcasting,source-books,timeline,weapon-attacks} + src/rules/data/feats-2014（ABILITY_LABELS）
   -> src/types/character
-  （唯一导出模型：身份、属性、战斗、攻击、物品、钱币、特性、法术、人物资料与诊断）
+  （唯一导出模型：身份、属性、战斗、攻击、物品、钱币、特性与选择、资源、法术、人物资料与诊断；名称与选项按 draft.ruleset 解析）
 
 src/services/draft-storage.ts
   -> src/rules/{manual-edits,starting-equipment}（EMPTY_CURRENCY）⚠️ starting-equipment 为既有越权点

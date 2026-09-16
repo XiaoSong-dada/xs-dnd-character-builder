@@ -4,7 +4,10 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 import type { Workbook } from 'exceljs'
 
+import { buildCharacterExportModel } from '@/features/character-export/build-export-data'
+import { deriveCharacter } from '@/rules/derive'
 import { CHARACTER_SHEET_TEMPLATE_VERSION, buildXlsxFieldValues, fillTemplate, readFieldMapping, readTemplateVersion, verifyFormulaCaches, verifyFullCalculationOnLoad } from '@/services/export-xlsx'
+import { draft2024, selection } from '../fixtures/draft-2024'
 import { fighterExportModel, wizardExportModel } from '../fixtures/export-character'
 
 const TEMPLATE_PATH = resolve(__dirname, '../../public/templates/character-sheet-zh.xlsx')
@@ -35,6 +38,29 @@ describe('export-xlsx v4 模板契约', () => {
     expect(wizard.spell_slot_1_total).toBe(4)
     expect(wizard.spell_slot_2_total).toBe(2)
     expect(Object.values(wizard).filter((value) => value === '魔法飞弹')).toHaveLength(1)
+  })
+
+  it('2024 模型导出资源区块与选择类特性（B11-01/04）', () => {
+    const draft = draft2024({
+      id: 'xlsx-2024',
+      classId: 'class-2024-ranger',
+      subclassId: 'subclass-2024-ranger-hunter',
+      targetLevel: 5,
+      enabledSourceIds: ['source-2024-phb'],
+      selections: [
+        selection('class-2024-ranger-mastery-1', ['equipment-2024-longbow', 'equipment-2024-shortsword']),
+        selection('subclass-feature-ranger-2024-hunter-hunters-prey', ['hunter-2024-prey-colossus-slayer']),
+      ],
+    })
+    const model = buildCharacterExportModel(draft, deriveCharacter(draft))
+    expect(model.resources.length).toBeGreaterThan(0)
+    const { values, diagnostics } = buildXlsxFieldValues(model)
+    expect(diagnostics.filter((item) => item.severity === 'error')).toEqual([])
+    const featureText = `${values.features_traits}\n${values.additional_features}`
+    expect(featureText).toContain('武器精通：长弓')
+    expect(featureText).toContain('巨像屠夫')
+    expect(featureText).toContain('资源：')
+    expect(featureText).toContain('宿敌')
   })
 
   it('写入输入值并保留公式及缓存结果', async () => {

@@ -33,12 +33,12 @@ describe('ValidationStep 提示级校验呈现（B09-04）', () => {
     expect(wrapper.emitted('go')).toEqual([['spells']])
   })
 
-  it('2024 草稿显示车卡预览与边界说明', () => {
+  it('2024 草稿显示支持范围说明（B11-05）', () => {
     const wrapper = mount(ValidationStep, { props: { issues: [], ruleset: '5e-2024' } })
 
-    expect(wrapper.text()).toContain('2024 车卡预览')
-    expect(wrapper.text()).toContain('跑团资源结算与导出承载尚未完成')
+    expect(wrapper.text()).toContain('2024 支持')
+    expect(wrapper.text()).toContain('跑团资源结算与导出已完成')
     const legacy = mount(ValidationStep, { props: { issues: [] } })
-    expect(legacy.text()).not.toContain('2024 车卡预览')
+    expect(legacy.text()).not.toContain('2024 支持')
   })
 })

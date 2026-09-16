@@ -101,6 +101,44 @@ describe('CharacterJsonService', () => {
     expect(roundTrip.enabledSourceIds).toEqual(['source-2024-phb'])
   })
 
+  it('v8 2024 草稿完整往返保留装备、法术、语言与背景属性分配，且 JSON 不含图片', () => {
+    const imported = CharacterJsonService.importDraft(JSON.stringify({
+      schemaVersion: 8,
+      id: 'v8-2024-rich',
+      ruleset: '5e-2024',
+      baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 },
+      enabledSourceIds: ['source-2024-phb'],
+      classId: 'class-2024-cleric',
+      subclassId: 'subclass-2024-cleric-life-domain',
+      targetLevel: 3,
+      backgroundId: 'background-2024-sage',
+      backgroundAbilityAllocation: { int: 2, wis: 1 },
+      languages: ['通用手语', '龙语'],
+      selections: [{ checkpointId: 'class-2024-cleric-divine-order-1', optionIds: ['cleric-2024-divine-order-protector'], confirmedAt: '2026-09-11T00:00:00.000Z' }],
+      inventory: [{ id: 'inv-longsword', itemId: 'equipment-2024-longsword', quantity: 1, equippedQuantity: 1, sourceKind: 'class' }],
+      spellSelections: {
+        cantripIds: ['spell-2024-guidance'],
+        knownSpellIds: [],
+        preparedSpellIds: ['spell-2024-bless'],
+        spellbookSpellIds: [],
+        transcribedSpellIds: [],
+      },
+      media: { avatar: { mediaId: 'media-1', mimeType: 'image/webp', width: 64, height: 64 } },
+    }), { preserveMedia: true })
+
+    const exported = CharacterJsonService.exportDraft(imported)
+    expect(exported).not.toContain('media')
+    const roundTrip = CharacterJsonService.importDraft(exported)
+    expect(roundTrip.ruleset).toBe('5e-2024')
+    expect(roundTrip.enabledSourceIds).toEqual(['source-2024-phb'])
+    expect(roundTrip.selections).toEqual(imported.selections)
+    expect(roundTrip.inventory).toEqual(imported.inventory)
+    expect(roundTrip.spellSelections).toEqual(imported.spellSelections)
+    expect(roundTrip.languages).toEqual(['通用手语', '龙语'])
+    expect(roundTrip.backgroundAbilityAllocation).toEqual({ int: 2, wis: 1 })
+    expect(roundTrip.media).toBeUndefined()
+  })
+
   it('v8 导入为缺失的子职额外入书字段补默认值，并保留已有选择', () => {
     const withoutField = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 8,

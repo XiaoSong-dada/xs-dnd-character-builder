@@ -75,6 +75,16 @@ describe('完整角色包', () => {
     expect(imported.enabledSourceIds).toEqual([])
   })
 
+  it('2024 角色包含图片往返保留版本与媒体（B11-02）', async () => {
+    await CharacterMediaStorageService.save(new NodeBlob(['avatar-2024'], { type: 'image/webp' }) as Blob, 'avatar-2024-old')
+    const draft = draftWith({ avatar: { mediaId: 'avatar-2024-old', mimeType: 'image/webp', width: 256, height: 256 } }, '5e-2024')
+    const bytes = await CharacterPackageService.build(draft)
+    const imported = await CharacterPackageService.import(new Blob([bytes as BlobPart], { type: 'application/zip' }))
+    expect(imported.ruleset).toBe('5e-2024')
+    expect(imported.media?.avatar?.mediaId).not.toBe('avatar-2024-old')
+    expect(await readText(await CharacterMediaStorageService.load(imported.media!.avatar!.mediaId))).toBe('avatar-2024')
+  })
+
   it('区分损坏 ZIP 与缺少 character.json', async () => {
     await expect(CharacterPackageService.import(new Blob(['bad'], { type: 'application/zip' }))).rejects.toThrow('ZIP')
     const { zipSync } = await import('fflate')

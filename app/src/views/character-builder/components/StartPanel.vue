@@ -116,7 +116,7 @@ const hasSiteInfo = computed(() => Boolean(siteConfig.authorName || siteConfig.g
       tone="warning"
       title="发现旧版 2024 草稿"
     >
-      这些草稿已安全隔离，当前 2014 车卡不会自动转换或修改它们。你仍可导出原始 JSON 备份。
+      这些草稿已安全隔离，当前车卡流程不会自动转换或修改它们。你仍可导出原始 JSON 备份。
     </UiNotice>
     <article v-for="draft in legacyDrafts" :key="draft.id" class="start-panel__legacy">
       <span>

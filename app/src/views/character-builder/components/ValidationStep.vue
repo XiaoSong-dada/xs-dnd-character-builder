@@ -17,8 +17,8 @@ const warnings = computed(() => props.issues.filter((issue) => issue.severity !=
     <UiNotice v-if="!issues.length" tone="success" title="规则校验通过">所有必选项均已完成，可以生成角色卡。</UiNotice>
     <UiNotice v-else-if="errors.length" tone="error" title="仍有需要处理的项目">错误会阻止合法完成；提示项允许预览但建议补齐。</UiNotice>
     <UiNotice v-else tone="warning" title="可以继续，但存在提示项">提示不影响完成；补齐后角色更完整。</UiNotice>
-    <UiNotice v-if="ruleset === '5e-2024'" tone="info" title="2024 车卡预览">
-      2024 车卡流程已可用；跑团资源结算与导出承载尚未完成，本页只校验车卡范围内的必选项。
+    <UiNotice v-if="ruleset === '5e-2024'" tone="info" title="2024 支持">
+      2024 车卡流程已可用；跑团资源结算与导出已完成，本页只校验车卡范围内的必选项。
     </UiNotice>
     <template v-if="errors.length">
       <h3 class="validation-step__group">需要处理（{{ errors.length }}）</h3>

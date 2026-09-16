@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
@@ -128,6 +128,21 @@ describe('character drafts store', () => {
 
     store.updateDraft({ classId: 'class-2024-fighter', targetLevel: 3 })
     expect(SessionStateStorageService.load(draft.id)?.resourceUsage).toEqual({})
+  })
+
+  it('旧版 2024 隔离草稿可按原始 JSON 导出（B11-05）', () => {
+    const raw = { schemaVersion: 7, id: 'legacy-2024', ruleset: '5e-2024', name: '旧角色', targetLevel: 5 }
+    localStorage.setItem('dnd-character-builder:drafts:v1', JSON.stringify([raw]))
+    const store = useCharacterDraftsStore()
+    expect(store.legacyDrafts.map((draft) => draft.id)).toContain('legacy-2024')
+
+    const download = vi.spyOn(CharacterJsonService, 'downloadRaw').mockImplementation(() => {})
+    store.exportLegacyDraft('legacy-2024')
+    expect(download).toHaveBeenCalledTimes(1)
+    const [text, filename] = download.mock.calls[0]!
+    expect(JSON.parse(text)).toEqual(raw)
+    expect(filename).toContain('2024-backup.json')
+    download.mockRestore()
   })
 
   it('两版草稿共存并在刷新后恢复', async () => {
