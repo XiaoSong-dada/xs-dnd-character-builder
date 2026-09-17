@@ -325,8 +325,8 @@ export const warlockSubclassFeatures2024: readonly SubclassFeature[] = [
   },
   {
     id: 'warlock-2024-goo-awakened-mind', subclassId: 'subclass-2024-warlock-great-old-one-patron', name: '唤醒心灵', englishName: 'Awakened Mind', level: 3,
-    summary: '附赠动作与 30 尺内可见生物建立心灵链接：可用互相知晓的语言心灵交流，距离不超过魅力调整值英里（至少 1），持续魔契师等级分钟。',
-    description: '以一个附赠动作，你指定 30 尺内一个可见生物并建立心灵链接。当你们相距不超过等于你魅力调整值（至少 1）的英里数时，可以用心灵感应交谈，但双方必须使用对方知晓的语言。链接持续等于你魔契师等级的分钟数，在你建立另一道链接时提前结束。',
+    summary: '附赠动作与 30 尺内可见生物建立心灵链接：可用互相知晓的语言心灵交流，距离不超过魅力调整值的里数（至少 1 里），持续魔契师等级分钟。',
+    description: '以一个附赠动作，你指定 30 尺内一个可见生物并建立心灵链接。当你们相距不超过等于你魅力调整值（至少 1）的里数时，可以用心灵感应交谈，但双方必须使用对方知晓的语言。链接持续等于你魔契师等级的分钟数，在你建立另一道链接时提前结束。',
     kind: 'bonus-action', status: 'implemented', sourceIds,
   },
   {

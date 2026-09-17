@@ -21,10 +21,10 @@
 | 抗毒护符 | Periapt of Proof against Poison | 稀有 | 奇物 | 佩戴者免疫毒素伤害与中毒状态。 | selectable |
 | 伤口愈合护符 | Periapt of Wound Closure | 非普通 | 奇物 | 稳定生命值；倒地昏迷时自动稳定。 | selectable |
 | 爱情灵药 | Philter of Love | 非普通 | 奇物 | 饮用者被指定生物魅惑 1 小时。 | selectable |
-| 慑魂风笛 | Pipes of Haunting | 非普通 | 奇物 | 吹奏令 9 米内生物恐惧（豁免 DC 15）。 | selectable |
+| 慑魂风笛 | Pipes of Haunting | 非普通 | 奇物 | 吹奏令 30 尺内生物恐惧（豁免 DC 15）。 | selectable |
 | 下水道风笛 | Pipes of the Sewers | 非普通 | 奇物 | 召唤并控制鼠群，可指挥老鼠攻击。 | selectable |
 | 以太化板甲 | Plate Armor of Etherealness | 传说 | 护甲（板甲） | 命令后穿戴者与护甲一同进入以太位面，可穿过物体。 | selectable |
-| 便携洞 | Portable Hole | 稀有 | 奇物 | 展开成直径 1.8 米、深 2.4 米的次元空间布，可收纳大量物品。 | selectable |
+| 便携洞 | Portable Hole | 稀有 | 奇物 | 展开成直径 6 尺、深 8 尺的次元空间布，可收纳大量物品。 | selectable |
 
 ## 药水（Potion，本段内）
 

@@ -12,7 +12,7 @@
 | 火巨灵链甲 | Efreeti Chain | 传说 | 护甲（链甲） | AC +3、火焰伤害免疫、可施放火焰相关法术、懂得火巨灵语。 | selectable |
 | 元素宝石 | Elemental Gem | 非普通 | 奇物 | 捏碎宝石召唤一只对应元素的仆从，为其服务 1 小时。 | selectable |
 | 精灵链甲 | Elven Chain | 稀有 | 护甲（链甲衫） | 无需护甲熟练即可正常使用；AC 13 + 敏捷调整值。 | selectable |
-| 魅惑之眼 | Eyes of Charming | 非普通 | 奇物 | 每日 3 次对 9 米内生物施放魅惑术（豁免 DC 13）。 | selectable |
+| 魅惑之眼 | Eyes of Charming | 非普通 | 奇物 | 每日 3 次对 30 尺内生物施放魅惑术（豁免 DC 13）。 | selectable |
 | 微观视觉之眼 | Eyes of Minute Seeing | 非普通 | 奇物 | 近距离观察微小细节的检定优势（如搜索陷阱机关）。 | selectable |
 | 鹰眼 | Eyes of the Eagle | 非普通 | 奇物 | 远距离观察的感知（察觉）检定优势。 | selectable |
 

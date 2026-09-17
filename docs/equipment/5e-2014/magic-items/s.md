@@ -7,7 +7,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 骑士马鞍 | Saddle of the Cavalier | 非普通 | 奇物 | 骑乘时不易被击落马；对抗击落的效果优势。 | selectable |
 | 迅捷弯刀 | Scimitar of Speed | 非常稀有 | 武器（弯刀） | 轻灵迅捷：可用附赠动作进行一次攻击。 | selectable |
-| 防护卷轴 | Scroll of Protection | 稀有 | 奇物 | 展开后在 9 米内形成防护光环，阻止特定类型生物进入。 | selectable |
+| 防护卷轴 | Scroll of Protection | 稀有 | 奇物 | 展开后在 30 尺内形成防护光环，阻止特定类型生物进入。 | selectable |
 | 哨兵盾 | Sentinel Shield | 非普通 | 护甲（盾牌） | 先攻检定优势；感知（察觉）检定优势。 | selectable |
 | 附魔盾 +1/+2/+3 | Shield, +1/+2/+3 | 非普通/稀有/非常稀有 | 护甲（盾牌） | 盾牌获得对应 AC 魔法加值。 | index-only |
 | 引弹盾 | Shield of Missile Attraction | 稀有 | 护甲（盾牌，诅咒） | AC +2 但远程攻击被吸引射向持盾者；诅咒难除。 | selectable |
@@ -15,7 +15,7 @@
 | 至尊胶 | Sovereign Glue | 传说 | 奇物 | 粘合任何物体，几乎无法分离（万能溶剂可解）。 | selectable |
 | 法术卷轴 | Spell Scroll | 常见~传说 | 奇物 | 储存一个法术；职业匹配可读，否则需施法检定。 | index-only |
 | 法术防护盾 | Spellguard Shield | 非常稀有 | 护甲（盾牌） | 对抗法术的豁免优势；法术攻击对持盾者有劣势。 | selectable |
-| 湮灭球 | Sphere of Annihilation | 传说 | 奇物 | 直径 0.6 米的黑色球体，吞噬一切接触之物，极难控制。 | selectable |
+| 湮灭球 | Sphere of Annihilation | 传说 | 奇物 | 直径 2 尺的黑色球体，吞噬一切接触之物，极难控制。 | selectable |
 | 魅惑法杖 | Staff of Charming | 稀有 | 法杖 | 可施放魅惑人类、命令术、魅惑怪物；察觉被魅惑的优势。 | selectable |
 | 火焰法杖 | Staff of Fire | 非常稀有 | 法杖 | 可施放火球、燃火术、火焰之手、焰击术等火系法术。 | selectable |
 | 寒冰法杖 | Staff of Frost | 非常稀有 | 法杖 | 可施放冰风暴、冰墙、寒冰锥等冰系法术；寒冷抗力。 | selectable |

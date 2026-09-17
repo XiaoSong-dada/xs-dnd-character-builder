@@ -9,7 +9,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 瓦解硬头锤 | Mace of Disruption | 稀有 | 武器（硬头锤） | 对亡灵与邪魔额外伤害；亡灵生命值不足时直接摧毁。 | selectable |
 | 痛击硬头锤 | Mace of Smiting | 稀有 | 武器（硬头锤） | 攻击骰 20 时额外伤害；破坏物体时伤害最大化。 | selectable |
-| 恐惧硬头锤 | Mace of Terror | 稀有 | 武器（硬头锤） | 命令后 9 米内生物恐惧（豁免 DC 15），持续 1 分钟。 | selectable |
+| 恐惧硬头锤 | Mace of Terror | 稀有 | 武器（硬头锤） | 命令后 30 尺内生物恐惧（豁免 DC 15），持续 1 分钟。 | selectable |
 | 法术抗力斗篷 | Mantle of Spell Resistance | 稀有 | 奇物 | 对抗法术的豁免检定优势。 | selectable |
 | 健康之书 | Manual of Bodily Health | 非常稀有 | 奇物 | 阅读 48 小时后永久体质 +2（上限 30）。 | selectable |
 | 增益锻炼之书 | Manual of Gainful Exercise | 非常稀有 | 奇物 | 阅读 48 小时后永久力量 +2（上限 30）。 | selectable |

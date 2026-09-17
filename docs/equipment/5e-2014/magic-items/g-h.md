@@ -25,13 +25,13 @@
 | 智力头带 | Headband of Intellect | 非普通 | 奇物 | 佩戴者智力值设为 19。 | selectable |
 | 光辉头盔 | Helm of Brilliance | 非常稀有 | 奇物 | 镶满魔法宝石，可发出光芒、施放火球与日光术；宝石用尽后损坏。 | selectable |
 | 通晓语言头盔 | Helm of Comprehending Languages | 非普通 | 奇物 | 施放通晓语言，读懂文字听懂语言。 | selectable |
-| 心灵感应头盔 | Helm of Telepathy | 非普通 | 奇物 | 施放侦测思想；可与 36 米内生物心灵交流。 | selectable |
+| 心灵感应头盔 | Helm of Telepathy | 非普通 | 奇物 | 施放侦测思想；可与 120 尺内生物心灵交流。 | selectable |
 | 传送头盔 | Helm of Teleportation | 稀有 | 奇物 | 每日 3 次施放传送术。 | selectable |
 | 神圣复仇者 | Holy Avenger | 传说 | 武器（剑） | 圣武士专属：持用时法术豁免 +2；对邪恶生物额外伤害，展开防护光环。 | selectable |
-| 爆音号角 | Horn of Blasting | 稀有 | 奇物 | 吹响发出爆音，9 米内生物受音波伤害；有反震自伤风险。 | selectable |
+| 爆音号角 | Horn of Blasting | 稀有 | 奇物 | 吹响发出爆音，30 尺内生物受音波伤害；有反震自伤风险。 | selectable |
 | 瓦尔哈拉号角 | Horn of Valhalla | 稀有~传说 | 奇物 | 吹响召唤狂暴战士协助战斗（银/黄铜/青铜/铁号角召唤数量不同）。 | index-only |
 | 轻风马蹄铁 | Horseshoes of a Zephyr | 非常稀有 | 奇物 | 钉上后坐骑如履平地、跳跃距离三倍、不受困难地形影响。 | selectable |
-| 疾速马蹄铁 | Horseshoes of Speed | 稀有 | 奇物 | 钉上后坐骑速度 +9 米。 | selectable |
+| 疾速马蹄铁 | Horseshoes of Speed | 稀有 | 奇物 | 钉上后坐骑速度 +30 尺。 | selectable |
 
 ## 尾注
 

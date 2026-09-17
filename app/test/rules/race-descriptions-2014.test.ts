@@ -47,8 +47,8 @@ describe('2014 种族介绍登记', () => {
         expect(race.description, `${race.id} 介绍应提及速度`).toContain('速度')
       }
     }
-    // 木精灵 speed 35 → 10.5 米；矮人 speed 25 → 7.5 米
-    expect(byId.get('race-2014-elf-wood')?.description).toContain('10.5 米')
-    expect(byId.get('race-2014-dwarf')?.description).toContain('7.5 米')
+    // 木精灵 speed 35 尺；矮人 speed 25 尺（U03：统一为不全书用字）
+    expect(byId.get('race-2014-elf-wood')?.description).toContain('35 尺')
+    expect(byId.get('race-2014-dwarf')?.description).toContain('25 尺')
   })
 })

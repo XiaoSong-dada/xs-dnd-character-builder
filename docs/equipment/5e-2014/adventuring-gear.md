@@ -15,8 +15,8 @@
 | `equipment-2014-bolts` | 弩矢（20 支） | Crossbow bolts | 1 gp | 1.5 磅 | 弩用弹药，一盒 20 支。 | implemented |
 | `equipment-2014-bolt-case` | 弩矢盒 | Crossbow bolt case | 1 gp | 1 磅 | 可装 20 支弩矢的盒子，便于斜挎携带。 | pending |
 | `equipment-2014-quiver` | 箭袋 | Quiver | 1 gp | 1 磅 | 可装 20 支箭的箭袋。 | implemented |
-| `equipment-2014-backpack` | 背包 | Backpack | 2 gp | 5 磅 | 可背负约 15 千克物品。 | implemented |
-| `equipment-2014-ball-bearings-bag` | 滚珠（一袋） | Ball bearings | 1 gp | 2 磅 | 撒出覆盖 3 米方块，经过者敏捷豁免失败倒地。 | implemented |
+| `equipment-2014-backpack` | 背包 | Backpack | 2 gp | 5 磅 | 可背负约 30 磅物品。 | implemented |
+| `equipment-2014-ball-bearings-bag` | 滚珠（一袋） | Ball bearings | 1 gp | 2 磅 | 撒出覆盖 10 尺方块，经过者敏捷豁免失败倒地。 | implemented |
 | `equipment-2014-barrel` | 木桶 | Barrel | 2 gp | 70 磅 | 装液体或散货的密封木桶。 | pending |
 | `equipment-2014-basket` | 篮子 | Basket | 4 sp | 2 磅 | 藤编提篮，可盛放物品。 | pending |
 | `equipment-2014-bedroll` | 铺盖 | Bedroll | 1 gp | 7 磅 | 野外睡眠用铺盖。 | implemented |
@@ -27,9 +27,9 @@
 | `equipment-2014-glass-bottle` | 玻璃瓶 | Bottle, glass | 2 gp | 2 磅 | 装液体的玻璃瓶。 | pending |
 | `equipment-2014-bucket` | 水桶 | Bucket | 5 cp | 2 磅 | 打水或搬运用木桶。 | pending |
 | `equipment-2014-caltrops` | 铁蒺藜（一袋 20 枚） | Caltrops | 1 gp | 2 磅 | 撒在地上，经过者敏捷豁免失败则受 1 点穿刺伤害且速度受限。 | pending |
-| `equipment-2014-candle` | 蜡烛 | Candle | 1 cp | — | 燃烧 1 小时，照亮 1.5 米。 | implemented |
+| `equipment-2014-candle` | 蜡烛 | Candle | 1 cp | — | 燃烧 1 小时，照亮 5 尺。 | implemented |
 | `equipment-2014-map-case` | 地图或卷轴匣 | Case, map or scroll | 1 gp | 1 磅 | 存放地图与卷轴的匣子。 | implemented |
-| `equipment-2014-chain` | 锁链（3 米） | Chain | 5 gp | 10 磅 | 可锁住物体，需开锁或力量检定破坏。 | pending |
+| `equipment-2014-chain` | 锁链（10 尺） | Chain | 5 gp | 10 磅 | 可锁住物体，需开锁或力量检定破坏。 | pending |
 | `equipment-2014-chalk` | 粉笔（1 支） | Chalk | 1 cp | — | 在粗糙表面书写的粉笔。 | pending |
 | `equipment-2014-chest` | 箱子 | Chest | 5 gp | 25 磅 | 可上锁的储物箱。 | implemented |
 | `equipment-2014-climbers-kit` | 攀爬工具 | Climber's kit | 25 gp | 12 磅 | 岩钉、绳索、滑轮等攀爬装备，攀爬检定优势。 | pending |
@@ -49,10 +49,10 @@
 | `equipment-2014-hunting-trap` | 捕猎陷阱 | Hunting trap | 5 gp | 25 磅 | 可设置捕捉小型动物的陷阱。 | implemented |
 | `equipment-2014-ink-bottle` | 墨水（一瓶） | Ink | 10 gp | — | 一瓶墨水。 | implemented |
 | `equipment-2014-ink-pen` | 墨水笔 | Ink pen | 2 cp | — | 书写用笔。 | implemented |
-| `equipment-2014-ladder` | 梯子（3 米） | Ladder | 1 sp | 25 磅 | 木制直梯。 | pending |
-| `equipment-2014-lamp` | 油灯 | Lamp | 5 sp | 1 磅 | 照亮 9 米（明亮）并向外 9 米（微光），燃烧 6 小时。 | implemented |
-| `equipment-2014-bullseye-lantern` | 牛眼提灯 | Lantern, bullseye | 10 gp | 2 磅 | 锥形光束照亮 18 米（明亮）并向外 18 米（微光）。 | pending |
-| `equipment-2014-hooded-lantern` | 附盖提灯 | Lantern, hooded | 5 gp | 2 磅 | 点燃后照亮 9 米（明亮）并向外 9 米（微光），可盖住遮光。 | implemented |
+| `equipment-2014-ladder` | 梯子（10 尺） | Ladder | 1 sp | 25 磅 | 木制直梯。 | pending |
+| `equipment-2014-lamp` | 油灯 | Lamp | 5 sp | 1 磅 | 照亮 30 尺（明亮）并向外 30 尺（微光），燃烧 6 小时。 | implemented |
+| `equipment-2014-bullseye-lantern` | 牛眼提灯 | Lantern, bullseye | 10 gp | 2 磅 | 锥形光束照亮 60 尺（明亮）并向外 60 尺（微光）。 | pending |
+| `equipment-2014-hooded-lantern` | 附盖提灯 | Lantern, hooded | 5 gp | 2 磅 | 点燃后照亮 30 尺（明亮）并向外 30 尺（微光），可盖住遮光。 | implemented |
 | `equipment-2014-lock` | 锁 | Lock | 10 gp | 1 磅 | 附钥匙的机械锁，盗贼工具开锁需成功检定。 | pending |
 | `equipment-2014-magnifying-glass` | 放大镜 | Magnifying glass | 100 gp | — | 放大细小物体，检查物件时优势。 | pending |
 | `equipment-2014-manacles` | 镣铐 | Manacles | 2 gp | 6 磅 | 束缚中型或小型生物双手，开锁或力量检定可挣脱。 | pending |
@@ -63,13 +63,13 @@
 | `equipment-2014-parchment-sheet` | 羊皮纸 | Parchment | 1 sp | — | 一张羊皮纸。 | implemented |
 | `equipment-2014-perfume-vial` | 香水（一小瓶） | Perfume | 5 gp | — | 一小瓶香水。 | implemented |
 | `equipment-2014-piton` | 岩钉 | Piton | 5 cp | 0.25 磅 | 攀岩与固定绳索用岩钉。 | implemented |
-| `equipment-2014-pole` | 长杆（3 米） | Pole | 5 cp | 7 磅 | 探查陷阱或够取物品的长木杆。 | pending |
+| `equipment-2014-pole` | 长杆（10 尺） | Pole | 5 cp | 7 磅 | 探查陷阱或够取物品的长木杆。 | pending |
 | `equipment-2014-iron-pot` | 铁锅 | Pot, iron | 2 gp | 10 磅 | 烹饪用铁锅。 | implemented |
 | `equipment-2014-pouch` | 钱袋 | Pouch | 5 sp | 1 磅 | 装钱币与小物的布/皮袋。 | pending |
 | `equipment-2014-portable-ram` | 便携攻城锤 | Ram, portable | 4 gp | 35 磅 | 两人操作的撞门铁头木槌，破门检定加成。 | pending |
 | `equipment-2014-rations` | 口粮（1 天） | Rations | 5 sp | 2 磅 | 供一人一天所需的干粮。 | implemented |
-| `equipment-2014-hempen-rope-50` | 麻绳（15 米） | Rope, hempen | 1 gp | 10 磅 | 15 米麻绳，可承重拉拽。 | implemented |
-| `equipment-2014-silk-rope-50` | 丝绳（15 米） | Rope, silk | 10 gp | 5 磅 | 15 米丝绳，比麻绳更轻更结实。 | implemented |
+| `equipment-2014-hempen-rope-50` | 麻绳（50 尺） | Rope, hempen | 1 gp | 10 磅 | 50 尺麻绳，可承重拉拽。 | implemented |
+| `equipment-2014-silk-rope-50` | 丝绳（50 尺） | Rope, silk | 10 gp | 5 磅 | 50 尺丝绳，比麻绳更轻更结实。 | implemented |
 | `equipment-2014-sack` | 麻袋 | Sack | 1 cp | 0.5 磅 | 装物用的粗布袋。 | pending |
 | `equipment-2014-merchants-scale` | 商人秤 | Scale, merchant's | 5 gp | 3 磅 | 称量贵金属与货物的天平。 | pending |
 | `equipment-2014-sealing-wax` | 封蜡 | Sealing wax | 5 sp | — | 密封信封用的蜡。 | implemented |
@@ -80,10 +80,10 @@
 | `equipment-2014-spellbook` | 法术书 | Spellbook | 50 gp | 3 磅 | 法师记录法术的必备书册。 | implemented |
 | `equipment-2014-iron-spikes` | 铁钉（10 枚） | Spikes, iron | 1 gp | 5 磅 | 钉门或制作临时障碍用。 | pending |
 | `equipment-2014-spyglass` | 望远镜 | Spyglass | 1,000 gp | 1 磅 | 放大远处物体的贵重光学器具。 | pending |
-| `equipment-2014-string-10` | 细绳（3 米） | String | 1 cp | 0.5 磅 | 3 米细绳。 | implemented |
+| `equipment-2014-string-10` | 细绳（10 尺） | String | 1 cp | 0.5 磅 | 10 尺细绳。 | implemented |
 | `equipment-2014-tent` | 双人帐篷 | Tent, two-person | 2 gp | 20 磅 | 可住两人的简易帐篷。 | pending |
 | `equipment-2014-tinderbox` | 火绒盒 | Tinderbox | 5 sp | 1 磅 | 打火用具，可点燃火把等。 | implemented |
-| `equipment-2014-torch` | 火把 | Torch | 1 cp | 1 磅 | 燃烧 1 小时，照亮 6 米（明亮）并向外 6 米（微光）。 | implemented |
+| `equipment-2014-torch` | 火把 | Torch | 1 cp | 1 磅 | 燃烧 1 小时，照亮 20 尺（明亮）并向外 20 尺（微光）。 | implemented |
 | `equipment-2014-vial` | 小瓶 | Vial | 1 gp | — | 装液体的小玻璃瓶。 | pending |
 | `equipment-2014-waterskin` | 水袋 | Waterskin | 2 sp | 5 磅（满） | 可盛约 2 升水的皮袋。 | implemented |
 | `equipment-2014-whetstone` | 磨刀石 | Whetstone | 1 cp | 1 磅 | 打磨刀刃的石头。 | pending |

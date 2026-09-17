@@ -8,7 +8,7 @@
 | 中文名 | 英文名 | 稀有度 | 类型 | 效果摘要（原创转述） | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | 束缚魔杖 | Wand of Binding | 稀有 | 魔杖 | 可施放束缚类法术（束缚、缓慢、定身等）。 | selectable |
-| 侦测敌人魔杖 | Wand of Enemy Detection | 稀有 | 魔杖 | 10 分钟内侦测 18 米内怀有敌意的生物。 | selectable |
+| 侦测敌人魔杖 | Wand of Enemy Detection | 稀有 | 魔杖 | 10 分钟内侦测 60 尺内怀有敌意的生物。 | selectable |
 | 恐惧魔杖 | Wand of Fear | 稀有 | 魔杖 | 施放恐惧术（豁免 DC 15）。 | selectable |
 | 火球魔杖 | Wand of Fireballs | 稀有 | 魔杖 | 施放火球术（豁免 DC 15，每日 7 充能）。 | selectable |
 | 闪电束魔杖 | Wand of Lightning Bolts | 稀有 | 魔杖 | 施放闪电束（豁免 DC 15，每日 7 充能）。 | selectable |
@@ -16,7 +16,7 @@
 | 魔法飞弹魔杖 | Wand of Magic Missiles | 非普通 | 魔杖 | 施放魔法飞弹（每日 7 充能）。 | selectable |
 | 麻痹魔杖 | Wand of Paralysis | 稀有 | 魔杖 | 施放定身术（豁免 DC 15，每日 7 充能）。 | selectable |
 | 变形魔杖 | Wand of Polymorph | 非常稀有 | 魔杖 | 施放变形术（豁免 DC 15）。 | selectable |
-| 秘钥魔杖 | Wand of Secrets | 非普通 | 魔杖 | 侦测 9 米内的秘密门与机关。 | selectable |
+| 秘钥魔杖 | Wand of Secrets | 非普通 | 魔杖 | 侦测 30 尺内的秘密门与机关。 | selectable |
 | 战斗法师魔杖 | Wand of the War Mage | 非普通~非常稀有 | 魔杖 | 持用时法术攻击检定获得 +1/+2/+3 加值。 | index-only |
 | 蛛网魔杖 | Wand of Web | 非普通 | 魔杖 | 施放蛛网术（豁免 DC 13，每日 7 充能）。 | selectable |
 | 惊奇魔杖 | Wand of Wonder | 稀有 | 魔杖 | 施放随机魔法效果（掷表决定，含火球、变羊、彩虹等）。 | selectable |

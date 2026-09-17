@@ -18,7 +18,7 @@
 | 抗力护甲 | Armor of Resistance | 稀有 | 护甲 | 对一种伤害类型获得抗力（类型随机）。 | selectable |
 | 易伤护甲 | Armor of Vulnerability | 稀有 | 护甲（诅咒） | 对两种伤害类型易伤，同时对其他类型获得抗力；诅咒难除。 | selectable |
 | 弑杀箭 | Arrow of Slaying | 非常稀有 | 弹药 | 对特定生物类型额外造成大量伤害，目标体质豁免失败即死。 | selectable |
-| 接箭盾 | Arrow-Catching Shield | 稀有 | 护甲（盾牌） | 射向持盾者 1.5 米内目标的远程攻击，命中时改射向持盾者。 | selectable |
+| 接箭盾 | Arrow-Catching Shield | 稀有 | 护甲（盾牌） | 射向持盾者 5 尺内目标的远程攻击，命中时改射向持盾者。 | selectable |
 
 ## 尾注
 

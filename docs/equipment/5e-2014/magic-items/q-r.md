@@ -32,7 +32,7 @@
 | 三愿戒指 | Ring of Three Wishes | 传说 | 戒指 | 含 3 个愿望，用尽后戒指失去魔力。 | selectable |
 | 温暖戒指 | Ring of Warmth | 非普通 | 戒指 | 寒冷伤害抗力；抵御严寒环境。 | selectable |
 | 水上行走戒指 | Ring of Water Walking | 非普通 | 戒指 | 可站立于水面行走。 | selectable |
-| X 光视觉戒指 | Ring of X-Ray Vision | 稀有 | 戒指 | 透视 9 米内物质；每使用 1 分钟获得 1 级力竭。 | selectable |
+| X 光视觉戒指 | Ring of X-Ray Vision | 稀有 | 戒指 | 透视 30 尺内物质；每使用 1 分钟获得 1 级力竭。 | selectable |
 
 ## 尾注
 
