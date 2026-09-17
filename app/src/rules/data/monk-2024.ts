@@ -202,6 +202,7 @@ export const monkRule2024: ClassRule = {
   name: '武僧',
   englishName: 'Monk',
   summary: '2024版徒手武术家：功力驱动的连击与防御、无甲防御与高机动，子职特化。',
+  introduction: '以严格训练与精神修行发挥身体潜能的武斗家：功力驱动疾风连击、闪避与疾行，无甲防御与武艺骰使其不依赖装备，机动性与控制力出色。',
   hitDie: 8,
   primaryAbilities: ['dex', 'wis'],
   playStyleTags: ['striker', 'skirmisher', 'utility'],

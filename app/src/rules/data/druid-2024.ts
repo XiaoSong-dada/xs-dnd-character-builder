@@ -220,6 +220,7 @@ export const druidRule2024: ClassRule = {
   name: '德鲁伊',
   englishName: 'Druid',
   summary: '2024版自然神术施法者：准备施法、荒野变形与结社特化，兼顾治疗、控制与形态作战。',
+  introduction: '古老结社的自然施法者：驱使动物、植物与元素魔法，可用荒野变形化身为兽承担侦察或近战，兼顾治疗、控制与形态作战。',
   hitDie: 8,
   primaryAbilities: ['wis'],
   playStyleTags: ['spellcaster', 'support', 'skirmisher'],

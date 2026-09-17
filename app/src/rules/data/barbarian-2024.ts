@@ -158,6 +158,7 @@ export const barbarianRule2024: ClassRule = {
   name: '野蛮人',
   englishName: 'Barbarian',
   summary: '2024版狂暴前排：高生命值、狂暴减伤与伤害、武器精通和道途特化。',
+  introduction: '与多元宇宙原力联结的战士，以狂暴将力量爆发出来：狂暴提升伤害、获得力量检定与豁免优势并减伤，d12 生命骰使其成为最耐打的前线职业。',
   hitDie: 12,
   primaryAbilities: ['str'],
   playStyleTags: ['frontline', 'durable', 'striker'],

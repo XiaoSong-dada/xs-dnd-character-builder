@@ -153,6 +153,7 @@ export const warlockRule2024: ClassRule = {
   name: '魔契师',
   englishName: 'Warlock',
   summary: '2024版契约施法者：契约法术位短休恢复，魔能祈唤塑造能力，宗主决定力量来源与法术。',
+  introduction: '与宗主缔结契约的施法者：契约法术位数量少但短休恢复且始终以最高环施放，魔能祈唤与玄奥秘法提供高度自由的能力组合。',
   hitDie: 8,
   primaryAbilities: ['cha'],
   playStyleTags: ['spellcaster', 'striker', 'utility'],

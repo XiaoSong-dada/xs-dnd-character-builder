@@ -202,6 +202,7 @@ export const paladinRule2024: ClassRule = {
   name: '圣武士',
   englishName: 'Paladin',
   summary: '2024版神圣半施法者：圣疗与引导神力支援队伍，誓言灵光与斩击构成前线核心。',
+  introduction: '在誓言约束下对抗毁灭与腐化的战士：圣疗与引导神力提供治疗与爆发，誓言法术始终准备并带来灵光效果，5 级起获得信实坐骑。',
   hitDie: 10,
   primaryAbilities: ['str', 'cha'],
   playStyleTags: ['frontline', 'support', 'durable'],

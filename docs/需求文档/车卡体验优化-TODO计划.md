@@ -2,7 +2,7 @@
 
 > 制定日期：2026-09-16；决策确认日期：2026-09-16。
 > 依据：[《车卡体验优化需求》](车卡体验优化需求.md)（含已确认决策记录）。
-> 状态：**实施中**。U00-01—U00-03 已完成（Q-1—Q-6、Q-4a 已确认）；**U01 已完成（U01-01—U01-04）**；U00-04、U00-05 与 U02、U03、U04 待执行。
+> 状态：**实施中**。U00-01—U00-03 已完成（Q-1—Q-6、Q-4a 已确认）；**U01 已完成**；**U02 已完成（U02-01—U02-05，含 U00-04 取材清单）**；U00-05 与 U03、U04 待执行。
 > 本计划不修改业务代码；不确定发布日期与函数签名。
 
 ## 1. 使用方式与计划边界
@@ -42,7 +42,7 @@
 - [x] U00-01：Q-1（同环次级排序＝规则表数据顺序）与 Q-2（采纳环级小标题）已确认。
 - [x] U00-02：Q-3（字段名 `ClassRule.introduction`）、Q-4（展示生命骰与豁免）、Q-4a（2014 录入 `classPreviews2014` 并修 `repository.ts` 合并顺序）已确认。
 - [x] U00-03：Q-5（不保留米制辅助换算）与 Q-6（发版并登记更新公告）已确认。
-- [ ] U00-04（待执行，U02 前置）：整理 25 个职业的取材清单：每个职业记录 5e 不全书的章节文件路径、主要属性来源（2024「主要属性」字段／2014「快速建卡」建议）、核对 `ClassRule.primaryAbilities` 是否一致。
+- [x] U00-04（已完成，2026-09-17）：取材清单已整理（见 [U02 更新计划](车卡体验优化-U02更新计划.md) §2）：2024 取「主要属性 Primary Ability」字段、2014（含奇械师）取「快速建卡」建议；**逐条核对与现有 `primaryAbilities` 完全一致，无差异**；职业介绍取材于各职业章节概述段（2024 核心特质表后正文、2014 引言小说后的总结段、奇械师 TCoE 概述段）。
 - [ ] U00-05（待执行）：确认 R3 的数值回源清单（需求文档 4.2-F 表）的处理方式。由已确认决策推导：随 R3-2 一并纳入本轮；其中「干燥粉尘 45 立方米」来源未核验，先按来源核验结果处理，核验不到时保留为登记项，不猜测数值。
 
 交付物：决策记录（已写入需求文档 §6）、职业取材清单（待补）。
@@ -74,13 +74,15 @@
 
 目标：第 3 步职业卡片的展开区在「职业成长」上方展示「职业详情」（职业介绍 + 主要属性）。
 
-- [ ] U02-01（依赖 U00-02、U00-04）：`app/src/types/rules.ts` 的 `ClassRule` 新增 `introduction` 字段（Q-3 已确认，设为必填），补注释说明「原创中文转述」；确认 `ClassPreview = Omit<ClassRule, 'checkpoints'>` 会因此强制 13 条预览补齐。
-- [ ] U02-02（依赖 U02-01）：在 `rules/data/classes-2014.ts` 的 `classPreviews2014` 集中录入 2014 的 13 条职业介绍；**同步修正 `rules/repository.ts:37-41` 的合并顺序为 `{ ...item, ...classRule, features }`**（否则完整规则会覆盖预览字段，介绍丢失）；逐条核对 `primaryAbilities` 与「快速建卡」建议一致。
-- [ ] U02-03（依赖 U02-01）：在各 `<职业>-2024.ts` 录入 2024 的 12 条职业介绍（`classes-2024.ts` 仅装配，无需改动）；逐条核对「主要属性 Primary Ability」字段。
-- [ ] U02-04（依赖 U02-01）：`ClassStep.vue` 展开区新增「职业详情」区（位于「职业成长」之前），展示 `introduction` + 主要属性（`primaryAbilities` + `ABILITY_LABELS`）+ 生命骰 + 豁免熟练（Q-4 已确认全部展示）；样式沿用 `ClassStep` 私有 scoped SCSS，遵守嵌套约定与 44px 触控要求。
-- [ ] U02-05：测试与文档：新增数据测试（25 个职业介绍非空、非占位、两版隔离、`primaryAbilities` 符合预期）；`test/components/ClassStep.test.ts` 增加展开顺序与内容断言；同步 `docs/dnd-classes.md` §3.1 与对应职业资料文件；同步 `docs/quick-build-implementation.md`。
+- [x] U02-01（已完成）：`ClassRule.introduction` 新增（**可选字段**）；偏差说明：计划原写「必填」，实施时改为可选以避免 2014 文案在预览与 6 个完整规则文件间重复，完整性改由 `test/rules/class-introductions.test.ts` 固定。
+- [x] U02-02（已完成）：`classPreviews2014` 集中录入 13 条 2014 职业介绍；`rules/repository.ts` 合并顺序修正为 `{ ...item, ...classRule, features }`（带注释防回退），`rulesRepository2014.getClass()` 可返回介绍。
+- [x] U02-03（已完成）：12 个 `<职业>-2024.ts` 录入 2024 职业介绍（与 2014 同名职业文本不同）。
+- [x] U02-04（已完成）：`ClassStep.vue` 展开区改为「职业详情」（`expanded-label`）+ 介绍 + 主要属性／生命骰／豁免熟练（`getClassDetailSummary`）+「职业成长」小标题与列表；新增 scoped SCSS（`__intro`／`__facts`／`__growth-title`）。
+- [x] U02-05（已完成）：新增 `test/rules/class-introductions.test.ts`（5 项）与 `ClassStep.test.ts` 2 项断言；`docs/dnd-classes.md` §3.1 增补字段约定与主要属性核对口径；12 个 2024 职业页与 4 个 2014 职业页补充职业介绍；`docs/quick-build-implementation.md` 已同步。
 
 交付物：`ClassRule` 新字段 + 25 条职业介绍；`ClassStep.vue` 职业详情区；数据与组件测试；文档更新。
+
+实施记录（2026-09-17，见 [U02 更新计划](车卡体验优化-U02更新计划.md)）：已全部完成；`vitest run` 135 文件 / 1131 项通过，`vue-tsc -b` 与 `vite-ssg build` 通过。偏差：`introduction` 改为可选字段（避免 2014 文案两处重复，完整性由测试固定）；其余按计划执行。
 
 完成标准：
 

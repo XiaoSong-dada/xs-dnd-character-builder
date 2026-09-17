@@ -198,6 +198,7 @@ export const bardRule2024: ClassRule = {
   name: '吟游诗人',
   englishName: 'Bard',
   summary: '2024版魅力施法者：激励骰支援队友，专精与魔法奥秘扩展法术，学院特化战斗或诡术。',
+  introduction: '以音乐、舞蹈与诗歌唤起魔法的支援者：诗人激励强化队友的检定或防御，技能与专精覆盖面广，10 级起的魔法奥秘可跨表选取法术。',
   hitDie: 8,
   primaryAbilities: ['cha'],
   playStyleTags: ['spellcaster', 'support', 'utility'],

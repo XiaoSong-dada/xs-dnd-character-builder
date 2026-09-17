@@ -191,6 +191,7 @@ export const rogueRule2024: ClassRule = {
   name: '游荡者',
   englishName: 'Rogue',
   summary: '2024版技能与精准打击专家：专精、偷袭、诡诈打击与子职特化。',
+  introduction: '以潜行与诡计精准打击弱点的专家：偷袭提供爆发伤害，专精与狡黠动作强化技能与机动，是队伍中的技能与侦察核心。',
   hitDie: 8,
   primaryAbilities: ['dex'],
   playStyleTags: ['striker', 'skirmisher', 'utility'],

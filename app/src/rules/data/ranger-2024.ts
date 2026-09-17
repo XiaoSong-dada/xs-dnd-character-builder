@@ -212,6 +212,7 @@ export const rangerRule2024: ClassRule = {
   name: '游侠',
   englishName: 'Ranger',
   summary: '2024版原初半施法者：猎人印记标记猎物，武器精通与范型特化荒野作战。',
+  introduction: '守望荒野的猎手与半施法者：宿敌标记提供稳定的额外伤害，擅长追踪、探索与地形适应，2 级起以感知施展自然法术，远程与双持皆可。',
   hitDie: 10,
   primaryAbilities: ['dex', 'wis'],
   playStyleTags: ['skirmisher', 'striker', 'utility'],

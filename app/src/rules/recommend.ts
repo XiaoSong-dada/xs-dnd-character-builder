@@ -1,6 +1,7 @@
-import type { BackgroundRule, ClassRule, RaceRule, RulesRepository } from '@/types/rules'
+import type { BackgroundRule, ClassDetailSummary, ClassRule, RaceRule, RulesRepository } from '@/types/rules'
 import type { ClassGrowthSummaryItem } from '@/types/rules'
-import { ABILITY_LABELS } from '@/rules/data/feats-2014'
+import type { AbilityKey } from '@/types/character'
+import { ABILITY_KEYS, ABILITY_LABELS } from '@/rules/data/ability-labels'
 
 /**
  * 职业成长速览：由规则数据（生命骰、施法配置、子职选择等级、时间线检查点）推导关键节点，
@@ -32,6 +33,25 @@ export function getClassGrowthSummary(
     items.push({ level: checkpoint.level, title: checkpoint.title })
   }
   return items.sort((a, b) => a.level - b.level)
+}
+
+/** 属性键白名单校验：`primaryAbilities` / `savingThrowAbilities` 声明为字符串数组，非法值原样返回。 */
+function abilityLabel(key: string): string {
+  return (ABILITY_KEYS as readonly string[]).includes(key)
+    ? ABILITY_LABELS[key as AbilityKey]
+    : key
+}
+
+/**
+ * 职业详情速览：主要属性、豁免熟练与生命骰（职业卡片展开区展示用）。
+ * 组件只负责渲染，不硬编码标签文案。
+ */
+export function getClassDetailSummary(classRule: ClassRule): ClassDetailSummary {
+  return {
+    abilities: classRule.primaryAbilities.map(abilityLabel),
+    savingThrows: classRule.savingThrowAbilities.map(abilityLabel),
+    hitDie: `d${classRule.hitDie}`,
+  }
 }
 
 export function getRaceRecommendationReason(race: RaceRule, classRule?: ClassRule): string | undefined {

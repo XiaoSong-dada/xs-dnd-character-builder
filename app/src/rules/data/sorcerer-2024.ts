@@ -158,6 +158,7 @@ export const sorcererRule2024: ClassRule = {
   name: '术士',
   englishName: 'Sorcerer',
   summary: '2024版天生施法者：术法点与超魔改造法术，先天术法强化输出，术法决定力量来源。',
+  introduction: '天生法术的操纵者：术法点与超魔让法术表现可被改造，先天术法提供强化施法的手段，术法来源决定额外能力。',
   hitDie: 6,
   primaryAbilities: ['cha'],
   playStyleTags: ['spellcaster', 'striker', 'utility'],

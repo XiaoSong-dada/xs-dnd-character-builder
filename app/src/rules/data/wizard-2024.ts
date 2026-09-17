@@ -129,6 +129,7 @@ export const wizardRule2024: ClassRule = {
   name: '法师',
   englishName: 'Wizard',
   summary: '2024版法术书施法者：戏法与准备分离，奥术回想、学者与招牌法术构成成长路线。',
+  introduction: '以研究掌握奥术的施法者：法术书持续积累法术、每日更换准备列表，奥术回想补充施法能量，子职决定学派专精方向。',
   hitDie: 6,
   primaryAbilities: ['int'],
   playStyleTags: ['spellcaster', 'control', 'utility'],

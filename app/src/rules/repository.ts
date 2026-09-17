@@ -37,7 +37,8 @@ export const rulesRepository2014: RulesRepository = {
   classes: classPreviews2014.map((item) => {
     const classRule = [artificerClass2014, fighterRule, ...martialClasses2014, ...halfCasterClasses2014, ...arcaneCasterClasses2014, ...fullCasterClasses2014].find((classRule) => classRule.id === item.id)
       ?? { ...item, checkpoints: [] }
-    return { ...classRule, features: getClassFeatures2014(item.id) }
+    // 预览清单在前：职业介绍（introduction）等仅登记在 classPreviews2014 的字段不被完整规则覆盖。
+    return { ...item, ...classRule, features: getClassFeatures2014(item.id) }
   }),
   subclasses: subclasses2014,
   races: races2014,

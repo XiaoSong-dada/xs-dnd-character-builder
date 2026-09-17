@@ -160,6 +160,7 @@ export const fighterRule2024: ClassRule = {
   name: '战士',
   englishName: 'Fighter',
   summary: '2024版武器专家：战斗风格、武器精通、回气与动作如潮。',
+  introduction: '战场上的武器与护甲专家：武器精通与额外攻击提供稳定输出，回气与动作如潮增强持续作战，范型覆盖从勇士到战斗大师的多种风格。',
   hitDie: 10,
   primaryAbilities: ['str', 'dex'],
   playStyleTags: ['frontline', 'durable', 'striker', 'ranged'],

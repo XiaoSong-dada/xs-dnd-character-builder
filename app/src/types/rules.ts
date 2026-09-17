@@ -347,6 +347,8 @@ export interface ClassRule {
   readonly name: string
   readonly englishName: string
   readonly summary: string
+  /** 职业介绍（原创中文转述，1—3 句：定位、常见玩法与核心机制）；2014 与 2024 文本独立。 */
+  readonly introduction?: string
   readonly hitDie: number
   readonly primaryAbilities: readonly string[]
   readonly playStyleTags: readonly PlayStyleTag[]
@@ -756,4 +758,14 @@ export interface ClassRecommendation {
 export interface ClassGrowthSummaryItem {
   readonly level: number
   readonly title: string
+}
+
+/** 职业详情摘要：职业卡片展开区展示用；标签由规则层给出，组件不硬编码文案。 */
+export interface ClassDetailSummary {
+  /** 主要属性中文标签（可能两项，如「力量、敏捷」）。 */
+  readonly abilities: readonly string[]
+  /** 豁免熟练中文标签。 */
+  readonly savingThrows: readonly string[]
+  /** 生命骰，如 "d10"。 */
+  readonly hitDie: string
 }

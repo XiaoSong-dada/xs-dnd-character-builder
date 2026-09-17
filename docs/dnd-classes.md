@@ -32,6 +32,11 @@
 - 稳定 ID、中文名、英文名；
 - `ruleset` 与来源；
 - 主要属性、生命骰；
+- **职业介绍 `introduction`**（原创中文转述，1—3 句：职业定位、常见玩法与核心机制；不复制原书正文；2014 与 2024 文本必须独立）；
+  - 登记位置：2014 统一在 `app/src/rules/data/classes-2014.ts` 的 `classPreviews2014`（13 条），2024 在各 `app/src/rules/data/<职业>-2024.ts` 的 `<职业>Rule2024`（12 条）；
+  - 2014 装配时预览清单在前（`rules/repository.ts` 的 `{ ...item, ...classRule, features }`），不得改回 `{ ...classRule, ... }`，否则介绍会被完整规则覆盖；
+  - 完整性由 `app/test/rules/class-introductions.test.ts` 固定（25 个职业非空、非占位、两版不重复）。
+- **主要属性核对口径**：2024 取 5e 不全书 `玩家手册2024_角色职业_<职业>_<职业>.md` 的「主要属性 Primary Ability」字段，2014（含奇械师）取 `玩家手册_职业_<职业>.md`／`塔莎的万事坩埚_玩家选项_职业_奇械师.md` 的「快速建卡 Quick Build」最高属性建议；两者必须写进 `ClassRule.primaryAbilities`。
 - 玩法标签 `playStyleTags`（推荐引擎专用，只影响推荐排序与理由，不参与派生计算；标签取值见 `app/src/types/rules.ts` 的 `PlayStyleTag`，中文名见 `app/src/rules/data/preferences-2014.ts`）；
 - 护甲、武器、工具熟练；
 - 导出攻击使用 `app/src/rules/weapon-attacks.ts` 的 2014 职业武器熟练登记：支持简易/军用类别与职业指定武器；种族/子种族的指定武器熟练同时参与判断。该登记只服务逐武器基础攻击派生，不扩展多职业或情境加值。

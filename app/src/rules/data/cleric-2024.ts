@@ -180,6 +180,7 @@ export const clericRule2024: ClassRule = {
   name: '牧师',
   englishName: 'Cleric',
   summary: '2024版神术施法者：圣职路线、引导神力与领域特化，兼顾治疗、防护与输出。',
+  introduction: '从诸神国度引动力量的神术施法者：领域提供额外法术与特性，圣职路线决定偏武斗还是偏施法，按准备列表每日更换法术，治疗与防护兼具。',
   hitDie: 8,
   primaryAbilities: ['wis'],
   playStyleTags: ['spellcaster', 'support', 'durable'],

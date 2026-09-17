@@ -43,6 +43,31 @@ describe('ClassStep 职业选择', () => {
     expect(card.find('.expandable-option-card__growth').exists()).toBe(false)
   })
 
+  it('展开区展示职业详情（介绍 + 主要属性 + 生命骰 + 豁免）且位于职业成长之前', async () => {
+    const wrapper = mount(ClassStep)
+    const card = fighterCard(wrapper)!
+    await card.find('.expandable-option-card__arrow').trigger('click')
+
+    const panel = card.get('.expandable-option-card__growth')
+    // 面板标题为「职业详情」，职业成长作为内部小标题位于其后
+    expect(panel.findAll('strong').map((item) => item.text())).toEqual(['职业详情', '职业成长'])
+    expect(panel.get('.class-step__intro').text()).toContain('武器与护甲的全能专家')
+    const facts = panel.get('.class-step__facts').findAll('div').map((row) => row.text())
+    expect(facts).toEqual(['主要属性力量、敏捷', '生命骰d10', '豁免熟练力量、体质'])
+    // 职业成长仍在同一展开区内
+    expect(panel.text()).toContain('1级 · 生命骰 d10')
+  })
+
+  it('每个职业都有职业介绍（无介绍时不渲染空段落）', async () => {
+    const wrapper = mount(ClassStep)
+    expect(wrapper.findAll('.class-step__intro')).toHaveLength(0)
+    for (const card of wrapper.findAll('.expandable-option-card')) {
+      await card.find('.expandable-option-card__arrow').trigger('click')
+    }
+    expect(wrapper.findAll('.class-step__intro')).toHaveLength(13)
+    expect(wrapper.findAll('.class-step__intro').every((item) => item.text().trim().length > 0)).toBe(true)
+  })
+
   it('双击卡片主体只展开成长速览', async () => {
     vi.useFakeTimers()
     const wrapper = mount(ClassStep)
