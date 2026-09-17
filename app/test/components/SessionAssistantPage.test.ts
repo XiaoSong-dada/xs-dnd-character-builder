@@ -414,6 +414,37 @@ describe('跑团助手 · 法术书抄录与未准备法术', () => {
     expect(wrapper.text()).toContain('1环 · 已准备 3')
   })
 
+  it('未准备法术按环级升序 + 同环规则表顺序分组展示，含人工添加法术（U01）', async () => {
+    const { wrapper, store } = await mountWizardPanel({
+      cantripIds: [],
+      knownSpellIds: [],
+      preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield'],
+      // 故意乱序：3 环 → 1 环 → 2 环；同环内也倒序（护盾术在魔法飞弹之前）。
+      spellbookSpellIds: ['spell-2014-fireball', 'spell-2014-shield', 'spell-2014-magic-missile', 'spell-2014-misty-step'],
+      transcribedSpellIds: [],
+    })
+    // 人工添加的法术记录在 manualEdits，与候选池合并后应参与同一套排序（不追加到末尾）。
+    store.updateDraft({
+      manualEdits: {
+        abilityAdjustments: {},
+        proficiencyBonusAdjustment: 0,
+        derivedAdjustments: {},
+        savingThrowAdjustments: {},
+        skillAdjustments: {},
+        spellSlotAdjustments: {},
+        addedSpells: [{ spellId: 'spell-2014-mage-armor', destination: 'spellbook', prepared: false }],
+      },
+    })
+    await nextTick()
+
+    const section = wrapper.findAll('.session-panel__section')
+      .find((item) => item.find('h3').text().includes('未准备法术'))!
+    expect(section.findAll('h4').map((item) => item.text()))
+      .toEqual(['1环 · 1 个未准备', '2环 · 1 个未准备', '3环 · 1 个未准备'])
+    expect(section.findAll('.expandable-option-card strong').map((item) => item.text()))
+      .toEqual(['法师护甲', '迷踪步', '火球术'])
+  })
+
   it('准备数量满员时按钮显示「已满」并禁用', async () => {
     const { wrapper } = await mountWizardPanel({
       cantripIds: ['spell-2014-fire-bolt', 'spell-2014-mage-hand', 'spell-2014-ray-of-frost'],

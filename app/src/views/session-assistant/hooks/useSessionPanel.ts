@@ -3,7 +3,7 @@ import type { Ref } from 'vue'
 
 import { deriveCharacter } from '@/rules/derive'
 import { getRulesRepository } from '@/rules/repositories'
-import { getEffectiveSpellSlots, getRequiredSpellCount, getSpellCandidates, getSpellcastingConfig, getUnpreparedManualSpellIds } from '@/rules/spellcasting'
+import { getEffectiveSpellSlots, getRequiredSpellCount, getSpellCandidates, getSpellcastingConfig, getUnpreparedManualSpellIds, groupSpellsByLevel } from '@/rules/spellcasting'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import {
   applyExhaustionChange,
@@ -59,6 +59,10 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   })
   const canPrepareMore = computed(() =>
     draft.value.spellSelections.preparedSpellIds.length < requiredSpellCount.value,
+  )
+  /** U01：候选池与人工添加法术合并后，按环级升序 + 同环规则表顺序分组展示。 */
+  const unpreparedFromBookGroups = computed(() =>
+    groupSpellsByLevel(unpreparedFromBook.value, draft.value.ruleset),
   )
 
   /** 准备/取消准备法术书中未准备的法术（与角色卡 togglePrepare 同一语义）。 */
@@ -292,6 +296,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     availableSlots,
     totalGold,
     unpreparedFromBook,
+    unpreparedFromBookGroups,
     canPrepareMore,
     togglePrepareSpell,
     canPrepareSpell,

@@ -671,25 +671,28 @@ function openTranscribe(spellId?: string): void {
       <section v-if="panel.unpreparedFromBook.value.length" class="session-panel__section">
         <h3>未准备法术 · {{ panel.unpreparedFromBook.value.length }}（法术书中未准备）</h3>
         <ListShell>
-          <ExpandableOptionCard
-            v-for="spell in panel.unpreparedFromBook.value"
-            :key="spell.id"
-            :title="spell.name"
-            :description="formatSpellLabel(spell)"
-            expanded-label="法术效果"
-          >
-            <template #suffix>
-              <button
-                type="button"
-                class="session-panel__adjust"
-                  :disabled="!panel.canPrepareSpell(spell.id)"
-                  @click="panel.togglePrepareSpell(spell.id)"
-                >
-                  {{ panel.canPrepareSpell(spell.id) ? '准备' : '已满' }}
-              </button>
-            </template>
-            <template v-if="spell.description" #expanded>{{ spell.description }}</template>
-          </ExpandableOptionCard>
+          <div v-for="group in panel.unpreparedFromBookGroups.value" :key="group.level" class="session-panel__level">
+            <h4>{{ group.level }}环 · {{ group.spells.length }} 个未准备</h4>
+            <ExpandableOptionCard
+              v-for="spell in group.spells"
+              :key="spell.id"
+              :title="spell.name"
+              :description="formatSpellLabel(spell)"
+              expanded-label="法术效果"
+            >
+              <template #suffix>
+                <button
+                  type="button"
+                  class="session-panel__adjust"
+                    :disabled="!panel.canPrepareSpell(spell.id)"
+                    @click="panel.togglePrepareSpell(spell.id)"
+                  >
+                    {{ panel.canPrepareSpell(spell.id) ? '准备' : '已满' }}
+                </button>
+              </template>
+              <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+            </ExpandableOptionCard>
+          </div>
         </ListShell>
       </section>
       <p v-if="!cantripSpells.length && !spellGroups.length" class="session-panel__empty">暂无已准备法术</p>
@@ -1082,6 +1085,20 @@ function openTranscribe(spellId?: string): void {
     h3 {
       margin: 0 0 0.5rem;
       font-size: 0.9rem;
+    }
+  }
+
+  // 环级分组（U01）：与角色卡法术页签同口径，环级升序 + 同环规则表顺序。
+  &__level {
+    display: grid;
+    gap: 0.6rem;
+
+    & + & { margin-top: 0.7rem; }
+
+    h4 {
+      margin: 0.15rem 0 0;
+      color: var(--color-text-muted);
+      font-size: 0.78rem;
     }
   }
 

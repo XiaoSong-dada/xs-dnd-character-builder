@@ -18,7 +18,7 @@ import { decodeAbilityImprovement, formatFeatBonusOption, getCheckpointSelection
 import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
-import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
 import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, DerivedCharacter, InventoryEntry, ManualAddedSpell, SpellSelections } from '@/types/character'
@@ -204,6 +204,10 @@ const wizardWriteToBook = computed(() => {
     .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
 })
+/** U01：法术书相关列表统一按环级升序 + 同环规则表顺序展示；草稿存储顺序不变。 */
+const wizardPrepareFromBookGroups = computed(() => groupSpellsByLevel(wizardPrepareFromBook.value, props.draft.ruleset))
+const spellbookGroups = computed(() => groupSpellsByLevel(spellbookSpells.value, props.draft.ruleset))
+const wizardWriteToBookGroups = computed(() => groupSpellsByLevel(wizardWriteToBook.value, props.draft.ruleset))
 /** 候选按环级分组。 */
 const preparedCandidateGroups = computed(() => {
   const config = spellcastingConfig.value
@@ -916,20 +920,23 @@ function handleExportPdf(): void {
         <section v-if="wizardPrepareFromBook.length" class="character-sheet__spell-section">
           <h4>未准备法术 · {{ wizardPrepareFromBook.length }}（法术书中未准备）</h4>
           <ListShell>
-            <ExpandableOptionCard
-              v-for="spell in wizardPrepareFromBook"
-              expanded-label="法术效果"
-              :key="spell.id"
-              :title="spell.name"
-              :description="formatSpellLabel(spell)"
-            >
-              <template #suffix>
-                <button type="button" class="character-sheet__spell-action" :disabled="!canPrepareMore" @click="togglePrepare(spell.id)">
-                  {{ canPrepareMore ? '准备' : '已满' }}
-                </button>
-              </template>
-              <template v-if="spell.description" #expanded>{{ spell.description }}</template>
-            </ExpandableOptionCard>
+            <div v-for="group in wizardPrepareFromBookGroups" :key="group.level" class="character-sheet__spell-level">
+              <h5>{{ group.level }}环 · {{ group.spells.length }} 个未准备</h5>
+              <ExpandableOptionCard
+                v-for="spell in group.spells"
+                expanded-label="法术效果"
+                :key="spell.id"
+                :title="spell.name"
+                :description="formatSpellLabel(spell)"
+              >
+                <template #suffix>
+                  <button type="button" class="character-sheet__spell-action" :disabled="!canPrepareMore" @click="togglePrepare(spell.id)">
+                    {{ canPrepareMore ? '准备' : '已满' }}
+                  </button>
+                </template>
+                <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+              </ExpandableOptionCard>
+            </div>
           </ListShell>
         </section>
         <section v-if="spellbookSpells.length" class="character-sheet__spell-section">
@@ -938,42 +945,48 @@ function handleExportPdf(): void {
             <button v-if="spellcastingConfig?.mode === 'spellbook'" type="button" class="character-sheet__spell-action" aria-label="抄录法术书" @click="openTranscribe()">抄录法术</button>
           </div>
           <ListShell>
-            <ExpandableOptionCard
-              v-for="spell in spellbookSpells"
-              expanded-label="法术效果"
-              :key="spell.id"
-              :title="spell.name"
-              :description="formatSpellLabel(spell)"
-            >
-              <template #suffix>
-                <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
-                <em v-if="isTranscribedSpell(spell.id)" class="character-sheet__spell-badge">抄录</em>
-                <em class="character-sheet__spell-badge">在书中</em>
-              </template>
-              <template v-if="spell.description" #expanded>
-                <p>{{ spell.description }}</p>
-                <p v-if="isTranscribedSpell(spell.id)" class="character-sheet__spell-source">
-                  通过抄录获得：费用 {{ spell.level * 50 }} GP（每环级 50 GP）。
-                </p>
-              </template>
-            </ExpandableOptionCard>
+            <div v-for="group in spellbookGroups" :key="group.level" class="character-sheet__spell-level">
+              <h5>{{ group.level }}环 · {{ group.spells.length }} 个</h5>
+              <ExpandableOptionCard
+                v-for="spell in group.spells"
+                expanded-label="法术效果"
+                :key="spell.id"
+                :title="spell.name"
+                :description="formatSpellLabel(spell)"
+              >
+                <template #suffix>
+                  <em v-if="isPreparedSpell(spell.id)" class="character-sheet__spell-badge">已准备</em>
+                  <em v-if="isTranscribedSpell(spell.id)" class="character-sheet__spell-badge">抄录</em>
+                  <em class="character-sheet__spell-badge">在书中</em>
+                </template>
+                <template v-if="spell.description" #expanded>
+                  <p>{{ spell.description }}</p>
+                  <p v-if="isTranscribedSpell(spell.id)" class="character-sheet__spell-source">
+                    通过抄录获得：费用 {{ spell.level * 50 }} GP（每环级 50 GP）。
+                  </p>
+                </template>
+              </ExpandableOptionCard>
+            </div>
           </ListShell>
         </section>
         <section v-if="wizardWriteToBook.length" class="character-sheet__spell-section">
           <h4>未写入法术书 · {{ wizardWriteToBook.length }}（可抄录扩充）</h4>
           <ListShell>
-            <ExpandableOptionCard
-              v-for="spell in wizardWriteToBook"
-              expanded-label="法术效果"
-              :key="spell.id"
-              :title="spell.name"
-              :description="formatSpellLabel(spell)"
-            >
-              <template #suffix>
-                <button type="button" class="character-sheet__spell-action" :aria-label="`抄录${spell.name}`" @click="openTranscribe(spell.id)">抄录</button>
-              </template>
-              <template v-if="spell.description" #expanded>{{ spell.description }}</template>
-            </ExpandableOptionCard>
+            <div v-for="group in wizardWriteToBookGroups" :key="group.level" class="character-sheet__spell-level">
+              <h5>{{ group.level }}环 · {{ group.spells.length }} 个</h5>
+              <ExpandableOptionCard
+                v-for="spell in group.spells"
+                expanded-label="法术效果"
+                :key="spell.id"
+                :title="spell.name"
+                :description="formatSpellLabel(spell)"
+              >
+                <template #suffix>
+                  <button type="button" class="character-sheet__spell-action" :aria-label="`抄录${spell.name}`" @click="openTranscribe(spell.id)">抄录</button>
+                </template>
+                <template v-if="spell.description" #expanded>{{ spell.description }}</template>
+              </ExpandableOptionCard>
+            </div>
           </ListShell>
         </section>
       </template>

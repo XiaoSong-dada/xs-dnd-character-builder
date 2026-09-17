@@ -7,7 +7,7 @@ import { getWeaponMasteryCandidates } from '@/rules/weapon-mastery'
 import { isWeaponTrainingCovered } from '@/rules/weapon-training'
 import { abilityFromSpeciesSpellAbilityOption, classIdFromSpellListOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { AbilityKey, CharacterDraft, ChoiceSelection } from '@/types/character'
+import type { AbilityKey, CharacterDraft, ChoiceSelection, RulesetId } from '@/types/character'
 import type { ChoiceCheckpoint, FixedSpellGrant, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant, SpellRule } from '@/types/rules'
 
 type SpellcraftDraft = Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds' | 'ruleset'>
@@ -200,6 +200,46 @@ export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingCo
       && spell.level <= maximumLevel
       && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds, repository),
     ))
+}
+
+/** 单个环级的法术分组；组内顺序由 `groupSpellsByLevel` 保证为规则表登记顺序。 */
+export interface SpellLevelGroup {
+  readonly level: number
+  readonly spells: readonly SpellRule[]
+}
+
+/** 规则表登记下标（按规则集缓存）；数据为静态注册表，解析后不变。 */
+const spellOrderIndexes = new Map<RulesetId, ReadonlyMap<string, number>>()
+
+function getSpellOrderIndex(ruleset: RulesetId): ReadonlyMap<string, number> {
+  const cached = spellOrderIndexes.get(ruleset)
+  if (cached) return cached
+  const index = new Map(getRulesRepository(ruleset).spells.map((spell, position) => [spell.id, position]))
+  spellOrderIndexes.set(ruleset, index)
+  return index
+}
+
+/**
+ * 法术列表统一排序与分组（U01）：环级升序，同环内按规则表登记顺序。
+ * 输入数组可能是玩家点选顺序或「候选池 + 人工添加」的拼接结果，不能直接当作展示顺序，
+ * 因此这里显式按规则表重排；草稿存储顺序不受影响。
+ */
+export function groupSpellsByLevel(spells: readonly SpellRule[], ruleset: RulesetId): readonly SpellLevelGroup[] {
+  const order = getSpellOrderIndex(ruleset)
+  const byLevel = new Map<number, SpellRule[]>()
+  for (const spell of spells) {
+    const list = byLevel.get(spell.level) ?? []
+    list.push(spell)
+    byLevel.set(spell.level, list)
+  }
+  return [...byLevel.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([level, group]) => ({
+      level,
+      // 不在规则表内的法术（防御性分支）排到组内末尾；sort 稳定，保留其输入相对顺序。
+      spells: [...group].sort((left, right) =>
+        (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER)),
+    }))
 }
 
 /**

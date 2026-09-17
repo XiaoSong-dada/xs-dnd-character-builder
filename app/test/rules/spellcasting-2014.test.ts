@@ -9,7 +9,7 @@ import {
   THIRD_CASTER_SPELL_SLOTS,
 } from '@/rules/data/spell-slots-2014'
 import { rulesRepository } from '@/rules/repository'
-import { getCheckpointCandidates, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellCount, getSpellcastingConfig, getSpellSlots, getUnpreparedManualSpellIds, validateSpellSelections } from '@/rules/spellcasting'
+import { getCheckpointCandidates, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellCount, getSpellcastingConfig, getSpellSlots, getUnpreparedManualSpellIds, groupSpellsByLevel, validateSpellSelections } from '@/rules/spellcasting'
 import { validateDraft } from '@/rules/validate'
 import type { CharacterDraft } from '@/types/character'
 import type { ChoiceCheckpoint } from '@/types/rules'
@@ -480,5 +480,52 @@ describe('2014 法师抄录法术书与升级名额校验（缺陷回归：重�
     const w = wizardDraft(14, 0)
     expect(validateSpellSelections(w)).toBe(true)
     expect(validateDraft(w).some((issue) => issue.id === 'spellbook-count')).toBe(false)
+  })
+})
+
+describe('法术列表排序与分组（U01：环级升序 + 同环规则表顺序）', () => {
+  const spell = (id: string) => rulesRepository.spells.find((item) => item.id === id)!
+
+  it('空输入返回空数组', () => {
+    expect(groupSpellsByLevel([], '5e-2014')).toEqual([])
+  })
+
+  it('按环级升序分组，与输入顺序无关', () => {
+    const groups = groupSpellsByLevel(
+      [spell('spell-2014-fireball'), spell('spell-2014-magic-missile'), spell('spell-2014-misty-step')],
+      '5e-2014',
+    )
+    expect(groups.map((group) => group.level)).toEqual([1, 2, 3])
+    expect(groups.map((group) => group.spells.map((item) => item.id))).toEqual([
+      ['spell-2014-magic-missile'],
+      ['spell-2014-misty-step'],
+      ['spell-2014-fireball'],
+    ])
+  })
+
+  it('同环内按规则表登记顺序，不保留输入顺序', () => {
+    const shield = spell('spell-2014-shield')
+    const magicMissile = spell('spell-2014-magic-missile')
+    // 规则表顺序为 Magic Missile(105 行) → Shield(111 行)；此处故意倒序输入。
+    const [group] = groupSpellsByLevel([shield, magicMissile], '5e-2014')
+    expect(group.spells.map((item) => item.id)).toEqual(['spell-2014-magic-missile', 'spell-2014-shield'])
+  })
+
+  it('2014 扩展书法术保持规则表顺序，不按英文字母序重排', () => {
+    // 规则表中基础规则批在前：Vicious Mockery(42 行) → Control Flames(43 行，XGtE)；
+    // 英文字母序则是 Control Flames 在前。断言按规则表顺序输出。
+    const [group] = groupSpellsByLevel(
+      [spell('spell-2014-control-flames'), spell('spell-2014-vicious-mockery')],
+      '5e-2014',
+    )
+    expect(group.spells.map((item) => item.id)).toEqual(['spell-2014-vicious-mockery', 'spell-2014-control-flames'])
+  })
+
+  it('重复输入只保留一次，且不修改传入数组', () => {
+    const input = [spell('spell-2014-shield'), spell('spell-2014-shield')]
+    const groups = groupSpellsByLevel(input, '5e-2014')
+    // 分组只负责排序与分组，不做去重（去重由调用方的候选池函数保证）。
+    expect(groups[0].spells.map((item) => item.id)).toEqual(['spell-2014-shield', 'spell-2014-shield'])
+    expect(input.map((item) => item.id)).toEqual(['spell-2014-shield', 'spell-2014-shield'])
   })
 })

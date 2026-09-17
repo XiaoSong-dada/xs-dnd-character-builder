@@ -867,6 +867,38 @@ describe('CharacterSheetStep 候选池与点击交互', () => {
     expect(wrapper.text()).toContain('未写入法术书')
   })
 
+  it('三块法术书列表按环级升序 + 同环规则表顺序展示并带环级小标题（U01）', async () => {
+    const unorderedDraft: CharacterDraft = {
+      ...spellbookDraft,
+      targetLevel: 5,
+      spellSelections: {
+        ...spellbookDraft.spellSelections,
+        // 故意乱序：3 环 → 1 环 → 2 环；同环内也倒序（护盾术在魔法飞弹之前）。
+        spellbookSpellIds: ['spell-2014-fireball', 'spell-2014-shield', 'spell-2014-magic-missile', 'spell-2014-misty-step'],
+        preparedSpellIds: ['spell-2014-magic-missile', 'spell-2014-shield'],
+      },
+    }
+    const wrapper = await mountSheet(unorderedDraft)
+
+    const section = (title: string) => wrapper.findAll('.character-sheet__spell-section')
+      .find((item) => item.find('h4').text().includes(title))!
+    const cardTitles = (title: string) => section(title)
+      .findAll('.expandable-option-card strong')
+      .map((item) => item.text())
+    const groupTitles = (title: string) => section(title)
+      .findAll('h5')
+      .map((item) => item.text())
+
+    // 法术书：1 环（规则表顺序 魔法飞弹 → 护盾术）→ 2 环 → 3 环
+    expect(cardTitles('法术书 ·')).toEqual(['魔法飞弹', '护盾术', '迷踪步', '火球术'])
+    expect(groupTitles('法术书 ·')).toEqual(['1环 · 2 个', '2环 · 1 个', '3环 · 1 个'])
+    // 未准备（书中未准备）：仅未准备的 2/3 环，仍按环级升序
+    expect(cardTitles('未准备法术')).toEqual(['迷踪步', '火球术'])
+    expect(groupTitles('未准备法术')).toEqual(['2环 · 1 个未准备', '3环 · 1 个未准备'])
+    // 未写入法术书：候选池较大，只断言环级升序分组（数量随数据演进，不断言具体值）
+    expect(groupTitles('未写入法术书').map((title) => title.split(' ')[0])).toEqual(['1环', '2环', '3环'])
+  })
+
   it('点击候选项准备：emit changeSpellSelections 并加入 preparedSpellIds', async () => {
     const clericDraft: CharacterDraft = {
       ...draft,
