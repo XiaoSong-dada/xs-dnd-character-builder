@@ -4,14 +4,16 @@ import { describe, expect, it } from 'vitest'
 import SourcesStep from '@/views/character-builder/components/SourcesStep.vue'
 
 describe('SourcesStep 来源开关（E01）', () => {
-  it('2024 展示 7 个游玩测试来源且默认未选中', () => {
+  it('2024 展示 7 个游玩测试与 10 个旧扩展来源且默认未选中', () => {
     const wrapper = mount(SourcesStep, { props: { selected: [], ruleset: '5e-2024' } })
-    expect(wrapper.findAll('.ui-chip')).toHaveLength(7)
+    expect(wrapper.findAll('.ui-chip')).toHaveLength(17)
     expect(wrapper.text()).toContain('破解奥秘为游玩测试内容')
     expect(wrapper.text()).toContain('UA 艾伯伦')
     expect(wrapper.text()).toContain('游玩测试')
+    expect(wrapper.text()).toContain('旧扩展法术默认关闭')
+    expect(wrapper.text()).toContain('旧扩展')
     expect(wrapper.findAll('.ui-chip--selected')).toHaveLength(0)
-    expect(wrapper.text()).toContain('已启用 0 / 7')
+    expect(wrapper.text()).toContain('已启用 0 / 17')
   })
 
   it('2024 点击单个来源发出对应 ID，全部启用发出全部来源', async () => {
@@ -22,8 +24,9 @@ describe('SourcesStep 来源开关（E01）', () => {
 
     await wrapper.findAll('.sources-step__toolbar button')[0]!.trigger('click')
     const allEnabled = wrapper.emitted('change')?.[1]?.[0] as string[]
-    expect(allEnabled).toHaveLength(7)
+    expect(allEnabled).toHaveLength(17)
     expect(allEnabled).toContain('source-2024-ua-psion')
+    expect(allEnabled).toContain('source-2024-legacy-scc')
   })
 
   it('2024 已选来源渲染选中态，只用核心规则清空选择', async () => {

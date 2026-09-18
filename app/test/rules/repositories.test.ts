@@ -47,7 +47,7 @@ describe('versioned rules repositories', () => {
     expect(repository.getSpell('spell-2024-magic-missile')).toBeDefined()
     expect(repository.getEquipment('equipment-2024-longsword')).toBeDefined()
     expect(repository.sources.filter((source) => source.category === 'core').every((source) => !source.selectable)).toBe(true)
-    expect(repository.sources.filter((source) => source.selectable).every((source) => source.contentKind === 'playtest')).toBe(true)
+    expect(repository.sources.filter((source) => source.selectable).every((source) => source.contentKind === 'playtest' || source.contentKind === 'legacy')).toBe(true)
   })
 
   it('does not resolve identifiers across versions', () => {

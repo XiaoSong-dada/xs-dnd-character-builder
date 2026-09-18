@@ -33,6 +33,7 @@ import { speciesTraits2024 } from '@/rules/data/species-traits-2024'
 import { abilityImprovementOptions2024, featChoiceOptions2024, feats2024 } from '@/rules/data/feats-2024'
 import { spellListOptions2024, speciesSpellAbilityOptions2024 } from '@/rules/data/spell-lists-2024'
 import { spells2024 } from '@/rules/data/spells-2024'
+import { legacySpells2024 } from '@/rules/data/generated/spells-2024-legacy'
 import type { RulesetId } from '@/types/character'
 import type { RulesRepository } from '@/types/rules'
 
@@ -43,9 +44,24 @@ export class UnsupportedRulesetError extends Error {
   }
 }
 
+/** 2024 全部法术（PHB 2024 + UA + 旧扩展镜像）；职业法表按 classIds 合并，来源开关在候选池阶段过滤。 */
+const allSpells2024 = [...spells2024, ...uaSpells2024, ...psionSpells2024, ...legacySpells2024]
+
+const classes2024WithSpellPools = classes2024.map((classRule) => classRule.spellcasting
+  ? {
+      ...classRule,
+      spellcasting: {
+        ...classRule.spellcasting,
+        classSpellIds: [...new Set([
+          ...classRule.spellcasting.classSpellIds,
+          ...allSpells2024.filter((spell) => spell.classIds.includes(classRule.id)).map((spell) => spell.id),
+        ])],
+      },
+    }
+  : classRule)
 export const rulesRepository2024 = createRulesRepository('5e-2024', {
   sources: sources2024,
-  classes: classes2024,
+  classes: classes2024WithSpellPools,
   subclasses: subclasses2024,
   races: races2024,
   backgrounds: backgrounds2024,
@@ -56,7 +72,7 @@ export const rulesRepository2024 = createRulesRepository('5e-2024', {
   equipment: [...equipmentWithPacks2024, ...magicItems2024, ...uaMagicItems2024],
   classStartingEquipment: classStartingEquipment2024,
   backgroundStartingEquipment: backgroundStartingEquipment2024,
-  spells: [...spells2024, ...uaSpells2024, ...psionSpells2024],
+  spells: [...spells2024, ...uaSpells2024, ...psionSpells2024, ...legacySpells2024],
   weaponMasteries: weaponMasteries2024,
 })
 
