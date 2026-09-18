@@ -1,4 +1,5 @@
 import type { RuleOption, SubclassRule } from '@/types/rules'
+import { uaSubclassUpdate2024 } from '@/rules/data/ua-subclass-update-2024'
 import { uaFrSubclasses2024 } from '@/rules/data/ua-fr-subclasses-2024'
 import { artificerSubclasses2024 } from '@/rules/data/ua-artificer-2024'
 import { barbarianSubclasses2024 } from '@/rules/data/barbarian-2024'
@@ -30,6 +31,7 @@ export const subclasses2024: readonly SubclassRule[] = [
   ...wizardSubclasses2024,
   ...artificerSubclasses2024,
   ...uaFrSubclasses2024,
+  ...uaSubclassUpdate2024,
 ]
 
 /** 子职选项投影：供时间线候选显示与来源过滤解析。 */
