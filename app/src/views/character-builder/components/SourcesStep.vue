@@ -15,8 +15,9 @@ const repository = computed(() => getRulesRepository(props.ruleset))
 const coreSources = computed(() => repository.value.sources.filter((source) => source.category === 'core'))
 /** 按草稿规则集提供可切换来源；2024 当前全部为破解奥秘（UA）游玩测试来源。 */
 const selectableSources = computed(() => getSelectableSources(props.ruleset))
-const officialSources = computed(() => selectableSources.value.filter((source) => source.contentKind !== 'playtest'))
+const officialSources = computed(() => selectableSources.value.filter((source) => source.contentKind !== 'playtest' && source.contentKind !== 'third-party'))
 const playtestSources = computed(() => selectableSources.value.filter((source) => source.contentKind === 'playtest'))
+const thirdPartySources = computed(() => selectableSources.value.filter((source) => source.contentKind === 'third-party'))
 
 function toggle(id: string): void {
   emit('change', props.selected.includes(id)
@@ -32,6 +33,9 @@ function toggle(id: string): void {
     </UiNotice>
     <UiNotice v-if="playtestSources.length > 0" tone="warning" title="破解奥秘为游玩测试内容">
       破解奥秘（UA）不是官方正式规则，只是设计原型；启用后相关内容会显示「游玩测试」标记，使用前请获得 DM 同意。
+    </UiNotice>
+    <UiNotice v-if="thirdPartySources.length > 0" tone="warning" title="合作内容需 DM 同意">
+      以下第三方合作内容不是威世智官方规则；启用后相关内容会显示「合作内容」标记，使用前请获得 DM 同意。
     </UiNotice>
     <template v-if="selectableSources.length > 0">
       <div class="sources-step__toolbar">
@@ -58,6 +62,17 @@ function toggle(id: string): void {
           @toggle="toggle(source.id)"
         >
           <span class="sources-step__playtest-label"><UiBadge tone="warning">游玩测试</UiBadge> {{ source.shortTitle }} · {{ source.title }}</span>
+        </UiChip>
+      </div>
+      <div v-if="thirdPartySources.length > 0" class="sources-step__list" aria-label="第三方合作来源">
+        <UiChip
+          v-for="source in thirdPartySources"
+          :key="source.id"
+          :selected="selected.includes(source.id)"
+          :title="source.title"
+          @toggle="toggle(source.id)"
+        >
+          <span class="sources-step__third-party-label"><UiBadge tone="warning">合作内容</UiBadge> {{ source.shortTitle }} · {{ source.title }}</span>
         </UiChip>
       </div>
       <p class="sources-step__summary">已启用 {{ selected.length }} / {{ selectableSources.length }} 本扩展资料。关闭来源不会删除已选内容，但相关选择会暂时失效。</p>

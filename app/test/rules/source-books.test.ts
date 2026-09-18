@@ -9,11 +9,23 @@ import {
 } from '@/rules/source-books'
 
 describe('source-books 规则集化来源解析（E01）', () => {
-  it('2014 默认全选与白名单过滤保持既有行为', () => {
+  it('2014 默认启用不含第三方来源，白名单过滤保持既有行为', () => {
     const defaults = getDefaultEnabledSourceIds()
+    const selectable = getSelectableSources()
     expect(defaults.length).toBeGreaterThan(0)
-    expect(getSelectableSources()).toHaveLength(defaults.length)
+    expect(selectable.length).toBeGreaterThan(defaults.length)
+    const thirdParty = selectable.filter((source) => source.contentKind === 'third-party')
+    expect(thirdParty).toHaveLength(11)
+    expect(thirdParty.every((source) => source.defaultEnabled === false)).toBe(true)
+    for (const source of thirdParty) expect(defaults, source.id).not.toContain(source.id)
     expect(normalizeEnabledSourceIds(['xgte-2017-index', 'unknown-source'])).toEqual(['xgte-2017-index'])
+  })
+
+  it('2014 第三方来源可显式开启，且仅在开启后生效', () => {
+    expect(normalizeEnabledSourceIds(['tp-ebon-tides-index'])).toEqual(['tp-ebon-tides-index'])
+    expect(isSourceEnabled(['tp-ebon-tides-index'], [])).toBe(false)
+    expect(isSourceEnabled(['tp-ebon-tides-index'], ['tp-ebon-tides-index'])).toBe(true)
+    expect(isSourceEnabled(['tp-ebon-tides-index'], undefined)).toBe(true)
   })
 
   it('2024 可切换来源均为游玩测试且默认全关', () => {

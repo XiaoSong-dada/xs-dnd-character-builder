@@ -40,4 +40,18 @@ describe('SourcesStep 来源开关（E01）', () => {
     expect(wrapper.text()).toContain('全部启用')
     expect(wrapper.text()).not.toContain('破解奥秘为游玩测试内容')
   })
+
+  it('2014 第三方合作内容独立分组、默认未选中，全部启用可显式开启', async () => {
+    const wrapper = mount(SourcesStep, { props: { selected: [] } })
+    expect(wrapper.text()).toContain('合作内容需 DM 同意')
+    const labels = wrapper.findAll('.sources-step__third-party-label')
+    expect(labels).toHaveLength(11)
+    expect(labels.every((item) => item.text().includes('合作内容'))).toBe(true)
+    expect(wrapper.findAll('.ui-chip--selected')).toHaveLength(0)
+
+    await wrapper.findAll('.sources-step__toolbar button')[0]!.trigger('click')
+    const allEnabled = wrapper.emitted('change')?.[0]?.[0] as string[]
+    expect(allEnabled).toContain('tp-ebon-tides-index')
+    expect(allEnabled).toContain('xgte-2017-index')
+  })
 })

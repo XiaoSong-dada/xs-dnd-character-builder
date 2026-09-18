@@ -53,7 +53,7 @@ export function getSelectableSources(ruleset: RulesetId = '5e-2014'): readonly R
  */
 export function getDefaultEnabledSourceIds(ruleset: RulesetId = '5e-2014'): readonly string[] {
   if (ruleset === '5e-2024') return []
-  return [...SELECTABLE_SOURCE_IDS]
+  return sources2014.filter((source) => source.selectable && source.defaultEnabled !== false).map((source) => source.id)
 }
 
 /** 按规则集白名单过滤未知或已移除的来源 ID；缺省 2014，保持既有调用行为。 */
