@@ -10,10 +10,13 @@ import { spells2014 } from '@/rules/data/spells-2014'
 const GROWING_CANTRIP_IDS = [
   'spell-2014-acid-splash',
   'spell-2014-blood-bolt',
+  'spell-2014-cat-s-spring',
   'spell-2014-chill-touch',
+  'spell-2014-confounding-shadows',
   'spell-2014-create-bonfire',
   'spell-2014-dissolution',
   'spell-2014-eldritch-blast',
+  'spell-2014-evil-eye',
   'spell-2014-fire-bolt',
   'spell-2014-frostbite',
   'spell-2014-infestation',
