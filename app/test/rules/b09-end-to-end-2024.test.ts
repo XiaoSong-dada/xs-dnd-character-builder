@@ -25,7 +25,7 @@ describe('B09-05 2024 车卡端到端验收', () => {
     for (const classId of CLASS_IDS) {
       for (const level of [1, 3, 4, 19, 20]) {
         const draft = draft2024({ classId, targetLevel: level, subclassId: rulesRepository2024.subclasses.find((subclass) => subclass.classId === classId)?.id })
-        const timeline = buildTimeline(classId, level, { ruleset: '5e-2024', subclassId: draft.subclassId })
+        const timeline = buildTimeline(classId, level, { ruleset: '5e-2024', enabledSourceIds: [], subclassId: draft.subclassId })
         expect(timeline.length, `${classId} ${level}级时间线为空`).toBeGreaterThan(0)
         const profile = rulesRepository2024.getClassStartingEquipment(classId)
         const selections = (profile?.groups ?? []).map((group) => ({ groupId: group.id, optionId: group.options[0]!.id, pickedItemIds: [] }))

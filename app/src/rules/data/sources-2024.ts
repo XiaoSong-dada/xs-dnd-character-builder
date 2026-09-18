@@ -1,8 +1,8 @@
 import type { RuleSource } from '@/types/character'
 
 /**
- * 2024 核心来源表：PHB 2024 与 DMG 2024。
- * 两本均为 2024 规则集核心书，始终启用且不进入来源开关；后续批次按需追加扩展书条目。
+ * 2024 来源表：PHB 2024 与 DMG 2024 为核心来源，始终启用且不进入来源开关；
+ * 破解奥秘（UA）等扩展来源为可选项，默认关闭，由玩家在来源步骤显式启用。
  */
 export const sources2024: readonly RuleSource[] = [
   {
@@ -20,5 +20,68 @@ export const sources2024: readonly RuleSource[] = [
     ruleset: '5e-2024',
     category: 'core',
     selectable: false,
+  },
+  {
+    id: 'source-2024-ua-eberron',
+    title: '破解奥秘：艾伯伦',
+    shortTitle: 'UA 艾伯伦',
+    ruleset: '5e-2024',
+    category: 'supplement',
+    selectable: true,
+    contentKind: 'playtest',
+  },
+  {
+    id: 'source-2024-ua-fr-subclasses',
+    title: '破解奥秘：被遗忘的国度书-子职',
+    shortTitle: 'UA 被遗忘的国度',
+    ruleset: '5e-2024',
+    category: 'supplement',
+    selectable: true,
+    contentKind: 'playtest',
+  },
+  {
+    id: 'source-2024-ua-horror',
+    title: '破解奥秘：可怖子职',
+    shortTitle: 'UA 可怖子职',
+    ruleset: '5e-2024',
+    category: 'supplement',
+    selectable: true,
+    contentKind: 'playtest',
+  },
+  {
+    id: 'source-2024-ua-psion',
+    title: '破解奥秘：灵能',
+    shortTitle: 'UA 灵能',
+    ruleset: '5e-2024',
+    category: 'supplement',
+    selectable: true,
+    contentKind: 'playtest',
+  },
+  {
+    id: 'source-2024-ua-arcane',
+    title: '破解奥秘：奥术子职',
+    shortTitle: 'UA 奥术子职',
+    ruleset: '5e-2024',
+    category: 'supplement',
+    selectable: true,
+    contentKind: 'playtest',
+  },
+  {
+    id: 'source-2024-ua-cataclysm',
+    title: '破解奥秘：浩劫子职',
+    shortTitle: 'UA 浩劫子职',
+    ruleset: '5e-2024',
+    category: 'supplement',
+    selectable: true,
+    contentKind: 'playtest',
+  },
+  {
+    id: 'source-2024-ua-subclass-update',
+    title: '破解奥秘：子职业更新',
+    shortTitle: 'UA 子职业更新',
+    ruleset: '5e-2024',
+    category: 'supplement',
+    selectable: true,
+    contentKind: 'playtest',
   },
 ]

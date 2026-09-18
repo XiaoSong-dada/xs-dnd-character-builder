@@ -60,7 +60,7 @@ describe('2024 野蛮人与道途数据（B08-03）', () => {
   })
 
   it('4 个道途特性等级与结构齐全', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-barbarian').map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-barbarian' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
     const expectations: Readonly<Record<string, readonly number[]>> = {
       [SUBCLASS_IDS[0]]: [3, 6, 10, 14],
       [SUBCLASS_IDS[1]]: [3, 3, 6, 10, 14],
@@ -90,7 +90,7 @@ describe('2024 野蛮人与道途数据（B08-03）', () => {
   })
 
   it('道途在时间线上作为子职候选并可生成形貌选择检查点', () => {
-    const timeline = buildTimeline('class-2024-barbarian', 6, { ruleset: '5e-2024', subclassId: SUBCLASS_IDS[1] })
+    const timeline = buildTimeline('class-2024-barbarian', 6, { ruleset: '5e-2024', enabledSourceIds: [], subclassId: SUBCLASS_IDS[1] })
     const subclass = timeline.find((checkpoint) => checkpoint.kind === 'subclass')
     expect(subclass?.optionIds).toEqual([...SUBCLASS_IDS])
     const aspect = timeline.find((checkpoint) => checkpoint.id === 'subclass-feature-barbarian-2024-wild-heart-aspect-of-the-wilds')

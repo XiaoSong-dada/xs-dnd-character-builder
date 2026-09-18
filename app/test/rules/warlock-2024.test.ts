@@ -79,7 +79,7 @@ describe('2024 魔契师与 4 宗主数据（B08-10）', () => {
     expect(INVOCATION_2024_OPTION_IDS).toHaveLength(28)
     expect(new Set(invocations2024.map((option) => option.id)).size).toBe(28)
 
-    const optionsAt = (level: number) => buildTimeline('class-2024-warlock', level, { ruleset: '5e-2024' })
+    const optionsAt = (level: number) => buildTimeline('class-2024-warlock', level, { ruleset: '5e-2024', enabledSourceIds: [] })
       .find((checkpoint) => checkpoint.id === `class-2024-warlock-invocations-${level}`)?.optionIds ?? []
     expect(optionsAt(1)).toHaveLength(5)
     expect(optionsAt(2)).toHaveLength(14)
@@ -89,7 +89,7 @@ describe('2024 魔契师与 4 宗主数据（B08-10）', () => {
     expect(optionsAt(15)).toHaveLength(28)
     expect(optionsAt(18)).toHaveLength(28)
 
-    const levelEighteen = buildTimeline('class-2024-warlock', 18, { ruleset: '5e-2024' })
+    const levelEighteen = buildTimeline('class-2024-warlock', 18, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelEighteen.filter((checkpoint) => checkpoint.id.startsWith('class-2024-warlock-invocations-')).map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-warlock-invocations-1',
       'class-2024-warlock-invocations-2',
@@ -127,7 +127,7 @@ describe('2024 魔契师与 4 宗主数据（B08-10）', () => {
 
   it('玄奥秘法四档候选限魔契师法术且始终准备、可免费施放', () => {
     const draft = warlockDraft({ targetLevel: 17 })
-    const timeline = buildTimeline('class-2024-warlock', 17, { ruleset: '5e-2024' })
+    const timeline = buildTimeline('class-2024-warlock', 17, { ruleset: '5e-2024', enabledSourceIds: [] })
     const arcanum = [11, 13, 15, 17].map((level) => {
       const checkpoint = timeline.find((item) => item.id === `class-2024-warlock-arcanum-${level}`)
       if (!checkpoint) throw new Error(`缺少玄奥秘法检查点 ${level}`)
@@ -158,7 +158,7 @@ describe('2024 魔契师与 4 宗主数据（B08-10）', () => {
   })
 
   it('4 个宗主特性数量与等级节点正确，宗主法术始终准备', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-warlock').map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-warlock' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
     const expected: Readonly<Record<(typeof SUBCLASS_IDS)[number], readonly number[]>> = {
       'subclass-2024-warlock-archfey-patron': [3, 3, 6, 10, 14],
       'subclass-2024-warlock-celestial-patron': [3, 3, 6, 10, 14],
@@ -204,18 +204,18 @@ describe('2024 魔契师与 4 宗主数据（B08-10）', () => {
   })
 
   it('时间线展开技能、祈唤、子职与属性提升', () => {
-    const levelOne = buildTimeline('class-2024-warlock', 1, { ruleset: '5e-2024' })
+    const levelOne = buildTimeline('class-2024-warlock', 1, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-warlock-skills-1',
       'class-2024-warlock-invocations-1',
     ])
 
-    const levelThree = buildTimeline('class-2024-warlock', 3, { ruleset: '5e-2024' })
+    const levelThree = buildTimeline('class-2024-warlock', 3, { ruleset: '5e-2024', enabledSourceIds: [] })
     const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
     expect(subclass?.id).toBe('class-2024-warlock-subclass-3')
     expect(subclass?.optionIds).toEqual([...SUBCLASS_IDS])
 
-    const levelTwenty = buildTimeline('class-2024-warlock', 20, { ruleset: '5e-2024' })
+    const levelTwenty = buildTimeline('class-2024-warlock', 20, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-warlock-feat-4',
       'class-2024-warlock-feat-8',

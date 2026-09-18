@@ -20,6 +20,7 @@ import { validateWeaponMasterySelection } from '@/rules/weapon-mastery'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { isSourceEnabled } from '@/rules/source-books'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
+import { artificerReplicatePlans2024, getArtificerReplicatedItemLimit2024 } from '@/rules/data/ua-artificer-2024'
 import type { AbilityKey, CharacterDraft, ValidationIssue } from '@/types/character'
 
 export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[] {
@@ -98,9 +99,11 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
   }
   const infusionActive = draft.classId === 'class-2014-artificer'
     && Boolean(isSourceEnabled(repository.getClass(draft.classId)?.sourceIds ?? [], draft.enabledSourceIds, repository))
+  const replicateActive = draft.classId === 'class-2024-ua-artificer'
+    && Boolean(isSourceEnabled(repository.getClass(draft.classId)?.sourceIds ?? [], draft.enabledSourceIds, repository))
   const infusionAssignments = draft.infusionAssignments ?? []
-  if (infusionAssignments.length > 0 && !infusionActive) {
-    issues.push({ id: 'infusions-inactive', step: 'equipment', severity: 'warning', message: '奇械师灌注绑定已保留，但当前职业或来源不允许它们生效。', resolution: '重新选择奇械师并启用 ERftLW 或 TCoE 后会自动恢复。' })
+  if (infusionAssignments.length > 0 && !infusionActive && !replicateActive) {
+    issues.push({ id: 'infusions-inactive', step: 'equipment', severity: 'warning', message: '奇械师灌注／仿制绑定已保留，但当前职业或来源不允许它们生效。', resolution: '重新选择奇械师并启用对应来源后会自动恢复。' })
   }
   if (infusionActive) {
     const knownIds = new Set(draft.selections
@@ -126,6 +129,34 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         issues.push({ id: `infusion-item-missing-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: '灌注绑定的物品已被删除或无法解析。', resolution: '保留的绑定已停止应用；请选择新的合法物品。' })
       } else if (infusion && !infusion.eligibleCategories.some((category) => category === item.category)) {
         issues.push({ id: `infusion-item-category-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: `“${infusion.name}”不能应用于“${item.name}”。`, resolution: '选择符合物品注法类别的条目。' })
+      }
+    }
+  }
+  if (replicateActive) {
+    const knownPlanIds = new Set(draft.selections
+      .filter((selection) => selection.checkpointId.startsWith('artificer-2024-plans-') && !selection.invalidatedAt)
+      .flatMap((selection) => selection.optionIds))
+    const limit = getArtificerReplicatedItemLimit2024(draft.targetLevel)
+    if (infusionAssignments.length > limit) {
+      issues.push({ id: 'replicate-limit', step: 'equipment', severity: 'error', message: '同时存在的仿制魔法物品超过当前奇械师等级上限。', resolution: `当前最多同时存在 ${limit} 件仿制魔法物品。` })
+    }
+    const planIds = infusionAssignments.map((assignment) => assignment.infusionId)
+    const itemEntryIds = infusionAssignments.map((assignment) => assignment.inventoryEntryId)
+    if (new Set(planIds).size !== planIds.length) issues.push({ id: 'replicate-duplicate', step: 'equipment', severity: 'error', message: '同一个仿制方案被重复使用。', resolution: '每件仿制物品必须基于不同的已知方案。' })
+    if (new Set(itemEntryIds).size !== itemEntryIds.length) issues.push({ id: 'replicate-item-duplicate', step: 'equipment', severity: 'error', message: '同一件物品不能承载多个仿制绑定。', resolution: '为重复绑定的仿制方案更换物品。' })
+    for (const assignment of infusionAssignments) {
+      const planRule = artificerReplicatePlans2024.find((item) => item.id === assignment.infusionId)
+      const entry = draft.inventory.find((item) => item.id === assignment.inventoryEntryId)
+      const item = entry ? repository.getEquipment(entry.itemId) : undefined
+      if (!planRule || !knownPlanIds.has(assignment.infusionId)) {
+        issues.push({ id: `replicate-not-known-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: `仿制方案“${planRule?.name ?? assignment.infusionId}”尚未掌握或因降级失效。`, resolution: '返回时间线检查已知仿制方案。' })
+      } else if (planRule.minimumLevel > draft.targetLevel) {
+        issues.push({ id: `replicate-level-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: `仿制方案“${planRule.name}”的等级前置不满足。`, resolution: `需要奇械师 ${planRule.minimumLevel} 级。` })
+      }
+      if (!entry || !item) {
+        issues.push({ id: `replicate-item-missing-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: '仿制绑定对应的物品已被删除或无法解析。', resolution: '保留的绑定已停止应用；请重新创造或选择该方案对应的魔法物品。' })
+      } else if (planRule && item.id !== planRule.replicateItemId) {
+        issues.push({ id: `replicate-item-mismatch-${assignment.infusionId}`, step: 'equipment', severity: 'error', message: `物品“${item.name}”与方案“${planRule.name}”不匹配。`, resolution: '绑定到该方案可创造的魔法物品条目。' })
       }
     }
   }

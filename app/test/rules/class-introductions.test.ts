@@ -32,9 +32,9 @@ describe('职业介绍与职业详情（U02）', () => {
   const classes2014 = rulesRepository2014.classes
   const classes2024 = rulesRepository2024.classes
 
-  it('2014 的 13 个职业与 2024 的 12 个职业都登记了职业介绍', () => {
+  it('2014 的 13 个职业与 2024 的 13 个职业（含 UA 奇械师）都登记了职业介绍', () => {
     expect(classes2014).toHaveLength(13)
-    expect(classes2024).toHaveLength(12)
+    expect(classes2024).toHaveLength(13)
     for (const classRule of [...classes2014, ...classes2024]) {
       const introduction = classRule.introduction ?? ''
       expect(introduction.trim(), `${classRule.id} 应有职业介绍`).not.toBe('')
@@ -63,7 +63,7 @@ describe('职业介绍与职业详情（U02）', () => {
     }
   })
 
-  it('主要属性与 5e 不全书核对清单一致（25 个职业）', () => {
+  it('主要属性与 5e 不全书核对清单一致（26 个职业）', () => {
     for (const classRule of [...classes2014, ...classes2024]) {
       const expected = EXPECTED_PRIMARY_ABILITIES[classRule.englishName.toLowerCase()]
       expect(expected, `${classRule.id} 缺少核对清单项`).toBeTruthy()

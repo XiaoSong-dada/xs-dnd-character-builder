@@ -1,4 +1,6 @@
 import type { RuleOption, SubclassRule } from '@/types/rules'
+import { uaFrSubclasses2024 } from '@/rules/data/ua-fr-subclasses-2024'
+import { artificerSubclasses2024 } from '@/rules/data/ua-artificer-2024'
 import { barbarianSubclasses2024 } from '@/rules/data/barbarian-2024'
 import { bardSubclasses2024 } from '@/rules/data/bard-2024'
 import { clericSubclasses2024 } from '@/rules/data/cleric-2024'
@@ -12,7 +14,7 @@ import { sorcererSubclasses2024 } from '@/rules/data/sorcerer-2024'
 import { warlockSubclasses2024 } from '@/rules/data/warlock-2024'
 import { wizardSubclasses2024 } from '@/rules/data/wizard-2024'
 
-/** 2024 子职装配列表：按 B08 批次逐批追加。 */
+/** 2024 子职装配列表：核心子职 + 破解奥秘（UA）奇械师子职；按批次逐批追加。 */
 export const subclasses2024: readonly SubclassRule[] = [
   ...barbarianSubclasses2024,
   ...bardSubclasses2024,
@@ -26,6 +28,8 @@ export const subclasses2024: readonly SubclassRule[] = [
   ...sorcererSubclasses2024,
   ...warlockSubclasses2024,
   ...wizardSubclasses2024,
+  ...artificerSubclasses2024,
+  ...uaFrSubclasses2024,
 ]
 
 /** 子职选项投影：供时间线候选显示与来源过滤解析。 */

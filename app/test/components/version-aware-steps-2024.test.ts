@@ -27,13 +27,16 @@ describe('B09-02 各步骤按草稿版本解析', () => {
 
   it('ClassStep 按版本列出职业并发出对应版本 ID', async () => {
     vi.useFakeTimers()
-    const modern = mount(ClassStep, { props: { ruleset: '5e-2024' } })
+    const modern = mount(ClassStep, { props: { ruleset: '5e-2024', enabledSourceIds: [] } })
     const modernCards = modern.findAll('.expandable-option-card')
-    expect(modernCards).toHaveLength(rulesRepository2024.classes.length)
     expect(modernCards).toHaveLength(12)
     await modernCards.find((card) => card.get('strong').text() === '战士')!.find('.expandable-option-card__main').trigger('click')
     vi.advanceTimersByTime(400)
     expect(modern.emitted('select')).toEqual([['class-2024-fighter']])
+
+    const withUa = mount(ClassStep, { props: { ruleset: '5e-2024', enabledSourceIds: ['source-2024-ua-eberron'] } })
+    expect(withUa.findAll('.expandable-option-card')).toHaveLength(13)
+    expect(withUa.text()).toContain('奇械师')
 
     const legacy = mount(ClassStep, { props: { ruleset: '5e-2014' } })
     expect(legacy.findAll('.expandable-option-card')).toHaveLength(rulesRepository2014.classes.length)
@@ -42,12 +45,13 @@ describe('B09-02 各步骤按草稿版本解析', () => {
     expect(legacy.emitted('select')).toEqual([['class-2014-fighter']])
   })
 
-  it('SourcesStep 在 2024 只展示核心书说明，2014 保留扩展书开关', () => {
+  it('SourcesStep 在 2024 展示游玩测试来源，2014 保留扩展书开关', () => {
     const modern = mount(SourcesStep, { props: { selected: [], ruleset: '5e-2024' } })
     expect(modern.text()).toContain('玩家手册（2024）')
-    expect(modern.text()).toContain('2024 暂不提供扩展书开关')
-    expect(modern.text()).not.toContain('全部启用')
-    expect(modern.findAll('.ui-chip')).toHaveLength(0)
+    expect(modern.text()).toContain('破解奥秘为游玩测试内容')
+    expect(modern.text()).toContain('全部启用')
+    expect(modern.findAll('.ui-chip')).toHaveLength(7)
+    expect(modern.findAll('.ui-chip--selected')).toHaveLength(0)
 
     const legacy = mount(SourcesStep, { props: { selected: [] } })
     expect(legacy.text()).toContain('全部启用')

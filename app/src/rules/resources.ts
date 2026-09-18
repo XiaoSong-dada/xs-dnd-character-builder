@@ -12,7 +12,10 @@ const RECOVERY_LABELS: Readonly<Record<ClassResource['recovery'], string>> = {
  * 其余按等级表；越界等级按最近端点处理，未获得时返回 0。
  */
 export function getResourceMax(resource: ClassResource, level: number, abilityModifier = 0): number {
-  if (resource.maxFromAbility) return Math.max(resource.maxFromAbility.minimum, abilityModifier)
+  if (resource.maxFromAbility) {
+    const { minimum, multiplier = 1 } = resource.maxFromAbility
+    return Math.max(minimum, abilityModifier * multiplier)
+  }
   if (!resource.maxByLevel?.length) return 0
   const index = Math.min(Math.max(1, Math.trunc(level)), resource.maxByLevel.length) - 1
   const base = Math.max(0, resource.maxByLevel[index] ?? 0)

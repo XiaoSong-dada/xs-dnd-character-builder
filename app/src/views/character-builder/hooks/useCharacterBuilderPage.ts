@@ -405,8 +405,9 @@ export function useCharacterBuilderPage() {
 
   function sourceChangeAffectedContent(draft: CharacterDraft, enabledSourceIds: readonly string[]): readonly string[] {
     const affected: string[] = []
+    const repository = repositoryFor(draft)
     const add = (label: string, rule: { readonly sourceIds: readonly string[] } | undefined): void => {
-      if (rule && !isSourceEnabled(rule.sourceIds, enabledSourceIds)) affected.push(label)
+      if (rule && !isSourceEnabled(rule.sourceIds, enabledSourceIds, repository)) affected.push(label)
     }
     add(`职业：${draft.classId ? repositoryFor(draft).getClass(draft.classId)?.name ?? draft.classId : ''}`, draft.classId ? repositoryFor(draft).getClass(draft.classId) : undefined)
     add(`子职：${draft.subclassId ? repositoryFor(draft).getSubclass(draft.subclassId)?.name ?? draft.subclassId : ''}`, draft.subclassId ? repositoryFor(draft).getSubclass(draft.subclassId) : undefined)
@@ -435,7 +436,7 @@ export function useCharacterBuilderPage() {
   function updateSources(sourceIds: readonly string[]): void {
     const draft = activeDraft.value
     if (!draft) return
-    const normalized = normalizeEnabledSourceIds(sourceIds)
+    const normalized = normalizeEnabledSourceIds(sourceIds, draft.ruleset)
     if (normalized.length === draft.enabledSourceIds.length && normalized.every((id) => draft.enabledSourceIds.includes(id))) return
     const affected = sourceChangeAffectedContent(draft, normalized)
     const apply = () => store.updateDraft({ enabledSourceIds: normalized })

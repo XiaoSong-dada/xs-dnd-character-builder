@@ -100,7 +100,7 @@ describe('2024 圣武士与 4 誓言数据（B08-11）', () => {
   })
 
   it('4 个誓言特性数量与等级节点正确，誓言法术始终准备', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-paladin').map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-paladin' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
     const expected: Readonly<Record<(typeof SUBCLASS_IDS)[number], readonly number[]>> = {
       'subclass-2024-paladin-oath-of-devotion': [3, 3, 7, 15, 20],
       'subclass-2024-paladin-oath-of-glory': [3, 3, 3, 7, 15, 20],
@@ -153,25 +153,25 @@ describe('2024 圣武士与 4 誓言数据（B08-11）', () => {
   })
 
   it('时间线展开技能、武器精通、战斗风格、子职与属性提升', () => {
-    const levelOne = buildTimeline('class-2024-paladin', 1, { ruleset: '5e-2024' })
+    const levelOne = buildTimeline('class-2024-paladin', 1, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-paladin-skills-1',
       'class-2024-paladin-mastery-1',
     ])
 
-    const levelTwo = buildTimeline('class-2024-paladin', 2, { ruleset: '5e-2024' })
+    const levelTwo = buildTimeline('class-2024-paladin', 2, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelTwo.map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-paladin-skills-1',
       'class-2024-paladin-mastery-1',
       'class-2024-paladin-style-2',
     ])
 
-    const levelThree = buildTimeline('class-2024-paladin', 3, { ruleset: '5e-2024' })
+    const levelThree = buildTimeline('class-2024-paladin', 3, { ruleset: '5e-2024', enabledSourceIds: [] })
     const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
     expect(subclass?.id).toBe('class-2024-paladin-subclass-3')
     expect(subclass?.optionIds).toEqual([...SUBCLASS_IDS])
 
-    const levelTwenty = buildTimeline('class-2024-paladin', 20, { ruleset: '5e-2024' })
+    const levelTwenty = buildTimeline('class-2024-paladin', 20, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-paladin-feat-4',
       'class-2024-paladin-feat-8',

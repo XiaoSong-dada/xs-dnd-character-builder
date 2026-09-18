@@ -35,6 +35,8 @@ export interface RuleSource {
   readonly ruleset: RulesetId
   readonly category: 'core' | 'supplement'
   readonly selectable: boolean
+  /** 内容性质：缺省视为正式内容；`playtest` 用于破解奥秘（UA）等游玩测试来源。 */
+  readonly contentKind?: 'official' | 'playtest'
   readonly url?: string
 }
 

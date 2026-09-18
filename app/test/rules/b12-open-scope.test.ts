@@ -17,10 +17,11 @@ describe('B12-01 2024 开放集合与依赖闭合', () => {
   })
 
   it('12 职业与 48 子职全部 implemented，子职归属闭合', () => {
-    const classes = repository.classes.filter((item) => item.id.startsWith('class-2024-'))
+    const classes = repository.classes.filter((item) => item.sourceIds.includes('source-2024-phb'))
     expect(classes).toHaveLength(12)
     expect(classes.every((item) => item.status === 'implemented')).toBe(true)
-    const subclasses = repository.subclasses.filter((item) => item.classId.startsWith('class-2024-'))
+    const coreClassIds = new Set(classes.map((item) => item.id))
+    const subclasses = repository.subclasses.filter((item) => coreClassIds.has(item.classId) && item.sourceIds.includes('source-2024-phb'))
     expect(subclasses).toHaveLength(48)
     for (const subclass of subclasses) {
       expect(subclass.status, subclass.id).toBe('implemented')

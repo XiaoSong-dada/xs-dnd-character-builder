@@ -73,6 +73,10 @@ export const classStartingEquipment2024: readonly ClassStartingEquipmentRule[] =
   { classId: 'class-2024-wizard', fixedGrants: [], groups: [{ id: 'wizard-2024-starting', title: '选择职业初始装备或金币', options: [
     gear('wizard-2024-a', [g('equipment-2024-dagger', 2), g('equipment-2024-arcane-focus'), g('equipment-2024-robe'), g('equipment-2024-book'), g('equipment-2024-scholar-s-pack')], 5), gold('wizard-2024-b', 55),
   ] }] },
+  { classId: 'class-2024-ua-artificer', fixedGrants: [], groups: [{ id: 'artificer-2024-starting', title: '选择职业初始装备或金币', options: [
+    gear('artificer-2024-a', [g('equipment-2024-studded-leather-armor'), g('equipment-2024-dagger'), g('equipment-2024-thieves-tools'), g('equipment-2024-tinker-s-tools'), g('equipment-2024-dungeoneer-s-pack')], 16),
+    gold('artificer-2024-b', 150),
+  ] }] },
 ]
 
 export const backgroundStartingEquipment2024: readonly BackgroundStartingEquipmentRule[] = Object.entries(backgroundEquipmentA2024).map(([slug, grants]) => ({

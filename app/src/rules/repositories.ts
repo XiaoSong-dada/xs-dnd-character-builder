@@ -1,5 +1,9 @@
 import { createRulesRepository } from '@/rules/repository-builder'
 import { rulesRepository2014 } from '@/rules/repository'
+import { artificerOptions2024 } from '@/rules/data/ua-artificer-2024'
+import { uaFrSubclassOptions2024 } from '@/rules/data/ua-fr-subclasses-2024'
+import { uaMagicItems2024 } from '@/rules/data/ua-magic-items-2024'
+import { uaSpells2024 } from '@/rules/data/ua-spells-2024'
 import { classes2024 } from '@/rules/data/classes-2024'
 import { sources2024 } from '@/rules/data/sources-2024'
 import { subclassOptions2024, subclasses2024 } from '@/rules/data/subclasses-2024'
@@ -40,12 +44,12 @@ export const rulesRepository2024 = createRulesRepository('5e-2024', {
   backgrounds: backgrounds2024,
   raceFeatures: speciesTraits2024,
   backgroundFeatures: [],
-  options: [...abilityImprovementOptions2024, ...featChoiceOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024, ...skillOptions2024, ...subclassOptions2024, ...barbarianOptions2024, ...bardOptions2024, ...clericOptions2024, ...druidOptions2024, ...fighterOptions2024, ...monkOptions2024, ...rangerOptions2024, ...sorcererOptions2024, ...warlockOptions2024],
+  options: [...abilityImprovementOptions2024, ...featChoiceOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024, ...skillOptions2024, ...subclassOptions2024, ...barbarianOptions2024, ...bardOptions2024, ...clericOptions2024, ...druidOptions2024, ...fighterOptions2024, ...monkOptions2024, ...rangerOptions2024, ...sorcererOptions2024, ...warlockOptions2024, ...artificerOptions2024, ...uaFrSubclassOptions2024],
   feats: feats2024,
-  equipment: [...equipmentWithPacks2024, ...magicItems2024],
+  equipment: [...equipmentWithPacks2024, ...magicItems2024, ...uaMagicItems2024],
   classStartingEquipment: classStartingEquipment2024,
   backgroundStartingEquipment: backgroundStartingEquipment2024,
-  spells: spells2024,
+  spells: [...spells2024, ...uaSpells2024],
   weaponMasteries: weaponMasteries2024,
 })
 

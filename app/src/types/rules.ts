@@ -59,7 +59,7 @@ export interface ClassResource {
   /** 数值单位（缺省“次”，如奥术回想为“环级”）。 */
   readonly unit?: string
   /** 上限来自属性调整值（如 2024 诗人激励＝魅力调整值，至少 1 次）；提供时优先于 maxByLevel。 */
-  readonly maxFromAbility?: { readonly ability: AbilityKey; readonly minimum: number }
+  readonly maxFromAbility?: { readonly ability: AbilityKey; readonly minimum: number; readonly multiplier?: number }
   /** 在等级表上限之外再加一项属性调整值（如防护师奥术守御＝2×等级＋智力调整值）。 */
   readonly abilityBonus?: AbilityKey
   /** 短休只恢复固定数量（如 2024 狂暴／回气短休恢复 1 次）；缺省为短休全部恢复。 */
@@ -475,6 +475,10 @@ export interface SubclassFeature {
   readonly shortRestExhaustionReduction?: number
   /** 本特性固定授予的免费施法（如 2024 精宸所与的妖精召唤术长休免费 1 次）。 */
   readonly grantedSpells?: readonly FixedSpellGrant[]
+  /** 本特性额外授予的“自选语言”数量（如 2024 紫龙骑士骑士使节额外掌握一门语言）。 */
+  readonly languageChoices?: number
+  /** 所选技能获得专精（如知识领域·知识祝福）：检查点选项为技能 ID。 */
+  readonly grantsExpertiseInChosenSkills?: boolean
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }

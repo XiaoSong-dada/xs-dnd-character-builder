@@ -79,7 +79,7 @@ describe('2024 游荡者与子职数据（B08-04）', () => {
   })
 
   it('4 个子职各 5 条特性、3／9／13／17 级', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-rogue').map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-rogue' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
     for (const id of SUBCLASS_IDS) {
       const subclass = rulesRepository2024.getSubclass(id)
       expect(subclass?.status).toBe('implemented')
@@ -121,15 +121,15 @@ describe('2024 游荡者与子职数据（B08-04）', () => {
   })
 
   it('时间线展开技能、专精、武器精通、子职与属性提升', () => {
-    const levelOne = buildTimeline('class-2024-rogue', 1, { ruleset: '5e-2024' })
+    const levelOne = buildTimeline('class-2024-rogue', 1, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-rogue-skills-1',
       'class-2024-rogue-expertise-1',
       'class-2024-rogue-mastery-1',
     ])
-    const levelThree = buildTimeline('class-2024-rogue', 3, { ruleset: '5e-2024' })
+    const levelThree = buildTimeline('class-2024-rogue', 3, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelThree.find((checkpoint) => checkpoint.kind === 'subclass')?.optionIds).toEqual([...SUBCLASS_IDS])
-    const levelTwenty = buildTimeline('class-2024-rogue', 20, { ruleset: '5e-2024' })
+    const levelTwenty = buildTimeline('class-2024-rogue', 20, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-rogue-feat-4',
       'class-2024-rogue-feat-8',

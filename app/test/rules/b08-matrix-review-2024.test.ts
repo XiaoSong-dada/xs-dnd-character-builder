@@ -142,20 +142,24 @@ const MATRIX: Readonly<Record<string, {
 
 describe('B08-14 2024 目标矩阵复核', () => {
   it('12 个基础职业、48 个子职与 60 条身份记录全部闭合', () => {
-    const classIds = rulesRepository2024.classes.map((classRule) => classRule.id)
+    const coreClasses = rulesRepository2024.classes.filter((classRule) => classRule.sourceIds.includes('source-2024-phb'))
+    const classIds = coreClasses.map((classRule) => classRule.id)
     expect(classIds).toEqual(Object.keys(MATRIX))
     expect(classIds).toHaveLength(12)
-    const subclassIds = rulesRepository2024.subclasses.map((subclass) => subclass.id)
+    const coreClassIdSet = new Set(classIds)
+    const subclassIds = rulesRepository2024.subclasses
+      .filter((subclass) => coreClassIdSet.has(subclass.classId) && subclass.sourceIds.includes('source-2024-phb'))
+      .map((subclass) => subclass.id)
     expect(subclassIds).toHaveLength(48)
     expect(new Set(subclassIds).size).toBe(48)
-    for (const classRule of rulesRepository2024.classes) {
+    for (const classRule of coreClasses) {
       const expected = MATRIX[classRule.id]
       if (!expected) throw new Error(`矩阵缺少职业 ${classRule.id}`)
       expect(classRule.ruleset).toBe('5e-2024')
       expect(classRule.status).toBe('implemented')
       expect((classRule.features ?? []).map((feature) => feature.level)).toEqual(expected.features)
       expect(classRule.checkpoints.map((checkpoint) => `${checkpoint.level}:${checkpoint.kind}`)).toEqual(expected.checkpoints)
-      const subclassIdsOfClass = rulesRepository2024.subclasses.filter((subclass) => subclass.classId === classRule.id)
+      const subclassIdsOfClass = rulesRepository2024.subclasses.filter((subclass) => subclass.classId === classRule.id && subclass.sourceIds.includes('source-2024-phb'))
       expect(subclassIdsOfClass.map((subclass) => subclass.id)).toEqual(Object.keys(expected.subclasses))
       for (const subclass of subclassIdsOfClass) {
         expect(subclass.ruleset).toBe('5e-2024')
@@ -183,9 +187,9 @@ describe('B08-14 2024 目标矩阵复核', () => {
 
   it('全部检查点候选（含子职）可在仓库解析，未完成项不进入候选', () => {
     for (const classRule of rulesRepository2024.classes) {
-      const subclassIds = rulesRepository2024.subclasses.filter((subclass) => subclass.classId === classRule.id).map((subclass) => subclass.id)
+      const subclassIds = rulesRepository2024.subclasses.filter((subclass) => subclass.classId === classRule.id && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)
       for (const subclassId of [undefined, ...subclassIds]) {
-        const timeline = buildTimeline(classRule.id, 20, { ruleset: '5e-2024', subclassId })
+        const timeline = buildTimeline(classRule.id, 20, { ruleset: '5e-2024', enabledSourceIds: [], subclassId })
         for (const checkpoint of timeline) {
           for (const optionId of checkpoint.optionIds) {
             const resolved = rulesRepository2024.getOption(optionId) ?? rulesRepository2024.getFeat(optionId)

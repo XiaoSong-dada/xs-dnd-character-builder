@@ -10,7 +10,7 @@ function issueIds(draft: Parameters<typeof validateDraft>[0]): readonly string[]
 
 describe('2024 专长时间线约束', () => {
   it('战士成长检查点按等级展开四类候选池', () => {
-    const timeline = buildTimeline('class-2024-fighter', 19, { ruleset: '5e-2024' })
+    const timeline = buildTimeline('class-2024-fighter', 19, { ruleset: '5e-2024', enabledSourceIds: [] })
     const style = timeline.find((checkpoint) => checkpoint.id === 'class-2024-fighter-style-1')
     const levelFour = timeline.find((checkpoint) => checkpoint.id === 'class-2024-fighter-feat-4')
     const levelNineteen = timeline.find((checkpoint) => checkpoint.id === 'class-2024-fighter-feat-19')
@@ -24,7 +24,7 @@ describe('2024 专长时间线约束', () => {
   })
 
   it('人类授予额外起源专长检查点，法师不出现战斗风格候选', () => {
-    const timeline = buildTimeline('class-2024-wizard', 4, { ruleset: '5e-2024', raceId: 'species-2024-human' })
+    const timeline = buildTimeline('class-2024-wizard', 4, { ruleset: '5e-2024', enabledSourceIds: [], raceId: 'species-2024-human' })
     const speciesFeat = timeline.find((checkpoint) => checkpoint.id === 'species-2024-human-origin-feat')
     expect(speciesFeat?.kind).toBe('feat')
     expect(speciesFeat?.optionIds).toHaveLength(10)
