@@ -800,6 +800,31 @@ const spellSeeds: readonly [
   ['Octarine Spray', '第八虹光喷射', 7, ['bard', 'sorcerer', 'warlock', 'wizard'], ['tp-drakkenheim-index']],
   ['Contaminated Power', '污染之力', 8, ['sorcerer', 'warlock', 'wizard'], ['tp-drakkenheim-index']],
   ['Sacrament of the Falling Fire', '天火圣礼', 9, ['bard', 'cleric', 'druid', 'warlock'], ['tp-drakkenheim-index']],
+  // 第三方合作内容 · 谦卑林（Humblewood）
+  ['Gust Barrier', '尘风屏障', 0, ['bard', 'druid', 'sorcerer', 'warlock'], ['tp-humblewood-index']],
+  ['Elevated Sight', '提升视力', 1, ['cleric', 'druid', 'ranger', 'warlock', 'wizard'], ['tp-humblewood-index']],
+  ['Spiny Shield', '尖刺护盾', 1, ['druid', 'ranger', 'sorcerer', 'wizard'], ['tp-humblewood-index']],
+  ['Veil of Dusk', '黄昏之纱', 1, ['druid', 'warlock'], ['tp-humblewood-index']],
+  ['Ambush Prey', '伏击猎物', 2, ['ranger'], ['tp-humblewood-index']],
+  ['Feathered Reach', '羽化', 3, ['druid', 'ranger'], ['tp-humblewood-index']],
+  ['Globe of Twilight', '暮光法球', 3, ['druid', 'ranger', 'warlock'], ['tp-humblewood-index']],
+  ['Invoke the Amaranthine', '祈求永荣者', 3, ['cleric', 'paladin'], ['tp-humblewood-index']],
+  ['Shape Plants', '植物塑形', 4, ['bard', 'cleric', 'druid'], ['tp-humblewood-index']],
+  ['Stellar Bodies', '恒星之躯', 4, ['druid', 'ranger', 'sorcerer', 'wizard'], ['tp-humblewood-index']],
+  // 第三方合作内容 · 谦卑林故事集（Humblewood Tales）
+  ['Mend Plants', '植物修复', 0, ['druid', 'sorcerer', 'wizard'], ['tp-humblewood-tales-index']],
+  // 第三方合作内容 · 邪狱使（The Illrigger）
+  ['Hellfire', '地狱火', 0, ['sorcerer', 'warlock', 'wizard'], ['tp-illrigger-index']],
+  ['Vengeful Blade', '仇杀剑', 0, ['sorcerer', 'warlock', 'wizard'], ['tp-illrigger-index']],
+  ['Hell\'s Lash', '狱之笞', 1, ['sorcerer', 'warlock', 'wizard'], ['tp-illrigger-index']],
+  ['Infernal Challenge', '戕狱对决', 2, ['paladin'], ['tp-illrigger-index']],
+  ['Mote of Hell', '炼狱之尘', 3, ['sorcerer', 'warlock', 'wizard'], ['tp-illrigger-index']],
+  ['Aura of Desecration', '亵渎灵光', 4, ['cleric', 'paladin'], ['tp-illrigger-index']],
+  ['Maligned Weapon', '邪秽武器', 4, ['paladin'], ['tp-illrigger-index']],
+  ['Wall of Death', '死灭墙', 4, ['druid', 'sorcerer', 'wizard'], ['tp-illrigger-index']],
+  // 第三方合作内容 · 塔尔多雷（Tal'Dorei Campaign Setting）
+  ['Freedom of the Wave', '浪之自由', 3, ['druid', 'ranger', 'sorcerer'], ['tp-taldorei-index']],
+  ['Freedom of the Wind', '风之自由', 5, ['druid', 'ranger', 'sorcerer'], ['tp-taldorei-index']],
 ]
 
 /** 2014 法术池中带有仪式标签的法术英文名。 */
@@ -1630,6 +1655,28 @@ const spellDescriptions: Readonly<Record<string, string>> = {
   'spell-2014-octarine-spray': '自身 60 尺锥形，立即；施展时获得 1 层污染；锥内生物体质豁免后按来源表格逐目标投骰产生不同的第八虹射线效果。',
   'spell-2014-contaminated-power': '自身，持续 1 分钟；施展时获得 1 层污染；从妄质晶块汲取无法束缚的奥术力量，获得来源列出的增益。',
   'spell-2014-sacrament-of-the-falling-fire': '1 小时，射程 30 尺，立即；只能在浓厚污霭覆盖区域施放；为至多 12 名自愿类人嵌入妄质晶片并圣化；每人周围出现一只敌对幽影攻击（DM 可改为邪灵）。',
+  // ── 第三方合作内容 · 谦卑林／故事集／邪狱使／塔尔多雷 ──
+  'spell-2014-gust-barrier': '自身，持续 1 轮；到你下回合开始前，对你的远程攻击具有劣势。',
+  'spell-2014-elevated-sight': '自身，持续 1 分钟；在上方 120 尺处投射隐形传感器，可如飞行般 360 度观察，随你移动并保持相对高度。',
+  'spell-2014-spiny-shield': '反应（被近战命中时），自身，持续 1 轮；该次伤害减少 2d4 并对攻击者造成等量穿刺；对远程攻击无效但你 AC +2（视为半掩护）；每比 1 环高 1 环减伤与反伤 +1d4。',
+  'spell-2014-veil-of-dusk': '触碰，持续 1 小时；目标 AC +1 且隐匿检定优势。',
+  'spell-2014-ambush-prey': '自身，持续 1 分钟（专注）；你隐形且敏捷（隐匿）检定优势；移动超过施法位置 5 尺则提前结束；每比 2 环高 1 环首次攻击额外伤害 +1d6。',
+  'spell-2014-feathered-reach': '自身，持续 1 分钟；双臂化为翅膀并获得来源列出的增益；结束时光滑落地。',
+  'spell-2014-globe-of-twilight': '自身 20 尺，持续 1 分钟（专注）；球形夜空的暮色掩盖盟友并照亮敌人。',
+  'spell-2014-invoke-the-amaranthine': '自身，持续 24 小时；施法时掷两个 d20 并分配给攻击／属性／豁免的应用（可重复）；期间可让 60 尺内可见生物的掷骰采用这些结果。',
+  'spell-2014-shape-plants': '射程 30 尺，持续 1 小时；在 5 尺立方内改变植物形状；有荆棘的可变为困难地形；每比 4 环高 1 环影响范围 +5 立方尺。',
+  'spell-2014-stellar-bodies': '自身，持续 1 分钟；两颗星星环绕你提供 10 尺微光；5 尺内生物近战命中你时须感知豁免，失败则每颗星造成 1d8 光耀伤害；每比 4 环高 1 环 +1 颗星。',
+  'spell-2014-mend-plants': '射程 30 尺，立即；以原初魔法为附近植物注入活力，从来源列出的效应中选择。',
+  'spell-2014-hellfire': '射程 60 尺，立即；目标魅力豁免失败受 1d4 火焰＋1d4 暗蚀；5/11/17 级两种伤害各 +1d4。',
+  'spell-2014-vengeful-blade': '自身，立即；以武器近战命中后目标散发黑暗灵光至你下回合开始；若其攻击或施法则灵光结束并受 1d8 暗蚀；5/11/17 级两处伤害各 +1d8。',
+  'spell-2014-hell-s-lash': '射程 30 尺，持续 1 分钟（专注）；目标体质豁免失败受 4d4 火焰并束缚，其每回合开始再受 2d4、结束可再豁免；每比 1 环高 1 环初始伤害 +2d4、后续 +1d4。',
+  'spell-2014-infernal-challenge': '射程 30 尺，持续 1 分钟（专注）；目标魅力豁免失败接受决斗：你 AC +2，其对除你外攻击劣势，且首次尝试远离你时受影响。',
+  'spell-2014-mote-of-hell': '射程 120 尺，持续 1 分钟（专注）；15 尺球内黑暗、硫磺与火焰，光照无法穿透，完全在内者目盲；30 尺内可闻悲鸣。',
+  'spell-2014-aura-of-desecration': '自身 30 尺光环，持续 1 分钟；生物进入或在内开始回合受 1d6 暗蚀，你恢复等量生命值。',
+  'spell-2014-maligned-weapon': '触碰，持续 1 小时；武器熄灭 30 尺内普通光源，命中额外 2d6 暗蚀；非魔法武器在此期间视为魔法武器。',
+  'spell-2014-wall-of-death': '射程 120 尺，持续 1 分钟（专注）；创造不透明的暗蚀能量墙（直线 60×20 尺或环形直径 20 尺、厚 1 尺）；进入或穿墙者受影响。',
+  'spell-2014-freedom-of-the-wave': '射程 120 尺，立即；15 尺半径、10 尺高柱状海水，区域内生物力量豁免失败受 2d8 钝击并倒地；可选至多施法属性调整值（至少 1）个目标免受影响。',
+  'spell-2014-freedom-of-the-wind': '自身，持续 1 小时；获得 60 尺飞行速度；为避免擒抱的属性检定与避免束缚／麻痹的豁免具有优势。',
 }
 
 /** 补充结构化字段（学派与施法参数）；仅登记《5e 不全书》来源有明确值的条目。 */
