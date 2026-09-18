@@ -38,7 +38,7 @@ describe('2024 专长目录', () => {
     expect(feats2024.every((item) => item.id.startsWith('feat-2024-'))).toBe(true)
     expect(feats2024.every((item) => item.ruleset === '5e-2024' && item.description.length > 0 && item.detail.length > 0)).toBe(true)
     expect(feats2024.every((item) => item.sourceIds.includes('source-2024-phb'))).toBe(true)
-    expect(rulesRepository2024.feats).toHaveLength(75)
+    expect(rulesRepository2024.feats.filter((item) => item.sourceIds.includes('source-2024-phb'))).toHaveLength(75)
     expect(rulesRepository2024.getFeat('feat-2024-alert')?.name).toBe('警戒')
     expect(rulesRepository2024.getFeat('feat-2024-boon-of-fate')?.name).toBe('扭曲命运之恩惠')
     expect(rulesRepository2024.getOption('asi-2024-str-2')?.name).toBe('力量 +2')
@@ -64,14 +64,14 @@ describe('2024 专长目录', () => {
   })
 
   it('候选池按类别与获得节点等级展开', () => {
-    expect(getFeatPool(rulesRepository2024, ['fighting-style'], { level: 1 })).toHaveLength(10)
-    const general = getFeatPool(rulesRepository2024, ['general'], { level: 4 })
+    expect(getFeatPool(rulesRepository2024, ['fighting-style'], { level: 1, enabledSourceIds: [] })).toHaveLength(10)
+    const general = getFeatPool(rulesRepository2024, ['general'], { level: 4, enabledSourceIds: [] })
     expect(general).toHaveLength(43)
     expect(general.some((item) => item.id === 'feat-2024-boon-of-fate')).toBe(false)
-    const withBoons = getFeatPool(rulesRepository2024, ['general', 'epic-boon'], { level: 19 })
+    const withBoons = getFeatPool(rulesRepository2024, ['general', 'epic-boon'], { level: 19, enabledSourceIds: [] })
     expect(withBoons).toHaveLength(55)
-    expect(getFeatPool(rulesRepository2024, ['origin'], { level: 1 })).toHaveLength(10)
-    expect(getFeatPool(rulesRepository2024, ['general'], { level: 3 })).toHaveLength(0)
+    expect(getFeatPool(rulesRepository2024, ['origin'], { level: 1, enabledSourceIds: [] })).toHaveLength(10)
+    expect(getFeatPool(rulesRepository2024, ['general'], { level: 3, enabledSourceIds: [] })).toHaveLength(0)
   })
 
   it('前置按等级、属性、特性与护甲训练判定', () => {

@@ -89,7 +89,7 @@ describe('B12-01 2024 开放集合与依赖闭合', () => {
   })
 
   it('75 专长的法术授予与 391 道 2024 法术的职业归属闭合', () => {
-    const feats = repository.feats.filter((item) => item.ruleset === '5e-2024')
+    const feats = repository.feats.filter((item) => item.ruleset === '5e-2024' && item.sourceIds.includes('source-2024-phb'))
     expect(feats).toHaveLength(75)
     for (const feat of feats) {
       for (const grant of feat.grantedSpells ?? []) {

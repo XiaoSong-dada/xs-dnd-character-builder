@@ -27,6 +27,10 @@ export interface FeatEligibilityContext {
   readonly hasFightingStyle?: boolean
   /** 当前护甲训练；提供时优先于 2014 职业映射（2024 使用）。 */
   readonly armorTrainings?: readonly ArmorTraining[]
+  /** 已获得的专长 ID（用于 requiredFeatIds 与 excludedFeatTag 前置）。 */
+  readonly acquiredFeatIds?: readonly string[]
+  /** 已获得专长携带的标签集合（如 dragonmark、wild-talent）。 */
+  readonly acquiredFeatTags?: readonly string[]
 }
 
 /** 专长授予来源；用于重复选择校验与数值来源解释。 */
@@ -153,6 +157,14 @@ export function getFeatEligibility(
   if (requiredRaces && !requiredRaces.includes(context.raceId ?? '')) reasons.push('种族前置不满足')
   const requiredSubraces = selectedFeat.prerequisite?.requiredSubraceIds
   if (requiredSubraces && !requiredSubraces.includes(context.subraceId ?? '')) reasons.push('子种族前置不满足')
+  const requiredFeatIds = selectedFeat.prerequisite?.requiredFeatIds
+  if (requiredFeatIds?.length && !requiredFeatIds.every((featId) => context.acquiredFeatIds?.includes(featId))) {
+    reasons.push('需要先获得对应的前置专长')
+  }
+  const excludedFeatTag = selectedFeat.prerequisite?.excludedFeatTag
+  if (excludedFeatTag && context.acquiredFeatTags?.includes(excludedFeatTag)) {
+    reasons.push('不具有其他同类专长')
+  }
   if (requiredCapability === 'spellcasting' && !context.canCastSpells) {
     reasons.push(`需要${capabilityLabels.spellcasting}`)
   }
@@ -220,6 +232,18 @@ export function listFeatGrants(draft: CharacterDraft, repository: RulesRepositor
         sourceId: selection.checkpointId,
         checkpointId: selection.checkpointId,
       })
+    }
+  }
+  // 起源专长替代（如贵族／智者背景用狂野天赋替换固定起源专长）：
+  // 当背景声明可替代类别且已获得该类别专长时，移除固定起源专长授予。
+  const substitutions = background?.originFeatSubstitutions
+  if (substitutions?.length) {
+    const replaced = grants.some((grant) => {
+      const feat = repository.getFeat(grant.featId)
+      return Boolean(feat?.category && substitutions.some((item) => item.category === feat.category && feat.sourceIds.some((id) => item.sourceIds.includes(id))))
+    })
+    if (replaced) {
+      return grants.filter((grant) => !(grant.sourceKind === 'background' && grant.featId === background?.originFeatId))
     }
   }
   return grants

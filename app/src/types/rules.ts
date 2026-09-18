@@ -14,7 +14,7 @@ export type CheckpointKind =
   | 'infusion'
 
 /** 2024 专长类别：决定授予来源与候选池；2014 条目可省略。 */
-export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon'
+export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon' | 'dragonmark' | 'wild-talent'
 
 /** 护甲训练类别；2024 前置与熟练均以此为口径。 */
 export type ArmorTraining = 'light' | 'medium' | 'heavy' | 'shield'
@@ -132,6 +132,10 @@ export interface FeatPrerequisite {
     | 'spellcasting-or-pact'
   readonly requiredRaceIds?: readonly string[]
   readonly requiredSubraceIds?: readonly string[]
+  /** 必须已获得的专长 ID（如高等龙纹需先有对应基础龙纹）。 */
+  readonly requiredFeatIds?: readonly string[]
+  /** 已获得任意携带该 tag 的专长时不可选（如「不具有其他龙纹专长」）。 */
+  readonly excludedFeatTag?: string
 }
 
 /** 检查点或专长子选择声明的法术授予语义（始终准备、免费次数与恢复）。 */
@@ -173,6 +177,8 @@ export interface FixedSpellGrant {
   readonly freeCastingsFrom?: 'proficiency-bonus' | { readonly ability: AbilityKey; readonly minimum: number }
   readonly recovery?: 'long-rest' | 'short-rest'
   readonly ability?: AbilityKey
+  /** 达到该等级后本授予生效（如基础龙纹 3 级追加始终准备法术）。 */
+  readonly minimumLevel?: number
 }
 
 /** 物种授予的固定法术：按获得等级生效；施法属性由物种选择（若声明）。 */
@@ -217,6 +223,8 @@ export interface FeatRule extends RuleOption {
   readonly repeatable?: boolean
   /** 固定授予的法术（随专长自动生效，不需选择）。 */
   readonly grantedSpells?: readonly FixedSpellGrant[]
+  /** 将法术加入施法／契约法术列表（如龙纹「纹中之法」）。 */
+  readonly expandedSpellPool?: readonly string[]
   /** 无条件派生效果：每级最大生命值加成（如健壮 +2/级）。 */
   readonly hitPointBonusPerLevel?: number
   /** 无条件派生效果：固定最大生命值加成（如超凡强韧之恩惠 +40）。 */
@@ -578,6 +586,8 @@ export interface BackgroundRule {
   readonly featureName: string
   /** 2024 背景固定授予的起源专长；2014 背景与待接入数据省略。 */
   readonly originFeatId?: string
+  /** 起源专长替代：满足条件时可用所列类别专长替换固定起源专长（如贵族／智者＋狂野天赋）。 */
+  readonly originFeatSubstitutions?: readonly { readonly category: FeatCategory; readonly sourceIds: readonly string[] }[]
   /** 2024 背景的三项属性候选（+2/+1 或各 +1）；2014 背景省略。 */
   readonly abilityChoices?: readonly AbilityKey[]
   /** 2024 背景的可选工具规格（如工匠工具、乐器、赌具）。 */

@@ -193,7 +193,9 @@ export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingCo
   const expanded = config.expandedSpellPool && draft.targetLevel >= config.expandedSpellPool.startsAtLevel
     ? config.expandedSpellPool.spellIds
     : []
-  return [...new Set([...config.classSpellIds, ...expanded])]
+  // 专长扩表（如龙纹「纹中之法」）：仅在来源启用时加入候选。
+  const featExpanded = listActiveFeats(draft, repository).flatMap((feat) => feat.expandedSpellPool ?? [])
+  return [...new Set([...config.classSpellIds, ...expanded, ...featExpanded])]
     .map((id) => repository.getSpell(id))
     .filter((spell): spell is NonNullable<typeof spell> => Boolean(
       spell
@@ -416,9 +418,10 @@ export function getAlwaysPreparedSpellIds(draft: CharacterDraft): readonly strin
       }
     }
   }
-  // 专长固定授予（如迷踪步、隐形术、侦测思想）。
+  // 专长固定授予（如迷踪步、隐形术、侦测思想；龙纹 3 级追加授予按等级生效）。
   for (const feat of listActiveFeats(draft, repository)) {
     for (const grant of feat.grantedSpells ?? []) {
+      if ((grant.minimumLevel ?? 0) > draft.targetLevel) continue
       if (grant.alwaysPrepared !== false) ids.add(grant.spellId)
     }
   }
@@ -480,6 +483,7 @@ export function getSpellFreeCastings(
   for (const featGrant of listFeatGrants(draft, repository)) {
     const feat = repository.getFeat(featGrant.featId)
     for (const granted of feat?.grantedSpells ?? []) {
+      if ((granted.minimumLevel ?? 0) > draft.targetLevel) continue
       push(
         granted.spellId,
         `${featGrant.sourceId}:${featGrant.featId}`,
