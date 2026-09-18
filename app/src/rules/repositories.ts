@@ -6,6 +6,8 @@ import { uaSubclassUpdateOptions2024 } from '@/rules/data/ua-subclass-update-202
 import { uaHorrorOptions2024 } from '@/rules/data/ua-horror-2024'
 import { uaArcaneOptions2024 } from '@/rules/data/ua-arcane-subclasses-2024'
 import { uaCataclysmOptions2024 } from '@/rules/data/ua-cataclysm-2024'
+import { psionOptions2024 } from '@/rules/data/psion-2024'
+import { psionSpells2024 } from '@/rules/data/psion-spells-2024'
 import { uaMagicItems2024 } from '@/rules/data/ua-magic-items-2024'
 import { uaSpells2024 } from '@/rules/data/ua-spells-2024'
 import { classes2024 } from '@/rules/data/classes-2024'
@@ -48,12 +50,12 @@ export const rulesRepository2024 = createRulesRepository('5e-2024', {
   backgrounds: backgrounds2024,
   raceFeatures: speciesTraits2024,
   backgroundFeatures: [],
-  options: [...abilityImprovementOptions2024, ...featChoiceOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024, ...skillOptions2024, ...subclassOptions2024, ...barbarianOptions2024, ...bardOptions2024, ...clericOptions2024, ...druidOptions2024, ...fighterOptions2024, ...monkOptions2024, ...rangerOptions2024, ...sorcererOptions2024, ...warlockOptions2024, ...artificerOptions2024, ...uaFrSubclassOptions2024, ...uaSubclassUpdateOptions2024, ...uaHorrorOptions2024, ...uaArcaneOptions2024, ...uaCataclysmOptions2024],
+  options: [...abilityImprovementOptions2024, ...featChoiceOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024, ...skillOptions2024, ...subclassOptions2024, ...barbarianOptions2024, ...bardOptions2024, ...clericOptions2024, ...druidOptions2024, ...fighterOptions2024, ...monkOptions2024, ...rangerOptions2024, ...sorcererOptions2024, ...warlockOptions2024, ...artificerOptions2024, ...uaFrSubclassOptions2024, ...uaSubclassUpdateOptions2024, ...uaHorrorOptions2024, ...uaArcaneOptions2024, ...uaCataclysmOptions2024, ...psionOptions2024],
   feats: feats2024,
   equipment: [...equipmentWithPacks2024, ...magicItems2024, ...uaMagicItems2024],
   classStartingEquipment: classStartingEquipment2024,
   backgroundStartingEquipment: backgroundStartingEquipment2024,
-  spells: [...spells2024, ...uaSpells2024],
+  spells: [...spells2024, ...uaSpells2024, ...psionSpells2024],
   weaponMasteries: weaponMasteries2024,
 })
 

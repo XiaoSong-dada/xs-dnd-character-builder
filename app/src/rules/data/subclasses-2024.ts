@@ -1,6 +1,7 @@
 import type { RuleOption, SubclassRule } from '@/types/rules'
 import { uaSubclassUpdate2024 } from '@/rules/data/ua-subclass-update-2024'
 import { uaHorrorSubclasses2024 } from '@/rules/data/ua-horror-2024'
+import { psionSubclasses2024 } from '@/rules/data/psion-2024'
 import { uaArcaneSubclasses2024 } from '@/rules/data/ua-arcane-subclasses-2024'
 import { uaCataclysmSubclasses2024 } from '@/rules/data/ua-cataclysm-2024'
 import { uaFrSubclasses2024 } from '@/rules/data/ua-fr-subclasses-2024'
@@ -38,6 +39,7 @@ export const subclasses2024: readonly SubclassRule[] = [
   ...uaHorrorSubclasses2024,
   ...uaArcaneSubclasses2024,
   ...uaCataclysmSubclasses2024,
+  ...psionSubclasses2024,
 ]
 
 /** 子职选项投影：供时间线候选显示与来源过滤解析。 */
