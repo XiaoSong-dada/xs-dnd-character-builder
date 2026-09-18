@@ -1,7 +1,8 @@
 import type { SpellRule } from '@/types/rules'
 
 // 2014 全量法术元数据(仅保存选择所需:名称、环级、职业归属、来源索引),不复制效果正文。
-// 数据来源:5e.tools 法术数据(PHB/XGtE/EGtW/TCoE/FTD/SCC)+ dndspells.com 职业归属交叉核对。
+// 数据来源:5e.tools 法术数据(PHB/XGtE/EGtW/TCoE/FTD/SCC)+ dndspells.com 职业归属交叉核对;
+// AI/BMT/冰风谷/夸力许/AAG/SO/GGR 条目按《5e 不全书》v2025.11.8 补录。
 // SCAG 法术已并入 TCoE 重印条目;EGW dunamancy 法术(子职专属)不在 8 主职业列表中,未收录。
 // id 规则与历史数据兼容:spell-2014-<小写英文名连字符>。
 
@@ -57,6 +58,8 @@ const spellSeeds: readonly [
   ['Lightning Lure', '闪电牵引', 0, ['sorcerer', 'warlock', 'wizard'], ['tcoe-2020-index']],
   ['Mind Sliver', '心灵之楔', 0, ['sorcerer', 'warlock', 'wizard'], ['tcoe-2020-index']],
   ['Sword Burst', '剑刃爆发', 0, ['sorcerer', 'warlock', 'wizard'], ['tcoe-2020-index']],
+  // 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR）
+  ['Encode Thoughts', '思想编码', 0, [], ['ggr-2018-index']],
   // 1 环
   ['Alarm', '警报术', 1, ['ranger', 'wizard'], ['basic-rules-2014']],
   ['Animal Friendship', '化兽为友', 1, ['bard', 'druid', 'ranger'], ['basic-rules-2014']],
@@ -132,6 +135,10 @@ const spellSeeds: readonly [
   ['Zephyr Strike', '西风打击', 1, ['ranger'], ['xgte-2017-index']],
   ['Tasha\'s Caustic Brew', '塔莎酸蚀酿', 1, ['druid', 'sorcerer', 'wizard'], ['tcoe-2020-index']],
   ['Silvery Barbs', '银光锐语', 1, ['bard', 'sorcerer', 'wizard'], ['scc-2021-index']],
+  // 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR）
+  ['Distort Value', '扭曲价值', 1, ['bard', 'sorcerer', 'wizard', 'warlock'], ['ai-2019-index']],
+  ['Jim\'s Magic Missile', '吉姆的魔法飞弹', 1, ['wizard'], ['ai-2019-index']],
+  ['Frost Finger', '冷冻一指', 1, ['wizard'], ['idrotf-2020-index']],
   // 2 环
   ['Aid', '援助术', 2, ['cleric', 'paladin'], ['basic-rules-2014']],
   ['Alter Self', '变身术', 2, ['sorcerer', 'wizard'], ['basic-rules-2014']],
@@ -212,6 +219,13 @@ const spellSeeds: readonly [
   ['Kinetic Jaunt', '动力短行', 2, ['bard', 'sorcerer', 'wizard'], ['scc-2021-index']],
   ['Vortex Warp', '涡旋翘曲', 2, ['sorcerer', 'wizard'], ['scc-2021-index']],
   ['Wither and Bloom', '靡叶生华', 2, ['cleric', 'druid', 'sorcerer', 'wizard'], ['scc-2021-index']],
+  // 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR）
+  ['Gift of Gab', '巧舌如簧', 2, ['bard', 'wizard'], ['ai-2019-index']],
+  ['Jim\'s Glowing Coin', '吉姆的发光硬币', 2, ['wizard'], ['ai-2019-index']],
+  ['Spray of Cards', '卡牌喷射', 2, ['bard', 'sorcerer', 'wizard', 'warlock'], ['bmt-2023-index']],
+  ['Flock of Familiars', '魔宠群', 2, ['wizard', 'warlock'], ['llok-2018-index']],
+  ['Air Bubble', '空气泡泡', 2, ['druid', 'ranger', 'sorcerer', 'wizard', 'artificer'], ['aag-2022-index']],
+  ['Warp Sense', '侦测扭曲', 2, ['sorcerer', 'wizard', 'warlock'], ['sato-2023-index']],
   // 3 环
   ['Animate Dead', '活化死尸', 3, ['cleric', 'wizard'], ['basic-rules-2014']],
   ['Aura of Vitality', '活力灵光', 3, ['paladin'], ['basic-rules-2014']],
@@ -281,6 +295,12 @@ const spellSeeds: readonly [
   ['Summon Shadowspawn', '暗影衍体召唤术', 3, ['warlock', 'wizard'], ['tcoe-2020-index']],
   ['Summon Undead', '亡灵召唤术', 3, ['warlock', 'wizard'], ['tcoe-2020-index']],
   ['Ashardalon\'s Stride', '阿莎德隆奔行', 3, ['ranger', 'sorcerer', 'wizard'], ['ftd-2021-index']],
+  // 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR）
+  ['Fast Friends', '快速交友', 3, ['bard', 'cleric', 'wizard'], ['ai-2019-index']],
+  ['Incite Greed', '鼓动贪欲', 3, ['cleric', 'sorcerer', 'wizard', 'warlock'], ['ai-2019-index']],
+  ['Motivational Speech', '励志演讲', 3, ['bard', 'cleric'], ['ai-2019-index']],
+  ['Antagonize', '敌意术', 3, ['bard', 'sorcerer', 'wizard', 'warlock'], ['bmt-2023-index']],
+  ['Galder\'s Tower', '加德尔高塔术', 3, ['wizard'], ['llok-2018-index']],
   // 4 环
   ['Arcane Eye', '秘法眼', 4, ['wizard'], ['basic-rules-2014']],
   ['Aura of Life', '生命灵光', 4, ['paladin'], ['basic-rules-2014']],
@@ -331,6 +351,10 @@ const spellSeeds: readonly [
   ['Summon Construct', '构装召唤术', 4, ['wizard'], ['tcoe-2020-index']],
   ['Summon Elemental', '元素召唤术', 4, ['druid', 'ranger', 'wizard'], ['tcoe-2020-index']],
   ['Raulothim\'s Psychic Lance', '劳洛希姆心灵长枪', 4, ['bard', 'sorcerer', 'warlock', 'wizard'], ['ftd-2021-index']],
+  // 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR）
+  ['Spirit of Death', '死神灵魄', 4, ['sorcerer', 'wizard', 'warlock'], ['bmt-2023-index']],
+  ['Galder\'s Speedy Courier', '加德尔急速邮差', 4, ['wizard', 'warlock'], ['llok-2018-index']],
+  ['Gate Seal', '界门封锁', 4, ['sorcerer', 'wizard', 'warlock'], ['sato-2023-index']],
   // 5 环
   ['Animate Objects', '活化物件', 5, ['bard', 'sorcerer', 'wizard'], ['basic-rules-2014']],
   ['Antilife Shell', '防活物护罩', 5, ['druid'], ['basic-rules-2014']],
@@ -392,6 +416,8 @@ const spellSeeds: readonly [
   ['Wrath of Nature', '自然之怒', 5, ['druid', 'ranger'], ['xgte-2017-index']],
   ['Summon Celestial', '天界召唤术', 5, ['cleric', 'paladin'], ['tcoe-2020-index']],
   ['Summon Draconic Spirit', '龙类灵魄召唤术', 5, ['druid', 'sorcerer', 'wizard'], ['ftd-2021-index']],
+  // 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR）
+  ['Create Spelljamming Helm', '创造法驱魔舵', 5, ['wizard', 'artificer'], ['aag-2022-index']],
   // 6 环
   ['Arcane Gate', '秘法门', 6, ['sorcerer', 'warlock', 'wizard'], ['basic-rules-2014']],
   ['Blade Barrier', '剑刃护壁', 6, ['cleric'], ['basic-rules-2014']],
@@ -467,6 +493,8 @@ const spellSeeds: readonly [
   ['Whirlwind', '旋风术', 7, ['druid', 'sorcerer', 'wizard'], ['xgte-2017-index']],
   ['Dream of the Blue Veil', '蓝纱一梦', 7, ['bard', 'sorcerer', 'warlock', 'wizard'], ['tcoe-2020-index']],
   ['Draconic Transformation', '龙类变形', 7, ['druid', 'sorcerer', 'wizard'], ['ftd-2021-index']],
+  // 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR）
+  ['Create Magen', '创造魔卫', 7, ['wizard'], ['idrotf-2020-index']],
   // 8 环
   ['Animal Shapes', '动物形态', 8, ['druid'], ['basic-rules-2014']],
   ['Antimagic Field', '反魔法场', 8, ['cleric', 'wizard'], ['basic-rules-2014']],
@@ -1068,18 +1096,67 @@ const spellDescriptions: Readonly<Record<string, string>> = {
   'spell-2014-invulnerability': '1 动作，自身，持续 10 分钟（专注）；对全部伤害免疫。',
   'spell-2014-mass-polymorph': '1 动作，射程 120 尺，持续 1 小时（专注）；最多 10 个生物变为野兽形态。',
   'spell-2014-psychic-scream': '1 动作，射程 90 尺；智力豁免失败受 14d6 精神伤害并被震慑（成功减半）。',
+  // ── 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR） ──
+  'spell-2014-distort-value': '1 分钟，触碰，持续 8 小时；把 1 尺以内物件的观感价值翻倍或减半；检查者可用智力（调查）对抗你的法术 DC 识破；每高 1 环可多覆盖 1 尺。',
+  'spell-2014-fast-friends': '1 动作，射程 30 尺，持续 1 小时（专注）；类人生物感知豁免失败即被魅惑，尽力完成你要求的服务；要求危险或违背本性时可再豁免；你或同伴与其交战时其豁免优势；法术结束或要求致死时终止；每高 1 环 +1 目标。',
+  'spell-2014-gift-of-gab': '1 反应（与生物说话时），自身，立即；你周围 5 尺内你选择的生物忘掉你过去 6 秒说过的话，只记得你随后说出的言语成分内容；含版税成分（2 GP）。',
+  'spell-2014-incite-greed': '1 动作，射程 30 尺，持续 1 分钟（专注）；展示价值 50+ GP 的宝石，感知豁免失败的可见生物被魅惑并只能安全地靠近并注视宝石；你或同伴伤害它则结束；目标每回合结束可再豁免。',
+  'spell-2014-jim-s-glowing-coin': '1 动作，射程 60 尺，持续 1 分钟；硬币落在指定点并发光（如光亮术）；30 尺内你选择的可见生物感知豁免失败则被分心，其感知（察觉）与先攻检定劣势；含版税成分（2 GP）。',
+  'spell-2014-jim-s-magic-missile': '1 动作，射程 120 尺，立即；对至多 3 个目标各做一次远程法术攻击，命中 2d4 力场伤害，天然 20 改为 5d4；任一攻击掷出 1 则全部飞弹在你脸上爆炸，每枚各对你造成 1 点伤害；每高 1 环 +1 枚飞弹（版税成分 +1 GP）。',
+  'spell-2014-motivational-speech': '1 分钟，射程 60 尺，持续 1 小时；至多 5 个能听见你的生物各获得 5 点临时生命值且感知豁免优势；被攻击命中后其下一次攻击检定优势；临时生命值耗尽即对其结束；每高 1 环临时生命值 +5。',
+  'spell-2014-antagonize': '1 动作，射程 30 尺，立即；目标感知豁免失败受 4d4 心灵伤害，并须以反应对其触及内由你指定的另一个生物发动一次近战攻击；无法发动则其到你的下回合开始前下一次攻击检定劣势；豁免成功半伤；每高 1 环伤害 +1d4。',
+  'spell-2014-spirit-of-death': '1 动作，射程 60 尺，持续 1 小时（专注）；召唤死神化身的收割者灵魄（使用来源数据）在你可见的空位显形，与你共享先攻并在你回合后行动，听你口头指令；生命值降至 0 或法术结束时消失；升环（5 环起）使用更高环阶的灵魄数据。',
+  'spell-2014-spray-of-cards': '1 动作，自身 15 尺锥形，立即；锥内生物敏捷豁免失败受 2d10 力场伤害并目盲至其下回合结束，成功半伤；每高 1 环伤害 +1d10。',
+  'spell-2014-create-magen': '1 小时，触碰，立即；用价值 500 GP 的水银与真人大小人偶（耗材）和 1,500+ GP 水晶权杖制造一个魔卫（类型自选，数据见来源）；你的生命值上限减少等于该魔卫挑战等级的值（至少 1），仅祈愿术可撤销；魔卫无条件执行你的命令。',
+  'spell-2014-frost-finger': '1 动作，自身 15 尺锥形，立即；锥内生物体质豁免失败受 2d8 冷冻伤害，成功半伤；冻结区域内未被携带的非魔法液体；每高 1 环伤害 +1d8。',
+  'spell-2014-flock-of-familiars': '1 分钟，触碰，持续 1 小时（专注）；召唤 3 只临时魔宠（规则同寻获魔宠，须同类：天族／妖精／邪魔）；已有魔宠时数量 -1；可与它们心灵沟通并在 1 里内共享感官；每回合可由一只魔宠替你传递触碰法术；每高 1 环 +1 只。',
+  'spell-2014-galder-s-speedy-courier': '1 动作，射程 10 尺，持续 10 分钟；召唤无形气元素携带 3 尺立方箱子，可存入物品并指定你见过或持有其身体部位的收件生物；盖箱后箱子在目标旁出现，目标知晓内容并可取出；法术结束或取空后消失；八环施放可跨位面送达。',
+  'spell-2014-galder-s-tower': '10 分钟，射程 30 尺，持续 24 小时；召唤两层塔楼（圆形或方形，每层 10 尺高、至多 100 平方尺），层间以梯子与舱口连接；每层可选卧室／书房／餐厅等形式；再次施放同一区域即结束。',
+  'spell-2014-air-bubble': '1 动作，射程 60 尺，持续 24 小时；为一名自愿生物的头部创造散发幽光的空气球，使其呼吸新鲜空气（多头生物仅护住一头，除非共用呼吸系统）；每高 1 环 +2 个球体。',
+  'spell-2014-create-spelljamming-helm': '1 动作，触碰，立即；消耗一条价值 5,000+ GP 的水晶权杖，把一个不超过大型、未被占据的座椅变成法驱魔舵（数据见来源魔法物品）。',
+  'spell-2014-gate-seal': '1 分钟，射程 60 尺，持续 24 小时；封锁 30 尺立方区域的位面结构：区域内传送门关闭且无法重开，位面旅行／开门效应进出该区域自动失败；区域不可移动；六环以上施放持续至被解除。',
+  'spell-2014-warp-sense': '1 动作，自身，持续 1 分钟（专注）；感知 30 尺内的传送门（含未开启者）；可用动作分析已侦测的传送门：以施法属性进行 DC15 检定，成功可知目的地与钥匙需求并结束，失败则下次施法前无法再分析；3 尺木／土、1 尺石、1 寸金属或薄铅可阻挡。',
+  'spell-2014-encode-thoughts': '1 动作，自身，至多 8 小时；把一段记忆／想法／信息从心灵抽出，化为可由你握持携带的「思想链」实体；再次施放或持续结束即消失；握持时再施放可读取其中内容；若施放时正专注读取他人思想（如侦测思想），可把读取到的内容制成思想链。',
 }
 
-export const spells2014: readonly SpellRule[] = spellSeeds.map(([englishName, name, level, classIds, sourceIds]) => ({
-  id: spellId(englishName),
-  ruleset: '5e-2014',
-  name,
-  englishName,
-  level,
-  ritual: ritualSpellNameSet2014.has(englishName),
-  classIds: classIds.map((className) => `class-2014-${className}`),
-  summary: `${level === 0 ? '戏法' : `${level}环法术`}；元数据条目，效果以规则来源为准。`,
-  description: spellDescriptions[spellId(englishName)] ?? '',
-  status: 'implemented',
-  sourceIds,
-}))
+/** 补充结构化字段（学派与施法参数）；仅登记《5e 不全书》来源有明确值的条目。 */
+const spellMetadata2014: Readonly<Record<string, Pick<SpellRule, 'school' | 'castingTime' | 'range' | 'components' | 'duration' | 'concentration'>>> = {
+  'spell-2014-distort-value': { school: '幻术', castingTime: '1 分钟', range: '触碰', components: 'V', duration: '8 小时', concentration: false },
+  'spell-2014-fast-friends': { school: '惑控', castingTime: '动作', range: '30 尺', components: 'V', duration: '专注，至多 1 小时', concentration: true },
+  'spell-2014-gift-of-gab': { school: '惑控', castingTime: '1 反应（说话时）', range: '自身', components: 'V、S、R（2 GP）', duration: '立即', concentration: false },
+  'spell-2014-incite-greed': { school: '惑控', castingTime: '动作', range: '30 尺', components: 'V、S、M（一块至少价值 50 GP 的宝石）', duration: '专注，至多 1 分钟', concentration: true },
+  'spell-2014-jim-s-glowing-coin': { school: '惑控', castingTime: '动作', range: '60 尺', components: 'S、M（一枚硬币）、R（2 GP）', duration: '1 分钟', concentration: false },
+  'spell-2014-jim-s-magic-missile': { school: '塑能', castingTime: '动作', range: '120 尺', components: 'V、S、R（1 GP）', duration: '立即', concentration: false },
+  'spell-2014-motivational-speech': { school: '惑控', castingTime: '1 分钟', range: '60 尺', components: 'V', duration: '1 小时', concentration: false },
+  'spell-2014-antagonize': { school: '惑控', castingTime: '动作', range: '30 尺', components: 'V、S、M（一张描绘浪客的卡牌）', duration: '立即', concentration: false },
+  'spell-2014-spirit-of-death': { school: '死灵', castingTime: '动作', range: '60 尺', components: 'V、S、M（至少价值 400 GP 的镀金纸牌）', duration: '专注，至多 1 小时', concentration: true },
+  'spell-2014-spray-of-cards': { school: '咒法', castingTime: '动作', range: '自身（15 尺锥形）', components: 'V、S、M（一副牌组）', duration: '立即', concentration: false },
+  'spell-2014-create-magen': { school: '变化', castingTime: '1 小时', range: '触碰', components: 'V、S、M（价值 500 GP 的水银与真人大小人偶，作为耗材；价值 1,500+ GP 的水晶权杖）', duration: '立即', concentration: false },
+  'spell-2014-frost-finger': { school: '塑能', castingTime: '动作', range: '自身（15 尺锥形）', components: 'V、S', duration: '立即', concentration: false },
+  'spell-2014-flock-of-familiars': { school: '咒法', castingTime: '1 分钟', range: '触碰', components: 'V、S', duration: '专注，至多 1 小时', concentration: true },
+  'spell-2014-galder-s-speedy-courier': { school: '咒法', castingTime: '动作', range: '10 尺', components: 'V、S、M（价值 25 GP 的矿石货物，作为耗材）', duration: '10 分钟', concentration: false },
+  'spell-2014-galder-s-tower': { school: '咒法', castingTime: '10 分钟', range: '30 尺', components: 'V、S、M（一块建筑材料碎片）', duration: '24 小时', concentration: false },
+  'spell-2014-air-bubble': { school: '咒法', castingTime: '动作', range: '60 尺', components: 'S', duration: '24 小时', concentration: false },
+  'spell-2014-create-spelljamming-helm': { school: '变化', castingTime: '动作', range: '触碰', components: 'V、S、M（价值 5,000+ GP 的水晶权杖，作为耗材）', duration: '立即', concentration: false },
+  'spell-2014-gate-seal': { school: '防护', castingTime: '1 分钟', range: '60 尺', components: 'V、S、M（一把损坏的传送门钥匙，作为耗材）', duration: '24 小时', concentration: false },
+  'spell-2014-warp-sense': { school: '预言', castingTime: '动作', range: '自身', components: 'V、S、M（刃藤的一片叶子）', duration: '专注，至多 1 分钟', concentration: true },
+  'spell-2014-encode-thoughts': { school: '惑控', castingTime: '动作', range: '自身', components: 'S', duration: '至多 8 小时', concentration: false },
+}
+
+export const spells2014: readonly SpellRule[] = spellSeeds.map(([englishName, name, level, classIds, sourceIds]) => {
+  const id = spellId(englishName)
+  return {
+    id,
+    ruleset: '5e-2014',
+    name,
+    englishName,
+    level,
+    ritual: ritualSpellNameSet2014.has(englishName),
+    classIds: classIds.map((className) => `class-2014-${className}`),
+    summary: `${level === 0 ? '戏法' : `${level}环法术`}；元数据条目，效果以规则来源为准。`,
+    description: spellDescriptions[id] ?? '',
+    status: 'implemented',
+    sourceIds,
+    ...spellMetadata2014[id],
+  }
+})
