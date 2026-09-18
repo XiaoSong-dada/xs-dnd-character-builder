@@ -120,7 +120,7 @@ function buildSubclassFeatureCheckpoints(
       spellPool: feature.spellPool,
       spellGrant: feature.spellGrant,
       spellCastingTime: feature.spellCastingTime,
-      uniqueGroup: feature.optionIds?.length && feature.id.includes('arcane-shot') ? 'arcane-archer-shots' : undefined,
+      uniqueGroup: feature.uniqueGroup ?? (feature.optionIds?.length && feature.id.includes('arcane-shot') ? 'arcane-archer-shots' : undefined),
     }))
 }
 

@@ -1,5 +1,5 @@
 import { deriveAbilities } from '@/rules/derive'
-import { classHasFightingStyle, collectArmorTrainings, type FeatEligibilityContext } from '@/rules/feats'
+import { classHasFightingStyle, collectArmorTrainings, listFeatGrants, type FeatEligibilityContext } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
@@ -45,6 +45,8 @@ export function getFeatEligibilityContext(
   const canCastSpells = Boolean(
     spellcasting && checkpointLevel !== undefined && checkpointLevel >= spellcasting.startsAtLevel,
   )
+  const acquiredFeatIds = listFeatGrants(draft, repository).map((grant) => grant.featId)
+  const acquiredFeatTags = [...new Set(acquiredFeatIds.flatMap((featId) => repository.getFeat(featId)?.tags ?? []))]
   if (repository.ruleset !== '5e-2024') {
     return {
       abilities,
@@ -52,6 +54,8 @@ export function getFeatEligibilityContext(
       canCastSpells,
       raceId: draft.raceId,
       subraceId: draft.subraceId,
+      acquiredFeatIds,
+      acquiredFeatTags,
     }
   }
   return {
@@ -63,5 +67,7 @@ export function getFeatEligibilityContext(
     level: checkpointLevel,
     hasFightingStyle: classHasFightingStyle(repository, draft.classId, draft.targetLevel),
     armorTrainings: collectArmorTrainings(draft, repository),
+    acquiredFeatIds,
+    acquiredFeatTags,
   }
 }

@@ -102,7 +102,7 @@ describe('2024 游侠与 4 范型数据（B08-12）', () => {
   })
 
   it('4 个范型特性数量与等级节点正确，范型法术始终准备', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-ranger').map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-ranger' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
     const expected: Readonly<Record<(typeof SUBCLASS_IDS)[number], readonly number[]>> = {
       'subclass-2024-ranger-beast-master': [3, 7, 11, 15],
       'subclass-2024-ranger-fey-wanderer': [3, 3, 3, 7, 11, 15],
@@ -145,7 +145,7 @@ describe('2024 游侠与 4 范型数据（B08-12）', () => {
         selection('subclass-feature-ranger-2024-hunter-hunters-prey', ['hunter-2024-prey-colossus-slayer']),
       ],
     })
-    const timeline = buildTimeline('class-2024-ranger', 3, { ruleset: '5e-2024', subclassId: 'subclass-2024-ranger-hunter' })
+    const timeline = buildTimeline('class-2024-ranger', 3, { ruleset: '5e-2024', enabledSourceIds: [], subclassId: 'subclass-2024-ranger-hunter' })
     const prey = timeline.find((checkpoint) => checkpoint.id === 'subclass-feature-ranger-2024-hunter-hunters-prey')
     expect(prey?.optionIds).toEqual(['hunter-2024-prey-colossus-slayer', 'hunter-2024-prey-horde-breaker'])
     expect(draft.selections.flatMap((item) => item.optionIds)).toContain('hunter-2024-prey-colossus-slayer')
@@ -172,18 +172,18 @@ describe('2024 游侠与 4 范型数据（B08-12）', () => {
   })
 
   it('时间线展开技能、武器精通、战斗风格、子职与属性提升', () => {
-    const levelOne = buildTimeline('class-2024-ranger', 1, { ruleset: '5e-2024' })
+    const levelOne = buildTimeline('class-2024-ranger', 1, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-ranger-skills-1',
       'class-2024-ranger-mastery-1',
     ])
 
-    const levelThree = buildTimeline('class-2024-ranger', 3, { ruleset: '5e-2024' })
+    const levelThree = buildTimeline('class-2024-ranger', 3, { ruleset: '5e-2024', enabledSourceIds: [] })
     const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
     expect(subclass?.id).toBe('class-2024-ranger-subclass-3')
     expect(subclass?.optionIds).toEqual([...SUBCLASS_IDS])
 
-    const levelTwenty = buildTimeline('class-2024-ranger', 20, { ruleset: '5e-2024' })
+    const levelTwenty = buildTimeline('class-2024-ranger', 20, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-ranger-feat-4',
       'class-2024-ranger-feat-8',

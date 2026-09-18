@@ -14,6 +14,7 @@ const PLACEHOLDER_PATTERNS = [/元数据/, /待补/, /效果以规则来源为�
  */
 const EXPECTED_PRIMARY_ABILITIES: Readonly<Record<string, readonly string[]>> = {
   artificer: ['int'],
+  psion: ['int'],
   barbarian: ['str'],
   bard: ['cha'],
   cleric: ['wis'],
@@ -32,9 +33,9 @@ describe('职业介绍与职业详情（U02）', () => {
   const classes2014 = rulesRepository2014.classes
   const classes2024 = rulesRepository2024.classes
 
-  it('2014 的 13 个职业与 2024 的 12 个职业都登记了职业介绍', () => {
+  it('2014 的 13 个职业与 2024 的 14 个职业（含 UA 奇械师与灵能使）都登记了职业介绍', () => {
     expect(classes2014).toHaveLength(13)
-    expect(classes2024).toHaveLength(12)
+    expect(classes2024).toHaveLength(14)
     for (const classRule of [...classes2014, ...classes2024]) {
       const introduction = classRule.introduction ?? ''
       expect(introduction.trim(), `${classRule.id} 应有职业介绍`).not.toBe('')
@@ -58,12 +59,12 @@ describe('职业介绍与职业详情（U02）', () => {
     const introductions2014 = new Map(classes2014.map((classRule) => [classRule.englishName, classRule.introduction]))
     for (const classRule of classes2024) {
       const counterpart = introductions2014.get(classRule.englishName)
-      expect(counterpart, `${classRule.englishName} 应在 2014 有同名职业`).toBeTruthy()
+      if (counterpart === undefined) continue // 2024 新增职业（如灵能使）无 2014 同名条目。
       expect(classRule.introduction, `${classRule.englishName} 两版介绍不应相同`).not.toBe(counterpart)
     }
   })
 
-  it('主要属性与 5e 不全书核对清单一致（25 个职业）', () => {
+  it('主要属性与 5e 不全书核对清单一致（27 个职业）', () => {
     for (const classRule of [...classes2014, ...classes2024]) {
       const expected = EXPECTED_PRIMARY_ABILITIES[classRule.englishName.toLowerCase()]
       expect(expected, `${classRule.id} 缺少核对清单项`).toBeTruthy()

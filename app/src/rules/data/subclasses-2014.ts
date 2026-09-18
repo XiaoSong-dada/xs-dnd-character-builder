@@ -296,6 +296,18 @@ const spellIds = (...englishNames: readonly string[]): readonly string[] => engl
   return spell ? [spell.id] : []
 })
 
+/** EGtW 法师子职的秘迹学法术书候选（共享 6 条 + 时间／重力专属），仅对应子职可见。 */
+const wizardSubclassSpellbookSpells: Readonly<Record<string, readonly string[]>> = {
+  'subclass-2014-wizard-chronurgy': spellIds(
+    'Sapping Sting', 'Fortune\'s Favor', 'Immovable Object', 'Wristpocket', 'Pulse Wave', 'Tether Essence',
+    'Gift of Alacrity', 'Temporal Shunt', 'Reality Break', 'Time Ravage',
+  ),
+  'subclass-2014-wizard-graviturgy': spellIds(
+    'Sapping Sting', 'Fortune\'s Favor', 'Immovable Object', 'Wristpocket', 'Pulse Wave', 'Tether Essence',
+    'Magnify Gravity', 'Gravity Sinkhole', 'Gravity Fissure', 'Dark Star', 'Ravenous Void',
+  ),
+}
+
 const artificerSubclassSpells: Readonly<Record<string, Readonly<Record<number, readonly string[]>>>> = {
   'subclass-2014-artificer-alchemist': {
     3: spellIds('Healing Word', 'Ray of Sickness'), 5: spellIds('Flaming Sphere', "Melf's Acid Arrow"),
@@ -378,6 +390,7 @@ export const subclasses2014: readonly SubclassRule[] = Object.entries(entriesByC
       features: getSubclassFeatures2014(id),
       spellcasting: subclassSpellcasting[id],
       alwaysPreparedSpellIdsByLevel: artificerSubclassSpells[id],
+      spellbookSpellIds: wizardSubclassSpellbookSpells[id],
     }
   }),
 )

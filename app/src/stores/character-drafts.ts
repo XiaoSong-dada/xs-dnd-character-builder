@@ -49,7 +49,7 @@ function createCharacterDraft(ruleset: RulesetId): CharacterDraft {
     updatedAt: now,
     targetLevel: 10,
     abilityMethod: 'standard-array',
-    enabledSourceIds: ruleset === '5e-2014' ? getDefaultEnabledSourceIds() : [],
+    enabledSourceIds: getDefaultEnabledSourceIds(ruleset),
     raceAbilityChoices: [],
     backgroundSkillIds: [],
     backgroundToolIds: [],
@@ -185,7 +185,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     replaceDraft(index, current, {
       ...current,
       ruleset,
-      enabledSourceIds: ruleset === '5e-2014' ? getDefaultEnabledSourceIds() : [],
+      enabledSourceIds: getDefaultEnabledSourceIds(ruleset),
       updatedAt: new Date().toISOString(),
     })
     return true

@@ -22,6 +22,8 @@ const categoryTags: Readonly<Record<FeatCategory, string>> = {
   general: '通用',
   'fighting-style': '战斗风格',
   'epic-boon': '传奇恩惠',
+  dragonmark: '龙纹',
+  'wild-talent': '狂野天赋',
 }
 
 /**

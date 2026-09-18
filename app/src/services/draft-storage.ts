@@ -68,10 +68,9 @@ function normalizeMedia(value: unknown): CharacterMedia | undefined {
   return avatar || portrait ? { avatar, portrait } : undefined
 }
 
-/** 2014 只保留本版可选来源；2024 来源规则由 B06 接入，当前只去重、不套用 2014 白名单。 */
+/** 按草稿规则集保留本版可选来源；2024 的 UA 游玩测试来源同样按白名单规范化。 */
 function normalizeDraftSourceIds(draft: CharacterDraft): readonly string[] {
-  if (draft.ruleset === '5e-2014') return normalizeEnabledSourceIds(draft.enabledSourceIds)
-  return [...new Set(draft.enabledSourceIds ?? [])]
+  return normalizeEnabledSourceIds(draft.enabledSourceIds, draft.ruleset)
 }
 
 /** 2024 背景属性分配：只保留六项属性中 1／2 的整数值。 */

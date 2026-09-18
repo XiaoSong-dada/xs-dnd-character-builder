@@ -25,7 +25,7 @@ const WIZARD_SUBCLASS_IDS = [
 
 describe('2024 战士与法师补齐子职（B08-13）', () => {
   it('战士 4 个子职全部接入，特性等级结构正确', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-fighter').map((subclass) => subclass.id)).toEqual([...FIGHTER_SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-fighter' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...FIGHTER_SUBCLASS_IDS])
     expect(fighterSubclasses2024.map((subclass) => subclass.id)).toEqual([...FIGHTER_SUBCLASS_IDS])
     const expected: Readonly<Record<(typeof FIGHTER_SUBCLASS_IDS)[number], readonly number[]>> = {
       'subclass-2024-fighter-champion': [3, 3, 7, 10, 15, 18],
@@ -68,7 +68,7 @@ describe('2024 战士与法师补齐子职（B08-13）', () => {
 
     expect(fighterOptions2024).toHaveLength(20)
     const draft = draft2024({ classId: 'class-2024-fighter', subclassId: 'subclass-2024-fighter-battle-master', targetLevel: 15 })
-    const timeline = buildTimeline('class-2024-fighter', 15, { ruleset: '5e-2024', subclassId: 'subclass-2024-fighter-battle-master' })
+    const timeline = buildTimeline('class-2024-fighter', 15, { ruleset: '5e-2024', enabledSourceIds: [], subclassId: 'subclass-2024-fighter-battle-master' })
     const maneuverCheckpoints = timeline.filter((checkpoint) => checkpoint.optionIds.some((id) => id.startsWith('maneuver-2024-')))
     expect(maneuverCheckpoints.map((checkpoint) => [checkpoint.level, checkpoint.minSelections])).toEqual([
       [3, 3], [7, 2], [10, 2], [15, 2],
@@ -87,7 +87,7 @@ describe('2024 战士与法师补齐子职（B08-13）', () => {
   })
 
   it('法师 4 个子职全部接入，特性等级与额外入书学派正确', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-wizard').map((subclass) => subclass.id)).toEqual([...WIZARD_SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-wizard' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...WIZARD_SUBCLASS_IDS])
     expect(wizardSubclasses2024.map((subclass) => subclass.id)).toEqual([...WIZARD_SUBCLASS_IDS])
     const expected: Readonly<Record<(typeof WIZARD_SUBCLASS_IDS)[number], readonly number[]>> = {
       'subclass-2024-wizard-evoker': [3, 3, 6, 10, 14],
@@ -125,11 +125,11 @@ describe('2024 战士与法师补齐子职（B08-13）', () => {
   })
 
   it('子职检查点进入时间线且未接入子职不出现', () => {
-    const ekTimeline = buildTimeline('class-2024-fighter', 3, { ruleset: '5e-2024', subclassId: 'subclass-2024-fighter-eldritch-knight' })
+    const ekTimeline = buildTimeline('class-2024-fighter', 3, { ruleset: '5e-2024', enabledSourceIds: [], subclassId: 'subclass-2024-fighter-eldritch-knight' })
     expect(ekTimeline.find((checkpoint) => checkpoint.kind === 'subclass')?.optionIds).toEqual([...FIGHTER_SUBCLASS_IDS])
     expect(ekTimeline.some((checkpoint) => checkpoint.id.startsWith('subclass-feature-fighter-2024-eldritch-knight'))).toBe(false)
 
-    const wizardTimeline = buildTimeline('class-2024-wizard', 3, { ruleset: '5e-2024', subclassId: 'subclass-2024-wizard-abjurer' })
+    const wizardTimeline = buildTimeline('class-2024-wizard', 3, { ruleset: '5e-2024', enabledSourceIds: [], subclassId: 'subclass-2024-wizard-abjurer' })
     expect(wizardTimeline.find((checkpoint) => checkpoint.kind === 'subclass')?.optionIds).toEqual([...WIZARD_SUBCLASS_IDS])
   })
 })

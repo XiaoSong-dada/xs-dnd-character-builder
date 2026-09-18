@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import UiBadge from '@/components/ui/UiBadge.vue'
 import UiChip from '@/components/ui/UiChip.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import { getRulesRepository } from '@/rules/repositories'
@@ -11,10 +12,13 @@ const props = withDefaults(defineProps<{ selected: readonly string[]; ruleset?: 
 const emit = defineEmits<{ change: [value: readonly string[]] }>()
 
 const repository = computed(() => getRulesRepository(props.ruleset))
-const isModern = computed(() => props.ruleset === '5e-2024')
 const coreSources = computed(() => repository.value.sources.filter((source) => source.category === 'core'))
-/** 2014 的扩展书开关仅在 2014 草稿提供；2024 当前只有核心书（B09-02，Q-B09-5）。 */
-const selectableSources = computed(() => isModern.value ? [] : getSelectableSources())
+/** 按草稿规则集提供可切换来源；2024 当前全部为破解奥秘（UA）游玩测试来源。 */
+const selectableSources = computed(() => getSelectableSources(props.ruleset))
+const officialSources = computed(() => selectableSources.value.filter((source) => source.contentKind !== 'playtest' && source.contentKind !== 'third-party' && source.contentKind !== 'legacy'))
+const playtestSources = computed(() => selectableSources.value.filter((source) => source.contentKind === 'playtest'))
+const thirdPartySources = computed(() => selectableSources.value.filter((source) => source.contentKind === 'third-party'))
+const legacySources = computed(() => selectableSources.value.filter((source) => source.contentKind === 'legacy'))
 
 function toggle(id: string): void {
   emit('change', props.selected.includes(id)
@@ -28,23 +32,62 @@ function toggle(id: string): void {
     <UiNotice tone="info" title="核心规则始终启用">
       {{ coreSources.map((source) => source.title).join('、') }} 不受扩展书开关影响。
     </UiNotice>
-    <UiNotice v-if="isModern" tone="info" title="2024 暂不提供扩展书开关">
-      2024 角色目前只使用玩家手册（2024）与城主指南（2024）两本核心书；后续扩展书将在对应批次接入。
+    <UiNotice v-if="playtestSources.length > 0" tone="warning" title="破解奥秘为游玩测试内容">
+      破解奥秘（UA）不是官方正式规则，只是设计原型；启用后相关内容会显示「游玩测试」标记，使用前请获得 DM 同意。
     </UiNotice>
-    <template v-if="!isModern">
+    <UiNotice v-if="thirdPartySources.length > 0" tone="warning" title="合作内容需 DM 同意">
+      以下第三方合作内容不是威世智官方规则；启用后相关内容会显示「合作内容」标记，使用前请获得 DM 同意。
+    </UiNotice>
+    <UiNotice v-if="legacySources.length > 0" tone="info" title="旧扩展法术默认关闭">
+      以下 2014 扩展法术未在 PHB 2024 重印；启用后可在 2024 车卡中使用，条目会显示「旧扩展」标记。
+    </UiNotice>
+    <template v-if="selectableSources.length > 0">
       <div class="sources-step__toolbar">
         <button type="button" @click="$emit('change', selectableSources.map((source) => source.id))">全部启用</button>
         <button type="button" @click="$emit('change', [])">只用核心规则</button>
       </div>
-      <div class="sources-step__list" aria-label="可选扩展书">
+      <div v-if="officialSources.length > 0" class="sources-step__list" aria-label="可选扩展书">
         <UiChip
-          v-for="source in selectableSources"
+          v-for="source in officialSources"
           :key="source.id"
           :selected="selected.includes(source.id)"
           :title="source.title"
           @toggle="toggle(source.id)"
         >
           {{ source.shortTitle }} · {{ source.title }}
+        </UiChip>
+      </div>
+      <div v-if="playtestSources.length > 0" class="sources-step__list" aria-label="游玩测试来源">
+        <UiChip
+          v-for="source in playtestSources"
+          :key="source.id"
+          :selected="selected.includes(source.id)"
+          :title="source.title"
+          @toggle="toggle(source.id)"
+        >
+          <span class="sources-step__playtest-label"><UiBadge tone="warning">游玩测试</UiBadge> {{ source.shortTitle }} · {{ source.title }}</span>
+        </UiChip>
+      </div>
+      <div v-if="thirdPartySources.length > 0" class="sources-step__list" aria-label="第三方合作来源">
+        <UiChip
+          v-for="source in thirdPartySources"
+          :key="source.id"
+          :selected="selected.includes(source.id)"
+          :title="source.title"
+          @toggle="toggle(source.id)"
+        >
+          <span class="sources-step__third-party-label"><UiBadge tone="warning">合作内容</UiBadge> {{ source.shortTitle }} · {{ source.title }}</span>
+        </UiChip>
+      </div>
+      <div v-if="legacySources.length > 0" class="sources-step__list" aria-label="旧扩展来源">
+        <UiChip
+          v-for="source in legacySources"
+          :key="source.id"
+          :selected="selected.includes(source.id)"
+          :title="source.title"
+          @toggle="toggle(source.id)"
+        >
+          <span class="sources-step__legacy-label"><UiBadge tone="neutral">旧扩展</UiBadge> {{ source.shortTitle }} · {{ source.title }}</span>
         </UiChip>
       </div>
       <p class="sources-step__summary">已启用 {{ selected.length }} / {{ selectableSources.length }} 本扩展资料。关闭来源不会删除已选内容，但相关选择会暂时失效。</p>
@@ -77,6 +120,12 @@ function toggle(id: string): void {
     display: flex;
     flex-wrap: wrap;
     gap: 0.65rem;
+  }
+
+  &__playtest-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
   }
 
   &__summary {

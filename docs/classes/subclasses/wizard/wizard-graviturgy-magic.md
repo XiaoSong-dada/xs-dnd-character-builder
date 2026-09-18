@@ -27,7 +27,7 @@
 
 ### 3级（原版2级）：调节密度 Adjust Density
 
-- 特性 ID：`wizard-graviturgy-magic-adjust-density`
+- 特性 ID：`wizard-graviturgy-adjust-density`
 - 动作或触发：动作并保持专注
 - 资源与恢复：同一时间一个目标；持续1分钟
 
@@ -39,7 +39,7 @@
 
 ### 6级：重力井 Gravity Well
 
-- 特性 ID：`wizard-graviturgy-magic-gravity-well`
+- 特性 ID：`wizard-graviturgy-gravity-well`
 - 动作或触发：法术命中、目标豁免失败或目标自愿失败时
 - 资源与恢复：每个合格法术目标一次
 
@@ -51,7 +51,7 @@
 
 ### 10级：狂暴牵引 Violent Attraction
 
-- 特性 ID：`wizard-graviturgy-magic-violent-attraction`
+- 特性 ID：`wizard-graviturgy-violent-attraction`
 - 动作或触发：反应；附近攻击命中或生物坠落时
 - 资源与恢复：智力调整值次/长休，至少1次
 
@@ -63,7 +63,7 @@
 
 ### 14级：事件视界 Event Horizon
 
-- 特性 ID：`wizard-graviturgy-magic-event-horizon`
+- 特性 ID：`wizard-graviturgy-event-horizon`
 - 动作或触发：动作并保持专注
 - 资源与恢复：长休一次，或按来源消耗法术位恢复
 
@@ -78,4 +78,4 @@
 - 战役必须允许该来源，法师达到子职选择等级，且子职选择位尚未占用。
 - 角色数据保留 `5e-2014`；原版2级特性在2024法师框架下于3级取得，其余等级保持来源记录。
 - 法术、召唤物、状态、休息和动作术语必须绑定明确规则版本。
-- 新旧同名或替代能力不得叠加；规则数据与自动化测试尚未实现。
+- 新旧同名或替代能力不得叠加；S02（2026-09-18）已接入规则数据与自动化测试：调节密度／重力井（6 级）／狂暴牵引（10 级）／事件视界（14 级）登记为 `selectable`，11 条秘迹学法术（共享 6 + 重力法师专属 5）经子职法术书候选提供，来源关闭时一并移出候选。

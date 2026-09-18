@@ -20,7 +20,7 @@ function optionFor(classId: string, optionId: string) {
 describe('2024 职业起始装备（战士／法师 B07-A；野蛮人／武僧／游荡者补录）', () => {
   it('已接入的 2024 职业都有装备方案，方案引用均可解析', () => {
     const implemented = rulesRepository2024.classes
-      .filter((classRule) => classRule.status === 'implemented')
+      .filter((classRule) => classRule.status === 'implemented' || classRule.status === 'selectable')
       .map((classRule) => classRule.id)
       .sort()
     expect(classStartingEquipment2024.map((item) => item.classId).sort()).toEqual(implemented)

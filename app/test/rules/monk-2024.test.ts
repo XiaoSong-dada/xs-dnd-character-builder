@@ -90,7 +90,7 @@ describe('2024 武僧与子职数据（B08-05）', () => {
   })
 
   it('4 个子职特性数为 6／5／4／4，等级为 3／6／11／17', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-monk').map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-monk' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
     const expectedFeatures = [
       ['subclass-2024-monk-warrior-of-mercy', 6],
       ['subclass-2024-monk-warrior-of-the-elements', 5],
@@ -128,19 +128,19 @@ describe('2024 武僧与子职数据（B08-05）', () => {
   })
 
   it('时间线展开技能、工具、子职与属性提升', () => {
-    const levelOne = buildTimeline('class-2024-monk', 1, { ruleset: '5e-2024' })
+    const levelOne = buildTimeline('class-2024-monk', 1, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-monk-skills-1',
       'class-2024-monk-tool-1',
     ])
 
-    const levelThree = buildTimeline('class-2024-monk', 3, { ruleset: '5e-2024' })
+    const levelThree = buildTimeline('class-2024-monk', 3, { ruleset: '5e-2024', enabledSourceIds: [] })
     const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
     expect(subclass?.id).toBe('class-2024-monk-subclass-3')
     expect(subclass?.title).toBe('选择武僧子职')
     expect(subclass?.optionIds).toEqual([...SUBCLASS_IDS])
 
-    const levelTwenty = buildTimeline('class-2024-monk', 20, { ruleset: '5e-2024' })
+    const levelTwenty = buildTimeline('class-2024-monk', 20, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-monk-feat-4',
       'class-2024-monk-feat-8',

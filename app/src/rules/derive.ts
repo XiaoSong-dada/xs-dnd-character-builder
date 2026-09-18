@@ -313,11 +313,20 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   if (featSkillSelection.allSkills) {
     for (const skillId of SKILL_IDS) proficientSkillIds.add(skillId)
   }
+  const subclassFeatureExpertiseIds = (() => {
+    const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+    if (!subclass) return []
+    const flagged = new Set(subclass.features.filter((feature) => feature.grantsExpertiseInChosenSkills).map((feature) => `subclass-feature-${feature.id}`))
+    return draft.selections
+      .filter((selection) => !selection.invalidatedAt && flagged.has(selection.checkpointId))
+      .flatMap((selection) => selection.optionIds)
+  })()
   const expertiseIds = new Set([
     ...(classRule?.checkpoints ?? [])
       .filter((checkpoint) => checkpoint.kind === 'expertise')
       .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? []),
     ...featSkillSelection.expertise,
+    ...subclassFeatureExpertiseIds,
   ])
   const featSavingThrowAbilities = collectFeatSavingThrowAbilities(draft)
   const skillAbilities: Readonly<Record<string, AbilityKey>> = {

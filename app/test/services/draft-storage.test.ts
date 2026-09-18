@@ -122,12 +122,12 @@ describe('DraftStorageService', () => {
   it('v8 两版草稿共存，来源按规则版本分别规范化', () => {
     setJson(V8_KEY, [
       { schemaVersion: 8, id: '2014-1', ruleset: '5e-2014', name: '旧版', enabledSourceIds: ['xgte-2017-index', 'bogus-2014'] },
-      { schemaVersion: 8, id: '2024-1', ruleset: '5e-2024', name: '新版', enabledSourceIds: ['xgte-2017-index', 'xgte-2017-index'] },
+      { schemaVersion: 8, id: '2024-1', ruleset: '5e-2024', name: '新版', enabledSourceIds: ['source-2024-ua-eberron', 'xgte-2017-index', 'source-2024-ua-eberron'] },
     ])
     const drafts = DraftStorageService.loadAll()
     expect(drafts.map((draft) => draft.ruleset)).toEqual(['5e-2014', '5e-2024'])
     expect(drafts[0]?.enabledSourceIds).toEqual(['xgte-2017-index'])
-    expect(drafts[1]?.enabledSourceIds).toEqual(['xgte-2017-index'])
+    expect(drafts[1]?.enabledSourceIds).toEqual(['source-2024-ua-eberron'])
   })
 
   it('当前键中的非法条目隔离保留，不进入列表且重复加载不重复追加', () => {

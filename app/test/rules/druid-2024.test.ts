@@ -111,7 +111,7 @@ describe('2024 德鲁伊与 4 结社数据（B08-07）', () => {
   })
 
   it('4 个结社各 5 条特性、3／6／10／14 级，结社法术始终准备', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-druid').map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-druid' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
     for (const id of SUBCLASS_IDS) {
       const subclass = rulesRepository2024.getSubclass(id)
       expect(subclass?.status).toBe('implemented')
@@ -137,7 +137,7 @@ describe('2024 德鲁伊与 4 结社数据（B08-07）', () => {
   })
 
   it('大地结社地形选择驱动始终准备法术，并可随等级扩展', () => {
-    const levelThree = buildTimeline('class-2024-druid', 3, { ruleset: '5e-2024', subclassId: 'subclass-2024-druid-circle-of-the-land' })
+    const levelThree = buildTimeline('class-2024-druid', 3, { ruleset: '5e-2024', enabledSourceIds: [], subclassId: 'subclass-2024-druid-circle-of-the-land' })
     const landCheckpoint = levelThree.find((checkpoint) => checkpoint.id === LAND_CHECKPOINT_ID)
     expect(landCheckpoint?.kind).toBe('subclass-feature')
     expect(landCheckpoint?.optionIds).toEqual([
@@ -193,24 +193,24 @@ describe('2024 德鲁伊与 4 结社数据（B08-07）', () => {
   })
 
   it('时间线展开技能、原初职能、子职、元素之怒与属性提升', () => {
-    const levelOne = buildTimeline('class-2024-druid', 1, { ruleset: '5e-2024' })
+    const levelOne = buildTimeline('class-2024-druid', 1, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-druid-skills-1',
       'class-2024-druid-primal-order-1',
     ])
 
-    const levelThree = buildTimeline('class-2024-druid', 3, { ruleset: '5e-2024' })
+    const levelThree = buildTimeline('class-2024-druid', 3, { ruleset: '5e-2024', enabledSourceIds: [] })
     const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
     expect(subclass?.id).toBe('class-2024-druid-subclass-3')
     expect(subclass?.optionIds).toEqual([...SUBCLASS_IDS])
 
-    const levelSeven = buildTimeline('class-2024-druid', 7, { ruleset: '5e-2024' })
+    const levelSeven = buildTimeline('class-2024-druid', 7, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelSeven.find((checkpoint) => checkpoint.id === 'class-2024-druid-elemental-fury-7')?.optionIds).toEqual([
       'druid-2024-elemental-fury-potent-spellcasting',
       'druid-2024-elemental-fury-primal-strike',
     ])
 
-    const levelTwenty = buildTimeline('class-2024-druid', 20, { ruleset: '5e-2024' })
+    const levelTwenty = buildTimeline('class-2024-druid', 20, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'ability-improvement').map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-druid-feat-4',
       'class-2024-druid-feat-8',

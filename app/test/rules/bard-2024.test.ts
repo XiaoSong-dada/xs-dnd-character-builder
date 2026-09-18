@@ -121,7 +121,7 @@ describe('2024 吟游诗人与 4 学院数据（B08-08）', () => {
   })
 
   it('4 个学院各 4 条特性、3／6／14 级', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-bard').map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-bard' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
     const expectedLevels: Readonly<Record<(typeof SUBCLASS_IDS)[number], readonly number[]>> = {
       'subclass-2024-bard-college-of-dance': [3, 6, 6, 14],
       'subclass-2024-bard-college-of-glamour': [3, 3, 6, 14],
@@ -168,7 +168,7 @@ describe('2024 吟游诗人与 4 学院数据（B08-08）', () => {
 
   it('逸闻学院附赠熟练与魔法探秘候选', () => {
     const draft = bardDraft({ subclassId: 'subclass-2024-bard-college-of-lore', targetLevel: 6 })
-    const timeline = buildTimeline('class-2024-bard', 6, { ruleset: '5e-2024', subclassId: 'subclass-2024-bard-college-of-lore' })
+    const timeline = buildTimeline('class-2024-bard', 6, { ruleset: '5e-2024', enabledSourceIds: [], subclassId: 'subclass-2024-bard-college-of-lore' })
 
     const proficiencies = timeline.find((checkpoint) => checkpoint.id === LORE_PROFICIENCIES_CHECKPOINT)
     expect(proficiencies?.optionIds).toHaveLength(18)
@@ -222,19 +222,19 @@ describe('2024 吟游诗人与 4 学院数据（B08-08）', () => {
   })
 
   it('时间线展开技能、乐器、专精、子职与属性提升', () => {
-    const levelOne = buildTimeline('class-2024-bard', 1, { ruleset: '5e-2024' })
+    const levelOne = buildTimeline('class-2024-bard', 1, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-bard-skills-1',
       'class-2024-bard-tools-1',
     ])
 
-    const levelThree = buildTimeline('class-2024-bard', 3, { ruleset: '5e-2024' })
+    const levelThree = buildTimeline('class-2024-bard', 3, { ruleset: '5e-2024', enabledSourceIds: [] })
     const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
     expect(subclass?.id).toBe('class-2024-bard-subclass-3')
     expect(subclass?.title).toBe('选择吟游诗人子职')
     expect(subclass?.optionIds).toEqual([...SUBCLASS_IDS])
 
-    const levelTwenty = buildTimeline('class-2024-bard', 20, { ruleset: '5e-2024' })
+    const levelTwenty = buildTimeline('class-2024-bard', 20, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'expertise').map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-bard-expertise-2',
       'class-2024-bard-expertise-9',

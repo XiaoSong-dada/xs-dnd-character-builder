@@ -90,15 +90,15 @@ describe('CharacterJsonService', () => {
       ruleset: '5e-2024',
       baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 },
       selections: [{ checkpointId: 'fighter-2024-style-1', optionIds: ['style-defense'], confirmedAt: '2026-09-11T00:00:00.000Z' }],
-      enabledSourceIds: ['source-2024-phb'],
+      enabledSourceIds: ['source-2024-ua-eberron'],
     }))
     expect(imported.schemaVersion).toBe(8)
     expect(imported.ruleset).toBe('5e-2024')
-    expect(imported.enabledSourceIds).toEqual(['source-2024-phb'])
+    expect(imported.enabledSourceIds).toEqual(['source-2024-ua-eberron'])
     const roundTrip = CharacterJsonService.importDraft(CharacterJsonService.exportDraft(imported))
     expect(roundTrip.ruleset).toBe('5e-2024')
     expect(roundTrip.selections).toEqual(imported.selections)
-    expect(roundTrip.enabledSourceIds).toEqual(['source-2024-phb'])
+    expect(roundTrip.enabledSourceIds).toEqual(['source-2024-ua-eberron'])
   })
 
   it('v8 2024 草稿完整往返保留装备、法术、语言与背景属性分配，且 JSON 不含图片', () => {
@@ -107,7 +107,7 @@ describe('CharacterJsonService', () => {
       id: 'v8-2024-rich',
       ruleset: '5e-2024',
       baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 10 },
-      enabledSourceIds: ['source-2024-phb'],
+      enabledSourceIds: ['source-2024-ua-eberron'],
       classId: 'class-2024-cleric',
       subclassId: 'subclass-2024-cleric-life-domain',
       targetLevel: 3,
@@ -130,7 +130,7 @@ describe('CharacterJsonService', () => {
     expect(exported).not.toContain('media')
     const roundTrip = CharacterJsonService.importDraft(exported)
     expect(roundTrip.ruleset).toBe('5e-2024')
-    expect(roundTrip.enabledSourceIds).toEqual(['source-2024-phb'])
+    expect(roundTrip.enabledSourceIds).toEqual(['source-2024-ua-eberron'])
     expect(roundTrip.selections).toEqual(imported.selections)
     expect(roundTrip.inventory).toEqual(imported.inventory)
     expect(roundTrip.spellSelections).toEqual(imported.spellSelections)

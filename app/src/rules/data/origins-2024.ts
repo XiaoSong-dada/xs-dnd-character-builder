@@ -43,6 +43,9 @@ const background = (
   featureName: '',
   originFeatId,
   abilityChoices,
+  ...(slug === 'noble' || slug === 'sage'
+    ? { originFeatSubstitutions: [{ category: 'wild-talent' as const, sourceIds: ['source-2024-ua-psion'] }] }
+    : {}),
   startingEquipmentOptionA: (backgroundEquipmentA2024[slug] ?? []).map((grant) => grant.itemId),
   startingEquipmentGold: 50,
   recommendedClassIds: [],

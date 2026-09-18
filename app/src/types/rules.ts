@@ -14,7 +14,7 @@ export type CheckpointKind =
   | 'infusion'
 
 /** 2024 专长类别：决定授予来源与候选池；2014 条目可省略。 */
-export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon'
+export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon' | 'dragonmark' | 'wild-talent'
 
 /** 护甲训练类别；2024 前置与熟练均以此为口径。 */
 export type ArmorTraining = 'light' | 'medium' | 'heavy' | 'shield'
@@ -59,7 +59,7 @@ export interface ClassResource {
   /** 数值单位（缺省“次”，如奥术回想为“环级”）。 */
   readonly unit?: string
   /** 上限来自属性调整值（如 2024 诗人激励＝魅力调整值，至少 1 次）；提供时优先于 maxByLevel。 */
-  readonly maxFromAbility?: { readonly ability: AbilityKey; readonly minimum: number }
+  readonly maxFromAbility?: { readonly ability: AbilityKey; readonly minimum: number; readonly multiplier?: number }
   /** 在等级表上限之外再加一项属性调整值（如防护师奥术守御＝2×等级＋智力调整值）。 */
   readonly abilityBonus?: AbilityKey
   /** 短休只恢复固定数量（如 2024 狂暴／回气短休恢复 1 次）；缺省为短休全部恢复。 */
@@ -132,6 +132,10 @@ export interface FeatPrerequisite {
     | 'spellcasting-or-pact'
   readonly requiredRaceIds?: readonly string[]
   readonly requiredSubraceIds?: readonly string[]
+  /** 必须已获得的专长 ID（如高等龙纹需先有对应基础龙纹）。 */
+  readonly requiredFeatIds?: readonly string[]
+  /** 已获得任意携带该 tag 的专长时不可选（如「不具有其他龙纹专长」）。 */
+  readonly excludedFeatTag?: string
 }
 
 /** 检查点或专长子选择声明的法术授予语义（始终准备、免费次数与恢复）。 */
@@ -173,6 +177,8 @@ export interface FixedSpellGrant {
   readonly freeCastingsFrom?: 'proficiency-bonus' | { readonly ability: AbilityKey; readonly minimum: number }
   readonly recovery?: 'long-rest' | 'short-rest'
   readonly ability?: AbilityKey
+  /** 达到该等级后本授予生效（如基础龙纹 3 级追加始终准备法术）。 */
+  readonly minimumLevel?: number
 }
 
 /** 物种授予的固定法术：按获得等级生效；施法属性由物种选择（若声明）。 */
@@ -217,6 +223,8 @@ export interface FeatRule extends RuleOption {
   readonly repeatable?: boolean
   /** 固定授予的法术（随专长自动生效，不需选择）。 */
   readonly grantedSpells?: readonly FixedSpellGrant[]
+  /** 将法术加入施法／契约法术列表（如龙纹「纹中之法」）。 */
+  readonly expandedSpellPool?: readonly string[]
   /** 无条件派生效果：每级最大生命值加成（如健壮 +2/级）。 */
   readonly hitPointBonusPerLevel?: number
   /** 无条件派生效果：固定最大生命值加成（如超凡强韧之恩惠 +40）。 */
@@ -381,6 +389,8 @@ export interface SubclassRule {
   readonly features: readonly SubclassFeature[]
   /** 子职级施法配置（如奥法骑士、诡术师）；解析时优先于职业配置。 */
   readonly spellcasting?: SpellcastingConfig
+  /** 子职专属法术书候选（如 EGtW 法师子职的秘迹学法术）；仅在选择该子职且来源开启时并入候选。 */
+  readonly spellbookSpellIds?: readonly string[]
   /** 子职在特定职业等级授予的始终准备法术，不占准备上限。 */
   readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
   /** 子职提供的无甲防御公式（如 2024 舞蹈学院炫目舞步）；与职业公式共用版本化出口。 */
@@ -457,6 +467,8 @@ export interface SubclassFeature {
   readonly maxSelections?: number
   /** 动态候选池类型（如 2024 逸闻学院·魔法探秘的法术池）。 */
   readonly candidateKind?: CheckpointCandidateKind
+  /** 同一唯一组内的选项不得跨检查点重复（如魔射手奥术射击跨等级去重）。 */
+  readonly uniqueGroup?: string
   /** 候选法术池（与 `candidateKind: 'spell-pool'` 配合）。 */
   readonly spellPool?: SpellPoolSpec
   /** 检查点选择声明的法术授予语义（如始终准备）。 */
@@ -475,6 +487,10 @@ export interface SubclassFeature {
   readonly shortRestExhaustionReduction?: number
   /** 本特性固定授予的免费施法（如 2024 精宸所与的妖精召唤术长休免费 1 次）。 */
   readonly grantedSpells?: readonly FixedSpellGrant[]
+  /** 本特性额外授予的“自选语言”数量（如 2024 紫龙骑士骑士使节额外掌握一门语言）。 */
+  readonly languageChoices?: number
+  /** 所选技能获得专精（如知识领域·知识祝福）：检查点选项为技能 ID。 */
+  readonly grantsExpertiseInChosenSkills?: boolean
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }
@@ -572,6 +588,8 @@ export interface BackgroundRule {
   readonly featureName: string
   /** 2024 背景固定授予的起源专长；2014 背景与待接入数据省略。 */
   readonly originFeatId?: string
+  /** 起源专长替代：满足条件时可用所列类别专长替换固定起源专长（如贵族／智者＋狂野天赋）。 */
+  readonly originFeatSubstitutions?: readonly { readonly category: FeatCategory; readonly sourceIds: readonly string[] }[]
   /** 2024 背景的三项属性候选（+2/+1 或各 +1）；2014 背景省略。 */
   readonly abilityChoices?: readonly AbilityKey[]
   /** 2024 背景的可选工具规格（如工匠工具、乐器、赌具）。 */

@@ -19,7 +19,8 @@ describe('2024 法术目录', () => {
     expect(spells2024.every((spell) => spell.classIds.length > 0)).toBe(true)
     expect(spells2024.every((spell) => spell.classIds.every((id) => id.startsWith('class-2024-')))).toBe(true)
     expect(spells2024.every((spell) => spell.sourceIds.includes('source-2024-phb'))).toBe(true)
-    expect(rulesRepository2024.spells).toHaveLength(391)
+    // 仓库另含破解奥秘（UA）19 条与 2024 旧扩展镜像 128 条（来源默认关闭），不计入核心 391 条。
+    expect(rulesRepository2024.spells).toHaveLength(538)
   })
 
   it('施法参数、学派、仪式与专注按 B01 矩阵登记', () => {

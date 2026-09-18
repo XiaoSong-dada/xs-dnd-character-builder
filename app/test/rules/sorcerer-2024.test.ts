@@ -103,7 +103,7 @@ describe('2024 术士与 4 术法数据（B08-09）', () => {
   })
 
   it('4 个术法特性数量与等级节点正确', () => {
-    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-sorcerer').map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
+    expect(rulesRepository2024.subclasses.filter((subclass) => subclass.classId === 'class-2024-sorcerer' && subclass.sourceIds.includes('source-2024-phb')).map((subclass) => subclass.id)).toEqual([...SUBCLASS_IDS])
     const expected: Readonly<Record<(typeof SUBCLASS_IDS)[number], readonly number[]>> = {
       'subclass-2024-sorcerer-aberrant-sorcery': [3, 3, 6, 6, 14, 18],
       'subclass-2024-sorcerer-clockwork-sorcery': [3, 3, 6, 14, 18],
@@ -187,22 +187,22 @@ describe('2024 术士与 4 术法数据（B08-09）', () => {
   })
 
   it('时间线展开技能、超魔、子职与属性提升', () => {
-    const levelOne = buildTimeline('class-2024-sorcerer', 1, { ruleset: '5e-2024' })
+    const levelOne = buildTimeline('class-2024-sorcerer', 1, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelOne.map((checkpoint) => checkpoint.id)).toEqual(['class-2024-sorcerer-skills-1'])
 
-    const levelTwo = buildTimeline('class-2024-sorcerer', 2, { ruleset: '5e-2024' })
+    const levelTwo = buildTimeline('class-2024-sorcerer', 2, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelTwo.map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-sorcerer-skills-1',
       'class-2024-sorcerer-metamagic-2',
     ])
     expect(levelTwo.find((checkpoint) => checkpoint.id === 'class-2024-sorcerer-metamagic-2')?.optionIds).toEqual([...METAMAGIC_2024_OPTION_IDS])
 
-    const levelThree = buildTimeline('class-2024-sorcerer', 3, { ruleset: '5e-2024' })
+    const levelThree = buildTimeline('class-2024-sorcerer', 3, { ruleset: '5e-2024', enabledSourceIds: [] })
     const subclass = levelThree.find((checkpoint) => checkpoint.kind === 'subclass')
     expect(subclass?.id).toBe('class-2024-sorcerer-subclass-3')
     expect(subclass?.optionIds).toEqual([...SUBCLASS_IDS])
 
-    const levelTwenty = buildTimeline('class-2024-sorcerer', 20, { ruleset: '5e-2024' })
+    const levelTwenty = buildTimeline('class-2024-sorcerer', 20, { ruleset: '5e-2024', enabledSourceIds: [] })
     expect(levelTwenty.filter((checkpoint) => checkpoint.kind === 'class-choice').map((checkpoint) => checkpoint.id)).toEqual([
       'class-2024-sorcerer-metamagic-2',
       'class-2024-sorcerer-metamagic-10',

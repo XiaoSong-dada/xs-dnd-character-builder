@@ -134,7 +134,7 @@ describe('2024 法师与塑能师数据（B08-02）', () => {
 
   it('法术精通候选取法术书中动作施法的一环／二环法术，不含护盾术', () => {
     const draft = evokerDraft(18)
-    const timeline = buildTimeline('class-2024-wizard', 18, { ruleset: '5e-2024', subclassId: 'subclass-2024-wizard-evoker' })
+    const timeline = buildTimeline('class-2024-wizard', 18, { ruleset: '5e-2024', enabledSourceIds: [], subclassId: 'subclass-2024-wizard-evoker' })
     const levelOne = timeline.find((checkpoint) => checkpoint.id === 'class-2024-wizard-spell-mastery-1')
     const levelTwo = timeline.find((checkpoint) => checkpoint.id === 'class-2024-wizard-spell-mastery-2')
     if (!levelOne || !levelTwo) throw new Error('缺少法术精通检查点')
