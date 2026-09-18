@@ -59,8 +59,8 @@ function availableNames(subclassId?: string, enabledSourceIds?: readonly string[
 
 describe('EGtW 秘迹学与法师子职（S02）', () => {
   it('15 条法术已登记：classIds 为空、来源 egtw、摘要非空', () => {
-    // S01 509 + S02 15
-    expect(spells2014).toHaveLength(524)
+    // S01 509 + S02 15 起；后续第三方批次继续追加。
+    expect(spells2014.length).toBeGreaterThanOrEqual(524)
     for (const name of EGTW_SPELLS) {
       const spell = spells2014.find((item) => item.englishName === name)
       expect(spell, name).toBeTruthy()
