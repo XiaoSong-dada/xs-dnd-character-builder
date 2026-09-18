@@ -457,6 +457,8 @@ export interface SubclassFeature {
   readonly maxSelections?: number
   /** 动态候选池类型（如 2024 逸闻学院·魔法探秘的法术池）。 */
   readonly candidateKind?: CheckpointCandidateKind
+  /** 同一唯一组内的选项不得跨检查点重复（如魔射手奥术射击跨等级去重）。 */
+  readonly uniqueGroup?: string
   /** 候选法术池（与 `candidateKind: 'spell-pool'` 配合）。 */
   readonly spellPool?: SpellPoolSpec
   /** 检查点选择声明的法术授予语义（如始终准备）。 */
