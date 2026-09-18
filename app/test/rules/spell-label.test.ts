@@ -23,11 +23,29 @@ describe('2014 法术仪式元数据', () => {
     expect(spells2014.filter((spell) => spell.ritual).map((spell) => spell.englishName).sort())
       .toEqual([...ritualSpellNames2014].sort())
   })
+
+  it('第三方合作法术按《5e 不全书》登记仪式标记', () => {
+    const thirdPartyRitualNames = [
+      'Sand Structure',
+      'Cursed Cacophony',
+      'Contact Deity',
+      'Clue',
+      'Memorize',
+      'Game of Fate',
+      'Faerie Toast',
+      'Charnel Banquet',
+      'Deep Roots of the Moon',
+    ] as const
+    for (const name of thirdPartyRitualNames) {
+      expect(getSpell(name).ritual, `${name} 应带仪式标记`).toBe(true)
+    }
+  })
 })
 
 describe('法术列表标签', () => {
   it('只为仪式法术追加仪式标签', () => {
     expect(formatSpellLabel(getSpell('Find Familiar'))).toBe('1环 · Find Familiar · 仪式')
     expect(formatSpellLabel(getSpell('Magic Missile'))).toBe('1环 · Magic Missile')
+    expect(formatSpellLabel(getSpell('Sand Structure'))).toBe('1环 · Sand Structure · 仪式')
   })
 })

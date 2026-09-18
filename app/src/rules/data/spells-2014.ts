@@ -864,6 +864,16 @@ export const ritualSpellNames2014 = [
   'Water Walk',
   'Wristpocket',
   'Shadow Gateway',
+  // 第三方合作内容补录（《5e 不全书》v2025.11.8 仪式标记，2026-09-18）
+  'Sand Structure',
+  'Cursed Cacophony',
+  'Contact Deity',
+  'Clue',
+  'Memorize',
+  'Game of Fate',
+  'Faerie Toast',
+  'Charnel Banquet',
+  'Deep Roots of the Moon',
 ] as const
 
 const ritualSpellNameSet2014 = new Set<string>(ritualSpellNames2014)
