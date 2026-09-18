@@ -195,7 +195,12 @@ export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingCo
     : []
   // 专长扩表（如龙纹「纹中之法」）：仅在来源启用时加入候选。
   const featExpanded = listActiveFeats(draft, repository).flatMap((feat) => feat.expandedSpellPool ?? [])
-  return [...new Set([...config.classSpellIds, ...expanded, ...featExpanded])]
+  // 子职法术书扩表（如 EGtW 时间魔法／重力法师的秘迹学法术）：仅在选择该子职且来源启用时加入候选。
+  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  const subclassExpanded = subclass && isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)
+    ? subclass.spellbookSpellIds ?? []
+    : []
+  return [...new Set([...config.classSpellIds, ...expanded, ...featExpanded, ...subclassExpanded])]
     .map((id) => repository.getSpell(id))
     .filter((spell): spell is NonNullable<typeof spell> => Boolean(
       spell

@@ -389,6 +389,8 @@ export interface SubclassRule {
   readonly features: readonly SubclassFeature[]
   /** 子职级施法配置（如奥法骑士、诡术师）；解析时优先于职业配置。 */
   readonly spellcasting?: SpellcastingConfig
+  /** 子职专属法术书候选（如 EGtW 法师子职的秘迹学法术）；仅在选择该子职且来源开启时并入候选。 */
+  readonly spellbookSpellIds?: readonly string[]
   /** 子职在特定职业等级授予的始终准备法术，不占准备上限。 */
   readonly alwaysPreparedSpellIdsByLevel?: Readonly<Record<number, readonly string[]>>
   /** 子职提供的无甲防御公式（如 2024 舞蹈学院炫目舞步）；与职业公式共用版本化出口。 */

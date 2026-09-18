@@ -58,7 +58,8 @@ describe('2014 官方扩展补录（S01）', () => {
   })
 
   it('补录后目录为 509 条，20 条新法术的环级、职业与来源正确', () => {
-    expect(spells2014).toHaveLength(509)
+    // S01 补录后至少 509 条；后续批次继续追加。
+    expect(spells2014.length).toBeGreaterThanOrEqual(509)
     for (const entry of NEW_SPELLS) {
       const spell = spells2014.find((item) => item.englishName === entry.englishName)
       expect(spell, entry.englishName).toBeTruthy()

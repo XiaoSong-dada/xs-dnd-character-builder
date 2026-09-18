@@ -60,6 +60,8 @@ const spellSeeds: readonly [
   ['Sword Burst', '剑刃爆发', 0, ['sorcerer', 'warlock', 'wizard'], ['tcoe-2020-index']],
   // 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR）
   ['Encode Thoughts', '思想编码', 0, [], ['ggr-2018-index']],
+  // EGtW 秘迹学（时间／重力法师子职专属）
+  ['Sapping Sting', '削弱芒刺', 0, [], ['egtw-2020-index']],
   // 1 环
   ['Alarm', '警报术', 1, ['ranger', 'wizard'], ['basic-rules-2014']],
   ['Animal Friendship', '化兽为友', 1, ['bard', 'druid', 'ranger'], ['basic-rules-2014']],
@@ -139,6 +141,9 @@ const spellSeeds: readonly [
   ['Distort Value', '扭曲价值', 1, ['bard', 'sorcerer', 'wizard', 'warlock'], ['ai-2019-index']],
   ['Jim\'s Magic Missile', '吉姆的魔法飞弹', 1, ['wizard'], ['ai-2019-index']],
   ['Frost Finger', '冷冻一指', 1, ['wizard'], ['idrotf-2020-index']],
+  // EGtW 秘迹学（时间／重力法师子职专属）
+  ['Gift of Alacrity', '灵敏之赐', 1, [], ['egtw-2020-index']],
+  ['Magnify Gravity', '扩大重力', 1, [], ['egtw-2020-index']],
   // 2 环
   ['Aid', '援助术', 2, ['cleric', 'paladin'], ['basic-rules-2014']],
   ['Alter Self', '变身术', 2, ['sorcerer', 'wizard'], ['basic-rules-2014']],
@@ -226,6 +231,10 @@ const spellSeeds: readonly [
   ['Flock of Familiars', '魔宠群', 2, ['wizard', 'warlock'], ['llok-2018-index']],
   ['Air Bubble', '空气泡泡', 2, ['druid', 'ranger', 'sorcerer', 'wizard', 'artificer'], ['aag-2022-index']],
   ['Warp Sense', '侦测扭曲', 2, ['sorcerer', 'wizard', 'warlock'], ['sato-2023-index']],
+  // EGtW 秘迹学（时间／重力法师子职专属）
+  ['Fortune\'s Favor', '命运宠儿', 2, [], ['egtw-2020-index']],
+  ['Immovable Object', '不动物件', 2, [], ['egtw-2020-index']],
+  ['Wristpocket', '魔袋术', 2, [], ['egtw-2020-index']],
   // 3 环
   ['Animate Dead', '活化死尸', 3, ['cleric', 'wizard'], ['basic-rules-2014']],
   ['Aura of Vitality', '活力灵光', 3, ['paladin'], ['basic-rules-2014']],
@@ -301,6 +310,8 @@ const spellSeeds: readonly [
   ['Motivational Speech', '励志演讲', 3, ['bard', 'cleric'], ['ai-2019-index']],
   ['Antagonize', '敌意术', 3, ['bard', 'sorcerer', 'wizard', 'warlock'], ['bmt-2023-index']],
   ['Galder\'s Tower', '加德尔高塔术', 3, ['wizard'], ['llok-2018-index']],
+  // EGtW 秘迹学（时间／重力法师子职专属）
+  ['Pulse Wave', '脉冲波动', 3, [], ['egtw-2020-index']],
   // 4 环
   ['Arcane Eye', '秘法眼', 4, ['wizard'], ['basic-rules-2014']],
   ['Aura of Life', '生命灵光', 4, ['paladin'], ['basic-rules-2014']],
@@ -355,6 +366,8 @@ const spellSeeds: readonly [
   ['Spirit of Death', '死神灵魄', 4, ['sorcerer', 'wizard', 'warlock'], ['bmt-2023-index']],
   ['Galder\'s Speedy Courier', '加德尔急速邮差', 4, ['wizard', 'warlock'], ['llok-2018-index']],
   ['Gate Seal', '界门封锁', 4, ['sorcerer', 'wizard', 'warlock'], ['sato-2023-index']],
+  // EGtW 秘迹学（时间／重力法师子职专属）
+  ['Gravity Sinkhole', '引力裂沟', 4, [], ['egtw-2020-index']],
   // 5 环
   ['Animate Objects', '活化物件', 5, ['bard', 'sorcerer', 'wizard'], ['basic-rules-2014']],
   ['Antilife Shell', '防活物护罩', 5, ['druid'], ['basic-rules-2014']],
@@ -418,6 +431,8 @@ const spellSeeds: readonly [
   ['Summon Draconic Spirit', '龙类灵魄召唤术', 5, ['druid', 'sorcerer', 'wizard'], ['ftd-2021-index']],
   // 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR）
   ['Create Spelljamming Helm', '创造法驱魔舵', 5, ['wizard', 'artificer'], ['aag-2022-index']],
+  // EGtW 秘迹学（时间／重力法师子职专属）
+  ['Temporal Shunt', '时流刹转', 5, [], ['egtw-2020-index']],
   // 6 环
   ['Arcane Gate', '秘法门', 6, ['sorcerer', 'warlock', 'wizard'], ['basic-rules-2014']],
   ['Blade Barrier', '剑刃护壁', 6, ['cleric'], ['basic-rules-2014']],
@@ -466,6 +481,8 @@ const spellSeeds: readonly [
   ['Summon Fiend', '邪魔召唤术', 6, ['warlock', 'wizard'], ['tcoe-2020-index']],
   ['Tasha\'s Otherworldly Guise', '塔莎超凡形态', 6, ['sorcerer', 'warlock', 'wizard'], ['tcoe-2020-index']],
   ['Fizban\'s Platinum Shield', '费资本铂金盾', 6, ['cleric', 'sorcerer', 'wizard'], ['ftd-2021-index']],
+  // EGtW 秘迹学（时间／重力法师子职专属）
+  ['Gravity Fissure', '重力分裂', 6, [], ['egtw-2020-index']],
   // 7 环
   ['Conjure Celestial', '天界咒唤术', 7, ['cleric'], ['basic-rules-2014']],
   ['Delayed Blast Fireball', '延迟爆裂火球', 7, ['sorcerer', 'wizard'], ['basic-rules-2014']],
@@ -495,6 +512,8 @@ const spellSeeds: readonly [
   ['Draconic Transformation', '龙类变形', 7, ['druid', 'sorcerer', 'wizard'], ['ftd-2021-index']],
   // 官方扩展补录（AI／BMT／冰风谷／夸力许／AAG／SO／GGR）
   ['Create Magen', '创造魔卫', 7, ['wizard'], ['idrotf-2020-index']],
+  // EGtW 秘迹学（时间／重力法师子职专属）
+  ['Tether Essence', '系结本源', 7, [], ['egtw-2020-index']],
   // 8 环
   ['Animal Shapes', '动物形态', 8, ['druid'], ['basic-rules-2014']],
   ['Antimagic Field', '反魔法场', 8, ['cleric', 'wizard'], ['basic-rules-2014']],
@@ -518,6 +537,9 @@ const spellSeeds: readonly [
   ['Illusory Dragon', '幻影巨龙', 8, ['wizard'], ['xgte-2017-index']],
   ['Maddening Darkness', '疯狂之暗', 8, ['warlock', 'wizard'], ['xgte-2017-index']],
   ['Mighty Fortress', '坚固堡垒', 8, ['wizard'], ['xgte-2017-index']],
+  // EGtW 秘迹学（时间／重力法师子职专属）
+  ['Dark Star', '暗黑星辰', 8, [], ['egtw-2020-index']],
+  ['Reality Break', '崩坏现实', 8, [], ['egtw-2020-index']],
   // 9 环
   ['Astral Projection', '星界投影', 9, ['cleric', 'warlock', 'wizard'], ['basic-rules-2014']],
   ['Foresight', '预见术', 9, ['bard', 'druid', 'warlock', 'wizard'], ['basic-rules-2014']],
@@ -539,6 +561,9 @@ const spellSeeds: readonly [
   ['Mass Polymorph', '群体变形术', 9, ['bard', 'sorcerer', 'wizard'], ['xgte-2017-index']],
   ['Psychic Scream', '心灵尖啸', 9, ['bard', 'sorcerer', 'warlock', 'wizard'], ['xgte-2017-index']],
   ['Blade of Disaster', '灾厄之刃', 9, ['sorcerer', 'warlock', 'wizard'], ['tcoe-2020-index']],
+  // EGtW 秘迹学（时间／重力法师子职专属）
+  ['Ravenous Void', '饕餮虚空', 9, [], ['egtw-2020-index']],
+  ['Time Ravage', '时光蹂躏', 9, [], ['egtw-2020-index']],
 ]
 
 /** 2014 法术池中带有仪式标签的法术英文名。 */
@@ -576,6 +601,7 @@ export const ritualSpellNames2014 = [
   'Unseen Servant',
   'Water Breathing',
   'Water Walk',
+  'Wristpocket',
 ] as const
 
 const ritualSpellNameSet2014 = new Set<string>(ritualSpellNames2014)
@@ -1117,6 +1143,22 @@ const spellDescriptions: Readonly<Record<string, string>> = {
   'spell-2014-gate-seal': '1 分钟，射程 60 尺，持续 24 小时；封锁 30 尺立方区域的位面结构：区域内传送门关闭且无法重开，位面旅行／开门效应进出该区域自动失败；区域不可移动；六环以上施放持续至被解除。',
   'spell-2014-warp-sense': '1 动作，自身，持续 1 分钟（专注）；感知 30 尺内的传送门（含未开启者）；可用动作分析已侦测的传送门：以施法属性进行 DC15 检定，成功可知目的地与钥匙需求并结束，失败则下次施法前无法再分析；3 尺木／土、1 尺石、1 寸金属或薄铅可阻挡。',
   'spell-2014-encode-thoughts': '1 动作，自身，至多 8 小时；把一段记忆／想法／信息从心灵抽出，化为可由你握持携带的「思想链」实体；再次施放或持续结束即消失；握持时再施放可读取其中内容；若施放时正专注读取他人思想（如侦测思想），可把读取到的内容制成思想链。',
+  // ── EGtW 秘迹学（时间／重力法师子职专属） ──
+  'spell-2014-sapping-sting': '1 动作，射程 30 尺，立即；目标体质豁免失败受 1d4 暗蚀伤害并倒地；5/11/17 级伤害各 +1 骰。',
+  'spell-2014-gift-of-alacrity': '1 分钟，触碰，持续 8 小时；自愿生物的先攻检定可额外加 1d8。',
+  'spell-2014-magnify-gravity': '1 动作，射程 60 尺，持续 1 轮；10 尺半径内生物体质豁免失败受 2d8 力场伤害且速度减半；范围内未被携带的物品移动或拾起需以力量检定对抗你的法术 DC。',
+  'spell-2014-fortune-s-favor': '1 分钟，射程 60 尺，持续 1 小时；目标可在一次攻击／属性／豁免检定或成为攻击目标时结束法术并额外掷 1d20 二选一；每高 1 环 +1 个目标。',
+  'spell-2014-immovable-object': '1 动作，触碰，持续 1 小时；魔法固定至多 10 磅的物件，你与指定生物可如常移动；可设密码压制 1 分钟；固定空中可承重 4,000 磅，生物可用动作以力量检定对抗 DC 移动 10 尺；升环提高 DC、承重与时长。',
+  'spell-2014-wristpocket': '1 动作（仪式），自身，持续 1 小时（专注）；把手中至多 5 磅的物品送入异次元空间，期间可用动作取回或放回；结束时物品在你脚下出现。',
+  'spell-2014-pulse-wave': '1 动作，自身 30 尺锥形，立即；锥内生物体质豁免失败受 6d6 力场伤害并被推离或拉近 15 尺（由你选择），成功半伤；完全处于锥内的未携带物件同样被推拉；每高 1 环伤害 +1d6、距离 +5 尺。',
+  'spell-2014-gravity-sinkhole': '1 动作，射程 120 尺，立即；20 尺半径内生物体质豁免失败受 5d10 力场伤害并被拉向中心最近的空位，成功半伤且不被拉；每高 1 环伤害 +1d10。',
+  'spell-2014-temporal-shunt': '1 反应（生物攻击或开始施法时），射程 120 尺，持续 1 轮；目标感知豁免失败则被驱逐到时间流中，其攻击失手或法术浪费，其下回合开始时回到原位；目标不记得此法术；每高 1 环 +1 个目标（彼此相距 30 尺内）。',
+  'spell-2014-gravity-fissure': '1 动作，自身 100 尺长、5 尺宽直线，立即；线上生物体质豁免失败受 8d8 力场伤害，成功半伤；线 10 尺内的其他生物也需豁免，失败受 8d8 并被拉向线内；每高 1 环伤害 +1d8。',
+  'spell-2014-tether-essence': '1 动作，射程 60 尺，持续 1 小时（专注）；两个可见生物均体质豁免失败才生效（两者相距 30 尺内时豁免劣势，可自愿放弃）；此后两者共享伤害与治疗；任一方生命值降至 0 或法术结束即终止。',
+  'spell-2014-dark-star': '1 动作，射程 150 尺，持续 1 分钟（专注）；至多 40 尺半径球形魔法黑暗与重力区：区域困难地形，光源失效、声音不传、免疫雷鸣且耳聋、无法施放言语成分法术；进入或在其内开始回合的生物体质豁免失败受 8d10 力场伤害（成功半伤），被降至 0 则被解离（魔法物品除外）。',
+  'spell-2014-reality-break': '1 动作，射程 60 尺，持续 1 分钟（专注）；目标感知豁免失败则直到法术结束不能执行反应，且每回合开始掷 d10 按来源表格产生混沌效果；其回合结束可重复豁免，成功则结束。',
+  'spell-2014-ravenous-void': '1 动作，射程 1,000 尺，持续 1 分钟（专注）；20 尺半径力场且 100 尺内视为困难地形，未携带的非魔法物件被摧毁或拉向中心；100 尺内开始回合的生物力量豁免失败被拉向中心；首次进入或在其内开始回合的生物受 5d10 力场伤害并被束缚，可用动作以力量检定对抗 DC 解除；降至 0 者与其非魔法物品被湮灭。',
+  'spell-2014-time-ravage': '1 动作，射程 90 尺，立即；目标体质豁免失败受 12d10 暗蚀伤害并快速衰老至距老死仅 30 天（攻击、属性检定、豁免劣势，步行速度减半），成功半伤；衰老效果仅祈愿术或九环高等复原术可解除。',
 }
 
 /** 补充结构化字段（学派与施法参数）；仅登记《5e 不全书》来源有明确值的条目。 */
@@ -1141,6 +1183,22 @@ const spellMetadata2014: Readonly<Record<string, Pick<SpellRule, 'school' | 'cas
   'spell-2014-gate-seal': { school: '防护', castingTime: '1 分钟', range: '60 尺', components: 'V、S、M（一把损坏的传送门钥匙，作为耗材）', duration: '24 小时', concentration: false },
   'spell-2014-warp-sense': { school: '预言', castingTime: '动作', range: '自身', components: 'V、S、M（刃藤的一片叶子）', duration: '专注，至多 1 分钟', concentration: true },
   'spell-2014-encode-thoughts': { school: '惑控', castingTime: '动作', range: '自身', components: 'S', duration: '至多 8 小时', concentration: false },
+  // EGtW 秘迹学
+  'spell-2014-sapping-sting': { school: '死灵', castingTime: '动作', range: '30 尺', components: 'V、S', duration: '立即', concentration: false },
+  'spell-2014-gift-of-alacrity': { school: '预言', castingTime: '1 分钟', range: '触碰', components: 'V、S', duration: '8 小时', concentration: false },
+  'spell-2014-magnify-gravity': { school: '变化', castingTime: '动作', range: '60 尺', components: 'V、S', duration: '1 轮', concentration: false },
+  'spell-2014-fortune-s-favor': { school: '预言', castingTime: '1 分钟', range: '60 尺', components: 'V、S、M（至少价值 100 GP 的白色珍珠，作为耗材）', duration: '1 小时', concentration: false },
+  'spell-2014-immovable-object': { school: '变化', castingTime: '动作', range: '触碰', components: 'V、S、M（至少价值 25 GP 的金尘，作为施法时消耗的耗材）', duration: '1 小时', concentration: false },
+  'spell-2014-wristpocket': { school: '咒法', castingTime: '动作', range: '自身', components: 'S', duration: '专注，至多 1 小时', concentration: true },
+  'spell-2014-pulse-wave': { school: '塑能', castingTime: '动作', range: '自身（30 尺锥形）', components: 'V、S', duration: '立即', concentration: false },
+  'spell-2014-gravity-sinkhole': { school: '塑能', castingTime: '动作', range: '120 尺', components: 'V、S、M（一块黑色的大理石）', duration: '立即', concentration: false },
+  'spell-2014-temporal-shunt': { school: '变化', castingTime: '1 反应（生物攻击或开始施法时）', range: '120 尺', components: 'V、S', duration: '1 轮', concentration: false },
+  'spell-2014-gravity-fissure': { school: '塑能', castingTime: '动作', range: '自身（100 尺长）', components: 'V、S、M（一块铁料）', duration: '立即', concentration: false },
+  'spell-2014-tether-essence': { school: '死灵', castingTime: '动作', range: '60 尺', components: 'V、S、M（至少价值 250 GP 的铂金丝线，作为耗材）', duration: '专注，至多 1 小时', concentration: true },
+  'spell-2014-dark-star': { school: '塑能', castingTime: '动作', range: '150 尺', components: 'V、S、M（一小块碎玛瑙与一滴施法者的血液，作为耗材）', duration: '专注，至多 1 分钟', concentration: true },
+  'spell-2014-reality-break': { school: '咒法', castingTime: '动作', range: '60 尺', components: 'V、S、M（一个水晶棱镜）', duration: '专注，至多 1 分钟', concentration: true },
+  'spell-2014-ravenous-void': { school: '塑能', castingTime: '动作', range: '1,000 尺', components: 'V、S、M（一只铁制的小九芒星）', duration: '专注，至多 1 分钟', concentration: true },
+  'spell-2014-time-ravage': { school: '死灵', castingTime: '动作', range: '90 尺', components: 'V、S、M（装满钻石粉尘的沙漏，价值至少 5,000 GP，作为耗材）', duration: '立即', concentration: false },
 }
 
 export const spells2014: readonly SpellRule[] = spellSeeds.map(([englishName, name, level, classIds, sourceIds]) => {
