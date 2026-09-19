@@ -445,6 +445,26 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
             })
           }
         }
+        if (option?.requiredSpellIds?.length) {
+          const knownSpellIds = new Set([
+            ...draft.spellSelections.cantripIds,
+            ...draft.spellSelections.knownSpellIds,
+            ...draft.spellSelections.preparedSpellIds,
+            ...draft.spellSelections.spellbookSpellIds,
+            ...draft.spellSelections.transcribedSpellIds,
+          ])
+          const missingSpells = option.requiredSpellIds.filter((id) => !knownSpellIds.has(id))
+          if (missingSpells.length > 0) {
+            const names = missingSpells.map((id) => repository.getSpell(id)?.name ?? id).join('、')
+            issues.push({
+              id: `option-spell-prerequisite-${checkpoint.id}-${optionId}`,
+              step: checkpoint.step,
+              severity: 'error',
+              message: `「${option.name}」需要先习得法术：${names}。`,
+              resolution: '先在法术步骤习得该法术，或移除该选择。',
+            })
+          }
+        }
         const featBonus = /^feat-bonus-(str|dex|con|int|wis|cha)-([12])$/.exec(optionId)
         if (featBonus) {
           const ability = featBonus[1] as keyof ReturnType<typeof deriveAbilities>

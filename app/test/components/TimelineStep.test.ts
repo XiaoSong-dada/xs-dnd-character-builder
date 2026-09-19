@@ -240,3 +240,63 @@ describe('TimelineStep 2024 武器精通', () => {
       checkpointId === 'class-2024-fighter-mastery-1' && (optionIds as readonly string[]).includes('equipment-2024-longsword'))).toBe(true)
   })
 })
+
+describe('TimelineStep 邪术师可展开卡片', () => {
+  function warlockDraft(targetLevel: number, selections: CharacterDraft['selections'] = []): CharacterDraft {
+    return { ...bardDraft(), classId: 'class-2014-warlock', targetLevel, selections }
+  }
+
+  function expandableCard(wrapper: ReturnType<typeof mountStep>, name: string) {
+    return wrapper.findAll('.expandable-option-card').find((card) => card.text().includes(name))
+  }
+
+  const skillSelection = { checkpointId: 'warlock-2014-skills-1', optionIds: ['skill-arcana', 'skill-deception'], confirmedAt: '' }
+  const patronSelection = { checkpointId: 'warlock-2014-subclass-1', optionIds: ['subclass-2014-warlock-fiend'], confirmedAt: '' }
+
+  it('宗主选择使用可展开卡片，展开后显示详情与来源', async () => {
+    const wrapper = mountStep(warlockDraft(1, [skillSelection]))
+    const card = expandableCard(wrapper, '至高妖精')
+    expect(card).toBeDefined()
+
+    await card?.find('.expandable-option-card__arrow').trigger('click')
+
+    const detail = wrapper.find('.timeline-step__option-detail')
+    expect(detail.exists()).toBe(true)
+    expect(detail.text()).toContain('妖精领主或女王')
+    expect(detail.text()).toContain('来源：The Archfey · PHB')
+  })
+
+  it('魔能祈唤使用可展开卡片，展开后显示先决条件与来源', async () => {
+    const wrapper = mountStep(warlockDraft(3, [skillSelection, patronSelection]))
+    const card = expandableCard(wrapper, '苦痛魔爆')
+    expect(card).toBeDefined()
+
+    await card?.find('.expandable-option-card__arrow').trigger('click')
+
+    const detail = wrapper.find('.timeline-step__option-detail')
+    expect(detail.text()).toContain('先决条件：已习得法术 魔能爆')
+    expect(detail.text()).toContain('来源：Agonizing Blast · PHB')
+  })
+
+  it('无先决的祈唤不渲染先决条件行', async () => {
+    const wrapper = mountStep(warlockDraft(3, [skillSelection, patronSelection]))
+    await expandableCard(wrapper, '魔鬼视界')?.find('.expandable-option-card__arrow').trigger('click')
+
+    const detail = wrapper.find('.timeline-step__option-detail')
+    expect(detail.text()).not.toContain('先决条件')
+    expect(detail.text()).toContain("来源：Devil's Sight · PHB")
+  })
+
+  it('魔契恩泽四项均使用可展开卡片', () => {
+    const wrapper = mountStep(warlockDraft(3, [
+      skillSelection,
+      patronSelection,
+      { checkpointId: 'warlock-2014-invocations-2', optionIds: ['invocation-devils-sight', 'invocation-2014-armor-of-shadows'], confirmedAt: '' },
+    ]))
+
+    for (const name of ['链之魔契', '刃之魔契', '书之魔契', '符之魔契']) {
+      expect(expandableCard(wrapper, name), name).toBeDefined()
+    }
+    expect(wrapper.findAll('.option-card').length).toBe(0)
+  })
+})

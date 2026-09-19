@@ -235,6 +235,7 @@
 
 - 职业 ID：`warlock`
 - 当前2014实现：[2014邪术师实现说明](classes/subclasses/warlock/warlock-2014.md)
+- 2014魔能祈唤与魔契恩泽：魔能祈唤 54 条（PHB 32／XGtE 14／TCoE 8），按等级与依赖先决分级筛选（2 级 2 项，5／7／9／12／15／18 级各 +1，累计 8 项，跨等级不可重复）；魔契恩泽 4 项（链之／刃之／书之／符之魔契）；译名按《5e 不全书》2014 章节定稿；最后核验日期 2026-09-19
 - 职业基础与等级特性：[魔契师详细资料](classes/subclasses/warlock/warlock.md)
 - 2024子职：[至高妖精宗主](classes/subclasses/warlock/warlock-archfey-patron.md)、[天界宗主](classes/subclasses/warlock/warlock-celestial-patron.md)、[邪魔宗主](classes/subclasses/warlock/warlock-fiend-patron.md)、[旧日支配者宗主](classes/subclasses/warlock/warlock-great-old-one-patron.md)
 - 旧版与扩展子职：[不朽者](classes/subclasses/warlock/warlock-undying-patron.md)、[咒剑](classes/subclasses/warlock/warlock-hexblade-patron.md)、[深海意志](classes/subclasses/warlock/warlock-fathomless-patron.md)、[巨灵](classes/subclasses/warlock/warlock-genie-patron.md)、[死灵](classes/subclasses/warlock/warlock-undead-patron.md)

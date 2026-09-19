@@ -100,6 +100,58 @@ function isExpertiseLocked(checkpointId: string, optionId: string): boolean {
   return !proficientSkillIds.value.has(optionId)
 }
 
+/** 静态选项卡片的标题（兼容专长属性提升与子职特性选项标签回退）。 */
+function optionTitle(checkpointId: string, optionId: string): string {
+  return rulesRepository.value.getOption(optionId)?.name
+    ?? formatFeatBonusOption(rulesRepository.value, optionId)
+    ?? featureOptionLabel(checkpointId, optionId)
+    ?? optionId
+}
+
+type OptionCardState = 'default' | 'selected' | 'locked' | 'incompatible'
+
+function optionState(checkpointId: string, optionId: string): OptionCardState {
+  if (selectedIds(checkpointId).includes(optionId)) return 'selected'
+  if (isUniqueOptionUsedElsewhere(checkpointId, optionId) || isBackgroundSkill(checkpointId, optionId) || isExpertiseLocked(checkpointId, optionId)) return 'locked'
+  return rulesRepository.value.getOption(optionId)?.status === 'index-only' ? 'incompatible' : 'default'
+}
+
+function optionDisabledReason(checkpointId: string, optionId: string): string {
+  if (isUniqueOptionUsedElsewhere(checkpointId, optionId)) {
+    const checkpoint = checkpoints.value.find((item) => item.id === checkpointId)
+    return checkpoint?.kind === 'expertise' ? '已在较低等级获得专精' : '已在同一选项组的其他等级掌握'
+  }
+  if (isBackgroundSkill(checkpointId, optionId)) return '背景已提供此技能，请选择另一项职业技能'
+  if (isExpertiseLocked(checkpointId, optionId)) return '需先获得该技能熟练（职业技能或背景）'
+  return ''
+}
+
+/** 展开区的先决条件行：由选项字段生成（等级／魔契／法术），无先决时返回 undefined。 */
+function optionPrerequisiteText(optionId: string): string | undefined {
+  const option = rulesRepository.value.getOption(optionId)
+  if (!option) return undefined
+  const parts: string[] = []
+  if (option.minimumLevel) parts.push(`${option.minimumLevel} 级`)
+  for (const requiredId of option.requiredOptionIds ?? []) {
+    parts.push(rulesRepository.value.getOption(requiredId)?.name ?? requiredId)
+  }
+  if (option.requiredSpellIds?.length) {
+    const spellNames = option.requiredSpellIds.map((id) => rulesRepository.value.getSpell(id)?.name ?? id)
+    parts.push(`已习得法术 ${spellNames.join('、')}`)
+  }
+  return parts.length ? parts.join('，') : undefined
+}
+
+/** 展开区的来源行：英文名 + 来源简写（如 “The Fiend · PHB”）。 */
+function optionSourceText(optionId: string): string | undefined {
+  const option = rulesRepository.value.getOption(optionId)
+  if (!option) return undefined
+  const titles = option.sourceIds
+    .map((id) => rulesRepository.value.sources.find((source) => source.id === id)?.shortTitle ?? id)
+    .join('／')
+  return [option.englishName, titles].filter(Boolean).join(' · ') || undefined
+}
+
 function toggle(checkpointId: string, optionId: string, max: number): void {
   const current = selectedIds(checkpointId)
   const alreadySelected = current.includes(optionId)
@@ -214,27 +266,41 @@ function spellCandidateDescription(spell: SpellRule): string {
           @select="saveSpecialSelection(checkpoint.id, $event)"
         />
         <ListShell
+          v-else-if="checkpoint.optionIds.length && checkpoint.optionPresentation === 'expandable'"
+        >
+          <ExpandableOptionCard
+            v-for="optionId in checkpoint.optionIds"
+            :key="optionId"
+            :title="optionTitle(checkpoint.id, optionId)"
+            :description="rulesRepository.getOption(optionId)?.description"
+            expanded-label="详情"
+            :state="optionState(checkpoint.id, optionId)"
+            :disabled-reason="optionDisabledReason(checkpoint.id, optionId)"
+            @select="toggle(checkpoint.id, optionId, checkpointBounds(checkpoint).max)"
+          >
+            <template #suffix>
+              <UiBadge v-if="rulesRepository.getOption(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
+              <UiBadge v-else-if="rulesRepository.getOption(optionId)?.status === 'selectable'" tone="warning">可选择 · 部分效果需手动处理</UiBadge>
+            </template>
+            <template #expanded>
+              <div class="timeline-step__option-detail">
+                <p>{{ rulesRepository.getOption(optionId)?.description }}</p>
+                <p v-if="optionPrerequisiteText(optionId)">先决条件：{{ optionPrerequisiteText(optionId) }}</p>
+                <p v-if="optionSourceText(optionId)">来源：{{ optionSourceText(optionId) }}</p>
+              </div>
+            </template>
+          </ExpandableOptionCard>
+        </ListShell>
+        <ListShell
           v-else-if="checkpoint.optionIds.length"
         >
           <OptionCard
             v-for="optionId in checkpoint.optionIds"
             :key="optionId"
-            :title="rulesRepository.getOption(optionId)?.name ?? formatFeatBonusOption(rulesRepository, optionId) ?? featureOptionLabel(checkpoint.id, optionId) ?? optionId"
+            :title="optionTitle(checkpoint.id, optionId)"
             :description="rulesRepository.getOption(optionId)?.description"
-            :state="selectedIds(checkpoint.id).includes(optionId)
-              ? 'selected'
-              : isUniqueOptionUsedElsewhere(checkpoint.id, optionId) || isBackgroundSkill(checkpoint.id, optionId) || isExpertiseLocked(checkpoint.id, optionId)
-                ? 'locked'
-                : rulesRepository.getOption(optionId)?.status === 'index-only'
-                  ? 'incompatible'
-                  : 'default'"
-            :disabled-reason="isUniqueOptionUsedElsewhere(checkpoint.id, optionId)
-              ? checkpoint.kind === 'expertise' ? '已在较低等级获得专精' : '已在同一选项组的其他等级掌握'
-              : isBackgroundSkill(checkpoint.id, optionId)
-                ? '背景已提供此技能，请选择另一项职业技能'
-                : isExpertiseLocked(checkpoint.id, optionId)
-                  ? '需先获得该技能熟练（职业技能或背景）'
-                  : ''"
+            :state="optionState(checkpoint.id, optionId)"
+            :disabled-reason="optionDisabledReason(checkpoint.id, optionId)"
             @select="toggle(checkpoint.id, optionId, checkpointBounds(checkpoint).max)"
           >
             <template #suffix>
@@ -368,6 +434,14 @@ function spellCandidateDescription(spell: SpellRule): string {
   &__spell-empty { margin: 0; padding: 0.6rem 0.75rem; border-radius: var(--radius-md); color: var(--color-text-muted); background: var(--color-surface-muted, #f4efe6); font-size: 0.75rem; line-height: 1.5; }
 
   &__subclass-features { display: grid; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--color-border); }
+
+  // 展开区内容（祈唤／魔契恩泽／宗主选择）：段落间距由容器统一控制，避免 <p> 默认外边距撑开卡片
+  &__option-detail {
+    display: grid;
+    gap: 0.3rem;
+
+    p { margin: 0; }
+  }
   &__subclass-features h4 { margin: 0; font-size: 0.78rem; color: var(--color-text-muted); }
 
   &__feature { display: flex; gap: 0.6rem; padding: 0.5rem; border-radius: var(--radius-sm); background: var(--color-surface-alt, rgba(0, 0, 0, 0.03)); }

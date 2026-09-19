@@ -105,6 +105,8 @@ export interface RuleOption {
   readonly minimumLevel?: number
   /** 依赖的已选选项（如魔能斩需先选刃之魔契）。 */
   readonly requiredOptionIds?: readonly string[]
+  /** 依赖的已习得法术（如 2014 魔能爆系祈唤需先习得戏法魔能爆）。 */
+  readonly requiredSpellIds?: readonly string[]
   /** 可重复选择（如苦痛魔爆可为不同戏法重复选取）。 */
   readonly repeatable?: boolean
   /** 选项授予的始终准备法术（如 2024 德鲁伊大地结社的地形法术，按德鲁伊等级生效）。 */
@@ -276,6 +278,8 @@ export interface ChoiceCheckpoint {
   readonly spellCastingTime?: string
   /** 武器精通候选范围（缺省任意；`melee` 近战限定，`proficient` 限职业熟练武器）。 */
   readonly weaponMasteryFilter?: 'melee' | 'proficient' | 'any'
+  /** 候选卡片的展示形式：`card` 为紧凑卡（默认），`expandable` 可展开读取完整详情。 */
+  readonly optionPresentation?: 'card' | 'expandable'
 }
 
 /** 动态候选池：检查点选项随草稿状态（等级、法术书）由规则层生成。 */

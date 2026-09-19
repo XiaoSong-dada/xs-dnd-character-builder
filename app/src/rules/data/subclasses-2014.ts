@@ -18,6 +18,16 @@ const sourceTitles: Readonly<Record<string, string>> = {
   'bigby-2023-index': '《毕格比的巨人荣光》',
 }
 
+/**
+ * 子职摘要覆盖：已按《5e 不全书》核验过的子职在此登记真实摘要（原创中文转述），
+ * 未列出的子职沿用下方的通用说明。
+ */
+const subclassSummaryOverrides: Readonly<Record<string, string>> = {
+  'subclass-2014-warlock-archfey': '宗主是一位妖精领主或女王，守护着凡人种族出现前就已被遗忘的秘密，行为往往难以理解。1 级获得扩展法术列表与妖精仪态；6 级雾遁；10 级斗转星移；14 级幻影黑幕。',
+  'subclass-2014-warlock-fiend': '宗主是下层位面的强大邪魔（恶魔领主或大魔鬼），追求万物的堕落与毁灭，但你不必与之同流合污。1 级获得扩展法术列表与黑暗赐福；6 级黑暗强运；10 级邪魔体魄；14 级直坠噩梦。',
+  'subclass-2014-warlock-great-old-one': '宗主的本质与现实结构格格不入，可能来自遥远国度或仅存于传说中的古神，其行为无法被凡人理解，也可能根本未意识到你的存在。1 级获得扩展法术列表与唤醒心灵；6 级熵光结界；10 级思维之盾；14 级创造奴仆。',
+}
+
 const entriesByClass = {
   artificer: [
     ['alchemist', '炼金师', 'Alchemist', 'tcoe-2020-index'],
@@ -376,7 +386,7 @@ export const subclasses2014: readonly SubclassRule[] = Object.entries(entriesByC
       selectionLevel: selectionLevels[classSlug] ?? 3,
       summary: dmOnly
         ? `${name}是仅供地下城主批准使用的子职业，本项目登记其索引但不开放普通车卡选择。`
-        : `${name}提供围绕其主题的职业发展路线；当前仅登记选择所需的原创摘要与来源。`,
+        : subclassSummaryOverrides[id] ?? `${name}提供围绕其主题的职业发展路线；当前仅登记选择所需的原创摘要与来源。`,
       status: (() => {
         if (dmOnly) return 'dm-only' as const
         const features = getSubclassFeatures2014(id)
@@ -398,6 +408,7 @@ export const subclasses2014: readonly SubclassRule[] = Object.entries(entriesByC
 export const subclassOptions2014: readonly RuleOption[] = subclasses2014.map((subclass) => ({
   id: subclass.id,
   name: subclass.name,
+  englishName: subclass.englishName,
   description: `${subclass.englishName} · ${sourceTitles[subclass.sourceIds[0] ?? ''] ?? '2014 扩展资料'} · ${subclass.summary}`,
   status: subclass.status,
   sourceIds: subclass.sourceIds,

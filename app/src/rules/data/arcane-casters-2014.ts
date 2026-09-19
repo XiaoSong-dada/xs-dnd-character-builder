@@ -1,11 +1,13 @@
 import type { ClassRule, RuleOption, SubclassRule } from '@/types/rules'
 import { ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
+import { INVOCATION_2014_CHECKPOINTS, invocationCheckpointId, invocationIdsAt, invocations2014 } from '@/rules/data/invocations-2014'
 import { FULL_CASTER_SPELL_SLOTS, PACT_SPELL_SLOTS, fullCasterMaximumSpellLevels, pactMaximumSpellLevels } from '@/rules/data/spell-slots-2014'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
 
 const basicSource = ['basic-rules-2014'] as const
 const indexSource = ['phb-2014-index'] as const
+const tcoeSource = ['tcoe-2020-index'] as const
 const wizardCantrips = [3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5] as const
 const wizardSpellbookCounts = Array.from({ length: 20 }, (_, index) => 6 + index * 2)
 const warlockCantrips = [2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4] as const
@@ -19,15 +21,29 @@ const warlockSubclassIds = ['subclass-2014-warlock-archfey', 'subclass-2014-warl
 export const arcaneCasterOptions2014: readonly RuleOption[] = [
   ...wizardSubclassIds.map((id) => ({ id, name: ({ abjuration: '防护学派', conjuration: '咒法学派', divination: '预言学派', enchantment: '附魔学派', evocation: '塑能学派', illusion: '幻术学派', necromancy: '死灵学派', transmutation: '变化学派' } as Record<string, string>)[id.split('-').slice(-1)[0] ?? ''] ?? id, description: '2014法师奥术传承索引。', status: 'index-only' as const, sourceIds: indexSource })),
   ...warlockSubclassIds.map((id) => ({ id, name: ({ archfey: '至高妖精', fiend: '邪魔', 'great-old-one': '旧日支配者' } as Record<string, string>)[id.replace('subclass-2014-warlock-', '')] ?? id, description: '2014邪术师异界宗主索引。', status: 'index-only' as const, sourceIds: indexSource })),
-  { id: 'pact-chain', name: '锁链契约', description: '获得强化魔宠路线。', status: 'index-only', sourceIds: indexSource },
-  { id: 'pact-blade', name: '刀锋契约', description: '获得契约武器路线。', status: 'index-only', sourceIds: indexSource },
-  { id: 'pact-tome', name: '魔典契约', description: '获得额外戏法路线。', status: 'index-only', sourceIds: indexSource },
-  { id: 'invocation-agonizing-blast', name: '痛苦魔爆', description: '魔能祈唤索引。', status: 'index-only', sourceIds: indexSource },
-  { id: 'invocation-devils-sight', name: '魔鬼视界', description: '魔能祈唤索引。', status: 'index-only', sourceIds: indexSource },
-  { id: 'invocation-mask-of-many-faces', name: '千面之颜', description: '魔能祈唤索引。', status: 'index-only', sourceIds: indexSource },
+  { id: 'pact-chain', name: '链之魔契', description: '契约魔宠路线：习得寻获魔宠，魔宠可从特殊形态中选择，并可用一次攻击换取魔宠的反应攻击。', status: 'implemented', sourceIds: indexSource },
+  { id: 'pact-blade', name: '刃之魔契', description: '契约武器路线：以动作创造一把契约武器，你视为拥有其熟练项，且其攻击视为魔法性。', status: 'implemented', sourceIds: indexSource },
+  { id: 'pact-tome', name: '书之魔契', description: '影之书路线：自任意职业法术列表选择 3 个戏法，持书时随意施展且不计入已知戏法数量。', status: 'implemented', sourceIds: indexSource },
+  { id: 'pact-talisman', name: '符之魔契', description: '护符路线：宗主赐予一枚护符，佩戴者属性检定失败时可加 1d4；次数等于你的熟练加值，长休后恢复。', status: 'implemented', sourceIds: tcoeSource },
+  ...invocations2014,
 ]
 
 const asi = (level: number, className: 'wizard' | 'warlock') => ({ id: `${className}-2014-asi-${level}`, level, step: 'timeline' as const, kind: 'ability-improvement' as const, title: '属性提升或专长', description: '属性提升与专长互斥。', required: true, minSelections: 1, maxSelections: 1, optionIds: ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS })
+
+/**
+ * 魔能祈唤检查点：2 级 2 项（保留首版 ID），5／7／9／12／15／18 级各 +1。
+ * `uniqueGroup` 保证跨等级不重复选同一条祈唤；候选按等级与来源筛选。
+ */
+const invocationCheckpoint = (level: number, count: number) => ({
+  id: invocationCheckpointId(level),
+  level, step: 'timeline' as const, kind: 'class-choice' as const,
+  title: level === 2 ? `选择${count}项魔能祈唤` : '新增魔能祈唤',
+  description: '选择尚未掌握且满足等级先决与依赖先决的魔能祈唤；先决不满足时校验会给出原因。',
+  required: true, minSelections: count, maxSelections: count,
+  optionIds: invocationIdsAt(level),
+  uniqueGroup: 'warlock-2014-invocations-known',
+  optionPresentation: 'expandable' as const,
+})
 
 export const arcaneCasterClasses2014: readonly ClassRule[] = [
   {
@@ -46,9 +62,9 @@ export const arcaneCasterClasses2014: readonly ClassRule[] = [
     id: 'class-2014-warlock', ruleset: '5e-2014', name: '邪术师', englishName: 'Warlock', summary: '2014版契约施法者，以短休恢复的契约法术位施法。', hitDie: 8, primaryAbilities: ['cha'], playStyleTags: ['spellcaster', 'striker', 'control', 'utility'], savingThrowAbilities: ['wis', 'cha'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'warlock-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项邪术师技能', description: '选择职业技能。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-deception', 'skill-history', 'skill-intimidation', 'skill-investigation', 'skill-nature', 'skill-religion'] },
-      { id: 'warlock-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择异界宗主', description: '宗主在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: warlockSubclassIds },
-      { id: 'warlock-2014-invocations-2', level: 2, step: 'timeline', kind: 'class-choice', title: '选择2项魔能祈唤', description: '当前提供核心祈唤索引。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['invocation-agonizing-blast', 'invocation-devils-sight', 'invocation-mask-of-many-faces'] },
-      { id: 'warlock-2014-pact-3', level: 3, step: 'timeline', kind: 'class-choice', title: '选择魔契恩泽', description: '锁链、刀锋或魔典契约。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['pact-chain', 'pact-blade', 'pact-tome'] },
+      { id: 'warlock-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择异界宗主', description: '宗主在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: warlockSubclassIds, optionPresentation: 'expandable' as const },
+      ...INVOCATION_2014_CHECKPOINTS.map((item) => invocationCheckpoint(item.level, item.count)),
+      { id: 'warlock-2014-pact-3', level: 3, step: 'timeline', kind: 'class-choice', title: '选择魔契恩泽', description: '从链之、刃之、书之与符之魔契中选择其一。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['pact-chain', 'pact-blade', 'pact-tome', 'pact-talisman'], optionPresentation: 'expandable' as const },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'warlock')),
     ],
     spellcasting: { ruleset: '5e-2014', mode: 'pact', ability: 'cha', startsAtLevel: 1, cantripsKnownByLevel: warlockCantrips, spellsKnownByLevel: warlockSpellsKnown, maxSpellLevelByClassLevel: pactMaximumSpellLevels, pactSlotsByClassLevel: PACT_SPELL_SLOTS, classSpellIds: spellIds('class-2014-warlock') },
