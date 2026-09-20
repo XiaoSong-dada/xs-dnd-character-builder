@@ -15,7 +15,8 @@ describe('source-books 规则集化来源解析（E01）', () => {
     expect(defaults.length).toBeGreaterThan(0)
     expect(selectable.length).toBeGreaterThan(defaults.length)
     const thirdParty = selectable.filter((source) => source.contentKind === 'third-party')
-    expect(thirdParty).toHaveLength(11)
+    // 下界断言：第三方来源随批次增长（G 批次 11 → G2 批次 12），不锁死总数。
+    expect(thirdParty.length).toBeGreaterThanOrEqual(12)
     expect(thirdParty.every((source) => source.defaultEnabled === false)).toBe(true)
     for (const source of thirdParty) expect(defaults, source.id).not.toContain(source.id)
     expect(normalizeEnabledSourceIds(['xgte-2017-index', 'unknown-source'])).toEqual(['xgte-2017-index'])

@@ -62,10 +62,39 @@ describe('2014 origins', () => {
       'background-2014-marine', 'background-2014-fisher', 'background-2014-shipwright', 'background-2014-smuggler',
       'background-2014-failed-merchant', 'background-2014-rival-intern', 'background-2014-gambler',
       'background-2014-grinner', 'background-2014-volstrucker-agent',
+      // G2 批次：BMT 2 / Bigby 2 / 寻路者指南 1 / Plane Shift 2
+      'background-2014-rewarded', 'background-2014-ruined',
+      'background-2014-giant-foundling', 'background-2014-rune-carver',
+      'background-2014-house-agent', 'background-2014-vizier', 'background-2014-inquisitor',
     ]) {
       expect(baseBackgroundIds, id).toContain(id)
     }
     expect(rulesRepository.backgrounds.filter((item) => item.parentBackgroundId)).toHaveLength(5)
+  })
+
+  it('G2 批次背景必须登记原创 description 与背景特性', () => {
+    const g2Ids = [
+      'background-2014-rewarded', 'background-2014-ruined',
+      'background-2014-giant-foundling', 'background-2014-rune-carver',
+      'background-2014-house-agent', 'background-2014-vizier', 'background-2014-inquisitor',
+    ]
+    for (const id of g2Ids) {
+      const background = rulesRepository.getBackground(id)
+      expect(background, id).toBeDefined()
+      expect(background?.description.length ?? 0, id).toBeGreaterThan(40)
+      expect(background?.featureName, id).toBeTruthy()
+      const features = rulesRepository.getBackgroundFeatures(id)
+      expect(features.length, id).toBeGreaterThanOrEqual(1)
+      expect(features[0]?.name, id).toBe(background?.featureName)
+    }
+  })
+
+  it('试行内容（Plane Shift）登记为 dm-only 且来源为第三方', () => {
+    for (const id of ['background-2014-vizier', 'background-2014-inquisitor']) {
+      const background = rulesRepository.getBackground(id)
+      expect(background?.status, id).toBe('dm-only')
+      expect(background?.sourceIds, id).toContain('tp-planshift-index')
+    }
   })
 
   it('combines parent and subrace bonuses', () => {

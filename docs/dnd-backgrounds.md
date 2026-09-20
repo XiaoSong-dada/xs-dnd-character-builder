@@ -177,6 +177,27 @@ G 批次按《5e 不全书》CHM v2026.09.13 逐条核验补齐。以下条目�
 
 > 胧忆岛使用来源自有技能表（工程／回收）与自有货币（金花币），项目技能表与货币表无对应条目，故对应字段留空、以文字登记；德拉肯海姆的 1d8 秘宝／传闻表写入背景描述，不建结构化表。
 
+## 2014 扩展背景（G2 批次补齐：万象无常书／毕格比／寻路者指南）
+
+| 背景 | 英文名 | 来源 | 详细资料 | 备注 |
+| --- | --- | --- | --- | --- |
+| 受宠者 | Rewarded | BMT | [2014 受宠者](backgrounds/5e-2014/rewarded/rewarded.md) | 特性授予幸运／魔法学徒／熟习三选一，按原书处理 |
+| 受难者 | Ruined | BMT | [2014 受难者](backgrounds/5e-2014/ruined/ruined.md) | 特性授予警觉／熟习／健壮三选一 |
+| 巨人养子 | Giant Foundling | Bigby | [2014 巨人养子](backgrounds/5e-2014/giant-foundling/giant-foundling.md) | 授予「巨人打击」专长 |
+| 符文雕刻者 | Rune Carver | Bigby | [2014 符文雕刻者](backgrounds/5e-2014/rune-carver/rune-carver.md) | 授予「符文塑形者」专长 |
+| 家族代理人 | House Agent | ERftLW | [2014 家族代理人](backgrounds/5e-2014/house-agent/house-agent.md) | 旧版（家族工具熟练表）；本书 2024 重制版见下文奇械锻炉 |
+
+> **归属勘误（G2 批次）**：CHM 中 `6874` 书页标题为「魔邓肯的众敌卷册（旧版）」，但 `6875`—`6965` 的内容实为《范·里希腾的鸦阁魔域指南》的重复渲染（与 `6580`—`6873` 段对应），本批不重复登记；CHM 内不存在 MToF 2018 的背景条目，故本轮不计 MToF 缺口。
+
+## 2014 第三方合作内容背景（G2 批次，来源默认关闭、需 DM 同意）
+
+| 背景 | 英文名 | 来源 | 详细资料 | 备注 |
+| --- | --- | --- | --- | --- |
+| 维齐尔 | Vizier | Plane Shift·阿芒凯 | [2014 维齐尔](backgrounds/5e-2014/vizier/vizier.md) | 试行内容，登记为 `dm-only` |
+| 审判官 | Inquisitor | Plane Shift·依尼翠 | [2014 审判官](backgrounds/5e-2014/inquisitor/inquisitor.md) | 同上 |
+
+> 异界传送 Plane Shift 为威世智免费发布的非正式试玩内容，按 G2 决策 Q3-C 登记为 `dm-only`（需 DM 同意），不进入默认候选。
+
 ## 索引条目（非可选背景）
 
 | 条目 | 来源 | 说明 |
@@ -211,6 +232,79 @@ G 批次按《5e 不全书》CHM v2026.09.13 逐条核验补齐。以下条目�
 
 配套第三方起源专长登记在 `app/src/rules/data/third-party-feats-2024.ts`（歪曲之月 12 + 德拉肯海姆 2）。
 
+## 2024 官方扩展出身（G2 批次）
+
+以下为 2025 年起的官方扩展，均采用 2024 写法（属性候选 + 起源专长 + 技能 + 工具 + 装备 A/B），登记进 `5e-2024` 仓库。
+
+| 出身 | 英文名 | 来源 | 详细资料 | 备注 |
+| --- | --- | --- | --- | --- |
+| 乔拉斯科家族后裔 | House Jorasco Heir | 奇械锻炉 | [2024 乔拉斯科家族后裔](backgrounds/5e-2024/efa-jorasco-heir/efa-jorasco-heir.md) | 起源专长＝医疗龙纹（接入 UA 艾伯伦龙纹专长条目） |
+| 伽兰达家族后裔 | House Ghallanda Heir | 奇械锻炉 | [2024 伽兰达家族后裔](backgrounds/5e-2024/efa-ghallanda-heir/efa-ghallanda-heir.md) | 招待龙纹 |
+| 坎尼斯家族后裔 | House Cannith Heir | 奇械锻炉 | [2024 坎尼斯家族后裔](backgrounds/5e-2024/efa-cannith-heir/efa-cannith-heir.md) | 创造龙纹 |
+| 撒剌释克家族后裔 | House Tharashk Heir | 奇械锻炉 | [2024 撒剌释克家族后裔](backgrounds/5e-2024/efa-tharashk-heir/efa-tharashk-heir.md) | 探寻龙纹 |
+| 昆达拉克家族后裔 | House Kundarak Heir | 奇械锻炉 | [2024 昆达拉克家族后裔](backgrounds/5e-2024/efa-kundarak-heir/efa-kundarak-heir.md) | 守御龙纹 |
+| 梅丹尼家族后裔 | House Medani Heir | 奇械锻炉 | [2024 梅丹尼家族后裔](backgrounds/5e-2024/efa-medani-heir/efa-medani-heir.md) | 侦测龙纹 |
+| 欧瑞恩家族后裔 | House Orien Heir | 奇械锻炉 | [2024 欧瑞恩家族后裔](backgrounds/5e-2024/efa-orien-heir/efa-orien-heir.md) | 通行龙纹 |
+| 瓦达利斯家族后裔 | House Vadalis Heir | 奇械锻炉 | [2024 瓦达利斯家族后裔](backgrounds/5e-2024/efa-vadalis-heir/efa-vadalis-heir.md) | 畜牧龙纹 |
+| 苏兰尼家族后裔 | House Thuranni Heir | 奇械锻炉 | [2024 苏兰尼家族后裔](backgrounds/5e-2024/efa-thuranni-heir/efa-thuranni-heir.md) | 阴影龙纹 |
+| 西维斯家族后裔 | House Sivis Heir | 奇械锻炉 | [2024 西维斯家族后裔](backgrounds/5e-2024/efa-sivis-heir/efa-sivis-heir.md) | 抄录龙纹 |
+| 费亚兰家族后裔 | House Phiarlan Heir | 奇械锻炉 | [2024 费亚兰家族后裔](backgrounds/5e-2024/efa-phiarlan-heir/efa-phiarlan-heir.md) | 阴影龙纹 |
+| 邓奈斯家族后裔 | House Deneith Heir | 奇械锻炉 | [2024 邓奈斯家族后裔](backgrounds/5e-2024/efa-deneith-heir/efa-deneith-heir.md) | 哨戒龙纹；2014 旧版译名「邓奈斯」 |
+| 黎兰达家族后裔 | House Lyrandar Heir | 奇械锻炉 | [2024 黎兰达家族后裔](backgrounds/5e-2024/efa-lyrandar-heir/efa-lyrandar-heir.md) | 暴风龙纹 |
+| 异种后裔 | Aberrant Heir | 奇械锻炉 | [2024 异种后裔](backgrounds/5e-2024/efa-aberrant-heir/efa-aberrant-heir.md) | 异种龙纹 |
+| 探事员 | Inquisitive | 奇械锻炉 | [2024 探事员](backgrounds/5e-2024/efa-inquisitive/efa-inquisitive.md) | 起源专长：警戒 |
+| 考古学家 | Archaeologist | 奇械锻炉 | [2024 考古学家](backgrounds/5e-2024/efa-archaeologist/efa-archaeologist.md) | 起源专长：熟习 |
+| 家族代理人 | House Agent | 奇械锻炉 | [2024 家族代理人](backgrounds/5e-2024/efa-house-agent/efa-house-agent.md) | 起源专长：幸运；与 2014 旧版同名并存 |
+| 冰上钓客 | Ice Fisher | 费伦冒险 | [2024 冰上钓客](backgrounds/5e-2024/fr-ai-ice-fisher/fr-ai-ice-fisher.md) | 起源专长：警戒 |
+| 咒火学徒 | Spellfire Initiate | 费伦冒险 | [2024 咒火学徒](backgrounds/5e-2024/fr-ai-spellfire-initiate/fr-ai-spellfire-initiate.md) | 起源专长为本书新增专长，未登记 ID |
+| 巨灵接触者 | Genie Touched | 费伦冒险 | [2024 巨灵接触者](backgrounds/5e-2024/fr-ai-genie-touched/fr-ai-genie-touched.md) | 起源专长：魔法学徒（法师） |
+| 影宗流亡者 | Shadowmasters Exile | 费伦冒险 | [2024 影宗流亡者](backgrounds/5e-2024/fr-ai-shadowmasters-exile/fr-ai-shadowmasters-exile.md) | 起源专长：凶蛮打手 |
+| 散塔林会佣兵 | Zhentarim Mercenary | 费伦冒险 | [2024 散塔林会佣兵](backgrounds/5e-2024/fr-ai-zhentarim-mercenary/fr-ai-zhentarim-mercenary.md) | 新增专长未登记 ID |
+| 月井朝圣者 | Moonwell Pilgrim | 费伦冒险 | [2024 月井朝圣者](backgrounds/5e-2024/fr-ai-moonwell-pilgrim/fr-ai-moonwell-pilgrim.md) | 起源专长：魔法学徒（德鲁伊） |
+| 死魔区住民 | Dead Magic Dweller | 费伦冒险 | [2024 死魔区住民](backgrounds/5e-2024/fr-ai-dead-magic-dweller/fr-ai-dead-magic-dweller.md) | 新增专长未登记 ID |
+| 焰拳佣兵 | Flaming Fist Mercenary | 费伦冒险 | [2024 焰拳佣兵](backgrounds/5e-2024/fr-ai-flaming-fist-mercenary/fr-ai-flaming-fist-mercenary.md) | 起源专长：健壮 |
+| 琼达斯海盗 | Chondathan Freebooter | 费伦冒险 | [2024 琼达斯海盗](backgrounds/5e-2024/fr-ai-chondathan-freebooter/fr-ai-chondathan-freebooter.md) | 起源专长：熟习 |
+| 穆尔霍兰德盗墓者 | Mulhorandi Tomb Raider | 费伦冒险 | [2024 穆尔霍兰德盗墓者](backgrounds/5e-2024/fr-ai-mulhorandi-tomb-raider/fr-ai-mulhorandi-tomb-raider.md) | 起源专长：幸运 |
+| 竖琴手 | Harper | 费伦冒险 | [2024 竖琴手](backgrounds/5e-2024/fr-ai-harper/fr-ai-harper.md) | 新增专长未登记 ID |
+| 紫龙骑士侍从 | Purple Dragon Squire | 费伦冒险 | [2024 紫龙骑士侍从](backgrounds/5e-2024/fr-ai-purple-dragon-squire/fr-ai-purple-dragon-squire.md) | 同上 |
+| 翠绿闲庭庇护者 | Emerald Enclave Caretaker | 费伦冒险 | [2024 翠绿闲庭庇护者](backgrounds/5e-2024/fr-ai-emerald-enclave-caretaker/fr-ai-emerald-enclave-caretaker.md) | 同上 |
+| 臂铠骑士 | Knight of the Gauntlet | 费伦冒险 | [2024 臂铠骑士](backgrounds/5e-2024/fr-ai-knight-of-the-gauntlet/fr-ai-knight-of-the-gauntlet.md) | 同上 |
+| 莱瑟曼流浪者 | Rashemi Wanderer | 费伦冒险 | [2024 莱瑟曼流浪者](backgrounds/5e-2024/fr-ai-rashemi-wanderer/fr-ai-rashemi-wanderer.md) | 起源专长：健壮 |
+| 迷锁守卫者 | Mythalkeeper | 费伦冒险 | [2024 迷锁守卫者](backgrounds/5e-2024/fr-ai-mythalkeeper/fr-ai-mythalkeeper.md) | 起源专长：巧匠 |
+| 领主联盟臣属 | Lords' Alliance Vassal | 费伦冒险 | [2024 领主联盟臣属](backgrounds/5e-2024/fr-ai-lords-alliance-vassal/fr-ai-lords-alliance-vassal.md) | 新增专长未登记 ID |
+| 龙巫教信徒 | Dragon Cultist | 费伦冒险 | [2024 龙巫教信徒](backgrounds/5e-2024/fr-ai-dragon-cultist/fr-ai-dragon-cultist.md) | 同上 |
+| 吸血鬼幸存者 | Vampire Survivor | 费伦英雄 | [2024 吸血鬼幸存者](backgrounds/5e-2024/fr-hf-vampire-survivor/fr-hf-vampire-survivor.md) | 新增专长未登记 ID |
+| 吸血鬼皈依者 | Vampire Devotee | 费伦英雄 | [2024 吸血鬼皈依者](backgrounds/5e-2024/fr-hf-vampire-devotee/fr-hf-vampire-devotee.md) | 同上 |
+| 狂欢客 | Carouser | 费伦英雄 | [2024 狂欢客](backgrounds/5e-2024/fr-hf-carouser/fr-hf-carouser.md) | 同上 |
+| 噩梦缠身者 | Haunted One | 魔障深藏 | [2024 噩梦缠身者](backgrounds/5e-2024/rthw-haunted-one/rthw-haunted-one.md) | 黑暗赠礼专长类别未登记，按原书处理 |
+| 调查员 | Investigator | 魔障深藏 | [2024 调查员](backgrounds/5e-2024/rthw-investigator/rthw-investigator.md) | 同上 |
+| 迷雾漫游者 | Mist Wanderer | 魔障深藏 | [2024 迷雾漫游者](backgrounds/5e-2024/rthw-mist-wanderer/rthw-mist-wanderer.md) | 同上 |
+| 降灵师 | Spirit Medium | 魔障深藏 | [2024 降灵师](backgrounds/5e-2024/rthw-spirit-medium/rthw-spirit-medium.md) | 同上 |
+| 第九翎羽特工 | Agent of the Ninth Quill | 启封奥秘 | [2024 第九翎羽特工](backgrounds/5e-2024/au-ninth-quill-agent/au-ninth-quill-agent.md) | 十个背景的起源专长均为本书新增，未登记 ID |
+| 瑰宝秘社间谍 | Bejeweled Conclave Spy | 启封奥秘 | [2024 瑰宝秘社间谍](backgrounds/5e-2024/au-bejeweled-conclave-spy/au-bejeweled-conclave-spy.md) | 同上 |
+| 寰宇黎明实验体 | Cosmic Dawn Experiment | 启封奥秘 | [2024 寰宇黎明实验体](backgrounds/5e-2024/au-cosmic-dawn-experiment/au-cosmic-dawn-experiment.md) | 工具自选 |
+| 亡陵誓盟新晋者 | Covenant of the Grave Recruit | 启封奥秘 | [2024 亡陵誓盟新晋者](backgrounds/5e-2024/au-covenant-of-the-grave-recruit/au-covenant-of-the-grave-recruit.md) | — |
+| 熔炉追风者 | Crucible Storm Chaser | 启封奥秘 | [2024 熔炉追风者](backgrounds/5e-2024/au-crucible-storm-chaser/au-crucible-storm-chaser.md) | — |
+| 魔宠训练家 | Familiar Trainer | 启封奥秘 | [2024 魔宠训练家](backgrounds/5e-2024/au-familiar-trainer/au-familiar-trainer.md) | 工具自选（赌具） |
+| 织界者门徒 | Horizon Weaver Initiate | 启封奥秘 | [2024 织界者门徒](backgrounds/5e-2024/au-horizon-weaver-initiate/au-horizon-weaver-initiate.md) | — |
+| 幻影马戏团艺人 | Phantasmic Circus Trouper | 启封奥秘 | [2024 幻影马戏团艺人](backgrounds/5e-2024/au-phantasmic-circus-trouper/au-phantasmic-circus-trouper.md) | — |
+| 先知学徒 | Seer Apprentice | 启封奥秘 | [2024 先知学徒](backgrounds/5e-2024/au-seer-apprentice/au-seer-apprentice.md) | — |
+| 庇护之手受护者 | Ward of the Sheltering Hands | 启封奥秘 | [2024 庇护之手受护者](backgrounds/5e-2024/au-ward-of-the-sheltering-hands/au-ward-of-the-sheltering-hands.md) | — |
+
+## 2024 第三方出身（G2 批次，来源默认关闭、需 DM 同意）
+
+| 出身 | 英文名 | 来源 | 详细资料 | 备注 |
+| --- | --- | --- | --- | --- |
+| 仪式专家 | Ritualist | 避世潜藏 | [2024 仪式专家](backgrounds/5e-2024/tp-vtm-ritualist/tp-vtm-ritualist.md) | 起源专长：魔法学徒（法师） |
+| 猎魔学者 | Scholar of the Hunt | 避世潜藏 | [2024 猎魔学者](backgrounds/5e-2024/tp-vtm-scholar-of-the-hunt/tp-vtm-scholar-of-the-hunt.md) | 本设定自有专长「博学」未登记 ID |
+| 血仆 | Ghoul | 避世潜藏 | [2024 血仆](backgrounds/5e-2024/tp-vtm-ghoul/tp-vtm-ghoul.md) | 同上（夜行） |
+| 血族之奴 | Thrall | 避世潜藏 | [2024 血族之奴](backgrounds/5e-2024/tp-vtm-thrall/tp-vtm-thrall.md) | 同上（康健） |
+| 触石 | Touchstone | 避世潜藏 | [2024 触石](backgrounds/5e-2024/tp-vtm-touchstone/tp-vtm-touchstone.md) | 同上（受护） |
+| 契约追寻者 | Pact Seeker | Beyond Drops | [2024 契约追寻者](backgrounds/5e-2024/tp-beyond-pact-seeker/tp-beyond-pact-seeker.md) | 试行内容，登记为 `dm-only` |
+
+> **归属修正（G2-E Q1-A）**：幻身灵旅者／马伦蒂／异端裁判官／猎兽人 4 条在 CHM 中位于《斯坦哈德的诡怖猎杀指南：玩家包》书目段（书锚点 `4954`），现已同时登记 `source-2024-tp-steinhardt`；原「德拉肯海姆」归属保留以兼容既有草稿。
+> Beyond Drops 为 2026 年线上连载的试行内容，按 G2 决策 Q3-C 登记为 `dm-only`。
+
 ## 来源与版权边界
 
 - 2024 通用机制与侍僧、罪犯、学者、士兵依据 [2024 Free Rules：Character Origins](https://www.dndbeyond.com/sources/dnd/br-2024/character-origins) 与 SRD 5.2.1，可用原创表述整理到实现级。
@@ -229,9 +323,20 @@ G 批次按《5e 不全书》CHM v2026.09.13 逐条核验补齐。以下条目�
   - **AAG**：Astral Adventurer’s Guide（星界浪客、荒宇人）。
   - **VRGtR**：Van Richten’s Guide to Ravenloft（精界迷失者；勘误：CHM 中未收录「暗影迷失者」独立背景页）。
   - **SCC**：Strixhaven: A Curriculum of Chaos（五学院学生）。
-  - **第三方（默认关闭、需 DM 同意）**：塔尔多雷（4）、胧忆岛（6）、德拉肯海姆（2014 写法 5 + 2024 写法 4）、歪曲之月（13）、火炬光下的克苏鲁（1）。
+  - **BMT**（G2 批次）：The Book of Many Things（受宠者、受难者，出自第八章「命运」）。
+  - **Bigby**（G2 批次）：Bigby Presents: Glory of the Giants（巨人养子、符文雕刻者；特性授予本书专长）。
+  - **ERftLW**（G2 批次）：Eberron: Rising from the Last War（旧版家族代理人；本书 `5740`—`5757` 段在 CHM 中为 2024 写法，见下方 2024 官方扩展）。
+  - **PS**（第三方，`dm-only`）：Plane Shift 免费试玩材料（阿芒凯维齐尔、依尼翠审判官）。
+- 2024 官方扩展来源索引（G2 批次）：
+  - **EFA**：Eberron: Forge of the Artificer（12 家系后裔 + 家族代理人 + 异种后裔 + 探事员 + 考古学家，另含 2024 重制版家族代理人；龙纹专长沿用已登记的 UA 艾伯伦条目）。
+  - **FR:AI**：Forgotten Realms: Adventures in Faerûn（18，含竖琴手、紫龙骑士侍从、散塔林会佣兵等）。
+  - **FR:HF**：Forgotten Realms: Heroes of Faerûn（吸血鬼幸存者、吸血鬼皈依者、狂欢客；同书起源专长未登记，见各自主文件）。
+  - **RTHW**：Ravenloft: The Horrors Within（调查员、噩梦缠身者、降灵师、迷雾漫游者；以黑暗赠礼专长为起源专长）。
+  - **AU**：Arcana Unleashed（十个背景，含九个与魔法派系关联者 + 魔宠训练家）。
+  - **第三方（默认关闭、需 DM 同意）**：歪曲之月（13）、火炬光下的克苏鲁（1）、德拉肯海姆（2024 写法 4）、避世潜藏（5）、斯坦哈德（4 条归属修正）、Beyond Drops（1，`dm-only`）。
 - 版本勘误记录（2026-08-11 核验）：SCAG 背景为独立完整背景（非“替换 PHB 技能”的变体），特性按原书标 Variant Feature、建议特征表借用 PHB 对应背景；GGR 公会法术加入施法职业法术列表并占用职业法术位，无短休恢复机制；MOT 仅 Athlete 一个新背景。
 - 版本勘误记录（G 批次核验，2026-09-20）：**海军（Marine）是 Ghosts of Saltmarsh 的完整背景**，并非「士兵变体」，上一条旧勘误仅指同名的 Ghosts of Saltmarsh「Marine」与其它书的同名条目无关；析米克科学家因 CHM 缺页未纳入。
+- 版本勘误记录（G2 批次核验，2026-09-21）：①`5528 背景` 属**艾伯伦寻路者指南**（旧版家族代理人），第一轮误记为黯潮之书；②CHM 中 `6874` 书页虽标「魔邓肯的众敌卷册（旧版）」，但 `6875`—`6965` 的内容是**《范·里希腾的鸦阁魔域指南》的重复渲染**，故 CHM 内不存在 MToF 2018 背景，本轮不计 MToF 缺口；③施坦哈德书锚点为 `4954`，其背景条目（`4936`—`4938`）与「探秘艾伯伦」同段混排。
 
 ## 选择性加载
 
@@ -242,9 +347,9 @@ G 批次按《5e 不全书》CHM v2026.09.13 逐条核验补齐。以下条目�
 
 ## 核验记录
 
-- 全量核验日期：2026-07-27；2026-08-11 扩展背景考察、勘误核验；**2026-09-20 G 批次补全核验**（依据《5e 不全书》CHM v2026.09.13）。
-- 当前资料范围：**34 个 `5e-2024` 出身文件**（16 核心 + 18 第三方 2024 写法）、**76 个 `5e-2014` 背景**（13 核心基础 + 5 正式变体 + 22 既有扩展 + 22 本批补齐 + 15 第三方）、**2 条索引条目**（GoS 盐沼背景 DM 工具页、EGtW 英雄编年史），以及本总索引。
-- 当前程序注册情况：`5e-2014` 背景 **76** 条（基础 71 + 变体 5，全部带 `description` 与背景特性）、`5e-2024` 背景 **34** 条（16 核心 + 18 第三方，第三方来源默认关闭）。
-- G 批次补全清单（22 条官方 + 15 条第三方 2014 写法 + 18 条第三方 2024 写法）：官方来源为 Ghosts of Saltmarsh 4、Acquisitions Incorporated 3、Explorer's Guide to Wildemount 2、龙枪 DSotDQ 2、Planescape SatO 2、Astral Adventurer's Guide 2、Van Richten's Guide to Ravenloft 1、斯翠海文 SCC 5；第三方为塔尔多雷 4、胧忆岛 6、德拉肯海姆（2014 写法 5 + 2024 写法 4）、歪曲之月 13、火炬光下的克苏鲁 1。
-- 未纳入：**析米克科学家**（GGR，CHM 无背景页，无法核验）；Plane Shift 等推广材料、怪物数据块与社区内容。
-- 2024 第三方背景口径：歪曲之月 13 条与神话调查员 1 条原书不含属性提升行，故未登记属性候选；「任选起源专长」与「原书未核验固定专长」的条目未登记固定专长 ID，均在各自主文件中标注。
+- 全量核验日期：2026-07-27；2026-08-11 扩展背景考察、勘误核验；**2026-09-20 G 批次补全核验**；**2026-09-21 G2 批次补全核验**（依据《5e 不全书》CHM v2026.09.13）。
+- 当前资料范围：**92 个 `5e-2024` 出身文件**（16 核心 + 5 官方扩展书 52 + 第三方 24）、**102 个 `5e-2014` 背景**（13 核心基础 + 5 正式变体 + 22 既有扩展 + 22 G 批次补齐 + 19 G2 批次补齐 + 第三方 21）、**2 条索引条目**（GoS 盐沼背景 DM 工具页、EGtW 英雄编年史），以及本总索引。
+- 当前程序注册情况：`5e-2014` 背景 **102** 条（基础 97 + 变体 5，全部带 `description`；`background-features-2014` 共 **87** 条特性）、`5e-2024` 背景 **92** 条（16 核心 + 52 官方扩展 + 24 第三方）。
+- G2 批次补全清单（19 条官方 2014 + 34 条官方 2024 + 12 条第三方 = 65 条新增，含 1 条同名重制版）：官方 2014 为万象无常书 2、毕格比的巨人荣光 2、艾伯伦寻路者指南（旧版家族代理人）1，另勘误排除 MToF（CHM 该段实为 VRGtR 重复渲染）；官方 2024 为艾伯伦：奇械锻炉 17（16 条同批 + 2024 重制版家族代理人）、费伦冒险 18、费伦英雄 3、鸦阁魔域：魔障深藏 4、启封奥秘 10；第三方为避世潜藏 5、异界传送 Plane Shift 2、Beyond Drops 1，另将幻身灵旅者等 4 条补登斯坦哈德来源。
+- 未纳入：**析米克科学家**（GGR，CHM 无背景页，无法核验）；CHM 中无背景节的第三方书（惊奇一发节日包、拳斗士、狮鹫的珍宝鞍包Ⅱ、瓦尔达的秘密尖塔玩家包、铳士、花卉龙博考、谦卑林两册、邪狱使、艾弗瑞斯巢穴集、黯潮之书、洛温：初光、耐瑟瑞尔之陨）。
+- 2024 扩展背景口径：费伦冒险／费伦英雄／启封奥秘／鸦阁魔障深藏等书的起源专长多为各书新增类别（如黑暗赠礼专长、奥法系列专长），尚未登记为规则条目，故对应背景的 `originFeatId` 留空并在各自主文件中写明专长名，不编造 ID。

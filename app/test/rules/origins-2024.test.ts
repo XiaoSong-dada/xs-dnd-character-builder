@@ -83,6 +83,41 @@ describe('2024 起源目录', () => {
     // 2014 仓库不受影响
     expect(rulesRepository2024.getRace('race-2014-dwarf')).toBeUndefined()
   })
+
+  it('G2 批次官方扩展来源背景齐备（奇械锻炉／费伦冒险／费伦英雄／魔障深藏／启封奥秘）', () => {
+    const bySource = (sourceId: string) => backgrounds2024.filter((item) => item.sourceIds.includes(sourceId))
+    // 每条官方扩展按书给出下界，避免逐批改总数断言。
+    expect(bySource('source-2024-efa').length).toBeGreaterThanOrEqual(16)
+    expect(bySource('source-2024-fr-ai').length).toBeGreaterThanOrEqual(18)
+    expect(bySource('source-2024-fr-hf').length).toBeGreaterThanOrEqual(3)
+    expect(bySource('source-2024-rthw').length).toBeGreaterThanOrEqual(4)
+    expect(bySource('source-2024-au').length).toBeGreaterThanOrEqual(10)
+
+    // 家系后裔覆盖十二龙纹家族 + 异种，且固定起源专长必须可解析。
+    const heirNames = bySource('source-2024-efa').map((item) => item.englishName)
+    expect(heirNames).toEqual(expect.arrayContaining([
+      'House Jorasco Heir', 'House Ghallanda Heir', 'House Cannith Heir', 'House Tharashk Heir',
+      'House Kundarak Heir', 'House Medani Heir', 'House Orien Heir', 'House Vadalis Heir',
+      'House Thuranni Heir', 'House Sivis Heir', 'House Phiarlan Heir', 'House Deneith Heir',
+      'House Lyrandar Heir', 'Aberrant Heir', 'House Agent', 'Inquisitive', 'Archaeologist',
+    ]))
+    for (const background of bySource('source-2024-efa')) {
+      expect(background.abilityChoices, background.id).toHaveLength(3)
+    }
+
+    // 2024 背景声明的固定起源专长一律须在 2024 仓库可解析（含第三方与龙纹专长）。
+    for (const background of backgrounds2024) {
+      if (background.originFeatId) {
+        expect(rulesRepository2024.getFeat(background.originFeatId), `${background.id}:origin-feat`).toBeDefined()
+      }
+    }
+  })
+
+  it('试行内容登记为 dm-only（Plane Shift 之流不入 2024；Beyond Drops 在 2024）', () => {
+    const beyond = backgrounds2024.filter((item) => item.sourceIds.includes('source-2024-tp-beyond-drops'))
+    expect(beyond.length).toBeGreaterThanOrEqual(1)
+    expect(beyond.every((item) => item.status === 'dm-only')).toBe(true)
+  })
 })
 
 describe('2024 背景属性分配', () => {
