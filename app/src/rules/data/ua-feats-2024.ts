@@ -4,9 +4,14 @@ import type { FeatRule } from '@/types/rules'
  * 破解奥秘：艾伯伦龙纹专长与灵能狂野天赋专长（UA）。
  * 来源：龙纹 `source-2024-ua-eberron`、狂野天赋 `source-2024-ua-psion`；默认关闭、状态 selectable。
  * 效果为原创中文摘要；未核验的具体效果不进入自动计算。
+ *
+ * G3-F（决策 Q5-A）：龙纹条目同时登记官方书来源 `source-2024-efa`（《艾伯伦：奇械锻炉》第二章
+ * 龙纹专长），中文名按本地 CHM 的官方译名统一为「XX龙纹」（原先沿用 UA 的「XX之纹」，
+ * 其中 Mark of Finding／Sentinel／Warding 官方分别译作「探寻龙纹／哨戒龙纹／守御龙纹」）。
+ * 条目 ID 保持不变，高等龙纹的 `prerequisite.requiredFeatIds` 因此无需改动。
  */
 
-const dragonmarkSource = ['source-2024-ua-eberron'] as const
+const dragonmarkSource = ['source-2024-ua-eberron', 'source-2024-efa'] as const
 const talentSource = ['source-2024-ua-psion'] as const
 
 const ABILITY_CHOICE = { id: 'ability', title: '选择施法属性', description: '从智力、感知、魅力中选择本专长法术的施法属性。', minSelections: 1, maxSelections: 1, optionIds: ['spell-ability-int', 'spell-ability-wis', 'spell-ability-cha'] } as const
@@ -32,7 +37,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofdetection',
     ruleset: '5e-2024',
-    name: '侦测之纹',
+    name: '侦测龙纹',
     englishName: "Mark of Detection",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -48,7 +53,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markoffinding',
     ruleset: '5e-2024',
-    name: '探索之纹',
+    name: '探寻龙纹',
     englishName: "Mark of Finding",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -64,7 +69,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofhandling',
     ruleset: '5e-2024',
-    name: '畜牧之纹',
+    name: '畜牧龙纹',
     englishName: "Mark of Handling",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -80,7 +85,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofhealing',
     ruleset: '5e-2024',
-    name: '医疗之纹',
+    name: '医疗龙纹',
     englishName: "Mark of Healing",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -96,7 +101,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofhospitality',
     ruleset: '5e-2024',
-    name: '招待之纹',
+    name: '招待龙纹',
     englishName: "Mark of Hospitality",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -112,7 +117,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofmaking',
     ruleset: '5e-2024',
-    name: '创造之纹',
+    name: '创造龙纹',
     englishName: "Mark of Making",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -128,7 +133,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofpassage',
     ruleset: '5e-2024',
-    name: '通行之纹',
+    name: '通行龙纹',
     englishName: "Mark of Passage",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -144,7 +149,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofscribing',
     ruleset: '5e-2024',
-    name: '抄录之纹',
+    name: '抄录龙纹',
     englishName: "Mark of Scribing",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -160,7 +165,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofsentinel',
     ruleset: '5e-2024',
-    name: '守护之纹',
+    name: '哨戒龙纹',
     englishName: "Mark of Sentinel",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -176,7 +181,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofshadow',
     ruleset: '5e-2024',
-    name: '阴影之纹',
+    name: '阴影龙纹',
     englishName: "Mark of Shadow",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -192,7 +197,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofstorm',
     ruleset: '5e-2024',
-    name: '风暴之纹',
+    name: '风暴龙纹',
     englishName: "Mark of Storm",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -208,7 +213,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-dragonmark-markofwarding',
     ruleset: '5e-2024',
-    name: '警戒之纹',
+    name: '守御龙纹',
     englishName: "Mark of Warding",
     category: 'dragonmark',
     tags: ['dragonmark'],
@@ -224,7 +229,7 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greateraberrantmark',
     ruleset: '5e-2024',
-    name: '高等异种纹',
+    name: '高等异种龙纹',
     englishName: "Greater Aberrant Mark",
     category: 'general',
     tags: ['dragonmark'],
@@ -238,11 +243,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofdetection',
     ruleset: '5e-2024',
-    name: '高等侦测之纹',
+    name: '高等侦测龙纹',
     englishName: "Greater Mark of Detection",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得侦测之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得侦测龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -252,11 +257,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkoffinding',
     ruleset: '5e-2024',
-    name: '高等探索之纹',
+    name: '高等探寻龙纹',
     englishName: "Greater Mark of Finding",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得探索之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得探寻龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -266,11 +271,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofhandling',
     ruleset: '5e-2024',
-    name: '高等畜牧之纹',
+    name: '高等畜牧龙纹',
     englishName: "Greater Mark of Handling",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得畜牧之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得畜牧龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -280,11 +285,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofhealing',
     ruleset: '5e-2024',
-    name: '高等医疗之纹',
+    name: '高等医疗龙纹',
     englishName: "Greater Mark of Healing",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得医疗之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得医疗龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -294,11 +299,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofhospitality',
     ruleset: '5e-2024',
-    name: '高等招待之纹',
+    name: '高等招待龙纹',
     englishName: "Greater Mark of Hospitality",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得招待之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得招待龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -308,11 +313,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofmaking',
     ruleset: '5e-2024',
-    name: '高等创造之纹',
+    name: '高等创造龙纹',
     englishName: "Greater Mark of Making",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得创造之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得创造龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -322,11 +327,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofpassage',
     ruleset: '5e-2024',
-    name: '高等通行之纹',
+    name: '高等通行龙纹',
     englishName: "Greater Mark of Passage",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得通行之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得通行龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -336,11 +341,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofscribing',
     ruleset: '5e-2024',
-    name: '高等抄录之纹',
+    name: '高等抄录龙纹',
     englishName: "Greater Mark of Scribing",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得抄录之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得抄录龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -350,11 +355,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofsentinel',
     ruleset: '5e-2024',
-    name: '高等守卫之纹',
+    name: '高等哨戒龙纹',
     englishName: "Greater Mark of Sentinel",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得守护之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得哨戒龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -364,11 +369,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofshadow',
     ruleset: '5e-2024',
-    name: '高等阴影之纹',
+    name: '高等阴影龙纹',
     englishName: "Greater Mark of Shadow",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得阴影之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得阴影龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -378,11 +383,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofstorm',
     ruleset: '5e-2024',
-    name: '高等风暴之纹',
+    name: '高等风暴龙纹',
     englishName: "Greater Mark of Storm",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得风暴之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得风暴龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,
@@ -392,11 +397,11 @@ export const uaFeats2024: readonly FeatRule[] = [
   {
     id: 'feat-2024-ua-greater-dragonmark-greatermarkofwarding',
     ruleset: '5e-2024',
-    name: '高等警戒之纹',
+    name: '高等守御龙纹',
     englishName: "Greater Mark of Warding",
     category: 'general',
     tags: ['dragonmark'],
-    description: '通用龙纹专长（先决：等级 4+，已获得警戒之纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
+    description: '通用龙纹专长（先决：等级 4+，已获得守御龙纹）。属性 +1（上限 20），直觉骰从 d4 提升为 d6，并获得该龙纹对应的强化增益（以《破解奥秘：艾伯伦》正文为准）。',
     detail: '高等龙纹：Dragonmark。强化增益按对应基础龙纹逐条登记于来源资料。',
     status: 'selectable',
     sourceIds: dragonmarkSource,

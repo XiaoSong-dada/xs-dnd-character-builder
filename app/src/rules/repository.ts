@@ -18,10 +18,13 @@ import { fullCasterClasses2014 } from '@/rules/data/full-casters-2014'
 import { metamagicOptions2014 } from '@/rules/data/metamagic-2014'
 import { subclassChoiceOptions2014 } from '@/rules/data/subclass-choice-options-2014'
 import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
+import { humblewoodRaces2014, obojimaRaces2014 } from '@/rules/data/races-third-party-2014'
+import { ebonTidesRaces2014 } from '@/rules/data/races-ebon-tides-2014'
 import { raceFeatures2014 } from '@/rules/data/race-features-2014'
 import { backgroundFeatures2014 } from '@/rules/data/background-features-2014'
 import { backgroundStartingEquipment2014, classStartingEquipment2014 } from '@/rules/data/starting-equipment-2014'
 import { subclasses2014, subclassOptions2014 } from '@/rules/data/subclasses-2014'
+import { thirdPartyItems2014 } from '@/rules/data/third-party-items-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
 import { sources2014 } from '@/rules/data/sources-2014'
 import { artificerClass2014, artificerInfusions2014 } from '@/rules/data/artificer-2014'
@@ -41,7 +44,7 @@ export const rulesRepository2014: RulesRepository = {
     return { ...item, ...classRule, features: getClassFeatures2014(item.id) }
   }),
   subclasses: subclasses2014,
-  races: races2014,
+  races: [...races2014, ...obojimaRaces2014, ...humblewoodRaces2014, ...ebonTidesRaces2014],
   backgrounds: backgrounds2014,
   raceFeatures: raceFeatures2014,
   backgroundFeatures: backgroundFeatures2014,
@@ -60,7 +63,7 @@ export const rulesRepository2014: RulesRepository = {
   ],
   feats: feats2014,
   equipment: mergeOfficialExpansionItems(
-    [...equipment2014, ...mergeDmgCatalog(magicItems2014, magicItemsDmgCatalogIndex2014), ...magicItemsXgteTcoe2014],
+    [...equipment2014, ...thirdPartyItems2014, ...mergeDmgCatalog(magicItems2014, magicItemsDmgCatalogIndex2014), ...magicItemsXgteTcoe2014],
     magicItemsExpansionCatalogIndex2014,
   ),
   classStartingEquipment: classStartingEquipment2014,

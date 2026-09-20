@@ -25,6 +25,7 @@ const categoryTags: Readonly<Record<FeatCategory, string>> = {
   dragonmark: '龙纹',
   'wild-talent': '狂野天赋',
   'dark-gift': '黑暗赠礼',
+  bloodline: '血族',
 }
 
 /**

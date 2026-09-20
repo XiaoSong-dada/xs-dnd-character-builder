@@ -59,6 +59,12 @@ export const sources2014: readonly RuleSource[] = [
   source('tp-humblewood-tales-index', 'HWT', '谦卑林故事集', 'supplement', { contentKind: 'third-party', defaultEnabled: false }),
   // ===== G2-E：第三方 2014 写法来源 =====
   source('tp-planshift-index', 'PS', '异界传送 Plane Shift', 'supplement', { contentKind: 'third-party', defaultEnabled: false }),
+  // ===== G3-I2：第三方子职普查新增来源（2014 写法）=====
+  source('tp-griffin-saddlebag2-index', 'GSB2', '狮鹫的鞍中珍宝Ⅱ', 'supplement', { contentKind: 'third-party', defaultEnabled: false }),
+  // ===== G3-I3：第三方法术补录新增来源（该书 2024 侧来源为 `source-2024-tp-steinhardt`，两者 ID 独立）=====
+  source('tp-steinhardt-index', 'SGtEH', '斯坦哈德的诡怖猎杀指南', 'supplement', { contentKind: 'third-party', defaultEnabled: false }),
+  // 注：《花卉龙博考》经复核为 2024 版式（德鲁伊／魔契师子职自 3 级起），来源改登记在 `sources-2024.ts`，
+  // 2014 注册表不再保留同名来源，以免同一本书跨两个规则集注册。
 ]
 
 export const CORE_SOURCE_IDS = sources2014

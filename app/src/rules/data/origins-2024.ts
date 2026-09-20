@@ -1,5 +1,6 @@
 import type { BackgroundRule, RaceRule } from '@/types/rules'
 import { backgroundEquipmentA2024 } from '@/rules/data/starting-equipment-2024'
+import { DARK_GIFT_FEAT_IDS } from '@/rules/data/feats-rthw-2024'
 
 /**
  * 2024 核心起源：16 背景、10 主物种与 8 血统／传承。
@@ -23,7 +24,7 @@ const background = (
   abilityChoices: BackgroundRule['abilityChoices'],
   originFeatId: string,
   skillIds: readonly string[],
-  tool: { readonly id?: string; readonly choices?: boolean },
+  tool: { readonly id?: string; readonly choices?: boolean; readonly feats?: readonly string[] },
   _equipment: readonly string[],
   summary: string,
   description: string,
@@ -42,7 +43,9 @@ const background = (
   ...(tool.choices ? { toolChoices: { count: 1, optionIds: slug === 'artisan' ? artisanToolIds : slug === 'entertainer' ? musicalToolIds : gamingToolIds } } : {}),
   languageChoices: 0,
   featureName: '',
-  originFeatId,
+  ...(originFeatId ? { originFeatId } : {}),
+  // 二选一起源专长候选（G3 决策 Q1-A）：由 `tool.feats` 声明，声明时不再走 originFeatId 固定授予。
+  ...(tool.feats?.length ? { originFeatOptions: tool.feats } : {}),
   abilityChoices,
   ...(slug === 'noble' || slug === 'sage'
     ? { originFeatSubstitutions: [{ category: 'wild-talent' as const, sourceIds: ['source-2024-ua-psion'] }] }
@@ -181,7 +184,7 @@ export const backgrounds2024: readonly BackgroundRule[] = [
   background('tp-changeling-traveler', '幻身灵旅者', 'Changeling Traveler', ['dex', 'wis', 'cha'], 'feat-2024-tp-focused-mask', ['skill-deception', 'skill-sleight-of-hand'], { id: 'equipment-2024-thieves-tools' },
     ['2 把匕首', '盗贼工具', '铺盖', '2 个小包', '易纺服装'],
     '漂泊城市之间：以伪装与机敏自保。',
-    '属性候选：敏捷、感知、魅力。起源专长：专注面具。技能：欺瞒、巧手。工具：盗贼工具。装备：A 为 2 匕首、盗贼工具、铺盖、2 小包与旅行服装；B 为 50 GP。', 'selectable', ['source-2024-tp-drakkenheim', 'source-2024-tp-steinhardt']),
+    '属性候选：敏捷、感知、魅力。起源专长：专注面具。技能：欺瞒、巧手。工具：盗贼工具。装备：A 为 2 匕首、盗贼工具、铺盖、2 小包、旅行者服装与 10 GP；B 为 50 GP。（G3-E2 勘误，2026-09-21：此前漏登 A 方案的 10 GP。）', 'selectable', ['source-2024-tp-drakkenheim', 'source-2024-tp-steinhardt']),
   background('tp-malenti', '马伦蒂', 'Malenti', ['dex', 'int', 'cha'], 'feat-2024-tp-aquatic-adaptation', ['skill-deception', 'skill-insight'], { choices: true },
     ['旅行服装'],
     '生于永恒辖领：吞噬他人以替代其身份。',
@@ -189,23 +192,29 @@ export const backgrounds2024: readonly BackgroundRule[] = [
   // 注（G2-E Q1-A）：以下 4 条 CHM 中实际位于《斯坦哈德的诡怖猎杀指南：玩家包》书目段
   // （书锚点 `4954`，背景位于 `4936`—`4938`），故来源同时登记德拉肯海姆与斯坦哈德；
   // 以 `source-2024-tp-steinhardt` 表达真实书目归属。
-  background('tp-inquisitor', '异端裁判官', 'Inquisitor', ['str', 'wis', 'cha'], '', ['skill-insight', 'skill-religion'], { id: 'equipment-2024-calligrapher-s-supplies' },
+  background('tp-inquisitor', '异端裁判官', 'Inquisitor', ['str', 'wis', 'cha'], 'feat-2024-tp-faithful', ['skill-religion', 'skill-intimidation'], { id: 'equipment-2024-tp-sh-torture-tools' },
     ['书（祈祷书）', '圣徽', '镣铐', '旅行者服装', '酷刑工具'],
     '教会的律法执行者：审问与调查。',
-    '起源专长：按原书（本批未登记固定专长 ID，需按原书处理）。技能：洞悉、宗教。工具：书法工具。装备：A 为祈祷书、圣徽、镣铐、旅行者服装与酷刑工具；B 为 50 GP。', 'selectable', ['source-2024-tp-drakkenheim', 'source-2024-tp-steinhardt']),
-  background('tp-beast-hunter', '猎兽人', 'Beast Hunter', ['str', 'dex', 'wis'], '', ['skill-survival'], { id: 'equipment-2024-herbalism-kit' },
-    ['旅行者服装', '医疗包', '草药工具', '匕首', '照明弹', '烧瓶'],
+    '起源专长：虔信。技能：宗教、威吓。工具：酷刑工具（第三方工具条目 `equipment-2024-tp-sh-torture-tools`）。装备：A 为祈祷书、圣徽、镣铐、旅行者服装、酷刑工具与 10 GP；B 为 50 GP。（G3-E2 勘误，2026-09-21：此前误登记为「洞悉、宗教 + 书法工具」，已按参考资料更正。）', 'selectable', ['source-2024-tp-drakkenheim', 'source-2024-tp-steinhardt']),
+  background('tp-beast-hunter', '猎兽人', 'Beast Hunter', ['str', 'dex', 'wis'], 'feat-2024-tp-grizzled', ['skill-athletics', 'skill-survival'], { id: 'equipment-2024-herbalism-kit' },
+    ['旅行者服装', '医疗包', '草药工具', '子弹（20 发）', '匕首', '照明弹', '烧瓶'],
     '为复仇与正义追猎天灾野兽。',
-    '起源专长：按原书（本批未登记固定专长 ID，需按原书处理）。技能：生存 + 任选一项（按原书）。工具：草药工具。装备：A 为旅行者服装、医疗包、草药工具、匕首、照明弹与烧瓶；B 为 50 GP。', 'selectable', ['source-2024-tp-drakkenheim', 'source-2024-tp-steinhardt']),
+    '起源专长：霜鬓。技能：运动、求生。工具：草药工具。装备：A 为旅行者服装、医疗包、草药工具、20 发子弹、匕首、照明弹、烧瓶与 30 GP；B 为 50 GP。（G3-E2 勘误，2026-09-21：此前技能只登记「求生」、装备漏登子弹与 GP，已按参考资料更正。）', 'selectable', ['source-2024-tp-drakkenheim', 'source-2024-tp-steinhardt']),
+  // G3 补录（2026-09-21）：G2 §6 把斯坦哈德登记为 3 条背景（猎兽人／异端裁判官／终亡者），
+  // 但 §11 的「84 条全部在位」结论有误 —— 本条此前并未入库，按参考资料补齐。
+  background('tp-marked-for-death', '终亡者', 'Marked for Death', ['str', 'dex', 'con'], 'feat-2024-tp-grizzled', ['skill-arcana', 'skill-survival'], {},
+    ['匕首', '照明弹', '纸张（50 张）', '祭献烙印', '旅行者服装'],
+    '曾被神秘血月复活、身上留有祭品烙印的人。',
+    '起源专长：霜鬓。技能：奥秘、求生。装备：A 为匕首、照明弹、纸张 50 张、祭献烙印、旅行者服装与 40 GP；B 为祭献烙印与 50 GP。祭献烙印为第三方魔法物品（`index-only`），故此处只按原书列出装备名、不做结构化授予，需 DM 按物品条目处理。', 'selectable', ['source-2024-tp-drakkenheim', 'source-2024-tp-steinhardt']),
   background('tp-mythos-investigator', '神话调查员', 'Mythos Investigator', [], '', [], { choices: true },
     ['50 GP'],
     '与克苏鲁神话接触后选择直面它的人。',
     '属性：任选（将一项 +2、另一项 +1；或三项各 +1，均不超过 20）——原书为自由分配，本项目按文字登记、不固定三项候选。起源专长：任选一项起源专长（玩家自选）。技能：任选两项。工具：任选一项。装备：50 GP。', 'selectable', ['source-2024-tp-cthulhu-torchlight']),
 
   // ===== G2-B：艾伯伦：奇械锻炉（EFA 2025）第二章背景（16 条）=====
-  // 注 1：家系后裔的「XX龙纹」即官方版龙纹专长，本项目沿用已登记的 UA 艾伯伦龙纹专长条目
-  //      （`feat-2024-ua-dragonmark-*`，来源 UA：艾伯伦），故 originFeatId 指向该批 ID；
-  //      官方书译名与 UA 译名略有差异（如「医疗龙纹」对应「医疗之纹」）。
+  // 注 1：家系后裔的「XX龙纹」即官方版龙纹专长，本项目沿用已登记的龙纹专长条目
+  //      （`feat-2024-ua-dragonmark-*`，来源含 UA：艾伯伦与《艾伯伦：奇械锻炉》），
+  //      故 originFeatId 指向该批 ID；G3-F 起中文名已按本地 CHM 官方译名统一为「XX龙纹」。
   // 注 2：家系后裔的工具熟练为「二选一」类型的，按原书固定项登记；自选型（选择一种工匠工具／
   //      赌具／乐器）沿用 2024 通用工具选择规格。
   // 注 3：本书「背景」节自述共 17 个背景，CHM 索引仅呈现 16 条（考古学家、家族代理人、
@@ -289,10 +298,10 @@ export const backgrounds2024: readonly BackgroundRule[] = [
     ['木雕工具', '篮子', '滑轮组', '吊桶', '链条', '捕猎陷阱', '捕网', '长杆', '口粮（3 日份）', '绳索', '旅行服装'],
     '冰风谷十镇的冰钓世家出身：耐心与坚韧。',
     '属性候选：力量、敏捷、体质。起源专长：警戒。技能：驯兽、运动。工具：木雕工具。装备：A 为木雕工具、篮子、滑轮组、吊桶、链条、捕猎陷阱、捕网、长杆、口粮（3 日份）、绳索与旅行服装（另 32 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
-  background('fr-ai-spellfire-initiate', '咒火学徒', 'Spellfire Initiate', ['con', 'int', 'cha'], '', ['skill-arcana', 'skill-perception'], { choices: true },
+  background('fr-ai-spellfire-initiate', '咒火学徒', 'Spellfire Initiate', ['con', 'int', 'cha'], 'feat-2024-fr-ai-spellfire-spark', ['skill-arcana', 'skill-perception'], { choices: true },
     ['赌具（自选）', '奥术法器（水晶或魔杖）', '2 个小包', '旅行服装'],
     '身负咒火天赋：引导魔网原始力量。',
-    '属性候选：体质、智力、魅力。起源专长：咒火火花（本章新增专长，本批未登记固定 ID，需按原书处理）。技能：奥秘、察觉。工具：自选一套赌具。装备：A 为赌具（同上所选）、奥术法器（水晶或魔杖）、2 个小包与旅行服装（另 36 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
+    '属性候选：体质、智力、魅力。起源专长：咒火火花（feat-2024-fr-ai-spellfire-spark）。技能：奥秘、察觉。工具：自选一套赌具。装备：A 为赌具（同上所选）、奥术法器（水晶或魔杖）、2 个小包与旅行服装（另 36 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
   background('fr-ai-genie-touched', '巨灵接触者', 'Genie Touched', ['dex', 'wis', 'cha'], 'feat-2024-magic-initiate', ['skill-perception', 'skill-persuasion'], { id: 'equipment-2024-glassblower-s-tools' },
     ['轻锤', '玻璃匠工具', '高档服装', '油灯', '灯油（3 瓶）', '水袋'],
     '与巨灵有过命运交集：眼光敏锐、口舌伶俐。',
@@ -301,10 +310,10 @@ export const backgrounds2024: readonly BackgroundRule[] = [
     ['2 把匕首', '盗贼工具', '铁蒺藜', '戏服', '爪钩', '铁钉', '镜子', '2 个小包', '长袍', '旅行服装'],
     '被逐出赛斯克神秘盗贼协会「影宗」的受训者。',
     '属性候选：敏捷、智力、魅力。起源专长：凶蛮打手。技能：特技、隐匿。工具：盗贼工具。装备：A 为 2 把匕首、盗贼工具、铁蒺藜、戏服、爪钩、铁钉、镜子、2 个小包、长袍与旅行服装（另 3 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
-  background('fr-ai-zhentarim-mercenary', '散塔林会佣兵', 'Zhentarim Mercenary', ['str', 'dex', 'cha'], '', ['skill-intimidation', 'skill-perception'], { id: 'equipment-2024-forgery-kit' },
+  background('fr-ai-zhentarim-mercenary', '散塔林会佣兵', 'Zhentarim Mercenary', ['str', 'dex', 'cha'], 'feat-2024-fr-ai-zhentarim-ruffian', ['skill-intimidation', 'skill-perception'], { id: 'equipment-2024-forgery-kit' },
     ['短棒', '匕首', '文书伪造工具', '高档服装', '附盖提灯', '灯油（3 瓶）', '2 个小包', '细线', '火绒盒'],
     '效命于最臭名昭著的雇佣兵协会「散塔林会」。',
-    '属性候选：力量、敏捷、魅力。起源专长：散塔林会暴徒（本章新增专长，本批未登记固定 ID，需按原书处理）。技能：威吓、察觉。工具：文书伪造工具。装备：A 为短棒、匕首、文书伪造工具、高档服装、附盖提灯、灯油、2 个小包、细线与火绒盒（另 11 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
+    '属性候选：力量、敏捷、魅力。起源专长：散塔林会暴徒（feat-2024-fr-ai-zhentarim-ruffian）。技能：威吓、察觉。工具：文书伪造工具。装备：A 为短棒、匕首、文书伪造工具、高档服装、附盖提灯、灯油、2 个小包、细线与火绒盒（另 11 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
   background('fr-ai-moonwell-pilgrim', '月井朝圣者', 'Moonwell Pilgrim', ['con', 'wis', 'cha'], 'feat-2024-magic-initiate', ['skill-nature', 'skill-performance'], { id: 'equipment-2024-painter-s-supplies' },
     ['长棍', '画家工具', '铺盖', '铃铛', '小包', '长袍', '细线', '旅行服装', '水袋'],
     '月影群岛出身：巡礼月井并与神明对话。',
@@ -312,7 +321,7 @@ export const backgrounds2024: readonly BackgroundRule[] = [
   background('fr-ai-dead-magic-dweller', '死魔区住民', 'Dead Magic Dweller', ['str', 'con', 'wis'], '', ['skill-medicine', 'skill-survival'], { id: 'equipment-2024-leatherworker-s-tools' },
     ['巨棒', '皮匠工具', '铺盖', '吊桶', '医疗包', '长杆', '口粮（3 日份）', '帐篷', '火绒盒', '5 支火把', '旅行服装', '水袋'],
     '在埃诺奥克死魔法区域谋生：沙漠医药与荒漠生存。',
-    '属性候选：力量、体质、感知。起源专长：医疗师（本章新增专长，本批未登记固定 ID，需按原书处理）。技能：医药、求生。工具：皮匠工具。装备：A 为巨棒、皮匠工具、铺盖、吊桶、医疗包、长杆、口粮（3 日份）、帐篷、火绒盒、5 支火把、旅行服装与水袋（另 32 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
+    '属性候选：力量、体质、感知。起源专长：医疗师（参考数据中未见该专长的独立条目，无从核验其增益，故不登记固定 ID，需按原书处理）。技能：医药、求生。工具：皮匠工具。装备：A 为巨棒、皮匠工具、铺盖、吊桶、医疗包、长杆、口粮（3 日份）、帐篷、火绒盒、5 支火把、旅行服装与水袋（另 32 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
   background('fr-ai-flaming-fist-mercenary', '焰拳佣兵', 'Flaming Fist Mercenary', ['str', 'con', 'cha'], 'feat-2024-tough', ['skill-intimidation', 'skill-perception'], { id: 'equipment-2024-smith-s-tools' },
     ['硬头锤', '铁匠工具', '高档服装', '镣铐', '便携式攻城锤'],
     '博德之门焰拳的退役成员：剑湾最顽强的战士。',
@@ -325,22 +334,22 @@ export const backgrounds2024: readonly BackgroundRule[] = [
     ['匕首', '轻锤', '石匠工具', '背包', '铺盖', '撬棍', '梯子', '长杆', '2 个小包', '绳索', '细线', '火绒盒', '5 支火把', '旅行服装', '水袋'],
     '在神王之地探索墓穴、坟冢与金字塔。',
     '属性候选：敏捷、体质、智力。起源专长：幸运。技能：调查、宗教。工具：石匠工具。装备：A 为匕首、轻锤、石匠工具、背包、铺盖、撬棍、梯子、长杆、2 个小包、绳索、细线、火绒盒、5 支火把、旅行服装与水袋（另 26 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
-  background('fr-ai-harper', '竖琴手', 'Harper', ['dex', 'int', 'cha'], '', ['skill-performance', 'skill-sleight-of-hand'], { id: 'equipment-2024-disguise-kit' },
+  background('fr-ai-harper', '竖琴手', 'Harper', ['dex', 'int', 'cha'], 'feat-2024-fr-ai-harper-agent', ['skill-performance', 'skill-sleight-of-hand'], { id: 'equipment-2024-disguise-kit' },
     ['易容工具', '铺盖', '戏服', '爪钩', '绳索', '旅行服装'],
     '立誓服务公共利益的竖琴手新成员。',
-    '属性候选：敏捷、智力、魅力。起源专长：竖琴手特工（本章新增专长，本批未登记固定 ID，需按原书处理）。技能：表演、巧手。工具：易容工具。装备：A 为易容工具、铺盖、戏服、爪钩、绳索与旅行服装（另 14 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
-  background('fr-ai-purple-dragon-squire', '紫龙骑士侍从', 'Purple Dragon Squire', ['str', 'wis', 'cha'], '', ['skill-animal-handling', 'skill-insight'], { id: 'equipment-2024-navigator-s-tools' },
+    '属性候选：敏捷、智力、魅力。起源专长：竖琴手特工（feat-2024-fr-ai-harper-agent）。技能：表演、巧手。工具：易容工具。装备：A 为易容工具、铺盖、戏服、爪钩、绳索与旅行服装（另 14 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
+  background('fr-ai-purple-dragon-squire', '紫龙骑士侍从', 'Purple Dragon Squire', ['str', 'wis', 'cha'], 'feat-2024-fr-ai-purple-dragon-rook', ['skill-animal-handling', 'skill-insight'], { id: 'equipment-2024-navigator-s-tools' },
     ['矛', '领航工具', '高档服装'],
     '立志加入科米尔紫龙骑士团的侍从。',
-    '属性候选：力量、感知、魅力。起源专长：紫龙新兵（本章新增专长，本批未登记固定 ID，需按原书处理）。技能：驯兽、洞悉。工具：领航工具。装备：A 为矛、领航工具与高档服装（另 9 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
-  background('fr-ai-emerald-enclave-caretaker', '翠绿闲庭庇护者', 'Emerald Enclave Caretaker', ['con', 'int', 'wis'], '', ['skill-nature', 'skill-survival'], { id: 'equipment-2024-herbalism-kit' },
+    '属性候选：力量、感知、魅力。起源专长：紫龙新兵（feat-2024-fr-ai-purple-dragon-rook）。技能：驯兽、洞悉。工具：领航工具。装备：A 为矛、领航工具与高档服装（另 9 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
+  background('fr-ai-emerald-enclave-caretaker', '翠绿闲庭庇护者', 'Emerald Enclave Caretaker', ['con', 'int', 'wis'], 'feat-2024-fr-ai-emerald-enclave-fledgling', ['skill-nature', 'skill-survival'], { id: 'equipment-2024-herbalism-kit' },
     ['短弓', '20 支箭', '草药工具', '铺盖', '毯子', '小包', '帐篷', '旅行服装'],
     '维护文明与荒野平衡的翠绿闲庭成员。',
-    '属性候选：体质、智力、感知。起源专长：翠绿闲庭新羽（本章新增专长，本批未登记固定 ID，需按原书处理）。技能：自然、求生。工具：草药工具。装备：A 为短弓、20 支箭、草药工具、铺盖、毯子、小包、帐篷与旅行服装（另 13 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
-  background('fr-ai-knight-of-the-gauntlet', '臂铠骑士', 'Knight of the Gauntlet', ['str', 'int', 'wis'], '', ['skill-athletics', 'skill-medicine'], { id: 'equipment-2024-smith-s-tools' },
+    '属性候选：体质、智力、感知。起源专长：翠绿闲庭新羽（feat-2024-fr-ai-emerald-enclave-fledgling）。技能：自然、求生。工具：草药工具。装备：A 为短弓、20 支箭、草药工具、铺盖、毯子、小包、帐篷与旅行服装（另 13 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
+  background('fr-ai-knight-of-the-gauntlet', '臂铠骑士', 'Knight of the Gauntlet', ['str', 'int', 'wis'], 'feat-2024-fr-ai-tyro-of-the-gauntlet', ['skill-athletics', 'skill-medicine'], { id: 'equipment-2024-smith-s-tools' },
     ['矛', '铁匠工具', '牛眼提灯', '圣徽', '镣铐', '灯油（5 瓶）', '火绒盒', '旅行服装'],
     '走上神圣武者之路的臂铠骑士团成员。',
-    '属性候选：力量、智力、感知。起源专长：新锻臂铠（本章新增专长，本批未登记固定 ID，需按原书处理）。技能：运动、医药。工具：铁匠工具。装备：A 为矛、铁匠工具、牛眼提灯、圣徽、镣铐、灯油、火绒盒与旅行服装（另 9 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
+    '属性候选：力量、智力、感知。起源专长：新锻臂铠（feat-2024-fr-ai-tyro-of-the-gauntlet）。技能：运动、医药。工具：铁匠工具。装备：A 为矛、铁匠工具、牛眼提灯、圣徽、镣铐、灯油、火绒盒与旅行服装（另 9 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
   background('fr-ai-rashemi-wanderer', '莱瑟曼流浪者', 'Rashemi Wanderer', ['str', 'con', 'cha'], 'feat-2024-tough', ['skill-intimidation', 'skill-perception'], { id: 'equipment-2024-cartographer-s-tools' },
     ['制图工具', '背包', '铺盖', '附盖提灯', '灯油（3 瓶）', '绳索', '火绒盒', '旅行服装', '水袋'],
     '在莱瑟曼高原漂泊多年：与陌生人保持距离。',
@@ -349,14 +358,14 @@ export const backgrounds2024: readonly BackgroundRule[] = [
     ['长棍', '珠宝匠工具', '香水', '小包', '长袍', '铲子', '细线', '水袋'],
     '追寻迷锁遗迹、研究其历史与力量的谷地学者。',
     '属性候选：智力、感知、魅力。起源专长：巧匠。技能：奥秘、历史。工具：珠宝匠工具。装备：A 为长棍、珠宝匠工具、香水、小包、长袍、铲子、细线与水袋（另 16 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
-  background('fr-ai-lords-alliance-vassal', '领主联盟臣属', 'Lords\' Alliance Vassal', ['str', 'int', 'cha'], '', ['skill-insight', 'skill-persuasion'], { id: 'equipment-2024-calligrapher-s-supplies' },
+  background('fr-ai-lords-alliance-vassal', '领主联盟臣属', 'Lords\' Alliance Vassal', ['str', 'int', 'cha'], 'feat-2024-fr-ai-lords-alliance-agent', ['skill-insight', 'skill-persuasion'], { id: 'equipment-2024-calligrapher-s-supplies' },
     ['2 支标枪', '书法工具', '高档服装', '墨水', '5 支墨水笔', '羊皮纸（9 张）'],
     '向领主联盟加盟城镇宣誓效忠的特工。',
-    '属性候选：力量、智力、魅力。起源专长：领主联盟特工（本章新增专长，本批未登记固定 ID，需按原书处理）。技能：洞悉、游说。工具：书法工具。装备：A 为 2 支标枪、书法工具、高档服装、墨水、5 支墨水笔与羊皮纸（另 13 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
-  background('fr-ai-dragon-cultist', '龙巫教信徒', 'Dragon Cultist', ['dex', 'con', 'int'], '', ['skill-deception', 'skill-stealth'], { id: 'equipment-2024-calligrapher-s-supplies' },
+    '属性候选：力量、智力、魅力。起源专长：领主联盟特工（feat-2024-fr-ai-lords-alliance-agent）。技能：洞悉、游说。工具：书法工具。装备：A 为 2 支标枪、书法工具、高档服装、墨水、5 支墨水笔与羊皮纸（另 13 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
+  background('fr-ai-dragon-cultist', '龙巫教信徒', 'Dragon Cultist', ['dex', 'con', 'int'], 'feat-2024-fr-ai-cult-of-the-dragon-initiate', ['skill-deception', 'skill-stealth'], { id: 'equipment-2024-calligrapher-s-supplies' },
     ['书法工具', '匕首', '玻璃瓶', '油灯', '镣铐', '灯油（5 瓶）', '2 个小包', '长袍', '绳索'],
     '宣誓效命龙巫教的新晋教徒。',
-    '属性候选：敏捷、体质、智力。起源专长：新晋龙巫教徒（本章新增专长，本批未登记固定 ID，需按原书处理）。技能：欺瞒、隐匿。工具：书法工具。装备：A 为书法工具、匕首、玻璃瓶、油灯、镣铐、灯油、2 个小包、长袍与绳索（另 30 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
+    '属性候选：敏捷、体质、智力。起源专长：新晋龙巫教徒（feat-2024-fr-ai-cult-of-the-dragon-initiate）。技能：欺瞒、隐匿。工具：书法工具。装备：A 为书法工具、匕首、玻璃瓶、油灯、镣铐、灯油、2 个小包、长袍与绳索（另 30 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-ai']),
 
   // ===== G2-C：被遗忘的国度：费伦英雄（FR:HF 2025）第一章背景（3 条）=====
   background('fr-hf-vampire-survivor', '吸血鬼幸存者', 'Vampire Survivor', ['dex', 'con', 'wis'], '', ['skill-insight', 'skill-religion'], { id: 'equipment-2024-woodcarver-s-tools' },
@@ -373,100 +382,102 @@ export const backgrounds2024: readonly BackgroundRule[] = [
     '属性候选：敏捷、智力、魅力。起源专长：无休狂宴（本章新增专长，本批未登记固定 ID，需按原书处理）。技能：欺瞒、游说。工具：自选一种赌具。装备：A 为匕首、赌具（同上所选）、高档服装、玻璃瓶、镜子、香水、小包与火绒盒（另 19 GP）；B 为 50 GP。', 'selectable', ['source-2024-fr-hf']),
 
   // ===== G2-C：鸦阁魔域：魔障深藏（RTHW 2025）第一章背景（4 条）=====
-  // 注：四条均以「黑暗赠礼专长」或「起源专长／黑暗赠礼二选一」为起源专长，该专长类别
-  //     属本书新增类型，本项目尚未登记对应专长条目，故 originFeatId 留空并写明选择规则。
-  background('rthw-haunted-one', '噩梦缠身者', 'Haunted One', ['con', 'wis', 'cha'], '', ['skill-arcana', 'skill-survival'], { choices: true },
+  // 注：四条均以「黑暗赠礼专长」或「起源专长／黑暗赠礼二选一」为起源专长；
+  //     G3-D 已登记 9 条黑暗赠礼专长，故改用 originFeatOptions 表达二选一（Q1-A）。
+  //     噩梦缠身者／调查员原为「某项起源专长 或 黑暗赠礼」，其中「幸存者」「锐眼」在参考数据中
+  //     未见独立条目，故其候选池为 9 条黑暗赠礼，另一选项按原书处理。
+  background('rthw-haunted-one', '噩梦缠身者', 'Haunted One', ['con', 'wis', 'cha'], '', ['skill-arcana', 'skill-survival'], { choices: true, feats: DARK_GIFT_FEAT_IDS },
     ['赌具（自选）', '撬棍', '圣水（1 扁瓶）', '镜子', '灯油（2 瓶）', '信号笛', '火绒盒', '旅行服装', '5 支火把', '水袋'],
     '被过去阴霾纠缠：重担无法被斩杀或放逐。',
-    '属性候选：体质、感知、魅力。起源专长：幸存者，或一项自选黑暗赠礼专长（二选一；两类专长本批均未登记固定 ID，需按原书处理）。技能：奥秘、求生。工具：自选一种赌具。装备：A 为赌具（同上所选）、撬棍、圣水（1 扁瓶）、镜子、灯油（2 瓶）、信号笛、火绒盒、旅行服装、5 支火把与水袋（另 14 GP）；B 为 50 GP。', 'selectable', ['source-2024-rthw']),
-  background('rthw-investigator', '调查员', 'Investigator', ['int', 'wis', 'cha'], '', ['skill-insight', 'skill-investigation'], { id: 'equipment-2024-disguise-kit' },
+    '属性候选：体质、感知、魅力。起源专长：幸存者，或一项自选黑暗赠礼专长（二选一）。技能：奥秘、求生。工具：自选一种赌具。装备：A 为赌具（同上所选）、撬棍、圣水（1 扁瓶）、镜子、灯油（2 瓶）、信号笛、火绒盒、旅行服装、5 支火把与水袋（另 14 GP）；B 为 50 GP。', 'selectable', ['source-2024-rthw']),
+  background('rthw-investigator', '调查员', 'Investigator', ['int', 'wis', 'cha'], '', ['skill-insight', 'skill-investigation'], { id: 'equipment-2024-disguise-kit', feats: DARK_GIFT_FEAT_IDS },
     ['易容工具', '镣铐', '铲子', '旅行服装', '3 个小瓶'],
     '不懈追寻真相：揭开被极力掩藏的秘密。',
-    '属性候选：智力、感知、魅力。起源专长：锐眼，或一项自选黑暗赠礼专长（二选一；本批未登记固定 ID，需按原书处理）。技能：洞悉、调查。工具：易容工具。装备：A 为易容工具、镣铐、铲子、旅行服装与 3 个小瓶（另 16 GP）；B 为 50 GP。', 'selectable', ['source-2024-rthw']),
-  background('rthw-mist-wanderer', '迷雾漫游者', 'Mist Wanderer', ['dex', 'con', 'wis'], '', ['skill-survival', 'skill-stealth'], { choices: true },
+    '属性候选：智力、感知、魅力。起源专长：锐眼，或一项自选黑暗赠礼专长（二选一）。技能：洞悉、调查。工具：易容工具。装备：A 为易容工具、镣铐、铲子、旅行服装与 3 个小瓶（另 16 GP）；B 为 50 GP。', 'selectable', ['source-2024-rthw']),
+  background('rthw-mist-wanderer', '迷雾漫游者', 'Mist Wanderer', ['dex', 'con', 'wis'], '', ['skill-survival', 'skill-stealth'], { choices: true, feats: DARK_GIFT_FEAT_IDS },
     ['工匠工具（自选）', '油灯', '灯油（5 瓶）', '小包', '绳索', '火绒盒', '旅行服装'],
     '被迷雾卷入恐惧领域：在各界域间寻找归途。',
-    '属性候选：敏捷、体质、感知。起源专长：一项自选黑暗赠礼专长（推荐迷雾行者；本批未登记固定 ID，需按原书处理）。技能：求生、隐匿。工具：自选一种工匠工具。装备：A 为工匠工具（同上所选）、油灯、灯油（5 瓶）、小包、绳索、火绒盒与旅行服装（另 30 GP）；B 为 50 GP。', 'selectable', ['source-2024-rthw']),
-  background('rthw-spirit-medium', '降灵师', 'Spirit Medium', ['con', 'int', 'wis'], '', ['skill-insight', 'skill-religion'], { choices: true },
+    '属性候选：敏捷、体质、感知。起源专长：一项自选黑暗赠礼专长（推荐迷雾行者）。技能：求生、隐匿。工具：自选一种工匠工具。装备：A 为工匠工具（同上所选）、油灯、灯油（5 瓶）、小包、绳索、火绒盒与旅行服装（另 30 GP）；B 为 50 GP。', 'selectable', ['source-2024-rthw']),
+  background('rthw-spirit-medium', '降灵师', 'Spirit Medium', ['con', 'int', 'wis'], '', ['skill-insight', 'skill-religion'], { choices: true, feats: DARK_GIFT_FEAT_IDS },
     ['匕首', '赌具（自选）', '篮子', '铃铛', '8 根蜡烛', '墨水', '墨水笔', '纸（5 张）', '火绒盒', '旅行服装'],
     '肉身化作灵媒：从彼岸获得洞察与代价。',
-    '属性候选：体质、智力、感知。起源专长：一项自选黑暗赠礼专长（推荐汇灵低语；本批未登记固定 ID，需按原书处理）。技能：洞悉、宗教。工具：自选一种赌具。装备：A 为匕首、赌具（同上所选）、篮子、铃铛、8 根蜡烛、墨水、墨水笔、纸（5 张）、火绒盒与旅行服装（另 32 GP）；B 为 50 GP。', 'selectable', ['source-2024-rthw']),
+    '属性候选：体质、智力、感知。起源专长：一项自选黑暗赠礼专长（推荐汇灵低语）。技能：洞悉、宗教。工具：自选一种赌具。装备：A 为匕首、赌具（同上所选）、篮子、铃铛、8 根蜡烛、墨水、墨水笔、纸（5 张）、火绒盒与旅行服装（另 32 GP）；B 为 50 GP。', 'selectable', ['source-2024-rthw']),
 
   // ===== G2-D：启封奥秘（AU 2025）第一章背景（10 条）=====
   // 注：本书 10 个背景的起源专长均为本书新增（奥法渗透者、奥法雄辩家、万化本质、
   //     奥法殡葬师、奥法超负荷、魔宠密友、穿界者、奥法艺术家、奥法预言家、奥法护佑者），
   //     本项目尚未登记该批专长，故 originFeatId 留空并在描述中写明专长名。
   // 注：第九翎羽特工、瑰宝秘社间谍等 9 条背景与「魔法派系」相关联，但并非加入派系的必要条件。
-  background('au-ninth-quill-agent', '第九翎羽特工', 'Agent of the Ninth Quill', ['dex', 'int', 'cha'], '', ['skill-arcana', 'skill-sleight-of-hand'], { id: 'equipment-2024-thieves-tools' },
+  background('au-ninth-quill-agent', '第九翎羽特工', 'Agent of the Ninth Quill', ['dex', 'int', 'cha'], 'feat-2024-au-arcane-infiltrator', ['skill-arcana', 'skill-sleight-of-hand'], { id: 'equipment-2024-thieves-tools' },
     ['匕首', '轻锤', '盗贼工具', '铁钉', '绳索', '旅行服装'],
     '专事窃取魔法学识与圣物的盗贼间谍团体成员。',
-    '属性候选：敏捷、智力、魅力。起源专长：奥法渗透者（本书新增专长，本批未登记固定 ID，需按原书处理）。技能：奥秘、巧手。工具：盗贼工具。装备：A 为匕首、轻锤、盗贼工具、铁钉、绳索与旅行服装（另 17 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
-  background('au-bejeweled-conclave-spy', '瑰宝秘社间谍', 'Bejeweled Conclave Spy', ['dex', 'wis', 'cha'], '', ['skill-deception', 'skill-perception'], { id: 'equipment-2024-disguise-kit' },
+    '属性候选：敏捷、智力、魅力。起源专长：奥法渗透者（feat-2024-au-arcane-infiltrator）。技能：奥秘、巧手。工具：盗贼工具。装备：A 为匕首、轻锤、盗贼工具、铁钉、绳索与旅行服装（另 17 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
+  background('au-bejeweled-conclave-spy', '瑰宝秘社间谍', 'Bejeweled Conclave Spy', ['dex', 'wis', 'cha'], 'feat-2024-au-arcane-eloquence', ['skill-deception', 'skill-perception'], { id: 'equipment-2024-disguise-kit' },
     ['易容工具', '高档服装', '香水'],
     '公开身份是朝臣或艺人，实为刺探秘密的间谍。',
-    '属性候选：敏捷、感知、魅力。起源专长：奥法雄辩家（本书新增专长，本批未登记固定 ID，需按原书处理）。技能：欺瞒、察觉。工具：易容工具。装备：A 为易容工具、高档服装与香水（另 5 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
-  background('au-cosmic-dawn-experiment', '寰宇黎明实验体', 'Cosmic Dawn Experiment', ['str', 'dex', 'con'], '', ['skill-athletics', 'skill-survival'], { choices: true },
+    '属性候选：敏捷、感知、魅力。起源专长：奥法雄辩家（feat-2024-au-arcane-eloquence）。技能：欺瞒、察觉。工具：易容工具。装备：A 为易容工具、高档服装与香水（另 5 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
+  background('au-cosmic-dawn-experiment', '寰宇黎明实验体', 'Cosmic Dawn Experiment', ['str', 'dex', 'con'], 'feat-2024-au-transmuted-anatomy', ['skill-athletics', 'skill-survival'], { choices: true },
     ['工匠工具（自选）', '背包', '长袍', '旅行服装'],
     '躯体被变化系魔法扭曲：将奇异躯体化为优势。',
-    '属性候选：力量、敏捷、体质。起源专长：万化本质（本书新增专长，本批未登记固定 ID，需按原书处理）。技能：运动、求生。工具：自选一种工匠工具。装备：A 为工匠工具（同上所选）、背包、长袍与旅行服装（另 30 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
-  background('au-covenant-of-the-grave-recruit', '亡陵誓盟新晋者', 'Covenant of the Grave Recruit', ['str', 'int', 'wis'], '', ['skill-history', 'skill-medicine'], { id: 'equipment-2024-herbalism-kit' },
+    '属性候选：力量、敏捷、体质。起源专长：万化本质（feat-2024-au-transmuted-anatomy）。技能：运动、求生。工具：自选一种工匠工具。装备：A 为工匠工具（同上所选）、背包、长袍与旅行服装（另 30 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
+  background('au-covenant-of-the-grave-recruit', '亡陵誓盟新晋者', 'Covenant of the Grave Recruit', ['str', 'int', 'wis'], 'feat-2024-au-arcane-undertaker', ['skill-history', 'skill-medicine'], { id: 'equipment-2024-herbalism-kit' },
     ['匕首', '草药工具', '书籍（解剖学）', '铁锹'],
     '以科学般的严谨剖析死亡与可怖之物。',
-    '属性候选：力量、智力、感知。起源专长：奥法殡葬师（本书新增专长，本批未登记固定 ID，需按原书处理）。技能：历史、医药。工具：草药工具。装备：A 为匕首、草药工具、书籍（解剖学）与铁锹（另 16 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
-  background('au-crucible-storm-chaser', '熔炉追风者', 'Crucible Storm Chaser', ['str', 'con', 'int'], '', ['skill-athletics', 'skill-nature'], { id: 'equipment-2024-glassblower-s-tools' },
+    '属性候选：力量、智力、感知。起源专长：奥法殡葬师（feat-2024-au-arcane-undertaker）。技能：历史、医药。工具：草药工具。装备：A 为匕首、草药工具、书籍（解剖学）与铁锹（另 16 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
+  background('au-crucible-storm-chaser', '熔炉追风者', 'Crucible Storm Chaser', ['str', 'con', 'int'], 'feat-2024-au-arcane-overload', ['skill-athletics', 'skill-nature'], { id: 'equipment-2024-glassblower-s-tools' },
     ['玻璃匠工具', '背包', '绳索', '旅行服装'],
     '研究自然与魔法灾害的熔炉司守成员。',
-    '属性候选：力量、体质、智力。起源专长：奥法超负荷（本书新增专长，本批未登记固定 ID，需按原书处理）。技能：运动、自然。工具：玻璃匠工具。装备：A 为玻璃匠工具、背包、绳索与旅行服装（另 15 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
-  background('au-familiar-trainer', '魔宠训练家', 'Familiar Trainer', ['con', 'int', 'wis'], '', ['skill-animal-handling', 'skill-arcana'], { choices: true },
+    '属性候选：力量、体质、智力。起源专长：奥法超负荷（feat-2024-au-arcane-overload）。技能：运动、自然。工具：玻璃匠工具。装备：A 为玻璃匠工具、背包、绳索与旅行服装（另 15 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
+  background('au-familiar-trainer', '魔宠训练家', 'Familiar Trainer', ['con', 'int', 'wis'], 'feat-2024-au-familiar-friend', ['skill-animal-handling', 'skill-arcana'], { choices: true },
     ['长棍', '赌具（自选）', '铺盖', '铃铛', '细线', '火绒盒', '旅行服装', '水袋'],
     '自幼与魔法宠物结下羁绊：协同行动与陪伴。',
-    '属性候选：体质、智力、感知。起源专长：魔宠密友（本书新增专长，本批未登记固定 ID，需按原书处理）。技能：驯兽、奥秘。工具：自选一种赌具。装备：A 为长棍、赌具（同上所选）、铺盖、铃铛、细线、火绒盒、旅行服装与水袋（另 44 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
-  background('au-horizon-weaver-initiate', '织界者门徒', 'Horizon Weaver Initiate', ['dex', 'con', 'wis'], '', ['skill-acrobatics', 'skill-survival'], { id: 'equipment-2024-weaver-s-tools' },
+    '属性候选：体质、智力、感知。起源专长：魔宠密友（feat-2024-au-familiar-friend）。技能：驯兽、奥秘。工具：自选一种赌具。装备：A 为长棍、赌具（同上所选）、铺盖、铃铛、细线、火绒盒、旅行服装与水袋（另 44 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
+  background('au-horizon-weaver-initiate', '织界者门徒', 'Horizon Weaver Initiate', ['dex', 'con', 'wis'], 'feat-2024-au-portal-jumper', ['skill-acrobatics', 'skill-survival'], { id: 'equipment-2024-weaver-s-tools' },
     ['短弓', '20 支箭', '织布工具', '地图', '箭袋', '绳索', '旅行服装'],
     '受织界者咒法师传授传送魔法：远行成瘾。',
-    '属性候选：敏捷、体质、感知。起源专长：穿界者（本书新增专长，本批未登记固定 ID，需按原书处理）。技能：特技、生存。工具：织布工具。装备：A 为短弓、20 支箭、织布工具、地图、箭袋、绳索与旅行服装（另 18 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
-  background('au-phantasmic-circus-trouper', '幻影马戏团艺人', 'Phantasmic Circus Trouper', ['dex', 'con', 'cha'], '', ['skill-deception', 'skill-performance'], { id: 'equipment-2024-disguise-kit' },
+    '属性候选：敏捷、体质、感知。起源专长：穿界者（feat-2024-au-portal-jumper）。技能：特技、生存。工具：织布工具。装备：A 为短弓、20 支箭、织布工具、地图、箭袋、绳索与旅行服装（另 18 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
+  background('au-phantasmic-circus-trouper', '幻影马戏团艺人', 'Phantasmic Circus Trouper', ['dex', 'con', 'cha'], 'feat-2024-au-arcane-artist', ['skill-deception', 'skill-performance'], { id: 'equipment-2024-disguise-kit' },
     ['易容工具', '赌具（任选）', '戏服', '镜子', '旅行服装'],
     '随幻影马戏团周游世界：幻术与错引的天赋。',
-    '属性候选：敏捷、体质、魅力。起源专长：奥法艺术家（本书新增专长，本批未登记固定 ID，需按原书处理）。技能：欺瞒、表演。工具：易容工具。装备：A 为易容工具、赌具（任选）、戏服、镜子与旅行服装（另 12 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
-  background('au-seer-apprentice', '先知学徒', 'Seer Apprentice', ['int', 'wis', 'cha'], '', ['skill-history', 'skill-insight'], { id: 'equipment-2024-navigator-s-tools' },
+    '属性候选：敏捷、体质、魅力。起源专长：奥法艺术家（feat-2024-au-arcane-artist）。技能：欺瞒、表演。工具：易容工具。装备：A 为易容工具、赌具（任选）、戏服、镜子与旅行服装（另 12 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
+  background('au-seer-apprentice', '先知学徒', 'Seer Apprentice', ['int', 'wis', 'cha'], 'feat-2024-au-arcane-omens', ['skill-history', 'skill-insight'], { id: 'equipment-2024-navigator-s-tools' },
     ['领航工具', '8 根蜡烛', '墨水', '墨水笔', '羊皮纸（9 张）', '小包', '火绒盒', '旅行服装'],
     '沧穹先知会学徒：解读天穹与沧海的预兆。',
-    '属性候选：智力、感知、魅力。起源专长：奥法预言家（本书新增专长，本批未登记固定 ID，需按原书处理）。技能：历史、洞悉。工具：领航工具。装备：A 为领航工具、8 根蜡烛、墨水、墨水笔、羊皮纸（9 张）、小包、火绒盒与旅行服装（另 11 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
-  background('au-ward-of-the-sheltering-hands', '庇护之手受护者', 'Ward of the Sheltering Hands', ['con', 'wis', 'cha'], '', ['skill-insight', 'skill-medicine'], { id: 'equipment-2024-cook-s-utensils' },
+    '属性候选：智力、感知、魅力。起源专长：奥法预言家（feat-2024-au-arcane-omens）。技能：历史、洞悉。工具：领航工具。装备：A 为领航工具、8 根蜡烛、墨水、墨水笔、羊皮纸（9 张）、小包、火绒盒与旅行服装（另 11 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
+  background('au-ward-of-the-sheltering-hands', '庇护之手受护者', 'Ward of the Sheltering Hands', ['con', 'wis', 'cha'], 'feat-2024-au-arcane-safeguard', ['skill-insight', 'skill-medicine'], { id: 'equipment-2024-cook-s-utensils' },
     ['厨师工具', '毯子', '医疗包', '油灯', '灯油（3 瓶）', '火绒盒', '旅行服装', '水袋'],
     '受庇护之手救助并传授防护魔法：回馈不幸之人。',
-    '属性候选：体质、感知、魅力。起源专长：奥法护佑者（本书新增专长，本批未登记固定 ID，需按原书处理）。技能：洞悉、医药。工具：厨师工具。装备：A 为厨师工具、毯子、医疗包、油灯、灯油（3 瓶）、火绒盒、旅行服装与水袋（另 40 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
+    '属性候选：体质、感知、魅力。起源专长：奥法护佑者（feat-2024-au-arcane-safeguard）。技能：洞悉、医药。工具：厨师工具。装备：A 为厨师工具、毯子、医疗包、油灯、灯油（3 瓶）、火绒盒、旅行服装与水袋（另 40 GP）；B 为 50 GP。', 'selectable', ['source-2024-au']),
 
   // ===== G2-E：吸血鬼：避世潜藏-血之缚（第三方 2024 写法，5 条）=====
   // 注：本书起源专长为夜行／康健／受护／魔法学徒／博学；前四项中「魔法学徒」已登记，
   //     其余为本设定自有专长，本批未登记 ID 故留空并写明专长名。
-  background('tp-vtm-ritualist', '仪式专家', 'Ritualist', ['int', 'wis', 'cha'], 'feat-2024-magic-initiate', ['skill-arcana', 'skill-history'], { id: 'equipment-2024-alchemist-s-supplies' },
+  background('tp-vtm-ritualist', '仪式专家', 'Ritualist', ['int', 'wis', 'cha'], 'feat-2024-magic-initiate', ['skill-arcana', 'skill-history'], { id: 'equipment-2024-alchemist-s-supplies' , feats: ['feat-2024-magic-initiate', 'feat-2024-tp-thin-blooded'] },
     ['炼金工具', '匕首', '墨水', '书籍（仪式）', '旅行服装'],
     '追求神秘玄奥知识：窥见黑暗世界的一丝力量。',
     '属性候选：智力、感知、魅力。起源专长：魔法学徒（法师）。技能：奥秘、历史。工具：炼金工具。装备：A 为炼金工具、匕首、墨水、书籍（仪式）与旅行服装（另 9 GP）；B 为 50 GP。', 'selectable', ['source-2024-tp-vtm']),
-  background('tp-vtm-scholar-of-the-hunt', '猎魔学者', 'Scholar of the Hunt', ['con', 'int', 'wis'], '', ['skill-arcana', 'skill-investigation'], { choices: true },
+  background('tp-vtm-scholar-of-the-hunt', '猎魔学者', 'Scholar of the Hunt', ['con', 'int', 'wis'], 'feat-2024-tp-well-read', ['skill-arcana', 'skill-investigation'], { choices: true , feats: ['feat-2024-tp-well-read', 'feat-2024-tp-thin-blooded'] },
     ['赌具（自选）', '镣铐', '镜子', '旅行服装'],
     '长期研究超自然事物：熟知怪物的危险与本质。',
-    '属性候选：体质、智力、感知。起源专长：博学（本设定专长，本批未登记固定 ID，需按原书处理）。技能：奥秘、调查。工具：自选一种赌具。装备：A 为赌具（同上所选）、镣铐、镜子与旅行服装（另 15 GP）；B 为 50 GP。', 'selectable', ['source-2024-tp-vtm']),
-  background('tp-vtm-ghoul', '血仆', 'Ghoul', ['str', 'dex', 'cha'], '', ['skill-perception', 'skill-survival'], { choices: true },
+    '属性候选：体质、智力、感知。起源专长：博学。技能：奥秘、调查。工具：自选一种赌具。装备：A 为赌具（同上所选）、镣铐、镜子与旅行服装（另 15 GP）；B 为 50 GP。', 'selectable', ['source-2024-tp-vtm']),
+  background('tp-vtm-ghoul', '血仆', 'Ghoul', ['str', 'dex', 'cha'], 'feat-2024-tp-nocturnal', ['skill-perception', 'skill-survival'], { choices: true , feats: ['feat-2024-tp-nocturnal', 'feat-2024-tp-thin-blooded'] },
     ['工匠工具（自选）', '匕首', '血族绯血', '附盖提灯', '短弓', '20 支箭', '旅行服装'],
     '饮下血族之血：获得不洁的活力与风险。',
-    '属性候选：力量、敏捷、魅力。起源专长：夜行（本设定专长，本批未登记固定 ID，需按原书处理）。技能：察觉、求生。工具：自选一种工匠工具。装备：A 为工匠工具（同上所选）、匕首、血族绯血、附盖提灯、短弓、20 支箭与旅行服装（另 10 GP）；B 为 50 GP。', 'selectable', ['source-2024-tp-vtm']),
-  background('tp-vtm-thrall', '血族之奴', 'Thrall', ['con', 'wis', 'cha'], '', ['skill-athletics', 'skill-medicine'], { choices: true },
+    '属性候选：力量、敏捷、魅力。起源专长：夜行。技能：察觉、求生。工具：自选一种工匠工具。装备：A 为工匠工具（同上所选）、匕首、血族绯血、附盖提灯、短弓、20 支箭与旅行服装（另 10 GP）；B 为 50 GP。', 'selectable', ['source-2024-tp-vtm']),
+  background('tp-vtm-thrall', '血族之奴', 'Thrall', ['con', 'wis', 'cha'], 'feat-2024-tp-healthy', ['skill-athletics', 'skill-medicine'], { choices: true , feats: ['feat-2024-tp-healthy', 'feat-2024-tp-thin-blooded'] },
     ['赌具或乐器（自选）', '医疗包', '牛眼提灯', '旅行服装'],
     '血族的仆从与食物来源：深知其饥饿的代价。',
-    '属性候选：体质、感知、魅力。起源专长：康健（本设定专长，本批未登记固定 ID，需按原书处理）。技能：运动、医药。工具：自选一种赌具或乐器。装备：A 为赌具或乐器（同上所选）、医疗包、牛眼提灯与旅行服装（另 32 GP）；B 为 50 GP。', 'selectable', ['source-2024-tp-vtm']),
-  background('tp-vtm-touchstone', '触石', 'Touchstone', ['con', 'int', 'cha'], '', ['skill-persuasion', 'skill-survival'], { choices: true },
+    '属性候选：体质、感知、魅力。起源专长：康健。技能：运动、医药。工具：自选一种赌具或乐器。装备：A 为赌具或乐器（同上所选）、医疗包、牛眼提灯与旅行服装（另 32 GP）；B 为 50 GP。', 'selectable', ['source-2024-tp-vtm']),
+  background('tp-vtm-touchstone', '触石', 'Touchstone', ['con', 'int', 'cha'], 'feat-2024-tp-protected', ['skill-persuasion', 'skill-survival'], { choices: true , feats: ['feat-2024-tp-protected', 'feat-2024-tp-thin-blooded'] },
     ['工匠工具（自选）', '旅行服装'],
     '被某位永生者暗中守护：充当其情感纽带。',
-    '属性候选：体质、智力、魅力。起源专长：受护（本设定专长，本批未登记固定 ID，需按原书处理）。技能：游说、求生。工具：自选一种工匠工具。装备：A 为工匠工具（同上所选）与旅行服装（另 16 GP）；B 为 50 GP。', 'selectable', ['source-2024-tp-vtm']),
+    '属性候选：体质、智力、魅力。起源专长：受护。技能：游说、求生。工具：自选一种工匠工具。装备：A 为工匠工具（同上所选）与旅行服装（另 16 GP）；B 为 50 GP。', 'selectable', ['source-2024-tp-vtm']),
 
   // ===== G2-E：Beyond Drops 26.5（第三方试行内容，1 条）=====
-  background('tp-beyond-pact-seeker', '契约追寻者', 'Pact Seeker', ['con', 'int', 'cha'], '', ['skill-arcana', 'skill-persuasion'], { id: 'equipment-2024-calligrapher-s-supplies' },
+  background('tp-beyond-pact-seeker', '契约追寻者', 'Pact Seeker', ['con', 'int', 'cha'], '', ['skill-arcana', 'skill-persuasion'], { id: 'equipment-2024-calligrapher-s-supplies' , feats: ['feat-2024-tp-fey-pact', 'feat-2024-tp-infernal-pact'] },
     ['书法工具', '书籍', '羊皮纸（10 张）', '旅行服装'],
     '与跨位面实体达成契约：人生就此改变。',
-    '属性候选：体质、智力、魅力。起源专长：任选一项位面契约专长（试行内容，本批未登记固定 ID，需按原书处理）。技能：奥秘、游说。工具：书法工具。装备：A 为书法工具、书籍、羊皮纸（10 张）与旅行服装（另 2 GP）；B 为 50 GP。试行内容，需 DM 同意。', 'dm-only', ['source-2024-tp-beyond-drops']),
+    '属性候选：体质、智力、魅力。起源专长：任选一项位面契约专长（妖精契约或地狱契约）。技能：奥秘、游说。工具：书法工具。装备：A 为书法工具、书籍、羊皮纸（10 张）与旅行服装（另 2 GP）；B 为 50 GP。试行内容，需 DM 同意。', 'dm-only', ['source-2024-tp-beyond-drops']),
 ]
 
 const species = (

@@ -29,9 +29,21 @@ import { magicItems2024 } from '@/rules/data/magic-items-2024'
 import { classStartingEquipment2024, backgroundStartingEquipment2024 } from '@/rules/data/starting-equipment-2024'
 import { weaponMasteries2024 } from '@/rules/data/weapon-masteries-2024'
 import { backgrounds2024, races2024 } from '@/rules/data/origins-2024'
+import { crookedMoonSpecies2024, valdasSpireSpecies2024 } from '@/rules/data/races-crooked-moon-2024'
 import { speciesTraits2024 } from '@/rules/data/species-traits-2024'
 import { abilityImprovementOptions2024, featChoiceOptions2024, feats2024 } from '@/rules/data/feats-2024'
 import { thirdPartyOriginFeats2024 } from '@/rules/data/third-party-feats-2024'
+import { faerunOriginFeats2024 } from '@/rules/data/feats-fr-2024'
+import { arcanaUnleashedOriginFeats2024, damageResistanceOptions2024 } from '@/rules/data/feats-au-2024'
+import { darkGiftCategoryNote2024, ravenloftDarkGiftFeats2024 } from '@/rules/data/feats-rthw-2024'
+import { beyondDropsFeats2024, steinhardtOriginFeats2024, vtmOriginFeats2024 } from '@/rules/data/third-party-feats-g3-2024'
+import { cthulhuTorchlightFeats2024 } from '@/rules/data/third-party-feats-cthulhu-torchlight-2024'
+import { beyondDropsG3Feats2024 } from '@/rules/data/third-party-feats-beyond-drops-2024'
+import { crookedMoonFeats2024 } from '@/rules/data/third-party-feats-crooked-moon-2024'
+import { steinhardtGeneralFeats2024 } from '@/rules/data/third-party-feats-steinhardt-2024'
+import { valdasSpireFeats2024 } from '@/rules/data/third-party-feats-valdas-spire-2024'
+import { vtmBloodlineFeats2024, vtmEpicBoonFeats2024 } from '@/rules/data/third-party-feats-vtm-2024'
+import { thirdPartyItems2024 } from '@/rules/data/third-party-items-2024'
 import { spellListOptions2024, speciesSpellAbilityOptions2024 } from '@/rules/data/spell-lists-2024'
 import { spells2024 } from '@/rules/data/spells-2024'
 import { legacySpells2024 } from '@/rules/data/generated/spells-2024-legacy'
@@ -64,13 +76,31 @@ export const rulesRepository2024 = createRulesRepository('5e-2024', {
   sources: sources2024,
   classes: classes2024WithSpellPools,
   subclasses: subclasses2024,
-  races: races2024,
+  races: [...races2024, ...crookedMoonSpecies2024, ...valdasSpireSpecies2024],
   backgrounds: backgrounds2024,
   raceFeatures: speciesTraits2024,
   backgroundFeatures: [],
-  options: [...abilityImprovementOptions2024, ...featChoiceOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024, ...skillOptions2024, ...subclassOptions2024, ...barbarianOptions2024, ...bardOptions2024, ...clericOptions2024, ...druidOptions2024, ...fighterOptions2024, ...monkOptions2024, ...rangerOptions2024, ...sorcererOptions2024, ...warlockOptions2024, ...artificerOptions2024, ...uaFrSubclassOptions2024, ...uaSubclassUpdateOptions2024, ...uaHorrorOptions2024, ...uaArcaneOptions2024, ...uaCataclysmOptions2024, ...psionOptions2024],
-  feats: [...feats2024, ...uaFeats2024, ...thirdPartyOriginFeats2024],
-  equipment: [...equipmentWithPacks2024, ...magicItems2024, ...uaMagicItems2024],
+  options: [...abilityImprovementOptions2024, ...featChoiceOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...damageResistanceOptions2024, ...[darkGiftCategoryNote2024], ...feats2024, ...skillOptions2024, ...subclassOptions2024, ...barbarianOptions2024, ...bardOptions2024, ...clericOptions2024, ...druidOptions2024, ...fighterOptions2024, ...monkOptions2024, ...rangerOptions2024, ...sorcererOptions2024, ...warlockOptions2024, ...artificerOptions2024, ...uaFrSubclassOptions2024, ...uaSubclassUpdateOptions2024, ...uaHorrorOptions2024, ...uaArcaneOptions2024, ...uaCataclysmOptions2024, ...psionOptions2024],
+  feats: [
+    ...feats2024,
+    ...uaFeats2024,
+    ...faerunOriginFeats2024,
+    ...arcanaUnleashedOriginFeats2024,
+    ...ravenloftDarkGiftFeats2024,
+    ...vtmOriginFeats2024,
+    ...steinhardtOriginFeats2024,
+    ...beyondDropsFeats2024,
+    ...thirdPartyOriginFeats2024,
+    // G3-I4：第三方专长逐书并入（来源默认关闭）
+    ...cthulhuTorchlightFeats2024,
+    ...crookedMoonFeats2024,
+    ...steinhardtGeneralFeats2024,
+    ...beyondDropsG3Feats2024,
+    ...valdasSpireFeats2024,
+    ...vtmBloodlineFeats2024,
+    ...vtmEpicBoonFeats2024,
+  ],
+  equipment: [...equipmentWithPacks2024, ...magicItems2024, ...uaMagicItems2024, ...thirdPartyItems2024],
   classStartingEquipment: classStartingEquipment2024,
   backgroundStartingEquipment: backgroundStartingEquipment2024,
   spells: [...spells2024, ...uaSpells2024, ...psionSpells2024, ...legacySpells2024],

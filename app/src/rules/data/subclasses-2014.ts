@@ -1,5 +1,11 @@
 import type { RuleOption, SpellcastingConfig, SubclassRule } from '@/types/rules'
 import { getSubclassFeatures2014 } from '@/rules/data/subclass-features-2014'
+import { obojimaSubclasses2014 } from '@/rules/data/third-party-subclasses-obojima-2014'
+import { ebonTidesSubclasses2014 } from '@/rules/data/third-party-subclasses-ebon-tides-2014'
+import { grimHollowSubclasses2014 } from '@/rules/data/third-party-subclasses-grim-hollow-2014'
+import { taldoreiSubclasses2014 } from '@/rules/data/third-party-subclasses-taldorei-2014'
+import { griffinSaddlebag2Subclasses2014 } from '@/rules/data/third-party-subclasses-griffin-saddlebag2-2014'
+import { humblewoodSubclasses2014 } from '@/rules/data/third-party-subclasses-humblewood-2014'
 import { THIRD_CASTER_SPELL_SLOTS, thirdCasterMaximumSpellLevels } from '@/rules/data/spell-slots-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
 
@@ -16,6 +22,15 @@ const sourceTitles: Readonly<Record<string, string>> = {
   'ftd-2021-index': '《费兹班的巨龙宝库》',
   'dsotdq-2022-index': '《龙枪：龙后之影》',
   'bigby-2023-index': '《毕格比的巨人荣光》',
+  // ===== 第三方合作来源（G3-I2）=====
+  'tp-obojima-index': '《胧忆岛》(第三方)',
+  'tp-ebon-tides-index': '《黯潮之书》(第三方)',
+  'tp-taldorei-index': '《塔尔多雷》(第三方)',
+  'tp-griffin-saddlebag2-index': '《狮鹫的鞍中珍宝Ⅱ》(第三方)',
+  'tp-grim-hollow-index': '《鬼魅幽谷》(第三方)',
+  'tp-humblewood-index': '《谦卑林》(第三方)',
+  'tp-humblewood-tales-index': '《谦卑林故事集》(第三方)',
+  'tp-floral-dragons-index': '《花卉龙博考》(第三方)',
 }
 
 /**
@@ -512,7 +527,7 @@ const subclassSpellcasting: Readonly<Record<string, SpellcastingConfig>> = {
   },
 }
 
-export const subclasses2014: readonly SubclassRule[] = Object.entries(entriesByClass).flatMap(([classSlug, entries]) =>
+const coreSubclasses2014: readonly SubclassRule[] = Object.entries(entriesByClass).flatMap(([classSlug, entries]) =>
   entries.map(([slug, name, englishName, sourceId, availability]) => {
     const id = `subclass-2014-${classSlug}-${slug}`
     const dmOnly = availability === 'dm-only'
@@ -543,6 +558,20 @@ export const subclasses2014: readonly SubclassRule[] = Object.entries(entriesByC
     }
   }),
 )
+
+/**
+ * 2014 子职全量清单：核心与官方扩展子职 + 第三方合作子职（G3-I2 起逐书并入）。
+ * 第三方条目的 `sourceIds` 指向默认关闭的第三方来源，界面上需显式开启后才进入候选。
+ */
+export const subclasses2014: readonly SubclassRule[] = [
+  ...coreSubclasses2014,
+  ...obojimaSubclasses2014,
+  ...ebonTidesSubclasses2014,
+  ...grimHollowSubclasses2014,
+  ...taldoreiSubclasses2014,
+  ...griffinSaddlebag2Subclasses2014,
+  ...humblewoodSubclasses2014,
+]
 
 export const subclassOptions2014: readonly RuleOption[] = subclasses2014.map((subclass) => ({
   id: subclass.id,
