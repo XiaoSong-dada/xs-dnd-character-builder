@@ -205,8 +205,8 @@ src/App.vue
   -> Vue Router 的 RouterView
   -> src/features/update-notice/components/UpdateNoticeModal.vue
   -> src/stores/update-notice.ts（浏览器挂载后执行一次版本检查）
-  -> src/features/service-worker/components/ServiceWorkerUpdatePrompt.vue
-  -> src/stores/service-worker.ts（浏览器挂载后注册 Service Worker；仅提示、不自动刷新）
+  -> src/features/app-update/components/AppUpdatePrompt.vue
+  -> src/stores/app-update.ts（浏览器挂载后注册 Service Worker 并做一次构建标识对账，同时登记联网／回到前台的补充对账时机；仅提示、不自动刷新）
 
 src/router/router.ts
   -> src/layout/MainLayout.vue
@@ -245,6 +245,9 @@ src/views/about/index.vue
   -> src/views/about/hooks/useOfflineAssets.ts（离线使用区块：模板缓存状态、一键下载、持久化存储状态）
       -> src/services/offline-assets.ts
       -> src/services/persistent-storage.ts
+  -> src/views/about/hooks/useAppVersion.ts（构建标识展示、手动对账入口与自动检查周期设置）
+      -> src/config/setting.ts（appBuildId / appBuildIdDirty）
+      -> src/stores/app-update.ts（checkNow）
   -> src/views/about/components/AboutIntroSection.vue
   -> src/views/about/components/AboutLinksSection.vue
   -> src/views/about/components/OfflineAssetSection.vue
@@ -368,8 +371,8 @@ src/features/update-notice/components/UpdateNoticeModal.vue
   -> src/components/ui/UiScrollModal.vue
   -> src/stores/update-notice.ts
 
-src/features/service-worker/components/ServiceWorkerUpdatePrompt.vue（全站非阻断更新提示；不自动刷新）
-  -> src/stores/service-worker.ts
+src/features/app-update/components/AppUpdatePrompt.vue（全站非阻断更新提示；不自动刷新）
+  -> src/stores/app-update.ts
 
 src/features/spellbook-transcription（法师抄录法术书共享能力：角色卡与跑团助手双调用方）
   index.ts                          （装配导出：Modal + hook）
@@ -431,8 +434,13 @@ src/stores/update-notice.ts（全站公告开关、启动幂等与手动回看�
   -> src/constants/update-notices.ts
   -> src/services/update-notice-storage.ts
 
-src/stores/service-worker.ts（离线外壳：注册幂等、待更新版本、激活进行中）
-  -> src/services/service-worker.ts
+src/stores/app-update.ts（更新状态：构建标识对账为主、Service Worker waiting 兜底；注册与对账幂等、按可配置周期做自动检查、手动检查、切换进行中）
+  -> src/services/app-build-id.ts（远端版本清单对账）
+  -> src/services/service-worker.ts（离线外壳注册与切换）
+  -> src/services/update-watch.ts（登记联网／回到前台两个补充触发时机）
+  -> src/services/update-check-preference.ts（自动检查周期设置与上次检查时间）
+  （两路信号取或：buildIdMismatch || waitingShell；不保存可由 services 重新得出的派生值；
+    自动检查只在「上次拿到了结论」之后起算周期，手动检查不受周期限制）
 
 src/services/character-json.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
@@ -471,11 +479,29 @@ src/services/offline-assets.ts（导出模板的离线清单：缓存状态查�
   -> 浏览器 Cache Storage（经 Service Worker 的运行时缓存写入）
   （不读取 localStorage；无 Cache Storage 或无 SW 接管时返回 unavailable，由调用方给出中文说明）
 
-src/services/service-worker.ts（`public/sw.js` 的注册与更新握手边界）
+src/services/service-worker.ts（`public/sw.js` 的注册与切换边界）
   -> src/config/setting.ts（isDev：开发服务不生成 sw.js，注册前短路）
   -> src/config/site.ts（baseUrl：sw.js 路径与作用域）
   -> 浏览器 ServiceWorkerContainer（注册、updatefound、controllerchange、SKIP_WAITING）
-  （不导入 stores：注册结果通过回调上抛，避免 services 反向依赖状态层）
+  （不导入 stores：注册结果通过回调上抛，避免 services 反向依赖状态层；
+    没有等待中的新外壳时先 registration.update()，超时则整页刷新兜底）
+
+src/services/app-build-id.ts（远端构建清单的对账边界）
+  -> src/config/setting.ts（appBuildId：本机构建标识）
+  -> src/config/site.ts（baseUrl：version.json 路径）
+  -> 浏览器 fetch（cache: 'no-store'；离线／404／格式不符一律归为 unavailable，不抛错）
+  （与 app/scripts/app-build-id.ts 通过产物文件名 `version.json` 耦合：
+    改名时必须同步该常量与 nginx.conf 的 no-cache 规则）
+
+src/services/update-watch.ts（更新对账的补充触发时机边界）
+  -> 浏览器 window 的 `online`、document 的 `visibilitychange`
+  （只把事件翻成一次触发信号；去重与冷却属于策略，留在 src/stores/app-update.ts，
+    与 service-worker.ts 只负责接线、策略上抛的分工一致；返回解绑函数供测试与未来拆卸使用）
+
+src/services/update-check-preference.ts（自动检查周期的本机记录边界）
+  -> 浏览器 localStorage（`…:update-check-preference:v1` 存周期、`…:update-check-state:v1` 存上次检查时间）
+  （两份记录分开：前者是用户偏好、后者是本机运行记录，损坏其一不连累另一；
+    `isAutoCheckDue` 与 `parseUpdateCheckIntervalDays` 是不碰存储的纯函数，可直接被测试覆盖）
 
 src/services/persistent-storage.ts（`navigator.storage.persist()` 提权边界）
   -> 浏览器 StorageManager
@@ -510,7 +536,7 @@ src/services/umami.ts
   -> src/config/site.ts（域名匹配后幂等加载 Umami 统计脚本）
 
 src/config/site.ts    （项目内唯一读取 import.meta.env 的入口；版本由 package.json 构建期注入；导出 baseUrl 供字体等 public 资产 URL）
-src/config/setting.ts （运行开关：isDev，供 services 判断是否注册 Service Worker；其余 env 读取仍归 site.ts）
+src/config/setting.ts （运行开关与构建指纹：isDev 供 services 判断是否注册 Service Worker；appBuildId／appBuildIdDirty 由 scripts/app-build-id.ts 构建期注入，供更新对账与关于页展示；其余 env 读取仍归 site.ts）
 
 src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打印版面）
   -> src/features/character-export/build-export-data（与 XLSX 共用同一导出数据）
@@ -613,7 +639,9 @@ src/styles/index.scss  -> @use src/styles/flex.scss
 
 - ⚠️ `services -> rules`：`character-json.ts` 与 `draft-storage.ts` 导入 `rules/starting-equipment` 的 `EMPTY_CURRENCY`，而权限矩阵中 services 允许依赖 `api、config、types、纯 utils`（未含 rules）。建议后续把该常量上提到 `types` 或 `constants`，或修订矩阵授权。
 - 页面组件直接消费 `rules/data/*`（`TimelineStep`、`CharacterSheetStep`、`FeatChoicePanel`、`SourcesStep`），符合「views -> rules」权限；如需收紧可改经 `repository` 聚合。
-- `config/setting.ts` 为空占位文件；`assets/icons/DND.png` 无任何 import 引用。
+- ~~`config/setting.ts` 为空占位文件~~ 已不成立：v1.8.0 起导出运行开关 `isDev`，v1.9.0 起再导出构建指纹 `appBuildId`／`appBuildIdDirty`，成为除 `site.ts` 之外唯一读取构建期常量的入口。
+- `assets/icons/DND.png` 无任何 import 引用；它仅作为 PWA 图标（`public/icons/*.png`）的一次性派生源图，派生命令见 `docs/需求文档/PWA离线与可安装-更新计划.md`。
+- 构建期脚本位于 `app/scripts/`（不属于 `src/` 拓扑）：`build-item-catalog.mjs` 等为独立 Node 脚本，`app-build-id.ts` 额外被 `vite.config.ts` 导入，因此纳入 `tsconfig.node.json` 的类型检查；它依赖 node 内置模块，运行时代码不得反向导入。
 - `src/utils` 当前仅包含无状态的 `format-spell-label.ts`；`src/api`、`src/constants`、顶层 `src/hooks` 当前不存在，只有出现对应真实职责时才创建。
 
 ## 9. 变更复核

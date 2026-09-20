@@ -2,12 +2,12 @@
 import { ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 
-import { useServiceWorkerStore } from '@/stores/service-worker'
+import { useAppUpdateStore } from '@/stores/app-update'
 
-const store = useServiceWorkerStore()
+const store = useAppUpdateStore()
 const { updateAvailable, applying } = storeToRefs(store)
 
-/** 「稍后」只静默本轮；下次进入应用若新版本仍在等待，会再次提示。 */
+/** 「稍后」只静默本轮；下次进入应用若新版本仍在，会再次提示。 */
 const postponed = ref(false)
 
 watch(updateAvailable, (available) => {
@@ -18,25 +18,25 @@ watch(updateAvailable, (available) => {
 <template>
   <div
     v-if="updateAvailable && !postponed"
-    class="sw-update"
+    class="app-update"
     role="status"
     aria-live="polite"
   >
-    <div class="sw-update__body">
-      <p class="sw-update__title">新版本已就绪</p>
-      <p class="sw-update__text">刷新后生效；已经保存的角色草稿不会丢失。</p>
+    <div class="app-update__body">
+      <p class="app-update__title">新版本已就绪</p>
+      <p class="app-update__text">刷新后生效；已经保存的角色草稿不会丢失。</p>
     </div>
-    <div class="sw-update__actions">
+    <div class="app-update__actions">
       <button
-        class="sw-update__primary"
+        class="app-update__primary"
         type="button"
         :disabled="applying"
-        @click="store.applyUpdate()"
+        @click="void store.applyUpdate()"
       >
         {{ applying ? '正在切换…' : '立即刷新' }}
       </button>
       <button
-        class="sw-update__ghost"
+        class="app-update__ghost"
         type="button"
         :disabled="applying"
         @click="postponed = true"
@@ -48,7 +48,7 @@ watch(updateAvailable, (available) => {
 </template>
 
 <style scoped lang="scss">
-.sw-update {
+.app-update {
   position: fixed;
   z-index: 90;
   top: 0;

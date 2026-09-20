@@ -8,6 +8,8 @@ import { defineConfig } from 'vitest/config'
 
 import type { ViteSSGContext } from 'vite-ssg'
 
+import { appBuildIdPlugin, resolveAppBuildId } from './scripts/app-build-id'
+
 // 本期预渲染清单（docs/seo-requirements.md §P1-1）：
 // 根路径（重定向后渲染车卡页）+ 辅助车卡 + 赛博骰娘 + 404（命中 catch-all 路由）
 const INCLUDED_ROUTES = ['/', '/character-builder', '/assistant', '/dice', '/about', '/404']
@@ -17,6 +19,21 @@ if (typeof packageJson.version !== 'string' || !packageJson.version.trim()) {
   throw new Error('app/package.json 必须提供非空 version')
 }
 const APP_VERSION = packageJson.version.trim()
+
+/**
+ * PWA 更新检测的对账标识（见 docs/需求文档/PWA离线与可安装-更新计划.md）。
+ * 优先取宿主机经 build arg 注入的 APP_BUILD_ID，本地构建则直接读 git；
+ * 两者都拿不到时降级为 `v<版本号>-nogit`，此时同一提交的不同构建无法区分，必须显式告警。
+ */
+const APP_BUILD_ID = resolveAppBuildId(process.cwd(), APP_VERSION)
+if (APP_BUILD_ID.source === 'fallback') {
+  console.warn(
+    `[app-build-id] 未能读取 git 信息，构建标识降级为「${APP_BUILD_ID.id}」。` +
+      'PWA 更新检测将无法区分同一提交的不同构建：请在容器构建时注入 APP_BUILD_ID，或改用 deploy.sh。',
+  )
+} else {
+  console.log(`[app-build-id] ${APP_BUILD_ID.source === 'injected' ? '宿主机注入' : '本地 git'} → ${APP_BUILD_ID.id}`)
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -76,6 +93,7 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __APP_VERSION__: JSON.stringify(APP_VERSION),
+      __APP_BUILD_ID__: JSON.stringify(APP_BUILD_ID.id),
     },
     resolve: {
       alias: {
@@ -84,6 +102,8 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       vue(),
+      // 输出 dist/version.json：运行时以 no-store 拉取它，与本进程注入的 __APP_BUILD_ID__ 比对。
+      appBuildIdPlugin(APP_BUILD_ID),
       /**
        * PWA 离线外壳（见 docs/需求文档/PWA离线与可安装-更新计划.md）。关键取舍：
        *

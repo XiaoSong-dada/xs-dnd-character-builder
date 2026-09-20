@@ -13,9 +13,25 @@ const mockConfig = vi.hoisted(() => ({
   },
 }))
 
+/** 构建标识做成可变对象，便于分别覆盖「干净构建」与「含未提交改动」两种展示。 */
+const mockSetting = vi.hoisted(() => ({
+  isDev: false,
+  appBuildId: 'c0ffee1-dirty-9f8e7d6a',
+  appBuildIdDirty: true,
+  APP_BUILD_ID_DIRTY_MARKER: '-dirty-',
+}))
+
+const mockBuildIdService = vi.hoisted(() => ({ checkRemoteBuildId: vi.fn() }))
+
 vi.mock('@/config/site', () => mockConfig)
+vi.mock('@/config/setting', () => mockSetting)
+vi.mock('@/services/app-build-id', () => ({ checkRemoteBuildId: mockBuildIdService.checkRemoteBuildId }))
 
 import AboutPage from '@/views/about/index.vue'
+import {
+  UPDATE_CHECK_PREFERENCE_STORAGE_KEY,
+  UpdateCheckPreferenceService,
+} from '@/services/update-check-preference'
 
 function mountAbout(options: Parameters<typeof mount>[1] = {}) {
   return mount(AboutPage, {
@@ -38,7 +54,12 @@ describe('关于本站页面', () => {
   beforeEach(() => {
     mockConfig.siteConfig.tipQrCodes.wechatUrl = undefined
     mockConfig.siteConfig.tipQrCodes.alipayUrl = undefined
+    mockSetting.appBuildId = 'c0ffee1-dirty-9f8e7d6a'
+    mockSetting.appBuildIdDirty = true
+    mockBuildIdService.checkRemoteBuildId.mockReset().mockResolvedValue('up-to-date')
     setClipboard(vi.fn().mockResolvedValue(undefined))
+    // 周期设置与上次检查时间都落在 localStorage，用例之间必须互不串味。
+    localStorage.clear()
   })
 
   afterEach(() => {
@@ -149,5 +170,94 @@ describe('关于本站页面', () => {
     // 失败后按钮必须恢复可点，否则玩家无法重试。
     expect(wrapper.get('.offline-assets__action').attributes('disabled')).toBeUndefined()
     vi.unstubAllGlobals()
+  })
+
+  it('展示构建标识与手动检查入口，并标出含未提交改动的构建', () => {
+    const wrapper = mountAbout()
+
+    expect(wrapper.text()).toContain('构建标识')
+    // 界面只展示 commit 短 hash，脏标记用文案单独说明。
+    expect(wrapper.get('.about-intro__build code').text()).toBe('c0ffee1')
+    expect(wrapper.text()).toContain('含未提交改动')
+    expect(wrapper.get('.about-intro__build button').text()).toBe('检查更新')
+    // 还没查过时不显示任何结论文案。
+    expect(wrapper.find('.about-intro__feedback').exists()).toBe(false)
+  })
+
+  it('提交产物构建不显示未提交改动标记', () => {
+    mockSetting.appBuildId = 'abc1234'
+    mockSetting.appBuildIdDirty = false
+    const wrapper = mountAbout()
+
+    expect(wrapper.get('.about-intro__build code').text()).toBe('abc1234')
+    expect(wrapper.text()).not.toContain('含未提交改动')
+  })
+
+  it('手动检查更新后展示可执行的结论，且按钮回到可点状态', async () => {
+    mockBuildIdService.checkRemoteBuildId.mockResolvedValue('update-available')
+    const wrapper = mountAbout()
+
+    await wrapper.get('.about-intro__build button').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('.about-intro__feedback').text()).toContain('发现新构建')
+    })
+    expect(wrapper.get('.about-intro__build button').attributes('disabled')).toBeUndefined()
+  })
+
+  it('离线时手动检查给出可理解的说明，而不是静默失败', async () => {
+    mockBuildIdService.checkRemoteBuildId.mockResolvedValue('unavailable')
+    const wrapper = mountAbout()
+
+    await wrapper.get('.about-intro__build button').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('.about-intro__feedback').text()).toContain('暂时无法检查')
+    })
+  })
+
+  it('展示自动检查更新周期设置与上次检查说明，默认 7 天', () => {
+    const wrapper = mountAbout()
+
+    expect(wrapper.text()).toContain('自动检查更新')
+    const input = wrapper.get('#about-update-interval')
+    expect(input.attributes('type')).toBe('number')
+    expect(input.attributes('min')).toBe('1')
+    expect(input.attributes('max')).toBe('365')
+    expect((input.element as HTMLInputElement).value).toBe('7')
+    expect(wrapper.get('.about-intro__interval-hint').text()).toContain('还没有成功检查过')
+    expect(wrapper.find('.about-intro__interval-error').exists()).toBe(false)
+  })
+
+  it('修改周期后写入本机，下次打开按新周期运行', async () => {
+    const wrapper = mountAbout()
+
+    await wrapper.get('#about-update-interval').setValue('30')
+    await wrapper.get('#about-update-interval').trigger('change')
+
+    expect(UpdateCheckPreferenceService.loadIntervalDays()).toBe(30)
+    expect(localStorage.getItem(UPDATE_CHECK_PREFERENCE_STORAGE_KEY)).toContain('30')
+    expect(wrapper.find('.about-intro__interval-error').exists()).toBe(false)
+  })
+
+  it('周期超出范围时说明原因，不静默改回也不写入本机', async () => {
+    const wrapper = mountAbout()
+
+    await wrapper.get('#about-update-interval').setValue('999')
+    await wrapper.get('#about-update-interval').trigger('change')
+
+    expect(wrapper.get('.about-intro__interval-error').text()).toContain('1—365')
+    expect(UpdateCheckPreferenceService.loadIntervalDays()).toBe(7)
+    expect(localStorage.getItem(UPDATE_CHECK_PREFERENCE_STORAGE_KEY)).toBeNull()
+  })
+
+  it('手动检查后说明里能看到刚检查过', async () => {
+    const wrapper = mountAbout()
+
+    await wrapper.get('.about-intro__build button').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('.about-intro__interval-hint').text()).toContain('今天')
+    })
   })
 })

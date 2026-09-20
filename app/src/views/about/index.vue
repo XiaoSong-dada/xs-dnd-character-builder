@@ -4,6 +4,7 @@ import AboutLinksSection from '@/views/about/components/AboutLinksSection.vue'
 import OfflineAssetSection from '@/views/about/components/OfflineAssetSection.vue'
 import TipQrSection from '@/views/about/components/TipQrSection.vue'
 import { useAboutPage } from '@/views/about/hooks/useAboutPage'
+import { useAppVersion } from '@/views/about/hooks/useAppVersion'
 import { useOfflineAssets } from '@/views/about/hooks/useOfflineAssets'
 
 const {
@@ -35,6 +36,20 @@ const {
   feedback,
   download: downloadOfflineAssets,
 } = useOfflineAssets()
+
+const {
+  commit: buildCommit,
+  dirty: buildDirty,
+  checking: versionChecking,
+  feedback: versionFeedback,
+  check: checkUpdate,
+  intervalDays: checkIntervalDays,
+  intervalError: checkIntervalError,
+  intervalHint: checkIntervalHint,
+  intervalMin: checkIntervalMin,
+  intervalMax: checkIntervalMax,
+  saveInterval: saveCheckInterval,
+} = useAppVersion()
 </script>
 
 <template>
@@ -48,7 +63,18 @@ const {
       :description="projectDescription"
       :free-notice="freeNotice"
       :current-version="currentVersion"
+      :build-commit="buildCommit"
+      :build-dirty="buildDirty"
+      :check-checking="versionChecking"
+      :check-feedback="versionFeedback"
+      :check-interval-days="checkIntervalDays"
+      :check-interval-error="checkIntervalError"
+      :check-interval-hint="checkIntervalHint"
+      :check-interval-min="checkIntervalMin"
+      :check-interval-max="checkIntervalMax"
       @open-update-notice="openUpdateNotice"
+      @check-update="void checkUpdate()"
+      @save-interval="saveCheckInterval"
     />
     <AboutLinksSection
       :links="externalLinks"

@@ -12,7 +12,9 @@ services:
         VITE_AUTHOR_NAME: ${VITE_AUTHOR_NAME:-}
         VITE_GITHUB_URL: ${VITE_GITHUB_URL:-}
         VITE_AUTHOR_TAGLINE: ${VITE_AUTHOR_TAGLINE:-}
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-}
+        # PWA 更新检测的构建标识（git 标识，含未提交改动时带 -dirty- 后缀）。
+        # 由 deploy.sh 在宿主 git 仓库算好并导出；容器内没有 .git，无法自行计算。
+        APP_BUILD_ID: ${APP_BUILD_ID:-}
         VITE_UMAMI_SCRIPT_URL: ${VITE_UMAMI_SCRIPT_URL:-https://your_url/script.js}
         VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-your website id}
         VITE_UMAMI_DOMAINS: ${VITE_UMAMI_DOMAINS:-your_url}

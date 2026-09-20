@@ -2,6 +2,13 @@
 
 declare const __APP_VERSION__: string
 
+/**
+ * 构建标识：干净构建为 `<commit>`，工作区有未提交改动时为 `<commit>-dirty-<内容摘要>`。
+ * 由 `scripts/app-build-id.ts` 在构建期注入，用于 PWA 更新检测对账。
+ * 与 `__APP_VERSION__`（package.json 的对外版本号）用途不同，不要混用。
+ */
+declare const __APP_BUILD_ID__: string
+
 interface ImportMetaEnv {
   /** 站点作者名，如 小宋哒哒 */
   readonly VITE_AUTHOR_NAME?: string
