@@ -57,6 +57,8 @@ export const sources2014: readonly RuleSource[] = [
   source('tp-illrigger-index', 'ILL', '邪狱使', 'supplement', { contentKind: 'third-party', defaultEnabled: false }),
   source('tp-taldorei-index', 'TAL', '塔尔多雷', 'supplement', { contentKind: 'third-party', defaultEnabled: false }),
   source('tp-humblewood-tales-index', 'HWT', '谦卑林故事集', 'supplement', { contentKind: 'third-party', defaultEnabled: false }),
+  // ===== G2-E：第三方 2014 写法来源 =====
+  source('tp-planshift-index', 'PS', '异界传送 Plane Shift', 'supplement', { contentKind: 'third-party', defaultEnabled: false }),
 ]
 
 export const CORE_SOURCE_IDS = sources2014
