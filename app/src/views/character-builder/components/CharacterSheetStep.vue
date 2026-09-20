@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import AddItemModal from '@/components/AddItemModal.vue'
@@ -300,7 +300,7 @@ function isAlsoNormallyAcquired(spellId: string): boolean {
 const selectedOptionEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const choiceCheckpointIds = [
     ...(classInfo.value?.features ?? []).flatMap((feature) => feature.checkpointIds ?? []),
     ...(subclassInfo.value?.features ?? [])
@@ -358,7 +358,7 @@ function featureChoiceLabel(feature: ClassFeature): string {
   if (checkpointIds.length === 0) return '需选择'
   const draft = props.draft
   if (!draft.classId) return '需选择'
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const unlocked = checkpointIds
     .map((checkpointId) => timeline.find((item) => item.id === checkpointId))
     .filter((checkpoint): checkpoint is NonNullable<typeof checkpoint> => Boolean(checkpoint))
@@ -463,7 +463,7 @@ const classInfo = computed(() => {
 const featAndAsiEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const entries: {
     id: string
     level: number
@@ -548,7 +548,7 @@ const needsReview = computed(() => {
   const draft = props.draft
   const hasInvalidated = draft.selections.some((item) => Boolean(item.invalidatedAt))
   if (!draft.classId) return hasInvalidated
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const incomplete = timeline.some((checkpoint) => {
     const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
     return (selection?.optionIds.length ?? 0) < checkpoint.minSelections

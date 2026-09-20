@@ -14,7 +14,7 @@ export type CheckpointKind =
   | 'infusion'
 
 /** 2024 专长类别：决定授予来源与候选池；2014 条目可省略。 */
-export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon' | 'dragonmark' | 'wild-talent'
+export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon' | 'dragonmark' | 'wild-talent' | 'dark-gift'
 
 /** 护甲训练类别；2024 前置与熟练均以此为口径。 */
 export type ArmorTraining = 'light' | 'medium' | 'heavy' | 'shield'
@@ -592,6 +592,12 @@ export interface BackgroundRule {
   readonly featureName: string
   /** 2024 背景固定授予的起源专长；2014 背景与待接入数据省略。 */
   readonly originFeatId?: string
+  /**
+   * 2024 背景的**二选一**起源专长候选（如鸦阁「起源专长或一项黑暗赠礼专长」、
+   * 避世潜藏「薄血可替代任何起源专长」）。声明时该背景不再走 `originFeatId` 固定授予，
+   * 改为生成 `background-origin-feat` 选择检查点（G3 决策 Q1-A）。
+   */
+  readonly originFeatOptions?: readonly string[]
   /** 起源专长替代：满足条件时可用所列类别专长替换固定起源专长（如贵族／智者＋狂野天赋）。 */
   readonly originFeatSubstitutions?: readonly { readonly category: FeatCategory; readonly sourceIds: readonly string[] }[]
   /** 2024 背景的三项属性候选（+2/+1 或各 +1）；2014 背景省略。 */

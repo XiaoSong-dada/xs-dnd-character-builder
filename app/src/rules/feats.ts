@@ -214,11 +214,21 @@ function grantSourceKind(checkpointId: string): FeatGrant['sourceKind'] {
 export function listFeatGrants(draft: CharacterDraft, repository: RulesRepository): readonly FeatGrant[] {
   const grants: FeatGrant[] = []
   const background = draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
-  if (
-    background?.originFeatId
-    && isSourceEnabled(background.sourceIds, draft.enabledSourceIds, repository)
-  ) {
-    grants.push({ featId: background.originFeatId, sourceKind: 'background', sourceId: background.id })
+  if (background && isSourceEnabled(background.sourceIds, draft.enabledSourceIds, repository)) {
+    // 二选一背景（G3 Q1-A）：先看玩家在 `${background.id}-origin-feat` 检查点的选择。
+    const backgroundCheckpointId = `${background.id}-origin-feat`
+    const chosen = background.originFeatOptions?.length
+      ? draft.selections.find((item) => item.checkpointId === backgroundCheckpointId && !item.invalidatedAt)
+      : undefined
+    if (chosen) {
+      for (const optionId of chosen.optionIds) {
+        const feat = repository.getFeat(optionId)
+        if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
+        grants.push({ featId: feat.id, sourceKind: 'background', sourceId: background.id, checkpointId: backgroundCheckpointId })
+      }
+    } else if (background.originFeatId) {
+      grants.push({ featId: background.originFeatId, sourceKind: 'background', sourceId: background.id })
+    }
   }
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
@@ -243,9 +253,14 @@ export function listFeatGrants(draft: CharacterDraft, repository: RulesRepositor
       return Boolean(feat?.category && substitutions.some((item) => item.category === feat.category && feat.sourceIds.some((id) => item.sourceIds.includes(id))))
     })
     if (replaced) {
-      return grants.filter((grant) => !(grant.sourceKind === 'background' && grant.featId === background?.originFeatId))
-    }
-  }
+      const replacedIds = new Set<string>()
+      if (background?.originFeatId) replacedIds.add(background.originFeatId)
+      const backgroundFeatCheckpoint = background?.originFeatOptions?.length ? `${background.id}-origin-feat` : undefined
+      return grants.filter((grant) => !(
+        grant.sourceKind === 'background'
+        && (replacedIds.has(grant.featId) || (backgroundFeatCheckpoint !== undefined && grant.checkpointId === backgroundFeatCheckpoint))
+      ))
+    }  }
   return grants
 }
 

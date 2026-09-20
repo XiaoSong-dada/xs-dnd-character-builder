@@ -1,4 +1,4 @@
-import { ABILITY_LABELS } from '@/rules/data/feats-2014'
+﻿import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { normalizeManualEdits } from '@/rules/manual-edits'
@@ -174,7 +174,7 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
         enabledSourceIds: draft.enabledSourceIds,
         selections: draft.selections,
         ruleset: draft.ruleset,
-        raceId: draft.raceId,
+        raceId: draft.raceId,        backgroundId: draft.backgroundId,
       })
     : []
   const checkpointById = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint]))

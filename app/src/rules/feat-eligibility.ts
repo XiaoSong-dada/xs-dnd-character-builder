@@ -33,6 +33,7 @@ export function getFeatEligibilityContext(
       selections: draft.selections,
       ruleset: draft.ruleset,
       raceId: draft.raceId,
+      backgroundId: draft.backgroundId,
     })
     : []
   const abilities = repository.ruleset === '5e-2024' && checkpointLevel !== undefined

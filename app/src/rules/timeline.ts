@@ -29,6 +29,10 @@ export interface TimelineContext {
   readonly ruleset?: RulesetId
   /** 已选物种：用于展开物种授予的起源专长（如人类 Versatile）。 */
   readonly raceId?: string
+  /** 已选背景：用于展开背景授予的二选一起源专长（如鸦阁「起源专长或黑暗赠礼专长」）。 */
+  readonly backgroundId?: string
+  /** 显式注入仓库（缺省按 `ruleset` 解析）；供测试注入探针数据，运行期调用方无需传入。 */
+  readonly repository?: RulesRepository
 }
 
 /**
@@ -204,6 +208,35 @@ function buildSpeciesAbilityCheckpoints(
   return checkpoints
 }
 
+/** 背景授予的起源专长检查点（2024 二选一背景，如鸦阁「起源专长或黑暗赠礼专长」）。 */
+function buildBackgroundFeatCheckpoints(
+  backgroundId: string,
+  repository: RulesRepository,
+  enabledSourceIds?: readonly string[],
+): readonly ChoiceCheckpoint[] {
+  const background = repository.getBackground(backgroundId)
+  const options = background?.originFeatOptions
+  if (!background || !options?.length) return []
+  const optionIds = options.filter((id) => {
+    const feat = repository.getFeat(id)
+    if (!feat) return false
+    return enabledSourceIds === undefined || isSourceEnabled(feat.sourceIds, enabledSourceIds, repository)
+  })
+  if (optionIds.length === 0) return []
+  return [{
+    id: `${background.id}-origin-feat`,
+    level: 1,
+    step: 'timeline',
+    kind: 'feat',
+    title: '选择起源专长',
+    description: `${background.name}授予其中一项专长（按原书二选一）。`,
+    required: true,
+    minSelections: 1,
+    maxSelections: 1,
+    optionIds,
+  }]
+}
+
 function buildFeatChoiceCheckpoints(
   parentCheckpoints: readonly ChoiceCheckpoint[],
   selections: readonly ChoiceSelection[],
@@ -243,7 +276,7 @@ function buildFeatChoiceCheckpoints(
 }
 
 export function buildTimeline(classId: string, targetLevel: number, context: TimelineContext = {}): readonly ChoiceCheckpoint[] {
-  const repository = getRulesRepository(context.ruleset ?? '5e-2014')
+  const repository = context.repository ?? getRulesRepository(context.ruleset ?? '5e-2014')
   const classRule = repository.getClass(classId)
   if (!classRule) return []
   const subclassCheckpoint = buildSubclassCheckpoint(classId, repository, context.enabledSourceIds)
@@ -268,6 +301,7 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
   const baseTimeline = [
     ...(context.subraceId === 'race-2014-human-variant' ? [variantHumanCheckpoint] : []),
     ...(context.raceId ? buildSpeciesFeatCheckpoints(context.raceId, repository, context.enabledSourceIds) : []),
+    ...(context.backgroundId ? buildBackgroundFeatCheckpoints(context.backgroundId, repository, context.enabledSourceIds) : []),
     ...buildSpeciesAbilityCheckpoints([context.subraceId, context.raceId], repository),
     ...classCheckpoints,
     ...(context.subclassId ? buildSubclassFeatureCheckpoints(context.subclassId, repository, context.enabledSourceIds) : []),

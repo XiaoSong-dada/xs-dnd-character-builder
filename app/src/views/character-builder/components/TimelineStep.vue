@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
 import ListShell from '@/components/ui/ListShell.vue'
@@ -30,7 +30,7 @@ const expandedCheckpointId = ref<string>()
 /** 当前草稿规则版本的仓库：职业、子职、专长与装备名称一律由它解析。 */
 const rulesRepository = computed(() => getRulesRepository(props.draft.ruleset))
 
-const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId, enabledSourceIds: props.draft.enabledSourceIds, selections: props.draft.selections, ruleset: props.draft.ruleset, raceId: props.draft.raceId }))
+const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId, enabledSourceIds: props.draft.enabledSourceIds, selections: props.draft.selections, ruleset: props.draft.ruleset, raceId: props.draft.raceId, backgroundId: props.draft.backgroundId }))
 
 /** 当前已熟练的技能与盗贼工具：职业技能选择 + 背景技能。与 validate.ts 的专精校验口径一致。 */
 const proficientSkillIds = computed(() => {

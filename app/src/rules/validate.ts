@@ -1,4 +1,4 @@
-import { getRulesRepository } from '@/rules/repositories'
+﻿import { getRulesRepository } from '@/rules/repositories'
 import { deriveAbilities } from '@/rules/derive'
 import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
 import {
@@ -372,7 +372,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         issues.push({ id: 'spellbook-transcription-invalid', step: 'spells', severity: 'error', message: '抄录记录包含不在法术书中或当前不可用的法术。', resolution: '返回角色卡法术页签检查抄录记录。' })
       }
     }
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
     const checkpointLevels = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint.level]))
     const isV2024 = repository.ruleset === '5e-2024'
     for (const checkpoint of timeline) {

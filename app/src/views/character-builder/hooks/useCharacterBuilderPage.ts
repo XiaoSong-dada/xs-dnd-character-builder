@@ -1,4 +1,4 @@
-import { computed, onMounted, ref, watch } from 'vue'
+﻿import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -103,7 +103,7 @@ export function useCharacterBuilderPage() {
     if (!draft?.classId) return false
     const classRule = getRulesRepository(draft.ruleset).getClass(draft.classId)
     if (classRule?.status !== 'implemented') return true
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
     return timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const bounds = getCheckpointSelectionBounds(draft, checkpoint)
@@ -351,7 +351,7 @@ export function useCharacterBuilderPage() {
       setStep('setup')
       return
     }
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
     const hasInvalidated = draft.selections.some((selection) => Boolean(selection.invalidatedAt))
     const hasIncompleteCheckpoint = timeline.some((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
@@ -508,7 +508,7 @@ export function useCharacterBuilderPage() {
     store.saveSelection(checkpointId, optionIds)
     const draft = activeDraft.value
     if (!draft?.classId) return
-    const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+    const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
       .find((item) => item.id === checkpointId)
     if (checkpoint?.kind === 'subclass') {
       store.updateDraft({ subclassId: optionIds[0] })

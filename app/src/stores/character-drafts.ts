@@ -1,4 +1,4 @@
-import { computed, ref, watch } from 'vue'
+﻿import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 
 import { deriveCharacter, deriveCharacterSummary } from '@/rules/derive'
@@ -89,7 +89,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
   const completion = computed(() => {
     const draft = activeDraft.value
     if (!draft) return 0
-    const timeline = draft.classId ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId }) : []
+    const timeline = draft.classId ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId }) : []
     const timelineComplete = timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const count = selection?.optionIds.length ?? 0

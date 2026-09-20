@@ -1,4 +1,4 @@
-import { deriveCharacter, proficiencyBonus } from '@/rules/derive'
+﻿import { deriveCharacter, proficiencyBonus } from '@/rules/derive'
 import { getRulesRepository } from '@/rules/repositories'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { buildTimeline } from '@/rules/timeline'
@@ -27,13 +27,13 @@ function completedSelectionCount(draft: CharacterDraft, checkpointId: string): n
 
 /** 统计某目标等级时间线中指定类型检查点的数量。 */
 function countCheckpointKind(draft: CharacterDraft, level: number, kind: CheckpointKind): number {
-  return buildTimeline(draft.classId ?? '', level, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
+  return buildTimeline(draft.classId ?? '', level, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
     .filter((checkpoint) => checkpoint.kind === kind).length
 }
 
 /** 统计某目标等级时间线中战技选择检查点的数量（战技选项统一 maneuver- 前缀）。 */
 function countManeuverCheckpoints(draft: CharacterDraft, level: number): number {
-  return buildTimeline(draft.classId ?? '', level, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
+  return buildTimeline(draft.classId ?? '', level, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
     .filter((checkpoint) => checkpoint.optionIds.length > 0 && checkpoint.optionIds.every((optionId) => optionId.startsWith('maneuver-')))
     .length
 }

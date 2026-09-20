@@ -24,6 +24,7 @@ const categoryTags: Readonly<Record<FeatCategory, string>> = {
   'epic-boon': '传奇恩惠',
   dragonmark: '龙纹',
   'wild-talent': '狂野天赋',
+  'dark-gift': '黑暗赠礼',
 }
 
 /**
