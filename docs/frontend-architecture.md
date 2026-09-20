@@ -205,6 +205,8 @@ src/App.vue
   -> Vue Router 的 RouterView
   -> src/features/update-notice/components/UpdateNoticeModal.vue
   -> src/stores/update-notice.ts（浏览器挂载后执行一次版本检查）
+  -> src/features/service-worker/components/ServiceWorkerUpdatePrompt.vue
+  -> src/stores/service-worker.ts（浏览器挂载后注册 Service Worker；仅提示、不自动刷新）
 
 src/router/router.ts
   -> src/layout/MainLayout.vue
@@ -240,8 +242,14 @@ src/views/about/index.vue
   -> src/views/about/hooks/useAboutPage.ts
       -> src/config/site.ts（可选收款码 URL）
       -> src/stores/update-notice.ts（手动回看当前版本公告）
+  -> src/views/about/hooks/useOfflineAssets.ts（离线使用区块：模板缓存状态、一键下载、持久化存储状态）
+      -> src/services/offline-assets.ts
+      -> src/services/persistent-storage.ts
   -> src/views/about/components/AboutIntroSection.vue
   -> src/views/about/components/AboutLinksSection.vue
+  -> src/views/about/components/OfflineAssetSection.vue
+      -> src/components/ui/UiBadge.vue
+      -> src/services/offline-assets.ts（type-only）
   -> src/views/about/components/TipQrSection.vue
       -> src/components/ui/UiModal.vue
 src/views/not-found/index.vue  -> src/views/not-found/hooks/useNotFoundPage.ts（-> vue-router useRouter）
@@ -360,6 +368,9 @@ src/features/update-notice/components/UpdateNoticeModal.vue
   -> src/components/ui/UiScrollModal.vue
   -> src/stores/update-notice.ts
 
+src/features/service-worker/components/ServiceWorkerUpdatePrompt.vue（全站非阻断更新提示；不自动刷新）
+  -> src/stores/service-worker.ts
+
 src/features/spellbook-transcription（法师抄录法术书共享能力：角色卡与跑团助手双调用方）
   index.ts                          （装配导出：Modal + hook）
   components/SpellbookTranscriptionModal.vue
@@ -420,6 +431,9 @@ src/stores/update-notice.ts（全站公告开关、启动幂等与手动回看�
   -> src/constants/update-notices.ts
   -> src/services/update-notice-storage.ts
 
+src/stores/service-worker.ts（离线外壳：注册幂等、待更新版本、激活进行中）
+  -> src/services/service-worker.ts
+
 src/services/character-json.ts
   -> src/rules/starting-equipment（EMPTY_CURRENCY）⚠️ 越权点
   -> src/types/character
@@ -438,14 +452,34 @@ src/services/character-package.ts
 
 src/services/export-xlsx.ts
   -> exceljs（动态 import，仅导出时按需加载；不进入 SSG 预渲染路径）
-  -> src/config/site（baseUrl：模板资产前缀）
+  -> src/services/character-sheet-templates（XLSX 模板 URL 与离线缺失提示）
   -> src/features/character-export/build-export-data（消费唯一 CharacterExportModel，不导入 rules）
 
 src/services/export-pdf.ts
   -> pdf-lib + @pdf-lib/fontkit（动态 import，仅导出时按需加载）
-  -> src/config/site（baseUrl：字体资产前缀）
+  -> src/services/character-sheet-templates（PDF 模板与中文字体 URL、离线缺失提示）
   -> public/templates/character-sheet-zh-plus.pdf（静态中文字体子集化后的运行时模板；原始底稿保留在 docs/export-templates）
   -> src/features/character-export/build-export-data（消费唯一 CharacterExportModel，不导入 rules）
+
+src/services/character-sheet-templates.ts（public/templates/ 下全部导出模板资产 URL 的唯一事实源）
+  -> src/config/site.ts（baseUrl）
+  （与 vite.config.ts 的 workbox 运行时缓存规则通过 `/templates/` 前缀耦合：
+    调整目录结构时必须同步该正则、`offline-assets.ts` 清单与本处常量）
+
+src/services/offline-assets.ts（导出模板的离线清单：缓存状态查询与一键下载）
+  -> src/services/character-sheet-templates.ts
+  -> 浏览器 Cache Storage（经 Service Worker 的运行时缓存写入）
+  （不读取 localStorage；无 Cache Storage 或无 SW 接管时返回 unavailable，由调用方给出中文说明）
+
+src/services/service-worker.ts（`public/sw.js` 的注册与更新握手边界）
+  -> src/config/setting.ts（isDev：开发服务不生成 sw.js，注册前短路）
+  -> src/config/site.ts（baseUrl：sw.js 路径与作用域）
+  -> 浏览器 ServiceWorkerContainer（注册、updatefound、controllerchange、SKIP_WAITING）
+  （不导入 stores：注册结果通过回调上抛，避免 services 反向依赖状态层）
+
+src/services/persistent-storage.ts（`navigator.storage.persist()` 提权边界）
+  -> 浏览器 StorageManager
+  （拒绝为正常结果，不抛错；仅在用户明确表达离线意图时调用）
 
 src/features/character-export/build-export-data.ts
   -> src/rules/{feats,manual-edits,repositories,session-resources,spellcasting,source-books,timeline,weapon-attacks} + src/rules/data/feats-2014（ABILITY_LABELS）
@@ -476,7 +510,7 @@ src/services/umami.ts
   -> src/config/site.ts（域名匹配后幂等加载 Umami 统计脚本）
 
 src/config/site.ts    （项目内唯一读取 import.meta.env 的入口；版本由 package.json 构建期注入；导出 baseUrl 供字体等 public 资产 URL）
-src/config/setting.ts （空占位文件，无消费者）
+src/config/setting.ts （运行开关：isDev，供 services 判断是否注册 Service Worker；其余 env 读取仍归 site.ts）
 
 src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打印版面）
   -> src/features/character-export/build-export-data（与 XLSX 共用同一导出数据）

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import AboutIntroSection from '@/views/about/components/AboutIntroSection.vue'
 import AboutLinksSection from '@/views/about/components/AboutLinksSection.vue'
+import OfflineAssetSection from '@/views/about/components/OfflineAssetSection.vue'
 import TipQrSection from '@/views/about/components/TipQrSection.vue'
 import { useAboutPage } from '@/views/about/hooks/useAboutPage'
+import { useOfflineAssets } from '@/views/about/hooks/useOfflineAssets'
 
 const {
   title,
@@ -20,6 +22,19 @@ const {
   markQrCodeFailed,
   openUpdateNotice,
 } = useAboutPage()
+
+const {
+  statuses,
+  state,
+  cachedCount,
+  totalCount,
+  allCached,
+  progressPercent,
+  estimatedSizeLabel,
+  storagePersisted,
+  feedback,
+  download: downloadOfflineAssets,
+} = useOfflineAssets()
 </script>
 
 <template>
@@ -40,6 +55,18 @@ const {
       :qq-group="qqGroup"
       :copy-feedback="copyFeedback"
       @copy-qq-group="copyQqGroup"
+    />
+    <OfflineAssetSection
+      :statuses="statuses"
+      :state="state"
+      :cached-count="cachedCount"
+      :total-count="totalCount"
+      :all-cached="allCached"
+      :progress-percent="progressPercent"
+      :estimated-size-label="estimatedSizeLabel"
+      :storage-persisted="storagePersisted"
+      :feedback="feedback"
+      @download="downloadOfflineAssets"
     />
     <TipQrSection
       :codes="availableQrCodes"

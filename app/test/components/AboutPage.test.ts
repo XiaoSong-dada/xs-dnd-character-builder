@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 
 const mockConfig = vi.hoisted(() => ({
+  baseUrl: '/',
   siteConfig: {
     version: '1.1.4',
     tipQrCodes: {
@@ -120,5 +121,33 @@ describe('关于本站页面', () => {
 
     await wrapper.get('.tip-qr__card img').trigger('error')
     expect(wrapper.find('.tip-qr').exists()).toBe(false)
+  })
+
+  it('展示离线使用区块与三项导出资源，默认全部标记为未下载', async () => {
+    const wrapper = mountAbout()
+    await Promise.resolve()
+
+    expect(wrapper.text()).toContain('离线使用')
+    expect(wrapper.findAll('.offline-assets__item')).toHaveLength(3)
+    expect(wrapper.text()).toContain('PDF 角色卡模板')
+    expect(wrapper.text()).toContain('Excel 角色卡模板')
+    expect(wrapper.text()).toContain('中文字体子集')
+    expect(wrapper.findAll('.ui-badge').filter((badge) => badge.text() === '未下载')).toHaveLength(3)
+    expect(wrapper.get('.offline-assets__action').text()).toBe('一键下载离线资源')
+    expect(wrapper.text()).toContain('本地数据保护')
+  })
+
+  it('环境不支持离线缓存时，点击下载给出可执行的说明而不是静默失败', async () => {
+    vi.stubGlobal('caches', undefined)
+    const wrapper = mountAbout()
+    await Promise.resolve()
+
+    await wrapper.get('.offline-assets__action').trigger('click')
+    await vi.waitFor(() => {
+      expect(wrapper.get('.offline-assets__feedback').text()).toContain('需要通过 HTTPS 访问')
+    })
+    // 失败后按钮必须恢复可点，否则玩家无法重试。
+    expect(wrapper.get('.offline-assets__action').attributes('disabled')).toBeUndefined()
+    vi.unstubAllGlobals()
   })
 })
