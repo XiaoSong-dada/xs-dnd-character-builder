@@ -156,7 +156,10 @@ describe('AddItemModal', () => {
     mount(AddItemModal, { props: { open: true }, attachTo: document.body })
     await flush()
     expect(cardMains()).toHaveLength(80)
-    expect(document.body.textContent).toContain('找到 677 件物品')
+    // 物品总数随批次增长（G3-I5 起并入第三方法物品），按下界断言而不锁死具体数字。
+    const totalText = document.body.textContent?.match(/找到 (\d+) 件物品/)?.[1]
+    expect(totalText, '未渲染物品总数').toBeDefined()
+    expect(Number(totalText)).toBeGreaterThanOrEqual(677)
     const loadMore = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
       .find((button) => button.textContent?.includes('显示更多'))
     loadMore!.click()

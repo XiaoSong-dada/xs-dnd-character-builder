@@ -80,8 +80,13 @@ describe('B12-01 2024 开放集合与依赖闭合', () => {
 
     const species = repository.races.filter((item) => item.ruleset === '5e-2024' && !item.parentRaceId)
     const lineages = repository.races.filter((item) => item.ruleset === '5e-2024' && item.parentRaceId)
-    expect(species).toHaveLength(10)
-    expect(lineages).toHaveLength(8)
+    // 2024 物种总数随批次增长（G3-I1 起含第三方来源），按「核心 10 物种 / 8 血统齐备」+ 下界断言。
+    const coreSpecies = species.filter((item) => item.sourceIds.includes('source-2024-phb'))
+    const coreLineages = lineages.filter((item) => item.sourceIds.includes('source-2024-phb'))
+    expect(coreSpecies).toHaveLength(10)
+    expect(coreLineages).toHaveLength(8)
+    expect(species.length).toBeGreaterThanOrEqual(10)
+    expect(lineages.length).toBeGreaterThanOrEqual(8)
     for (const race of [...species, ...lineages]) {
       for (const grant of race.spellGrants ?? []) {
         expect(repository.getSpell(grant.spellId), `${race.id}:${grant.spellId}`).toBeDefined()

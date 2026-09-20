@@ -100,11 +100,37 @@ race-2014-elf-drow
 | 洛克斯 | Loxodon | GGR | [2014 洛克斯](species/5e-2014/loxodon/loxodon.md) | 无 | 已实现；商业摘要 |
 | 析米克混血 | Simic Hybrid | GGR | [2014 析米克混血](species/5e-2014/simic-hybrid/simic-hybrid.md) | 无 | 已实现；商业摘要 |
 
+## 第三方合作种族与物种（G3-I1，共 63 条）
+
+G3-I1（2026-09-21）补录第三方合作书中的种族／物种 **63 条**（2014 写法 45 + 2024 写法 18），全部挂在默认关闭的「合作内容」来源下、需 DM 同意后启用；只登记选择与展示所需元数据与原创中文摘要，效果不进入自动计算。
+
+**文档口径**：与第三方子职（见 [`dnd-classes.md`](dnd-classes.md) §4.3）一致，**第三方条目不在 `docs/species/` 下建立逐条资料文件**（该目录只登记核心与官方种族／物种），来源、兼容边界与摘要以数据模块头注释和本节表格为准。
+
+### 2014 写法（45 条，进 `5e-2014` 仓库）
+
+| 书 | 主族 | 亚种 | 来源 ID |
+| --- | --- | --- | --- |
+| 《胧忆岛》 | 达良人 Dara、鸣玉族 Nakudama | — | `tp-obojima-index` |
+| 《谦卑林》 | 浣熊族 Mapach、狡狐族 Vulpin、猬族 Hedge、跳鼠族 Jerbeen、鹿族 Cervan、隼族 Raptor、雉族 Gallus、鸦族 Corvum、鸮族 Strig、鸽族 Luma | 林地鹿／叉角鹿；海隼族／风隼族；靓雉族／野雉族；昏鸦族／煽鸦族；敦实鸮／迅疾鸮；黑鸽族／艳鸽族（12 条） | `tp-humblewood-index` |
+| 《黯潮之书》 | 熊民 Bearfolk、达拉库食尸鬼 Darakhul、幽影地精 Shadow Goblin、影蚀人类 Umbral Human、疾步族 Quickstep、猬族（灵魂渡者）Spiritfarer Erina、树鼠族 Ratatosk、萨塔雷（无缚者）Unbound Satarre、鸦族（崇高）Sublime Ravenfolk、幽影（冥河）Stygian Shade | 影裔熊民；达拉库食尸鬼（熊民／人类遗承）；影蚀人类（嬗变者／天赋者）；艾科尔／特拉德瓦克特树鼠族；影妖精／暗精灵／月精灵（父种族＝核心精灵）；玄命侏儒（父种族＝核心侏儒）（11 条） | `tp-ebon-tides-index` |
+
+### 2024 写法（18 条，进 `5e-2024` 仓库）
+
+| 书 | 主族 | 亚种 | 来源 ID |
+| --- | --- | --- | --- |
+| 《歪曲之月》 | 丝虫种 Silkborn、丰收种 Harvestborn、咒狼种 Curseborn、沼泽种 Bogborn、深潜种 Deepborn、灰烬种 Ashborn、疫鼠种 Plagueborn、石像种 Stoneborn、线偶种 Threadborn、绘骨种 Relicborn、苍羽种 Azureborn、诡木种 Gnarlborn、霜墓种 Graveborn（13 条，无亚种） | — | `source-2024-tp-crooked-moon` |
+| 《瓦尔达的秘密尖塔》玩家包Ⅰ | 匠偶 Geppettin、曼德拉 Mandrake | 素瓷／枢木／毛绒匠偶（3 条） | `source-2024-tp-valdas-spire` |
+
+**2024 物种不给属性加值**（属性来自背景），故这 18 条的 `fixedAbilityBonuses` 一律为空；2014 写法条目按 2014 口径使用 `属性值提升` 与固定／自选加值。
+
+**未登记（留档）**：胧忆岛的「人类」「精灵」两页只有风味文字、无种族特质段（规则数据已在核心种族中登记）；谦卑林的「鸟族」「地族」是分类总览页而非可玩种族；《花卉龙博考》的「花卉龙裔」与斯坦哈德的「灾孽者」分别因未识别为独立种族段／资料缺特质段而暂未登记。
+
 ## 来源与版权边界
 
 - 2024 的九个开放物种以 [2024 Free Rules：Character Origins](https://www.dndbeyond.com/sources/dnd/br-2024/character-origins) 与 SRD 5.2.1 为依据，可用项目原创表述整理到规则实现级；阿斯莫来自商业版 2024 PHB，只记录摘要。
 - 2014 开放内容以 [2014 Basic Rules：Races](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/races) 与 SRD 5.1 为依据，可整理到规则实现级。
 - 仅见于商业规则书的内容只记录稳定 ID、等级、特性名称、原创玩法摘要、选择提示、兼容边界和官方链接，不复制规则正文。
+- 第三方合作内容（G3-I1 的 63 条种族／物种）同样只登记元数据与原创中文摘要，来源默认关闭并在界面上标注「合作内容，需 DM 同意」；其逐条说明不在 `docs/species/` 下设文件，见上节表格与各数据模块头注释。
 - 2014 扩展种族来源索引：
   - **VGM**：Volo's Guide to Monsters（哥布林、大地精、熊地精、天裔、歌利亚、猫人、特里同、半巨人、兽人、鸦人、狗头人、鸟人、蜥蜴人、蛇人）。
   - **EEPC**：Elemental Evil Player's Companion（歌利亚、特里同、鸟人首发，VGM 重印数值相同）。

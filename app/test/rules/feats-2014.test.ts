@@ -15,8 +15,14 @@ import {
 
 describe('2014 feats and ability improvements', () => {
   it('registers PHB、XGtE 与 TCoE 专长并保持稳定 ID 唯一', () => {
-    expect(feats2014).toHaveLength(72)
+    // 官方核心条目 72 条保持精确断言；第三方合作专长（G3-I4 起逐书并入）按下界与覆盖度断言，不锁死总数。
+    const coreFeats = feats2014.filter((feat) => !feat.id.startsWith('feat-2014-tp-'))
+    const thirdPartyFeats = feats2014.filter((feat) => feat.id.startsWith('feat-2014-tp-'))
+    expect(coreFeats).toHaveLength(72)
+    expect(thirdPartyFeats.length).toBeGreaterThanOrEqual(39)
+    expect(feats2014).toHaveLength(72 + thirdPartyFeats.length)
     expect(new Set(FEAT_OPTION_IDS).size).toBe(feats2014.length)
+    expect(thirdPartyFeats.every((feat) => feat.category === undefined)).toBe(true)
     expect(feats2014.every((feat) =>
       feat.ruleset === '5e-2014'
       && feat.name.length > 0

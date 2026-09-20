@@ -36,8 +36,14 @@ function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
 
 describe('2014 origins', () => {
   it('registers all extended core races and every base background', () => {
-    expect(rulesRepository.races.filter((item) => !item.parentRaceId)).toHaveLength(35)
-    expect(rulesRepository.races.filter((item) => item.parentRaceId)).toHaveLength(37)
+    // 种族数量随第三方补录批次增长（G3-I1 起含胧忆岛／谦卑林），按「核心 35 主族 / 37 亚种齐备」+ 下界断言。
+    const baseRaces = rulesRepository.races.filter((item) => !item.parentRaceId)
+    const subraces = rulesRepository.races.filter((item) => item.parentRaceId)
+    const coreRaceIds = baseRaces.filter((item) => !item.id.startsWith('race-2014-tp-'))
+    expect(coreRaceIds).toHaveLength(35)
+    expect(subraces.filter((item) => !item.id.startsWith('race-2014-tp-'))).toHaveLength(37)
+    expect(baseRaces.length).toBeGreaterThanOrEqual(35)
+    expect(subraces.length).toBeGreaterThanOrEqual(37)
     // 背景数量随补全批次增长（G 批次起），这里按「核心集合必须齐备」断言，避免每次补数据都要改计数。
     const baseBackgroundIds = rulesRepository.backgrounds
       .filter((item) => !item.parentBackgroundId)

@@ -215,11 +215,37 @@ feat-2014-alert
 6. 将专长效果作为独立来源参与派生计算，不直接覆盖角色的原始属性或职业数据。
 7. 返回具体中文错误，例如“该专长要求角色至少 4 级”或“你已经选择过这个法术列表的魔法学徒”。
 
+## 第三方合作专长（G3-E／G3-I4）
+
+第三方合作书的专长分两批登记（G3-E 12 条 + G3-I4 87 条），另有 G3 之前已登记的 26 条（歪曲之月起源 12、VtM 起源 5、Beyond Drops 5、斯坦哈德起源 2、德拉肯海姆 2）。全部挂在默认关闭的「合作内容」来源下、需 DM 同意后启用；只登记元数据与原创中文摘要，效果不进入自动计算。
+
+**文档口径**：与第三方子职（[`dnd-classes.md`](dnd-classes.md) §4.3）和第三方种族（[`dnd-species.md`](dnd-species.md) 对应章节）一致，**第三方专长不在 `docs/feats/` 下建立逐条资料文件**，来源、兼容边界与摘要以数据模块头注释和本节表格为准。
+
+| 规则集 | 书 | 条数 | 模块 |
+| --- | --- | ---: | --- |
+| 2014 | 胧忆岛 | 20 | `third-party-feats-obojima-2014.ts` |
+| 2014 | 谦卑林 + 谦卑林故事集 | 7 + 4 | `third-party-feats-humblewood-2014.ts` |
+| 2014 | 塔尔多雷 | 7 | `third-party-feats-taldorei-2014.ts` |
+| 2014 | 鬼魅幽谷 | 2 | `third-party-feats-grim-hollow-2014.ts` |
+| 2024 | 吸血鬼：避世潜藏 | 血族 19 + 传奇恩惠 1 | `third-party-feats-vtm-2024.ts` |
+| 2024 | 瓦尔达的秘密尖塔 | 14 | `third-party-feats-valdas-spire-2024.ts` |
+| 2024 | 火炬光下的克苏鲁 | 5 | `third-party-feats-cthulhu-torchlight-2024.ts` |
+| 2024 | Beyond Drops | 4 | `third-party-feats-beyond-drops-2024.ts` |
+| 2024 | 歪曲之月（通用，起源 12 条见前） | 2 | `third-party-feats-crooked-moon-2024.ts` |
+| 2024 | 斯坦哈德（通用，起源 2 条见前） | 2 | `third-party-feats-steinhardt-2024.ts` |
+
+**类别扩展**：`FeatCategory` 在 G3-I4 新增 **`bloodline`（血族）**，用于避世潜藏的 19 条血族专长（含按等级分阶的「血律研习／高等／卓越／至高」四条，以 `requiredFeatIds` 串联并标记 `repeatable`）；Beyond Drops 的两条战斗风格专长归 `fighting-style`。
+
+**前置表达限制**：`FeatPrerequisite` 无「组织／背景／职业／特质」粒度，故血族职业限定、叙事性前置（如「击败一位大师」「集会成员」）写在条目 `detail` 开头，仅等级／属性／施法能力／先决专长进 `prerequisite`；谦卑林滑翔类专长用 `requiredRaceIds` 限定 5 个鸟族父种族近似表达。
+
+**未登记**：依附项目未支持职业的专长，以及参考资料中无专长分节的书（黯潮之书、德拉肯海姆、邪狱使、狮鹫鞍包Ⅱ、花卉龙博考、异界传送）。
+
 ## 来源与版权边界
 
 - 2024 开放内容依据 [2024 Free Rules：Feats](https://www.dndbeyond.com/sources/dnd/br-2024/feats) 与 SRD 5.2.1，可用项目原创表述整理到实现级。
 - 2024《玩家手册》确认共含 75 项专长，并分为起源、通用、战斗风格和传奇恩惠四类；商业独占条目只做机械摘要，不复制规则书原文。
 - 2014 专长通则依据 [2014 Basic Rules：Customization Options](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/customization-options)；2014 SRD 开放条目可整理到实现级，其余《玩家手册》条目只做商业摘要。
+- 第三方合作专长（G3-E 12 条 + G3-I4 87 条 + G3 前 26 条）只记录稳定 ID、中英文名、类别、前置、原创中文摘要与来源，不复制规则书正文；来源默认关闭并标注「合作内容，需 DM 同意」。
 - 中文名用于项目展示；若官方简体中文译名与当前常用译名不同，应保留英文名和稳定 ID，并在核验后统一调整显示名。
 
 ## 当前完成状态

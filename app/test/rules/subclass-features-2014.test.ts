@@ -93,7 +93,12 @@ describe('2014 subclass features catalog', () => {
     const selectable = playerSubclasses.filter((subclass) => ['implemented', 'selectable'].includes(subclass.status))
     expect(selectable.length).toBe(playerSubclasses.length)
     for (const subclass of selectable) {
-      expect(getSubclassFeatures2014(subclass.id).length).toBeGreaterThan(0)
+      // `getSubclassFeatures2014` 只覆盖核心注册表；第三方子职（G3-I2）自带特性数组，
+      // 故完整性一律以仓库挂载结果为准。
+      const mounted = rulesRepository.getSubclass(subclass.id)?.features ?? []
+      expect(mounted.length, subclass.id).toBeGreaterThan(0)
+      expect(getSubclassFeatures2014(subclass.id).length + (subclass.id.includes('-tp-') ? mounted.length : 0), subclass.id)
+        .toBeGreaterThan(0)
     }
     const spotChecks = [
       'subclass-2014-barbarian-zealot', 'subclass-2014-cleric-twilight', 'subclass-2014-fighter-rune-knight',
