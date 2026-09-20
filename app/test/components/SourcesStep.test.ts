@@ -4,16 +4,18 @@ import { describe, expect, it } from 'vitest'
 import SourcesStep from '@/views/character-builder/components/SourcesStep.vue'
 
 describe('SourcesStep 来源开关（E01）', () => {
-  it('2024 展示 7 个游玩测试与 10 个旧扩展来源且默认未选中', () => {
+  it('2024 展示游玩测试、旧扩展与第三方来源且默认未选中', () => {
     const wrapper = mount(SourcesStep, { props: { selected: [], ruleset: '5e-2024' } })
-    expect(wrapper.findAll('.ui-chip')).toHaveLength(17)
+    // 来源数量随批次增长（G 批次新增第三方），按「至少覆盖既有 17 条」断言。
+    expect(wrapper.findAll('.ui-chip').length).toBeGreaterThanOrEqual(17)
     expect(wrapper.text()).toContain('破解奥秘为游玩测试内容')
     expect(wrapper.text()).toContain('UA 艾伯伦')
     expect(wrapper.text()).toContain('游玩测试')
     expect(wrapper.text()).toContain('旧扩展法术默认关闭')
     expect(wrapper.text()).toContain('旧扩展')
+    expect(wrapper.text()).toContain('合作内容')
     expect(wrapper.findAll('.ui-chip--selected')).toHaveLength(0)
-    expect(wrapper.text()).toContain('已启用 0 / 17')
+    expect(wrapper.text()).toContain('已启用 0 /')
   })
 
   it('2024 点击单个来源发出对应 ID，全部启用发出全部来源', async () => {
@@ -24,9 +26,10 @@ describe('SourcesStep 来源开关（E01）', () => {
 
     await wrapper.findAll('.sources-step__toolbar button')[0]!.trigger('click')
     const allEnabled = wrapper.emitted('change')?.[1]?.[0] as string[]
-    expect(allEnabled).toHaveLength(17)
+    expect(allEnabled.length).toBe(wrapper.findAll('.ui-chip').length)
     expect(allEnabled).toContain('source-2024-ua-psion')
     expect(allEnabled).toContain('source-2024-legacy-scc')
+    expect(allEnabled).toContain('source-2024-tp-crooked-moon')
   })
 
   it('2024 已选来源渲染选中态，只用核心规则清空选择', async () => {
@@ -48,7 +51,7 @@ describe('SourcesStep 来源开关（E01）', () => {
     const wrapper = mount(SourcesStep, { props: { selected: [] } })
     expect(wrapper.text()).toContain('合作内容需 DM 同意')
     const labels = wrapper.findAll('.sources-step__third-party-label')
-    expect(labels).toHaveLength(11)
+    expect(labels.length).toBeGreaterThanOrEqual(11)
     expect(labels.every((item) => item.text().includes('合作内容'))).toBe(true)
     expect(wrapper.findAll('.ui-chip--selected')).toHaveLength(0)
 

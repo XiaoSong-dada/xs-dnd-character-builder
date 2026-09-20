@@ -47,7 +47,9 @@ describe('versioned rules repositories', () => {
     expect(repository.getSpell('spell-2024-magic-missile')).toBeDefined()
     expect(repository.getEquipment('equipment-2024-longsword')).toBeDefined()
     expect(repository.sources.filter((source) => source.category === 'core').every((source) => !source.selectable)).toBe(true)
-    expect(repository.sources.filter((source) => source.selectable).every((source) => source.contentKind === 'playtest' || source.contentKind === 'legacy')).toBe(true)
+    // 2024 可切换来源目前分为三类：游玩测试（UA）、旧扩展镜像与第三方合作内容（G 批次起）。
+    expect(repository.sources.filter((source) => source.selectable)
+      .every((source) => source.contentKind === 'playtest' || source.contentKind === 'legacy' || source.contentKind === 'third-party')).toBe(true)
   })
 
   it('does not resolve identifiers across versions', () => {

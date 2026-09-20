@@ -31,6 +31,7 @@ import { weaponMasteries2024 } from '@/rules/data/weapon-masteries-2024'
 import { backgrounds2024, races2024 } from '@/rules/data/origins-2024'
 import { speciesTraits2024 } from '@/rules/data/species-traits-2024'
 import { abilityImprovementOptions2024, featChoiceOptions2024, feats2024 } from '@/rules/data/feats-2024'
+import { thirdPartyOriginFeats2024 } from '@/rules/data/third-party-feats-2024'
 import { spellListOptions2024, speciesSpellAbilityOptions2024 } from '@/rules/data/spell-lists-2024'
 import { spells2024 } from '@/rules/data/spells-2024'
 import { legacySpells2024 } from '@/rules/data/generated/spells-2024-legacy'
@@ -68,7 +69,7 @@ export const rulesRepository2024 = createRulesRepository('5e-2024', {
   raceFeatures: speciesTraits2024,
   backgroundFeatures: [],
   options: [...abilityImprovementOptions2024, ...featChoiceOptions2024, ...spellListOptions2024, ...speciesSpellAbilityOptions2024, ...feats2024, ...skillOptions2024, ...subclassOptions2024, ...barbarianOptions2024, ...bardOptions2024, ...clericOptions2024, ...druidOptions2024, ...fighterOptions2024, ...monkOptions2024, ...rangerOptions2024, ...sorcererOptions2024, ...warlockOptions2024, ...artificerOptions2024, ...uaFrSubclassOptions2024, ...uaSubclassUpdateOptions2024, ...uaHorrorOptions2024, ...uaArcaneOptions2024, ...uaCataclysmOptions2024, ...psionOptions2024],
-  feats: [...feats2024, ...uaFeats2024],
+  feats: [...feats2024, ...uaFeats2024, ...thirdPartyOriginFeats2024],
   equipment: [...equipmentWithPacks2024, ...magicItems2024, ...uaMagicItems2024],
   classStartingEquipment: classStartingEquipment2024,
   backgroundStartingEquipment: backgroundStartingEquipment2024,

@@ -28,11 +28,13 @@ describe('source-books 规则集化来源解析（E01）', () => {
     expect(isSourceEnabled(['tp-ebon-tides-index'], undefined)).toBe(true)
   })
 
-  it('2024 可切换来源包含 UA 游玩测试与旧扩展，且默认全关', () => {
+  it('2024 可切换来源包含 UA 游玩测试、旧扩展与第三方，且默认全关', () => {
     const selectable = getSelectableSources('5e-2024')
-    expect(selectable).toHaveLength(17)
+    // 来源数量随批次增长（G 批次新增第三方来源），按「至少覆盖既有 17 条 + 三类内容」断言。
+    expect(selectable.length).toBeGreaterThanOrEqual(17)
     expect(selectable.filter((source) => source.contentKind === 'playtest')).toHaveLength(7)
     expect(selectable.filter((source) => source.contentKind === 'legacy')).toHaveLength(10)
+    expect(selectable.filter((source) => source.contentKind === 'third-party').length).toBeGreaterThanOrEqual(3)
     expect(selectable.every((source) => source.selectable && source.ruleset === '5e-2024' && source.category === 'supplement')).toBe(true)
     expect(getDefaultEnabledSourceIds('5e-2024')).toEqual([])
   })

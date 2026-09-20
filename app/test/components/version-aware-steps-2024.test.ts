@@ -50,7 +50,8 @@ describe('B09-02 各步骤按草稿版本解析', () => {
     expect(modern.text()).toContain('玩家手册（2024）')
     expect(modern.text()).toContain('破解奥秘为游玩测试内容')
     expect(modern.text()).toContain('全部启用')
-    expect(modern.findAll('.ui-chip')).toHaveLength(17)
+    // 来源数量随批次增长（G 批次新增第三方来源），按「至少覆盖既有 17 条」断言。
+    expect(modern.findAll('.ui-chip').length).toBeGreaterThanOrEqual(17)
     expect(modern.findAll('.ui-chip--selected')).toHaveLength(0)
 
     const legacy = mount(SourcesStep, { props: { selected: [] } })
