@@ -58,10 +58,15 @@ describe('2014 种族特性注册表', () => {
 describe('2014 背景特性注册表', () => {
   const bgIds = new Set(backgrounds2014.map((background) => background.id))
 
-  it('覆盖 35 个已登记背景（44 条特性）且 ID 唯一', () => {
-    expect(backgroundFeatures2014.length).toBe(44)
+  it('每个已登记基础背景都有背景特性，且特性 ID 唯一', () => {
+    // 特性条数随补全批次增长（G 批次起），按「基础背景全覆盖」断言，避免每次补数据都要改计数。
     const ids = backgroundFeatures2014.map((feature) => feature.id)
     expect(new Set(ids).size).toBe(ids.length)
+    const missing = backgrounds2014
+      .filter((background) => !background.parentBackgroundId)
+      .filter((background) => getBackgroundFeatures2014(background.id).length === 0)
+      .map((background) => background.id)
+    expect(missing).toEqual([])
   })
 
   it('每条特性的 backgroundId 指向已登记背景（含父背景；变体不重复登记）', () => {

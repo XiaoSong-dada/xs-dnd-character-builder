@@ -50,10 +50,12 @@ function wizardDraft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
 }
 
 describe('2014 starting equipment', () => {
-  it('covers all twelve classes and thirty-five base backgrounds with resolvable item references', () => {
+  it('covers all classes and every base background with resolvable item references', () => {
     expect(rulesRepository.classStartingEquipment).toHaveLength(13)
+    // 基础背景数量随补全批次增长（G 批次起），这里只要求非空且不含变体。
     const baseBackgrounds = rulesRepository.backgrounds.filter((background) => !background.parentBackgroundId)
-    expect(baseBackgrounds).toHaveLength(35)
+    expect(baseBackgrounds.length).toBeGreaterThanOrEqual(35)
+    expect(baseBackgrounds.every((background) => background.id.startsWith('background-2014-'))).toBe(true)
 
     const grants = [
       ...rulesRepository.classStartingEquipment.flatMap((profile) => [

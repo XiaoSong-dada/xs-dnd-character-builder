@@ -33,6 +33,7 @@ export const sources2014: readonly RuleSource[] = [
   source('llok-2018-index', 'LLoK', '夸力许的失落实验室', 'supplement'),
   source('erftlw-2019-index', 'ERftLW', '艾伯伦：战乱后的最后战争', 'supplement'),
   source('ai-2019-index', 'AI', '艾奎兹玄有限责任公司', 'supplement'),
+  source('gos-2019-index', 'GoS', '盐沼怪谈', 'supplement'),
   source('mot-2020-index', 'MOT', '塞洛斯神话奥德赛', 'supplement'),
   source('idrotf-2020-index', 'IDRotF', '冰风谷：霜少女的雾凇', 'supplement'),
   source('egtw-2020-index', 'EGtW', '荒洲探险者指南', 'supplement'),

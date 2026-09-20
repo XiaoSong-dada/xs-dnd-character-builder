@@ -35,10 +35,36 @@ function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
 }
 
 describe('2014 origins', () => {
-  it('registers all extended core races and thirty-five base backgrounds', () => {
+  it('registers all extended core races and every base background', () => {
     expect(rulesRepository.races.filter((item) => !item.parentRaceId)).toHaveLength(35)
     expect(rulesRepository.races.filter((item) => item.parentRaceId)).toHaveLength(37)
-    expect(rulesRepository.backgrounds.filter((item) => !item.parentBackgroundId)).toHaveLength(35)
+    // 背景数量随补全批次增长（G 批次起），这里按「核心集合必须齐备」断言，避免每次补数据都要改计数。
+    const baseBackgroundIds = rulesRepository.backgrounds
+      .filter((item) => !item.parentBackgroundId)
+      .map((item) => item.id)
+    expect(new Set(baseBackgroundIds).size).toBe(baseBackgroundIds.length)
+    for (const id of [
+      // PHB 核心 13
+      'background-2014-acolyte', 'background-2014-charlatan', 'background-2014-criminal', 'background-2014-entertainer',
+      'background-2014-folk-hero', 'background-2014-guild-artisan', 'background-2014-hermit', 'background-2014-noble',
+      'background-2014-outlander', 'background-2014-sage', 'background-2014-sailor', 'background-2014-soldier',
+      'background-2014-urchin',
+      // 扩展：SCAG 12 / GGR 9 / MOT 1
+      'background-2014-city-watch', 'background-2014-clan-crafter', 'background-2014-cloistered-scholar',
+      'background-2014-courtier', 'background-2014-faction-agent', 'background-2014-far-traveler',
+      'background-2014-inheritor', 'background-2014-knight-of-the-order', 'background-2014-mercenary-veteran',
+      'background-2014-urban-bounty-hunter', 'background-2014-uthgardt-tribe-member', 'background-2014-waterdhavian-noble',
+      'background-2014-azorius-functionary', 'background-2014-boros-legionnaire', 'background-2014-dimir-operative',
+      'background-2014-golgari-agent', 'background-2014-gruul-anarch', 'background-2014-izzet-engineer',
+      'background-2014-orzhov-representative', 'background-2014-rakdos-cultist', 'background-2014-selesnya-initiate',
+      'background-2014-athlete',
+      // G 批次 G-A：GoS 4 / AI 3 / EGtW 2
+      'background-2014-marine', 'background-2014-fisher', 'background-2014-shipwright', 'background-2014-smuggler',
+      'background-2014-failed-merchant', 'background-2014-rival-intern', 'background-2014-gambler',
+      'background-2014-grinner', 'background-2014-volstrucker-agent',
+    ]) {
+      expect(baseBackgroundIds, id).toContain(id)
+    }
     expect(rulesRepository.backgrounds.filter((item) => item.parentBackgroundId)).toHaveLength(5)
   })
 
