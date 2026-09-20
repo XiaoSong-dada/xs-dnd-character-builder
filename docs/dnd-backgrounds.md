@@ -125,6 +125,92 @@ background-2014-sailor-pirate
 | 瑟雷尼亚见习生 | Selesnya Initiate | GGR | [2014 瑟雷尼亚见习生](backgrounds/5e-2014/selesnya-initiate/selesnya-initiate.md) | 公会背景，自带特征表 |
 | 运动员 | Athlete | MOT | [2014 运动员](backgrounds/5e-2014/athlete/athlete.md) | 自带特征表 |
 
+## 2014 扩展背景（G 批次补齐：整本源与单点缺失）
+
+G 批次按《5e 不全书》CHM v2026.09.13 逐条核验补齐。以下条目与上表口径一致（只记录机械索引与原创摘要）；**`index-only` 类索引条目不进入运行时仓库**，详见各节说明。
+
+| 背景 | 英文名 | 来源 | 详细资料 | 备注 |
+| --- | --- | --- | --- | --- |
+| 海军 | Marine | GoS | [2014 海军](backgrounds/5e-2014/marine/marine.md) | 盐沼怪谈完整背景 |
+| 渔民 | Fisher | GoS | [2014 渔民](backgrounds/5e-2014/fisher/fisher.md) | 同上 |
+| 船工 | Shipwright | GoS | [2014 船工](backgrounds/5e-2014/shipwright/shipwright.md) | 同上 |
+| 走私者 | Smuggler | GoS | [2014 走私者](backgrounds/5e-2014/smuggler/smuggler.md) | 同上 |
+| 失败商人 | Failed Merchant | AI | [2014 失败商人](backgrounds/5e-2014/failed-merchant/failed-merchant.md) | 艾奎兹玄 |
+| 竞争对手实习生 | Rival Intern | AI | [2014 竞争对手实习生](backgrounds/5e-2014/rival-intern/rival-intern.md) | 同上 |
+| 赌徒 | Gambler | AI | [2014 赌徒](backgrounds/5e-2014/gambler/gambler.md) | 同上 |
+| 笑面人 | Grinner | EGtW | [2014 笑面人](backgrounds/5e-2014/grinner/grinner.md) | 荒洲 |
+| 沃什塔克特工 | Volstrucker Agent | EGtW | [2014 沃什塔克特工](backgrounds/5e-2014/volstrucker-agent/volstrucker-agent.md) | 同上 |
+| 索兰尼亚骑士 | Knight of Solamnia | DSotDQ | [2014 索兰尼亚骑士](backgrounds/5e-2014/knight-of-solamnia/knight-of-solamnia.md) | 战役先决；专长授予按原书处理 |
+| 高等术法会大法师 | Mage of High Sorcery | DSotDQ | [2014 高等术法会大法师](backgrounds/5e-2014/mage-of-high-sorcery/mage-of-high-sorcery.md) | 同上 |
+| 位面哲学家 | Planar Philosopher | SatO | [2014 位面哲学家](backgrounds/5e-2014/planar-philosopher/planar-philosopher.md) | 战役先决；派系技能对照见文件 |
+| 门镇守卫 | Gate Warden | SatO | [2014 门镇守卫](backgrounds/5e-2014/gate-warden/gate-warden.md) | 战役先决 |
+| 星界浪客 | Astral Drifter | AAG | [2014 星界浪客](backgrounds/5e-2014/astral-drifter/astral-drifter.md) | 神性之遇专长按原书处理 |
+| 荒宇人 | Wildspacer | AAG | [2014 荒宇人](backgrounds/5e-2014/wildspacer/wildspacer.md) | — |
+| 精界迷失者 | Feylost | VRGtR | [2014 精界迷失者](backgrounds/5e-2014/feylost/feylost.md) | — |
+| 粹丽学生 | Prismari Student | SCC | [2014 粹丽学生](backgrounds/5e-2014/prismari-student/prismari-student.md) | 斯翠海文；专长与法术扩表按原书处理 |
+| 衡鉴学生 | Lorehold Student | SCC | [2014 衡鉴学生](backgrounds/5e-2014/lorehold-student/lorehold-student.md) | 同上 |
+| 量析学生 | Quandrix Student | SCC | [2014 量析学生](backgrounds/5e-2014/quandrix-student/quandrix-student.md) | 同上 |
+| 银毫学生 | Silverquill Student | SCC | [2014 银毫学生](backgrounds/5e-2014/silverquill-student/silverquill-student.md) | 同上 |
+| 靡华学生 | Witherbloom Student | SCC | [2014 靡华学生](backgrounds/5e-2014/witherbloom-student/witherbloom-student.md) | 同上 |
+
+说明：**析米克科学家（Simic Scientist，GGR）**未纳入——该条目在 CHM v2026.09.13 中检索不到背景页（其余拉尼卡公会背景页同样未收录），无法逐条核验，需依官方原书另行补录。
+
+## 2014 第三方合作内容背景（G 批次，来源默认关闭、需 DM 同意）
+
+| 背景 | 英文名 | 来源 | 详细资料 | 备注 |
+| --- | --- | --- | --- | --- |
+| 学苑学者 | Lyceum Scholar | 塔尔多雷 | [2014 学苑学者](backgrounds/5e-2014/lyceum-scholar/lyceum-scholar.md) | 技能三选二，按固定项登记 |
+| 扣环帮成员 | Clasp Member | 塔尔多雷 | [2014 扣环帮成员](backgrounds/5e-2014/clasp-member/clasp-member.md) | 技能二选一 |
+| 白石城步枪团 | Whitestone Rifle Corps | 塔尔多雷 | [2014 白石城步枪团](backgrounds/5e-2014/whitestone-rifle-corps/whitestone-rifle-corps.md) | 火器不在项目装备库，仅文字说明 |
+| 阿沙里人 | Ashari | 塔尔多雷 | [2014 阿沙里人](backgrounds/5e-2014/ashari/ashari.md) | 技能二选一 |
+| AHA学徒 | Apprentice of AHA | 胧忆岛 | [2014 AHA学徒](backgrounds/5e-2014/apprentice-of-aha/apprentice-of-aha.md) | 学徒派系与导师设定 |
+| 亲灵者 | Spirit Kin | 胧忆岛 | [2014 亲灵者](backgrounds/5e-2014/spirit-kin/spirit-kin.md) | 自有技能「工程」，按文字登记 |
+| 机械师 | Mechanic | 胧忆岛 | [2014 机械师](backgrounds/5e-2014/mechanic/mechanic.md) | 自有技能「回收」 |
+| 潜水学徒 | Apprentice Diver | 胧忆岛 | [2014 潜水学徒](backgrounds/5e-2014/apprentice-diver/apprentice-diver.md) | 自有工具「潜水甲」 |
+| 速递队学员 | Courier Brigade Cadet | 胧忆岛 | [2014 速递队学员](backgrounds/5e-2014/courier-brigade-cadet/courier-brigade-cadet.md) | — |
+| 魔女学徒 | Apprentice Witch | 胧忆岛 | [2014 魔女学徒](backgrounds/5e-2014/apprentice-witch/apprentice-witch.md) | — |
+| 大陆贵族 | Continental Nobility | 德拉肯海姆 | [2014 大陆贵族](backgrounds/5e-2014/continental-nobility/continental-nobility.md) | 技能四选二 |
+| 寻宝者 | Treasure Seeker | 德拉肯海姆 | [2014 寻宝者](backgrounds/5e-2014/treasure-seeker/treasure-seeker.md) | 附 1d8 秘宝表 |
+| 幸存者 | Survivor | 德拉肯海姆 | [2014 幸存者](backgrounds/5e-2014/survivor/survivor.md) | 技能四选二 |
+| 虔诚传教士 | Devoted Missionary | 德拉肯海姆 | [2014 虔诚传教士](backgrounds/5e-2014/devoted-missionary/devoted-missionary.md) | 技能四选二 |
+| 魔法血脉 | Mageborn | 德拉肯海姆 | [2014 魔法血脉](backgrounds/5e-2014/mageborn/mageborn.md) | 技能四选二 |
+
+> 胧忆岛使用来源自有技能表（工程／回收）与自有货币（金花币），项目技能表与货币表无对应条目，故对应字段留空、以文字登记；德拉肯海姆的 1d8 秘宝／传闻表写入背景描述，不建结构化表。
+
+## 索引条目（非可选背景）
+
+| 条目 | 来源 | 说明 |
+| --- | --- | --- |
+| 盐沼背景（Saltmarsh Backgrounds） | GoS | DM 工具页：为 PHB 各背景补充与盐沼镇 NPC 的联系及猩红兄弟会线索。**仅登记索引**：项目背景候选不按 `status` 过滤，入库会被当作普通可选，故不写入运行时仓库。 |
+| 英雄编年史（Heroic Chronicle） | EGtW | 叙事生成工具：提供预言、出身故事等角色背景生成表。**仅登记索引**，同上。 |
+
+## 2024 第三方出身（G 批次，来源默认关闭、需 DM 同意）
+
+第三方书采用 2024 写法（起源专长 + 技能 + 工具 + 装备 A/B），按 Q8-B 登记进 `5e-2024` 仓库。
+
+| 出身 | 英文名 | 来源 | 详细资料 | 备注 |
+| --- | --- | --- | --- | --- |
+| 失忆者 | Amnesiac | 歪曲之月 | [2024 失忆者](backgrounds/5e-2024/tp-amnesiac/tp-amnesiac.md) | 原书无属性提升行；技能／工具自选 |
+| 安魂墓卫 | Rest Warden | 歪曲之月 | [2024 安魂墓卫](backgrounds/5e-2024/tp-rest-warden/tp-rest-warden.md) | 同上 |
+| 实验体 | Experiment | 歪曲之月 | [2024 实验体](backgrounds/5e-2024/tp-experiment/tp-experiment.md) | 同上 |
+| 密教徒 | Cultist | 歪曲之月 | [2024 密教徒](backgrounds/5e-2024/tp-cultist/tp-cultist.md) | 同上 |
+| 岔路赌徒 | Crossroads Gambler | 歪曲之月 | [2024 岔路赌徒](backgrounds/5e-2024/tp-crossroads-gambler/tp-crossroads-gambler.md) | 同上 |
+| 幽灯乘客 | Ghostlight Passenger | 歪曲之月 | [2024 幽灯乘客](backgrounds/5e-2024/tp-ghostlight-passenger/tp-ghostlight-passenger.md) | 同上 |
+| 彷徨镜影 | Reflected Wanderer | 歪曲之月 | [2024 彷徨镜影](backgrounds/5e-2024/tp-reflected-wanderer/tp-reflected-wanderer.md) | 同上 |
+| 德鲁斯肯瓦尔德居民 | Druskenvald Dweller | 歪曲之月 | [2024 德鲁斯肯瓦尔德居民](backgrounds/5e-2024/tp-druskenvald-dweller/tp-druskenvald-dweller.md) | 任选起源专长 |
+| 暗夜猎手 | Night Stalker | 歪曲之月 | [2024 暗夜猎手](backgrounds/5e-2024/tp-night-stalker/tp-night-stalker.md) | 原书无属性提升行 |
+| 柳编咒匠 | Wicker Weaver | 歪曲之月 | [2024 柳编咒匠](backgrounds/5e-2024/tp-wicker-weaver/tp-wicker-weaver.md) | 同上 |
+| 狂欢者 | Reveler | 歪曲之月 | [2024 狂欢者](backgrounds/5e-2024/tp-reveler/tp-reveler.md) | 同上 |
+| 猩红求道者 | Crimson Aspirant | 歪曲之月 | [2024 猩红求道者](backgrounds/5e-2024/tp-crimson-aspirant/tp-crimson-aspirant.md) | 同上 |
+| 禁忌学者 | Scholar of the Forbidden | 歪曲之月 | [2024 禁忌学者](backgrounds/5e-2024/tp-scholar-of-the-forbidden/tp-scholar-of-the-forbidden.md) | 同上 |
+| 幻身灵旅者 | Changeling Traveler | 德拉肯海姆 | [2024 幻身灵旅者](backgrounds/5e-2024/tp-changeling-traveler/tp-changeling-traveler.md) | 三项属性候选 |
+| 马伦蒂 | Malenti | 德拉肯海姆 | [2024 马伦蒂](backgrounds/5e-2024/tp-malenti/tp-malenti.md) | 装备随吞噬对象，按原书裁定 |
+| 异端裁判官 | Inquisitor | 德拉肯海姆 | [2024 异端裁判官](backgrounds/5e-2024/tp-inquisitor/tp-inquisitor.md) | 固定专长待核验 |
+| 猎兽人 | Beast Hunter | 德拉肯海姆 | [2024 猎兽人](backgrounds/5e-2024/tp-beast-hunter/tp-beast-hunter.md) | 同上 |
+| 神话调查员 | Mythos Investigator | 火炬光下的克苏鲁 | [2024 神话调查员](backgrounds/5e-2024/tp-mythos-investigator/tp-mythos-investigator.md) | 属性任选；起源专长任选；仅 50 GP |
+
+配套第三方起源专长登记在 `app/src/rules/data/third-party-feats-2024.ts`（歪曲之月 12 + 德拉肯海姆 2）。
+
 ## 来源与版权边界
 
 - 2024 通用机制与侍僧、罪犯、学者、士兵依据 [2024 Free Rules：Character Origins](https://www.dndbeyond.com/sources/dnd/br-2024/character-origins) 与 SRD 5.2.1，可用原创表述整理到实现级。
@@ -134,8 +220,18 @@ background-2014-sailor-pirate
 - 2014 扩展背景来源索引：
   - **SCAG**：Sword Coast Adventurer’s Guide（城市守卫、氏族工匠、隐修学者、宫廷贵族、派系特工、远方旅人、遗产继承者、骑士团骑士、雇佣兵老兵、城市赏金猎人、乌斯加德部落成员、深水城贵族）。
   - **GGR**：Guildmaster’s Guide to Ravnica（9 个公会背景，含公会法术特性；Simic Scientist 析米克科学家未纳入本次精选）。
-  - **MOT**：Mythic Odysseys of Theros（运动员；勘误：MOT 无 Mariner 背景，Ghosts of Saltmarsh 的 Marine 是士兵变体）。
+  - **MOT**：Mythic Odysseys of Theros（运动员）。
+  - **GoS**：Ghosts of Saltmarsh（海军 Marine、渔民 Fisher、船工 Shipwright、走私者 Smuggler；另含「盐沼背景」DM 工具页，仅登记索引）。
+  - **AI**：Acquisitions Incorporated（失败商人、竞争对手实习生、赌徒）。
+  - **EGtW**：Explorer’s Guide to Wildemount（笑面人、沃什塔克特工；另含英雄编年史叙事工具，仅登记索引）。
+  - **DSotDQ**：Dragonlance: Shadow of the Dragon Queen（索兰尼亚骑士、高等术法会大法师；均带战役先决与组织位阶）。
+  - **SatO**：Planescape: Adventures in the Multiverse（门镇守卫、位面哲学家；均带战役先决）。
+  - **AAG**：Astral Adventurer’s Guide（星界浪客、荒宇人）。
+  - **VRGtR**：Van Richten’s Guide to Ravenloft（精界迷失者；勘误：CHM 中未收录「暗影迷失者」独立背景页）。
+  - **SCC**：Strixhaven: A Curriculum of Chaos（五学院学生）。
+  - **第三方（默认关闭、需 DM 同意）**：塔尔多雷（4）、胧忆岛（6）、德拉肯海姆（2014 写法 5 + 2024 写法 4）、歪曲之月（13）、火炬光下的克苏鲁（1）。
 - 版本勘误记录（2026-08-11 核验）：SCAG 背景为独立完整背景（非“替换 PHB 技能”的变体），特性按原书标 Variant Feature、建议特征表借用 PHB 对应背景；GGR 公会法术加入施法职业法术列表并占用职业法术位，无短休恢复机制；MOT 仅 Athlete 一个新背景。
+- 版本勘误记录（G 批次核验，2026-09-20）：**海军（Marine）是 Ghosts of Saltmarsh 的完整背景**，并非「士兵变体」，上一条旧勘误仅指同名的 Ghosts of Saltmarsh「Marine」与其它书的同名条目无关；析米克科学家因 CHM 缺页未纳入。
 
 ## 选择性加载
 
@@ -146,6 +242,9 @@ background-2014-sailor-pirate
 
 ## 核验记录
 
-- 全量核验日期：2026-07-27；2026-08-11 扩展背景考察、勘误核验。
-- 当前资料范围：16 个 `5e-2024` 出身文件、13 个 `5e-2014` 核心背景文件、5 个正式变体文件、22 个 `5e-2014` 扩展背景文件（含调查员子变体说明），以及本总索引。
-- 当前程序已注册 `5e-2014` 背景共 40 条（13 核心基础 + 5 变体 + 22 扩展，全部 `implemented` 且带 `description` 展开介绍，2026-08-11 扩展登记完成）；2024 出身资料作为未来独立规则集保留，不进入当前车卡选项。
+- 全量核验日期：2026-07-27；2026-08-11 扩展背景考察、勘误核验；**2026-09-20 G 批次补全核验**（依据《5e 不全书》CHM v2026.09.13）。
+- 当前资料范围：**34 个 `5e-2024` 出身文件**（16 核心 + 18 第三方 2024 写法）、**76 个 `5e-2014` 背景**（13 核心基础 + 5 正式变体 + 22 既有扩展 + 22 本批补齐 + 15 第三方）、**2 条索引条目**（GoS 盐沼背景 DM 工具页、EGtW 英雄编年史），以及本总索引。
+- 当前程序注册情况：`5e-2014` 背景 **76** 条（基础 71 + 变体 5，全部带 `description` 与背景特性）、`5e-2024` 背景 **34** 条（16 核心 + 18 第三方，第三方来源默认关闭）。
+- G 批次补全清单（22 条官方 + 15 条第三方 2014 写法 + 18 条第三方 2024 写法）：官方来源为 Ghosts of Saltmarsh 4、Acquisitions Incorporated 3、Explorer's Guide to Wildemount 2、龙枪 DSotDQ 2、Planescape SatO 2、Astral Adventurer's Guide 2、Van Richten's Guide to Ravenloft 1、斯翠海文 SCC 5；第三方为塔尔多雷 4、胧忆岛 6、德拉肯海姆（2014 写法 5 + 2024 写法 4）、歪曲之月 13、火炬光下的克苏鲁 1。
+- 未纳入：**析米克科学家**（GGR，CHM 无背景页，无法核验）；Plane Shift 等推广材料、怪物数据块与社区内容。
+- 2024 第三方背景口径：歪曲之月 13 条与神话调查员 1 条原书不含属性提升行，故未登记属性候选；「任选起源专长」与「原书未核验固定专长」的条目未登记固定专长 ID，均在各自主文件中标注。
