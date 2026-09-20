@@ -23,6 +23,29 @@ export const backgroundEquipmentA2024: Readonly<Record<string, readonly Equipmen
   scribe: [g('equipment-2024-calligrapher-s-supplies'), g('equipment-2024-clothes-fine'), g('equipment-2024-lamp'), g('equipment-2024-oil', 3), g('equipment-2024-parchment', 12)],
   soldier: [g('equipment-2024-spear'), g('equipment-2024-shortbow'), g('equipment-2024-ammunition', 20), g('equipment-2024-healer-s-kit'), g('equipment-2024-quiver'), g('equipment-2024-clothes-traveler-s')],
   wayfarer: [g('equipment-2024-dagger', 2), g('equipment-2024-thieves-tools'), g('equipment-2024-bedroll'), g('equipment-2024-pouch', 2), g('equipment-2024-clothes-traveler-s')],
+
+  // ===== G 批次 G-F2：第三方 2024 写法背景的装备方案 A（来源默认关闭）=====
+  // 歪曲之月（The Crooked Moon）
+  'tp-amnesiac': [g('equipment-2024-book'), g('equipment-2024-ink'), g('equipment-2024-ink-pen'), g('equipment-2024-clothes-traveler-s')],
+  'tp-rest-warden': [g('equipment-2024-mason-s-tools'), g('equipment-2024-lantern-hooded'), g('equipment-2024-oil', 3), g('equipment-2024-shovel'), g('equipment-2024-clothes-traveler-s')],
+  'tp-experiment': [g('equipment-2024-alchemist-s-supplies'), g('equipment-2024-manacles'), g('equipment-2024-perfume'), g('equipment-2024-clothes-traveler-s')],
+  'tp-cultist': [g('equipment-2024-calligrapher-s-supplies'), g('equipment-2024-costume'), g('equipment-2024-holy-symbol'), g('equipment-2024-clothes-traveler-s')],
+  'tp-crossroads-gambler': [g('equipment-2024-dice'), g('equipment-2024-clothes-fine'), g('equipment-2024-caltrops')],
+  'tp-ghostlight-passenger': [g('equipment-2024-smith-s-tools'), g('equipment-2024-lantern-bullseye'), g('equipment-2024-oil', 3), g('equipment-2024-clothes-fine')],
+  'tp-reflected-wanderer': [g('equipment-2024-disguise-kit'), g('equipment-2024-mirror'), g('equipment-2024-clothes-traveler-s')],
+  'tp-druskenvald-dweller': [g('equipment-2024-carpenter-s-tools'), g('equipment-2024-map'), g('equipment-2024-clothes-traveler-s')],
+  'tp-night-stalker': [g('equipment-2024-leatherworker-s-tools'), g('equipment-2024-book'), g('equipment-2024-lantern-hooded'), g('equipment-2024-hunting-trap'), g('equipment-2024-oil', 3), g('equipment-2024-clothes-traveler-s')],
+  'tp-wicker-weaver': [g('equipment-2024-quarterstaff'), g('equipment-2024-weaver-s-tools'), g('equipment-2024-basket'), g('equipment-2024-book'), g('equipment-2024-pot-iron'), g('equipment-2024-clothes-traveler-s')],
+  'tp-reveler': [g('equipment-2024-musical-instrument'), g('equipment-2024-ball-bearings'), g('equipment-2024-costume'), g('equipment-2024-hunting-trap'), g('equipment-2024-manacles'), g('equipment-2024-torch', 3), g('equipment-2024-clothes-traveler-s')],
+  'tp-crimson-aspirant': [g('equipment-2024-herbalism-kit'), g('equipment-2024-dagger'), g('equipment-2024-clothes-fine'), g('equipment-2024-healer-s-kit'), g('equipment-2024-vial', 3)],
+  'tp-scholar-of-the-forbidden': [g('equipment-2024-calligrapher-s-supplies'), g('equipment-2024-book'), g('equipment-2024-ink'), g('equipment-2024-ink-pen'), g('equipment-2024-lamp'), g('equipment-2024-oil', 3), g('equipment-2024-paper', 10)],
+  // 德拉肯海姆（Dungeons of Drakkenheim）
+  'tp-changeling-traveler': [g('equipment-2024-dagger', 2), g('equipment-2024-thieves-tools'), g('equipment-2024-bedroll'), g('equipment-2024-pouch', 2), g('equipment-2024-clothes-traveler-s')],
+  'tp-malenti': [g('equipment-2024-dagger'), g('equipment-2024-thieves-tools'), g('equipment-2024-clothes-traveler-s')],
+  'tp-inquisitor': [g('equipment-2024-book'), g('equipment-2024-holy-symbol'), g('equipment-2024-manacles'), g('equipment-2024-clothes-traveler-s')],
+  'tp-beast-hunter': [g('equipment-2024-clothes-traveler-s'), g('equipment-2024-healer-s-kit'), g('equipment-2024-herbalism-kit'), g('equipment-2024-dagger'), g('equipment-2024-flask')],
+  // 火炬光下的克苏鲁：原书仅给 50 GP（A 项为空，B 项即 50 GP）
+  'tp-mythos-investigator': [],
 }
 
 export const classStartingEquipment2024: readonly ClassStartingEquipmentRule[] = [

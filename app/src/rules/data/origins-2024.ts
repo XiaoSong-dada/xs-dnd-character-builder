@@ -14,7 +14,7 @@ const sourceIds = ['source-2024-phb'] as const
 const artisanToolIds = ['alchemist-s-supplies','brewer-s-supplies','calligrapher-s-supplies','carpenter-s-tools','cartographer-s-tools','cobbler-s-tools','cook-s-utensils','glassblower-s-tools','jeweler-s-tools','leatherworker-s-tools','mason-s-tools','painter-s-supplies','potter-s-tools','smith-s-tools','tinker-s-tools','weaver-s-tools','woodcarver-s-tools'].map((id) => `equipment-2024-${id}`)
 const gamingToolIds = ['dice','dragonchess','playing-cards','three-dragon-ante'].map((id) => `equipment-2024-${id}`)
 const musicalToolIds = ['bagpipes','drum','dulcimer','flute','horn','lute','lyre','pan-flute','shawm','viol'].map((id) => `equipment-2024-${id}`)
-const fixedToolIds: Readonly<Record<string, string>> = { 'tool-2024-calligrapher': 'equipment-2024-calligrapher-s-supplies', 'tool-2024-forgery': 'equipment-2024-forgery-kit', 'tool-2024-thieves-tools': 'equipment-2024-thieves-tools', 'tool-2024-carpenter': 'equipment-2024-carpenter-s-tools', 'tool-cartographer': 'equipment-2024-cartographer-s-tools', 'tool-2024-herbalism': 'equipment-2024-herbalism-kit', 'tool-2024-navigator': 'equipment-2024-navigator-s-tools' }
+const fixedToolIds: Readonly<Record<string, string>> = { 'tool-2024-calligrapher': 'equipment-2024-calligrapher-s-supplies', 'tool-2024-forgery': 'equipment-2024-forgery-kit', 'tool-2024-thieves-tools': 'equipment-2024-thieves-tools', 'tool-2024-carpenter': 'equipment-2024-carpenter-s-tools', 'tool-cartographer': 'equipment-2024-cartographer-s-tools', 'tool-2024-herbalism': 'equipment-2024-herbalism-kit', 'tool-2024-navigator': 'equipment-2024-navigator-s-tools', 'tool-2024-smith': 'equipment-2024-smith-s-tools' }
 
 const background = (
   slug: string,
@@ -28,6 +28,7 @@ const background = (
   summary: string,
   description: string,
   status: BackgroundRule['status'] = 'selectable',
+  sources: readonly string[] = sourceIds,
 ): BackgroundRule => ({
   id: `background-2024-${slug}`,
   ruleset: '5e-2024',
@@ -50,7 +51,7 @@ const background = (
   startingEquipmentGold: 50,
   recommendedClassIds: [],
   status,
-  sourceIds,
+  sourceIds: sources,
 })
 
 export const backgrounds2024: readonly BackgroundRule[] = [
@@ -118,6 +119,85 @@ export const backgrounds2024: readonly BackgroundRule[] = [
     ['2 把匕首', '盗贼工具', '赌具（任意）', '铺盖', '2 个小包', '旅行服装'],
     '漂泊在路上的过客：洞察与潜行。',
     '属性候选：敏捷、感知、魅力。起源专长：幸运。技能：洞悉、隐匿。工具：盗贼工具。', 'selectable'),
+
+  // ===== G 批次 G-F2：第三方 2024 写法背景（来源默认关闭、需 DM 同意）=====
+  // 口径说明（与需求文档 3.7 节一致）：
+  // - 原书未提供属性提升行，故 abilityChoices 留空并在描述中说明（不替原书编造属性候选）；
+  // - 原书装备为「A 或 B（50GP）」，A 项已登记进 starting-equipment-2024 的 backgroundEquipmentA2024，
+  //   B 项沿用 50 GP 口径；
+  // - 神话题查员的起源专长为「任意起源专长」（玩家自选），故 originFeatId 留空并在描述注明。
+  background('tp-amnesiac', '失忆者', 'Amnesiac', [], 'feat-2024-tp-memory-hunger', [], { id: 'equipment-2024-calligrapher-s-supplies' },
+    ['书（个人笔记）', '墨水', '墨水笔', '旅行服装'],
+    '记忆被虚空吞噬：以拼凑记忆追寻自我。',
+    '起源专长：记忆饥渴。技能：任选两项（原书提供倾向表，本项按文字登记）。工具：任选一项（按原书）。装备：A 为书、墨水、墨水笔与旅行服装；B 为 50 GP。原书此背景不提供属性提升，故未登记属性候选。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-rest-warden', '安魂墓卫', 'Rest Warden', [], 'feat-2024-tp-gravetender', ['skill-religion', 'skill-survival'], { id: 'equipment-2024-mason-s-tools' },
+    ['石匠工具', '附盖提灯', '灯油（3 瓶）', '铲子', '带厚手套与深色兜帽的旅行服装'],
+    '守墓与殡葬：最熟悉亡灵侵扰的人。',
+    '起源专长：守墓人。技能：宗教、求生。工具：石匠工具。装备：A 为石匠工具、附盖提灯、灯油、铲子与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-experiment', '实验体', 'Experiment', [], 'feat-2024-tp-the-changed', ['skill-intimidation', 'skill-medicine'], { id: 'equipment-2024-alchemist-s-supplies' },
+    ['炼金工具', '镣铐', '香水（掩盖化学残味）', '带兜帽斗篷的旅行服装'],
+    '身体改造的幸存者：扭曲既是伤痕也是武器。',
+    '起源专长：异变者。技能：威吓、医药。工具：炼金工具。装备：A 为炼金工具、镣铐、香水与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-cultist', '密教徒', 'Cultist', [], 'feat-2024-tp-coven-initiate', ['skill-arcana'], { id: 'equipment-2024-calligrapher-s-supplies' },
+    ['书法工具', '戏服（教团制服）', '圣徽（教团标志）', '旅行服装'],
+    '秘密教团成员：仪式、暗语与禁忌知识。',
+    '起源专长：教团新进者。技能：奥秘 + 任选一项（按原书密教徒倾向表，本项按文字登记）。工具：书法工具。语言：任选一项（按原书倾向表）。装备：A 为书法工具、戏服、圣徽与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-crossroads-gambler', '岔路赌徒', 'Crossroads Gambler', [], 'feat-2024-tp-fate-gambler', ['skill-deception', 'skill-insight'], { choices: true },
+    ['赌具（自选）', '高档服装', '铁蒺藜', '优质红酒（瓶装）'],
+    '以命运为注：赌桌与邪魔妖精的博弈。',
+    '起源专长：命运赌徒。技能：欺瞒、洞悉。工具：自选一种赌具。装备：A 为赌具、高档服装、铁蒺藜与瓶装红酒；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-ghostlight-passenger', '幽灯乘客', 'Ghostlight Passenger', [], 'feat-2024-tp-ghostlight-medium', ['skill-insight', 'skill-persuasion'], { id: 'tool-2024-smith' },
+    ['铁匠工具', '牛眼提灯', '灯油（3 瓶）', '高档服装'],
+    '乘过幽灯特快：与亡者对话的旅人。',
+    '起源专长：幽灯灵媒。技能：洞悉、游说。工具：铁匠工具。装备：A 为铁匠工具、牛眼提灯、灯油与高档服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-reflected-wanderer', '彷徨镜影', 'Reflected Wanderer', [], 'feat-2024-tp-shapeless-form', ['skill-deception', 'skill-investigation'], { id: 'equipment-2024-disguise-kit' },
+    ['易容工具', '镜子', '旅行服装'],
+    '倒影与阴影被剥离：形体不再稳固。',
+    '起源专长：无影之形。技能：欺瞒、调查。工具：易容工具。装备：A 为易容工具、镜子与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-druskenvald-dweller', '德鲁斯肯瓦尔德居民', 'Druskenvald Dweller', [], '', ['skill-survival'], { choices: true },
+    ['工匠工具（随所选行省）', '德鲁斯肯瓦尔德行省地图', '旅行服装'],
+    '十三个不祥行省之一的当地人：技艺与乡土。',
+    '起源专长：任选一项起源专长（按原书）。技能：求生 + 任选一项（按原书行省亲和表，本项按文字登记）。工具：任选一项（按原书行省亲和表）。装备：A 为所选工匠工具、行省地图与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-night-stalker', '暗夜猎手', 'Night Stalker', [], 'feat-2024-tp-hunt-hunter', ['skill-stealth'], { id: 'equipment-2024-leatherworker-s-tools' },
+    ['皮匠工具', '书（一种生物类型）', '附盖提灯', '捕猎陷阱', '灯油（3 瓶）', '旅行服装'],
+    '从猎物变成猎人：追猎怪物的经验。',
+    '起源专长：猎兽猎手。技能：隐匿 + 任选一项（奥秘／历史／宗教／自然）。工具：皮匠工具。装备：A 为皮匠工具、书、附盖提灯、捕猎陷阱、灯油与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-wicker-weaver', '柳编咒匠', 'Wicker Weaver', [], 'feat-2024-tp-wicker-weaver', ['skill-insight', 'skill-nature'], { id: 'equipment-2024-weaver-s-tools' },
+    ['长棍', '织布工具', '篮子（干芦苇）', '书（德鲁伊学识）', '铁锅', '旅行服装'],
+    '柳编仪式：治疗与诅咒皆可编织其中。',
+    '起源专长：咒饰编织者。技能：洞悉、自然。工具：织布工具。语言：木族语。装备：A 为长棍、织布工具、篮子、书、铁锅与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-reveler', '狂欢者', 'Reveler', [], 'feat-2024-tp-revel-fool', ['skill-performance', 'skill-stealth'], { choices: true },
+    ['乐器（自选）', '滚珠', '戏服（带笑脸面具）', '捕猎陷阱', '镣铐', '火把（3 根）', '旅行服装'],
+    '随愚人之王的狂欢队伍巡游过的经历。',
+    '起源专长：狂欢愚者。技能：表演、隐匿。工具：自选一种乐器。语言：任选一项（原书推荐深渊语）。装备：A 为乐器、滚珠、戏服、捕猎陷阱、镣铐、火把与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-crimson-aspirant', '猩红求道者', 'Crimson Aspirant', [], 'feat-2024-tp-crimson-ritualist', ['skill-arcana', 'skill-medicine'], { id: 'equipment-2024-herbalism-kit' },
+    ['草药工具', '匕首', '高档服装', '医疗包', '小瓶（3 个）'],
+    '研究血脉之力：维系生命与锚定灵魂。',
+    '起源专长：猩红祭仪师。技能：奥秘、医药。工具：草药工具。装备：A 为草药工具、匕首、高档服装、医疗包与小瓶；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-scholar-of-the-forbidden', '禁忌学者', 'Scholar of the Forbidden', [], 'feat-2024-tp-dread-whisper', ['skill-arcana', 'skill-intimidation'], { id: 'equipment-2024-calligrapher-s-supplies' },
+    ['书法工具', '书（奥秘主题）', '墨水', '墨水笔', '油灯', '灯油（3 瓶）', '纸张（10 页）'],
+    '研读亵渎铭文：攫取禁忌知识与力量。',
+    '起源专长：恐惧秘言。技能：奥秘、威吓。工具：书法工具。语言：任选一项（原书推荐深潜语）。装备：A 为书法工具、书、墨水、墨水笔、油灯、灯油与纸张；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+  background('tp-changeling-traveler', '幻身灵旅者', 'Changeling Traveler', ['dex', 'wis', 'cha'], 'feat-2024-tp-focused-mask', ['skill-deception', 'skill-sleight-of-hand'], { id: 'equipment-2024-thieves-tools' },
+    ['2 把匕首', '盗贼工具', '铺盖', '2 个小包', '易纺服装'],
+    '漂泊城市之间：以伪装与机敏自保。',
+    '属性候选：敏捷、感知、魅力。起源专长：专注面具。技能：欺瞒、巧手。工具：盗贼工具。装备：A 为 2 匕首、盗贼工具、铺盖、2 小包与旅行服装；B 为 50 GP。', 'selectable', ['source-2024-tp-drakkenheim']),
+  background('tp-malenti', '马伦蒂', 'Malenti', ['dex', 'int', 'cha'], 'feat-2024-tp-aquatic-adaptation', ['skill-deception', 'skill-insight'], { choices: true },
+    ['旅行服装'],
+    '生于永恒辖领：吞噬他人以替代其身份。',
+    '属性候选：敏捷、智力、魅力。起源专长：水生适性。技能：欺瞒、洞悉。工具：盗贼工具／制毒工具／文书伪造工具自选其一。装备：A 为「所吞噬之人相关背景的装备」（按原书；本项目按旅行服装登记，具体由 DM 裁定）；B 为 50 GP。', 'selectable', ['source-2024-tp-drakkenheim']),
+  background('tp-inquisitor', '异端裁判官', 'Inquisitor', ['str', 'wis', 'cha'], '', ['skill-insight', 'skill-religion'], { id: 'equipment-2024-calligrapher-s-supplies' },
+    ['书（祈祷书）', '圣徽', '镣铐', '旅行者服装', '酷刑工具'],
+    '教会的律法执行者：审问与调查。',
+    '起源专长：按原书（本批未登记固定专长 ID，需按原书处理）。技能：洞悉、宗教。工具：书法工具。装备：A 为祈祷书、圣徽、镣铐、旅行者服装与酷刑工具；B 为 50 GP。', 'selectable', ['source-2024-tp-drakkenheim']),
+  background('tp-beast-hunter', '猎兽人', 'Beast Hunter', ['str', 'dex', 'wis'], '', ['skill-survival'], { id: 'equipment-2024-herbalism-kit' },
+    ['旅行者服装', '医疗包', '草药工具', '匕首', '照明弹', '烧瓶'],
+    '为复仇与正义追猎天灾野兽。',
+    '起源专长：按原书（本批未登记固定专长 ID，需按原书处理）。技能：生存 + 任选一项（按原书）。工具：草药工具。装备：A 为旅行者服装、医疗包、草药工具、匕首、照明弹与烧瓶；B 为 50 GP。', 'selectable', ['source-2024-tp-drakkenheim']),
+  background('tp-mythos-investigator', '神话调查员', 'Mythos Investigator', [], '', [], { choices: true },
+    ['50 GP'],
+    '与克苏鲁神话接触后选择直面它的人。',
+    '属性：任选（将一项 +2、另一项 +1；或三项各 +1，均不超过 20）——原书为自由分配，本项目按文字登记、不固定三项候选。起源专长：任选一项起源专长（玩家自选）。技能：任选两项。工具：任选一项。装备：50 GP。', 'selectable', ['source-2024-tp-cthulhu-torchlight']),
 ]
 
 const species = (

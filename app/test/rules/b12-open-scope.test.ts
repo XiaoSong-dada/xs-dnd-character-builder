@@ -58,11 +58,15 @@ describe('B12-01 2024 开放集合与依赖闭合', () => {
     }
   })
 
-  it('16 背景、10 物种与 8 血统的引用全部闭合', () => {
+  it('16 核心背景、10 物种与 8 血统的引用全部闭合', () => {
     const backgrounds = repository.backgrounds.filter((item) => item.ruleset === '5e-2024')
-    expect(backgrounds).toHaveLength(16)
+    // 背景总数随批次增长（G 批次新增第三方背景），核心 16 条必须齐备。
+    expect(backgrounds.filter((item) => item.sourceIds.includes('source-2024-phb'))).toHaveLength(16)
     for (const background of backgrounds) {
-      expect(repository.getFeat(background.originFeatId ?? ''), `${background.id}:origin-feat`).toBeDefined()
+      // 固定起源专长为可选项（第三方背景含「任选起源专长」），声明时须可解析。
+      if (background.originFeatId) {
+        expect(repository.getFeat(background.originFeatId), `${background.id}:origin-feat`).toBeDefined()
+      }
       for (const skillId of background.skillIds) {
         expect(repository.getOption(skillId), `${background.id}:${skillId}`).toBeDefined()
       }

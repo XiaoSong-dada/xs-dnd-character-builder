@@ -21,8 +21,11 @@ function issueIds(draft: CharacterDraft): readonly string[] {
 }
 
 describe('2024 起源目录', () => {
-  it('背景 16 条、主物种 10 条、血统／传承 8 条', () => {
-    expect(backgrounds2024).toHaveLength(16)
+  it('核心背景 16 条齐备、主物种 10 条、血统／传承 8 条', () => {
+    // 背景总数随批次增长（G 批次新增 18 条第三方背景），按「核心 16 条齐备」断言。
+    const coreBackgrounds = backgrounds2024.filter((background) => background.sourceIds.includes('source-2024-phb'))
+    expect(coreBackgrounds).toHaveLength(16)
+    expect(backgrounds2024.length).toBeGreaterThanOrEqual(16)
     expect(races2024.filter((race) => !race.parentRaceId)).toHaveLength(10)
     expect(races2024.filter((race) => race.parentRaceId)).toHaveLength(8)
     expect(races2024.every((race) => race.ruleset === '5e-2024')).toBe(true)
@@ -31,13 +34,29 @@ describe('2024 起源目录', () => {
     expect(races2024.every((race) => race.id.startsWith('species-2024-'))).toBe(true)
   })
 
-  it('背景引用完整：属性候选 3 项、起源专长存在、技能有效', () => {
+  it('背景引用完整：属性候选 3 项、起源专长存在、技能与装备有效', () => {
     for (const background of backgrounds2024) {
-      expect(background.abilityChoices).toHaveLength(3)
-      expect(background.originFeatId && featIds.has(background.originFeatId)).toBe(true)
-      expect(background.skillIds.length).toBe(2)
+      // PHB 2024 核心背景固定为三项属性候选、两项技能与固定起源专长；
+      // 第三方背景按原书可有不同结构（如不含属性提升行或技能自选），故只对核心断言。
+      const isCore = background.sourceIds.includes('source-2024-phb')
+      if (isCore) {
+        expect(background.abilityChoices, background.id).toHaveLength(3)
+        expect(background.skillIds.length, background.id).toBe(2)
+      }
+      // 若声明了固定起源专长，必须指向已登记专长（含第三方专长，故按仓库解析）
+      if (background.originFeatId) {
+        expect(rulesRepository2024.getFeat(background.originFeatId), background.id).toBeDefined()
+      }
       expect(background.languageChoices).toBe(0)
       expect(background.startingEquipmentGold).toBe(50)
+      // 技能引用必须为合法技能 ID（第三方背景含技能自选，可能为空）
+      for (const skillId of background.skillIds) {
+        expect(skillId.startsWith('skill-'), background.id).toBe(true)
+      }
+      // 工具引用必须能在 2024 装备库解析（第三方背景含工具自选，toolIds 可能为空）
+      for (const toolId of background.toolIds) {
+        expect(rulesRepository2024.getEquipment(toolId), `${background.id}:${toolId}`).toBeDefined()
+      }
     }
   })
 
