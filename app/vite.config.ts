@@ -9,6 +9,7 @@ import { defineConfig } from 'vitest/config'
 import type { ViteSSGContext } from 'vite-ssg'
 
 import { appBuildIdPlugin, resolveAppBuildId } from './scripts/app-build-id'
+import { normalizeDeployBase, resolveDeployUrl, templatesDenylistPattern } from './scripts/deploy-base'
 
 // 本期预渲染清单（docs/seo-requirements.md §P1-1）：
 // 根路径（重定向后渲染车卡页）+ 辅助车卡 + 赛博骰娘 + 404（命中 catch-all 路由）
@@ -52,11 +53,17 @@ function replaceTag(html: string, pattern: RegExp, replacement: string): string 
  * 预渲染每页 HTML 后，把模板中的站点级 title/description/canonical 替换为
  * 当前路由 meta 对应的值（客户端导航时的 head 更新由 src/router/seo.ts 负责）。
  */
-function injectRouteSeo(route: string, renderedHtml: string, appCtx: ViteSSGContext, siteUrl: string | undefined): string {
+function injectRouteSeo(
+  route: string,
+  renderedHtml: string,
+  appCtx: ViteSSGContext,
+  siteUrl: string | undefined,
+  base: string,
+): string {
   const meta = appCtx.router.currentRoute.value.meta
   const title = typeof meta.title === 'string' ? meta.title : DEFAULT_TITLE
   const description = typeof meta.description === 'string' ? meta.description : undefined
-  const canonical = siteUrl ? `${siteUrl}${route === '/' ? '' : route}` : undefined
+  const canonical = siteUrl ? resolveDeployUrl(siteUrl, base, route) : undefined
 
   let html = replaceTag(
     renderedHtml,
@@ -89,8 +96,15 @@ function injectRouteSeo(route: string, renderedHtml: string, appCtx: ViteSSGCont
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const siteUrl = env.VITE_SITE_URL?.trim().replace(/\/+$/, '') || undefined
+  /**
+   * 部署基路径：子路径部署时设为 `/xs-dnd-character-builder/` 这类前缀（见 scripts/deploy-base.ts）。
+   * 产物内所有资源引用、路由 href、SW 注册、模板与 version.json 都由它推导，
+   * 反向代理只需把该前缀原样映射到 dist 目录，不需要改写 HTML。
+   */
+  const base = normalizeDeployBase(env.VITE_BASE_URL)
 
   return {
+    base,
     define: {
       __APP_VERSION__: JSON.stringify(APP_VERSION),
       __APP_BUILD_ID__: JSON.stringify(APP_BUILD_ID.id),
@@ -123,25 +137,27 @@ export default defineConfig(({ mode }) => {
         filename: 'sw.js',
         manifestFilename: 'manifest.webmanifest',
         manifest: {
-          id: '/',
+          // 清单里的每一条路径都必须带部署前缀：`scope`/`start_url` 决定安装后的作用域，
+          // 写成根路径会让子路径部署的 PWA 与站点根抢作用域。
+          id: base,
           name: '小宋DND快速车卡',
           short_name: 'DND车卡',
           description: '面向新玩家的 D&D 5e 快速车卡工具：分步创建角色、自动计算与规则校验，支持离线使用。',
           lang: 'zh-CN',
-          start_url: '/',
-          scope: '/',
+          start_url: base,
+          scope: base,
           display: 'standalone',
           theme_color: '#8f2d2d',
           background_color: '#f6f0e4',
           categories: ['games', 'utilities'],
           icons: [
-            { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-            { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-            { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+            { src: `${base}icons/icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: `${base}icons/icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: `${base}icons/icon-maskable-512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           ],
           shortcuts: [
-            { name: '辅助车卡', short_name: '车卡', url: '/character-builder' },
-            { name: '赛博骰娘', short_name: '骰娘', url: '/dice' },
+            { name: '辅助车卡', short_name: '车卡', url: `${base}character-builder` },
+            { name: '赛博骰娘', short_name: '骰娘', url: `${base}dice` },
           ],
         },
         workbox: {
@@ -149,10 +165,10 @@ export default defineConfig(({ mode }) => {
           globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
           // og-image.png 约 2.3 MB，仅用于社交分享、客户端永不请求，排除出预缓存。
           globIgnores: ['**/og-image.png'],
-          // 离线导航回退到预渲染产出的 index.html；
+          // 离线导航回退到预渲染产出的 index.html（相对 SW 作用域，即部署前缀）；
           // templates 目录必须排除，否则直接打开 PDF 链接会被顶成 HTML。
           navigateFallback: 'index.html',
-          navigateFallbackDenylist: [/^\/templates\//],
+          navigateFallbackDenylist: [templatesDenylistPattern(base)],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: false,
@@ -184,7 +200,7 @@ export default defineConfig(({ mode }) => {
     ssgOptions: {
       dirStyle: 'nested',
       includedRoutes: () => INCLUDED_ROUTES,
-      onPageRendered: (route, renderedHtml, appCtx) => injectRouteSeo(route, renderedHtml, appCtx, siteUrl),
+      onPageRendered: (route, renderedHtml, appCtx) => injectRouteSeo(route, renderedHtml, appCtx, siteUrl, base),
     },
     test: {
       environment: 'happy-dom',

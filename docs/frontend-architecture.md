@@ -641,7 +641,7 @@ src/styles/index.scss  -> @use src/styles/flex.scss
 - 页面组件直接消费 `rules/data/*`（`TimelineStep`、`CharacterSheetStep`、`FeatChoicePanel`、`SourcesStep`），符合「views -> rules」权限；如需收紧可改经 `repository` 聚合。
 - ~~`config/setting.ts` 为空占位文件~~ 已不成立：v1.8.0 起导出运行开关 `isDev`，v1.9.0 起再导出构建指纹 `appBuildId`／`appBuildIdDirty`，成为除 `site.ts` 之外唯一读取构建期常量的入口。
 - `assets/icons/DND.png` 无任何 import 引用；它仅作为 PWA 图标（`public/icons/*.png`）的一次性派生源图，派生命令见 `docs/需求文档/PWA离线与可安装-更新计划.md`。
-- 构建期脚本位于 `app/scripts/`（不属于 `src/` 拓扑）：`build-item-catalog.mjs` 等为独立 Node 脚本，`app-build-id.ts` 额外被 `vite.config.ts` 导入，因此纳入 `tsconfig.node.json` 的类型检查；它依赖 node 内置模块，运行时代码不得反向导入。
+- 构建期脚本位于 `app/scripts/`（不属于 `src/` 拓扑）：`build-item-catalog.mjs` 等为独立 Node 脚本，`app-build-id.ts`（构建标识对账）与 `deploy-base.ts`（`VITE_BASE_URL` 归一化，供 `vite.config.ts` 推导 base、PWA 清单前缀与 `templates/` 排除规则）额外被 `vite.config.ts` 导入，因此纳入 `tsconfig.node.json` 的类型检查；它们依赖 node 内置模块，运行时代码不得反向导入。运行时的部署前缀只经 `src/config/site.ts` 的 `baseUrl`（= `import.meta.env.BASE_URL`）读取。
 - `src/utils` 当前仅包含无状态的 `format-spell-label.ts`；`src/api`、`src/constants`、顶层 `src/hooks` 当前不存在，只有出现对应真实职责时才创建。
 
 ## 9. 变更复核
