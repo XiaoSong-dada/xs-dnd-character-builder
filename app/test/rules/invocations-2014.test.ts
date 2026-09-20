@@ -179,9 +179,26 @@ describe('2014 魔能祈唤分级检查点', () => {
     expect(invocationIdsAt(2)).toHaveLength(24)
   })
 
-  it('未标记的检查点保持默认紧凑卡（其它职业不受影响）', () => {
+  it('批次 A 起静态选项检查点默认可展开，能力提升与动态候选池不标注', () => {
     const wizardTimeline = buildTimeline('class-2014-wizard', 20, { enabledSourceIds: [...ALL_SOURCES] })
-    expect(wizardTimeline.every((checkpoint) => checkpoint.optionPresentation === undefined)).toBe(true)
+    // 静态选项（技能／子职）：统一可展开
+    const staticTargets = wizardTimeline.filter((item) => ['skills', 'subclass'].includes(item.kind))
+    expect(staticTargets.length).toBeGreaterThan(0)
+    for (const checkpoint of staticTargets) {
+      expect(checkpoint.optionIds.length, checkpoint.id).toBeGreaterThan(0)
+      expect(checkpoint.optionPresentation, checkpoint.id).toBe('expandable')
+    }
+    // 能力提升／专长检查点由 FeatChoicePanel 渲染，不进入该分支
+    for (const checkpoint of wizardTimeline.filter((item) => item.kind === 'ability-improvement')) {
+      expect(checkpoint.optionPresentation, checkpoint.id).toBeUndefined()
+    }
+    // 动态候选池（法术精通、招牌法术）保持各自渲染路径
+    const dynamicTargets = wizardTimeline.filter((item) => item.candidateKind)
+    expect(dynamicTargets.length).toBeGreaterThan(0)
+    for (const checkpoint of dynamicTargets) {
+      expect(checkpoint.optionIds, checkpoint.id).toEqual([])
+      expect(checkpoint.optionPresentation, checkpoint.id).toBeUndefined()
+    }
   })
 
   it('跨等级重复选择同一祈唤被拦截', () => {

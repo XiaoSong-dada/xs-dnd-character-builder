@@ -42,7 +42,7 @@ export const halfCasterClasses2014: readonly ClassRule[] = [
     checkpoints: [
       { id: 'paladin-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项圣武士技能', description: '从圣武士技能列表中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-athletics', 'skill-insight', 'skill-intimidation', 'skill-medicine', 'skill-persuasion', 'skill-religion'] },
       { id: 'paladin-2014-style-2', level: 2, step: 'timeline', kind: 'fighting-style', title: '选择战斗风格', description: '选择圣武士的战斗路线。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['style-defense', 'style-dueling', 'style-great-weapon', 'style-protection'] },
-      { id: 'paladin-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择神圣誓言', description: '誓言在3级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: paladinSubclassIds },
+      { id: 'paladin-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择神圣誓言', description: '誓言在3级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: paladinSubclassIds, optionPresentation: 'expandable' as const },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'paladin')),
     ],
     spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'cha', startsAtLevel: 2, preparedFormula: 'ability-plus-half-level', maxSpellLevelByClassLevel: halfCasterMaximumSpellLevels, slotsByClassLevel: HALF_CASTER_SPELL_SLOTS, classSpellIds: paladinSpellIds },
@@ -64,7 +64,7 @@ export const halfCasterClasses2014: readonly ClassRule[] = [
       { id: 'ranger-2014-enemy-1', level: 1, step: 'timeline', kind: 'class-choice', title: '选择宿敌', description: '选择一种经常追踪与研究的敌人类型。', required: true, minSelections: 1, maxSelections: 1, optionIds: favoredEnemyIds },
       { id: 'ranger-2014-terrain-1', level: 1, step: 'timeline', kind: 'class-choice', title: '选择偏好地形', description: '选择一种自然探索者熟悉地形。', required: true, minSelections: 1, maxSelections: 1, optionIds: terrainIds },
       { id: 'ranger-2014-style-2', level: 2, step: 'timeline', kind: 'fighting-style', title: '选择战斗风格', description: '选择游侠的战斗路线。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['style-archery', 'style-defense', 'style-dueling', 'style-two-weapon'] },
-      { id: 'ranger-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择游侠范型', description: '范型在3级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: rangerSubclassIds },
+      { id: 'ranger-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择游侠范型', description: '范型在3级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: rangerSubclassIds, optionPresentation: 'expandable' as const },
       { id: 'ranger-2014-enemy-6', level: 6, step: 'timeline', kind: 'class-choice', title: '新增宿敌', description: '选择另一种宿敌。', required: true, minSelections: 1, maxSelections: 1, optionIds: favoredEnemyIds },
       { id: 'ranger-2014-terrain-6', level: 6, step: 'timeline', kind: 'class-choice', title: '新增偏好地形', description: '选择另一种偏好地形。', required: true, minSelections: 1, maxSelections: 1, optionIds: terrainIds },
       { id: 'ranger-2014-terrain-10', level: 10, step: 'timeline', kind: 'class-choice', title: '新增偏好地形', description: '选择第三种偏好地形。', required: true, minSelections: 1, maxSelections: 1, optionIds: terrainIds },

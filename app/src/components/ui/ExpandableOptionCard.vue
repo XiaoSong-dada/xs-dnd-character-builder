@@ -210,7 +210,10 @@ onBeforeUnmount(() => {
 
   &__arrow {
     display: grid;
-    width: 2.4rem;
+    // 触控目标：项目要求主要点击目标 ≥ 44px（docs/rules.md「UI 与移动端约定」）
+    width: 2.75rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
     flex: none;
     place-items: center;
     border: 0;

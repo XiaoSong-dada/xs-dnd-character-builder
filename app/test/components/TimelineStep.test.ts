@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import TimelineStep from '@/views/character-builder/components/TimelineStep.vue'
 import type { CharacterDraft } from '@/types/character'
@@ -53,33 +53,48 @@ function mountStep(draft: CharacterDraft) {
   })
 }
 
+/** 可展开候选卡（静态选项：技能、专精、超魔、子职、子职特性等）。 */
+function staticCard(wrapper: ReturnType<typeof mountStep>, name: string) {
+  return wrapper.findAll('.expandable-option-card').find((card) => card.text().includes(name))
+}
+
+/** 紧凑候选卡（仅动态法术候选池仍使用）。 */
 function optionCard(wrapper: ReturnType<typeof mountStep>, name: string) {
   return wrapper.findAll('.option-card').find((card) => card.text().includes(name))
 }
 
+/** 点击可展开候选卡完成选择：需跳过 250ms 双击判定窗口（配合假定时器使用）。 */
+async function selectStaticCard(wrapper: ReturnType<typeof mountStep>, name: string) {
+  await staticCard(wrapper, name)?.find('.expandable-option-card__main').trigger('click')
+  await vi.advanceTimersByTimeAsync(260)
+}
+
 describe('TimelineStep 专精选择', () => {
+  // 可展开卡单击主体＝选择，但有 250ms 双击判定窗口，故用假定时器推进提交。
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
   it('锁定未熟练的技能并显示提示，熟练技能与背景技能保持可选', () => {
     const wrapper = mountStep(bardDraft())
 
     // 欺瞒不在职业技能（洞悉/历史/游说）也不在背景技能（体操/表演）中
-    const deception = optionCard(wrapper, '欺瞒')
-    expect(deception?.attributes('disabled')).toBeDefined()
+    const deception = staticCard(wrapper, '欺瞒')
+    expect(deception?.find('.expandable-option-card__main').attributes('disabled')).toBeDefined()
     expect(deception?.text()).toContain('需先获得该技能熟练')
 
     // 洞悉是1级职业技能，可专精
-    const insight = optionCard(wrapper, '洞悉')
-    expect(insight?.attributes('disabled')).toBeUndefined()
+    const insight = staticCard(wrapper, '洞悉')
+    expect(insight?.find('.expandable-option-card__main').attributes('disabled')).toBeUndefined()
 
     // 体操是背景技能，可专精
-    const acrobatics = optionCard(wrapper, '体操')
-    expect(acrobatics?.attributes('disabled')).toBeUndefined()
+    const acrobatics = staticCard(wrapper, '体操')
+    expect(acrobatics?.find('.expandable-option-card__main').attributes('disabled')).toBeUndefined()
   })
 
   it('点击未熟练技能不会触发选择事件', async () => {
     const wrapper = mountStep(bardDraft())
 
-    const deception = optionCard(wrapper, '欺瞒')
-    await deception?.trigger('click')
+    await selectStaticCard(wrapper, '欺瞒')
 
     expect(wrapper.emitted('select')).toBeUndefined()
   })
@@ -87,8 +102,7 @@ describe('TimelineStep 专精选择', () => {
   it('点击已熟练技能可以加入专精选择', async () => {
     const wrapper = mountStep(bardDraft())
 
-    const insight = optionCard(wrapper, '洞悉')
-    await insight?.trigger('click')
+    await selectStaticCard(wrapper, '洞悉')
 
     expect(wrapper.emitted('select')?.[0]).toEqual(['bard-2014-expertise-3', ['skill-insight']])
   })
@@ -98,14 +112,37 @@ describe('TimelineStep 专精选择', () => {
     d.selections.push({ checkpointId: 'bard-2014-expertise-3', optionIds: ['skill-deception'], confirmedAt: '' })
     const wrapper = mountStep(d)
 
-    const deception = optionCard(wrapper, '欺瞒')
-    await deception?.trigger('click')
+    await selectStaticCard(wrapper, '欺瞒')
 
     expect(wrapper.emitted('select')?.[0]).toEqual(['bard-2014-expertise-3', []])
   })
 })
 
+describe('TimelineStep 静态选项可展开', () => {
+  it('技能候选卡默认折叠，可展开查看详情与来源', async () => {
+    const wrapper = mountStep(bardDraft())
+    const card = staticCard(wrapper, '洞悉')
+    expect(card).toBeDefined()
+    expect(card?.find('.expandable-option-card__growth').exists()).toBe(false)
+
+    await card?.find('.expandable-option-card__arrow').trigger('click')
+
+    const detail = card?.find('.expandable-option-card__growth')
+    expect(detail?.exists()).toBe(true)
+    expect(detail?.text()).toContain('感知相关技能')
+    expect(detail?.text()).toContain('来源：Basic Rules')
+  })
+
+  it('专精检查点不再渲染紧凑卡', () => {
+    const wrapper = mountStep(bardDraft())
+    expect(wrapper.findAll('.option-card').length).toBe(0)
+  })
+})
+
 describe('TimelineStep 超魔选择', () => {
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
   function sorcererDraft(targetLevel: number, selections: CharacterDraft['selections'] = []): CharacterDraft {
     const draft = bardDraft()
     return {
@@ -130,8 +167,7 @@ describe('TimelineStep 超魔选择', () => {
     expect(wrapper.text()).toContain('谨慎法术')
     expect(wrapper.text()).toContain('孪生法术')
 
-    const careful = optionCard(wrapper, '谨慎法术')
-    await careful?.trigger('click')
+    await selectStaticCard(wrapper, '谨慎法术')
     expect(wrapper.emitted('select')?.[0]).toEqual(['sorcerer-2014-metamagic-3', ['metamagic-careful']])
 
     // 模拟父组件写入首次选择后，再次点击应追加（多选规格 max 2）
@@ -139,8 +175,7 @@ describe('TimelineStep 超魔选择', () => {
     draft.selections = [...draft.selections, { checkpointId: 'sorcerer-2014-metamagic-3', optionIds: ['metamagic-careful'], confirmedAt: '' }]
     await wrapper.setProps({ selections: draft.selections })
 
-    const quickened = optionCard(wrapper, '迅捷法术')
-    await quickened?.trigger('click')
+    await selectStaticCard(wrapper, '迅捷法术')
     expect(wrapper.emitted('select')?.[1]).toEqual(['sorcerer-2014-metamagic-3', ['metamagic-careful', 'metamagic-quickened']])
   })
 
@@ -153,13 +188,57 @@ describe('TimelineStep 超魔选择', () => {
     ])
     const wrapper = mountStep(draft)
 
-    const careful = optionCard(wrapper, '谨慎法术')
-    expect(careful?.attributes('disabled')).toBeDefined()
+    const careful = staticCard(wrapper, '谨慎法术')
+    expect(careful?.find('.expandable-option-card__main').attributes('disabled')).toBeDefined()
     expect(careful?.text()).toContain('已在同一选项组的其他等级掌握')
 
-    const subtle = optionCard(wrapper, '隐蔽法术')
-    await subtle?.trigger('click')
+    await selectStaticCard(wrapper, '隐蔽法术')
     expect(wrapper.emitted('select')?.[0]).toEqual(['sorcerer-2014-metamagic-10', ['metamagic-subtle']])
+  })
+})
+
+describe('TimelineStep 子职与子职特性选项', () => {
+  /** 展开指定检查点（时间线默认只展开首个未完成检查点）。 */
+  async function openCheckpoint(wrapper: ReturnType<typeof mountStep>, titleFragment: string) {
+    const article = wrapper.findAll('article').find((item) => item.find('.timeline-step__header').text().includes(titleFragment))
+    await article?.find('.timeline-step__header').trigger('click')
+    return article
+  }
+
+  it('子职候选使用可展开卡片，展开后显示特性、先决条件与来源', async () => {
+    const draft = bardDraft()
+    draft.selections = [] as CharacterDraft['selections']
+    const wrapper = mountStep(draft)
+    await openCheckpoint(wrapper, '选择吟游诗人学院')
+
+    const card = staticCard(wrapper, '逸闻学院')
+    expect(card).toBeDefined()
+    await card?.find('.expandable-option-card__arrow').trigger('click')
+
+    const detail = card?.find('.expandable-option-card__growth')
+    expect(detail?.text()).toContain('特性：')
+    expect(detail?.text()).toContain('先决条件：吟游诗人 · 3 级可选')
+    expect(detail?.text()).toContain('来源：College of Lore · PHB')
+  })
+
+  it('子职特性选项使用可展开卡片（战斗大师战技）', async () => {
+    const draft = bardDraft()
+    draft.classId = 'class-2014-fighter'
+    draft.targetLevel = 3
+    draft.selections = [
+      { checkpointId: 'fighter-2014-skills-1', optionIds: ['skill-athletics', 'skill-perception'], confirmedAt: '' },
+      { checkpointId: 'fighter-2014-subclass-3', optionIds: ['subclass-2014-fighter-battle-master'], confirmedAt: '' },
+    ]
+    draft.subclassId = 'subclass-2014-fighter-battle-master'
+    const wrapper = mountStep(draft)
+    const article = await openCheckpoint(wrapper, '选择卓越战技')
+
+    // 限定在候选区（同一屏还有只读「子职特性」区块使用同名组件）
+    const card = article?.findAll('.timeline-step__options .expandable-option-card').find((item) => item.text().includes('精准攻击'))
+    expect(card).toBeDefined()
+    await card?.find('.expandable-option-card__arrow').trigger('click')
+    expect(card?.find('.expandable-option-card__growth').exists()).toBe(true)
+    expect(card?.find('.expandable-option-card__growth').text()).toContain('优势骰')
   })
 })
 

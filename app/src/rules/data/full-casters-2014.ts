@@ -57,7 +57,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
       { id: 'bard-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择3项任意技能', description: '2014吟游诗人可从任意技能中选择3项。', required: true, minSelections: 3, maxSelections: 3, optionIds: allSkillIds },
       { id: 'bard-2014-tool-1', level: 1, step: 'timeline', kind: 'class-choice', title: '选择一种乐器熟练', description: '选择一种乐器熟练。', required: true, minSelections: 1, maxSelections: 1, optionIds: ['tool-musical-instrument'] },
       { id: 'bard-2014-expertise-3', level: 3, step: 'timeline', kind: 'expertise', title: '选择2项专精', description: '选择已熟练的技能或乐器。', required: true, minSelections: 2, maxSelections: 2, optionIds: allSkillIds },
-      { id: 'bard-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择吟游诗人学院', description: '学院在3级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: bardSubclassIds },
+      { id: 'bard-2014-subclass-3', level: 3, step: 'timeline', kind: 'subclass', title: '选择吟游诗人学院', description: '学院在3级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: bardSubclassIds, optionPresentation: 'expandable' as const },
       { id: 'bard-2014-expertise-10', level: 10, step: 'timeline', kind: 'expertise', title: '选择2项专精（强化）', description: '再选择 2 项已熟练的技能或乐器获得专精。', required: true, minSelections: 2, maxSelections: 2, optionIds: allSkillIds },
       { id: 'bard-2014-magical-secrets-10', level: 10, step: 'timeline', kind: 'class-choice', title: '选择2个魔法奥秘法术', description: '从任意职业的法术列表中选择 2 个法术加入已知法术（环级不高于当前可用最高环）。', required: true, minSelections: 2, maxSelections: 2, optionIds: [], candidateKind: 'all-spells' },
       { id: 'bard-2014-magical-secrets-14', level: 14, step: 'timeline', kind: 'class-choice', title: '再选2个魔法奥秘法术', description: '再次从任意职业的法术列表中选择 2 个法术加入已知法术。', required: true, minSelections: 2, maxSelections: 2, optionIds: [], candidateKind: 'all-spells' },
@@ -70,7 +70,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
     id: 'class-2014-cleric', ruleset: '5e-2014', name: '牧师', englishName: 'Cleric', summary: '2014版神术施法者：领域、引导神力与准备法术。', hitDie: 8, primaryAbilities: ['wis'], playStyleTags: ['spellcaster', 'support', 'durable'], savingThrowAbilities: ['wis', 'cha'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'cleric-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项牧师技能', description: '从牧师技能列表中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-history', 'skill-insight', 'skill-medicine', 'skill-persuasion', 'skill-religion'] },
-      { id: 'cleric-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择神圣领域', description: '领域在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: clericSubclassIds },
+      { id: 'cleric-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择神圣领域', description: '领域在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: clericSubclassIds, optionPresentation: 'expandable' as const },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'cleric')),
     ],
     spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'wis', startsAtLevel: 1, preparedFormula: 'ability-plus-level', cantripsKnownByLevel: clericCantrips, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-cleric') },
@@ -79,7 +79,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
     id: 'class-2014-druid', ruleset: '5e-2014', name: '德鲁伊', englishName: 'Druid', summary: '2014版自然施法者：荒野形态与准备法术。', hitDie: 8, primaryAbilities: ['wis'], playStyleTags: ['spellcaster', 'control', 'support', 'durable'], savingThrowAbilities: ['int', 'wis'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'druid-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项德鲁伊技能', description: '从德鲁伊技能列表中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-animal-handling', 'skill-insight', 'skill-medicine', 'skill-nature', 'skill-perception', 'skill-religion', 'skill-survival'] },
-      { id: 'druid-2014-subclass-2', level: 2, step: 'timeline', kind: 'subclass', title: '选择德鲁伊结社', description: '结社在2级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: druidSubclassIds },
+      { id: 'druid-2014-subclass-2', level: 2, step: 'timeline', kind: 'subclass', title: '选择德鲁伊结社', description: '结社在2级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: druidSubclassIds, optionPresentation: 'expandable' as const },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'druid')),
     ],
     spellcasting: { ruleset: '5e-2014', mode: 'prepared', ability: 'wis', startsAtLevel: 1, preparedFormula: 'ability-plus-level', cantripsKnownByLevel: druidCantrips, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-druid') },
@@ -88,7 +88,7 @@ export const fullCasterClasses2014: readonly ClassRule[] = [
     id: 'class-2014-sorcerer', ruleset: '5e-2014', name: '术士', englishName: 'Sorcerer', summary: '2014版天生施法者：术法点、超魔法与已知法术。', hitDie: 6, primaryAbilities: ['cha'], playStyleTags: ['spellcaster', 'striker', 'control'], savingThrowAbilities: ['con', 'cha'], status: 'implemented', sourceIds: basicSource,
     checkpoints: [
       { id: 'sorcerer-2014-skills-1', level: 1, step: 'timeline', kind: 'skills', title: '选择2项术士技能', description: '从术士技能列表中选择。', required: true, minSelections: 2, maxSelections: 2, optionIds: ['skill-arcana', 'skill-deception', 'skill-insight', 'skill-intimidation', 'skill-persuasion', 'skill-religion'] },
-      { id: 'sorcerer-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择术法起源', description: '起源在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: sorcererSubclassIds },
+      { id: 'sorcerer-2014-subclass-1', level: 1, step: 'timeline', kind: 'subclass', title: '选择术法起源', description: '起源在1级确定。', required: true, minSelections: 1, maxSelections: 1, optionIds: sorcererSubclassIds, optionPresentation: 'expandable' as const },
       { id: 'sorcerer-2014-metamagic-3', level: 3, step: 'timeline', kind: 'class-choice', title: '选择2项超魔法', description: '选择 2 项超魔法选项，施法时消耗术法点改变法术效果。', required: true, minSelections: 2, maxSelections: 2, optionIds: METAMAGIC_OPTION_IDS },
       { id: 'sorcerer-2014-metamagic-10', level: 10, step: 'timeline', kind: 'class-choice', title: '再选1项超魔法', description: '再选择 1 项超魔法选项（共 3 项），不可与已选重复。', required: true, minSelections: 1, maxSelections: 1, optionIds: METAMAGIC_OPTION_IDS },
       { id: 'sorcerer-2014-metamagic-17', level: 17, step: 'timeline', kind: 'class-choice', title: '再选1项超魔法', description: '再选择 1 项超魔法选项（共 4 项），不可与已选重复。', required: true, minSelections: 1, maxSelections: 1, optionIds: METAMAGIC_OPTION_IDS },

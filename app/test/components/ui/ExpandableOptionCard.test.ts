@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -94,6 +96,20 @@ describe('ExpandableOptionCard', () => {
     await arrow.trigger('click')
     const panel = wrapper.find('.expandable-option-card__growth')
     expect(panel.attributes('id')).toBe(arrow.attributes('aria-controls'))
+  })
+
+  it('箭头触控目标不小于 44px（docs/rules.md 主要点击目标约定）', () => {
+    // 组件样式为 scoped SCSS，jsdom 不做布局计算，故以源码契约断言固定尺寸
+    const source = readFileSync(resolve(process.cwd(), 'src/components/ui/ExpandableOptionCard.vue'), 'utf8')
+    const arrowBlock = source.slice(source.indexOf('&__arrow {'))
+    const block = arrowBlock.slice(0, arrowBlock.indexOf('}'))
+    const width = block.match(/min-width:\s*([\d.]+)rem/)
+    const height = block.match(/min-height:\s*([\d.]+)rem/)
+    expect(width, '箭头需声明最小宽度').toBeTruthy()
+    expect(height, '箭头需声明最小高度').toBeTruthy()
+    // 根字号 16px：2.75rem = 44px
+    expect(Number(width?.[1]) * 16).toBeGreaterThanOrEqual(44)
+    expect(Number(height?.[1]) * 16).toBeGreaterThanOrEqual(44)
   })
 
   it('suffix 操作位位于主按钮外部（避免非法 button 嵌套）且可垂直居中', async () => {

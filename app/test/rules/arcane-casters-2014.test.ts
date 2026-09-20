@@ -110,7 +110,8 @@ describe('2014 wizard and warlock spellcasting', () => {
       enabledSourceIds: ['phb-2014-index', 'xgte-2017-index', 'tcoe-2020-index'],
     })
     const expandableIds = timeline.filter((checkpoint) => checkpoint.optionPresentation === 'expandable').map((checkpoint) => checkpoint.id)
-    expect(expandableIds).toEqual([
+    // 宗主选择 + 7 个祈唤档位 + 魔契恩泽必须可展开（批次 A 起技能等静态选项也一并可展开）
+    for (const id of [
       'warlock-2014-subclass-1',
       'warlock-2014-invocations-2',
       'warlock-2014-pact-3',
@@ -120,7 +121,9 @@ describe('2014 wizard and warlock spellcasting', () => {
       'warlock-2014-invocations-12',
       'warlock-2014-invocations-15',
       'warlock-2014-invocations-18',
-    ])
+    ]) {
+      expect(expandableIds, id).toContain(id)
+    }
 
     // 角色卡「已选选项详情」依赖特性的 checkpointIds 关联
     expect(classFeatures2014.find((feature) => feature.id === 'warlock-2014-class-eldritch-invocations')?.checkpointIds).toEqual(INVOCATION_2014_CHECKPOINT_IDS)

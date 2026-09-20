@@ -2,7 +2,7 @@ import { getRulesRepository } from '@/rules/repositories'
 import { FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
 import { getFeatPool } from '@/rules/feats'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { ChoiceCheckpoint, RulesRepository } from '@/types/rules'
+import type { CheckpointKind, ChoiceCheckpoint, RulesRepository } from '@/types/rules'
 import type { ChoiceSelection, RulesetId } from '@/types/character'
 import { SKILL_IDS } from '@/rules/derive'
 
@@ -30,6 +30,21 @@ export interface TimelineContext {
   /** 已选物种：用于展开物种授予的起源专长（如人类 Versatile）。 */
   readonly raceId?: string
 }
+
+/**
+ * 静态选项检查点的默认展示形式：这些检查点的候选卡统一用可展开卡片
+ * （`ExpandableOptionCard`）渲染，折叠只显示名称与一行摘要，展开后读详情。
+ * 数据层显式声明 `optionPresentation` 时优先，便于将来单独回退为 `card`。
+ */
+const EXPANDABLE_CHECKPOINT_KINDS = new Set<CheckpointKind>([
+  'subclass',
+  'subclass-feature',
+  'skills',
+  'class-choice',
+  'expertise',
+  'fighting-style',
+  'infusion',
+])
 
 const subclassTitles: Readonly<Record<string, string>> = {
   'class-2014-artificer': '选择奇械师专职',
@@ -84,6 +99,18 @@ function buildSubclassCheckpoint(
     minSelections: 1,
     maxSelections: 1,
     optionIds,
+  }
+}
+
+/**
+ * 归一化静态选项检查点的展示形式：目标种类且候选非空时默认标为 `expandable`；
+ * 数据层已显式声明者优先。动态候选池（optionIds 为空）不标注，仍走各自渲染路径。
+ */
+function withOptionPresentation(checkpoint: ChoiceCheckpoint): ChoiceCheckpoint {
+  return {
+    ...checkpoint,
+    optionPresentation: checkpoint.optionPresentation
+      ?? (EXPANDABLE_CHECKPOINT_KINDS.has(checkpoint.kind) && checkpoint.optionIds.length > 0 ? 'expandable' : undefined),
   }
 }
 
@@ -246,7 +273,7 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
     ...(context.subclassId ? buildSubclassFeatureCheckpoints(context.subclassId, repository, context.enabledSourceIds) : []),
   ]
     .filter((checkpoint) => checkpoint.level <= targetLevel)
-    .map((checkpoint) => ({
+    .map((checkpoint) => withOptionPresentation({
       ...checkpoint,
       uniqueGroup: inferredUniqueGroup(checkpoint),
       optionIds: checkpoint.optionIds.filter((id) => {
@@ -254,6 +281,6 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
         return !option || context.enabledSourceIds === undefined || isSourceEnabled(option.sourceIds, context.enabledSourceIds, repository)
       }),
     }))
-  return [...baseTimeline, ...buildFeatChoiceCheckpoints(baseTimeline, context.selections ?? [], repository)]
+  return [...baseTimeline, ...buildFeatChoiceCheckpoints(baseTimeline, context.selections ?? [], repository).map(withOptionPresentation)]
     .sort((left, right) => left.level - right.level)
 }

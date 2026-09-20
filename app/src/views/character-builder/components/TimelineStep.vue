@@ -13,7 +13,7 @@ import { formatResourceText } from '@/rules/resources'
 import { buildTimeline } from '@/rules/timeline'
 import { getCheckpointCandidates } from '@/rules/spellcasting'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
-import type { ChoiceCheckpoint, ClassResource, SpellRule, SubclassFeature } from '@/types/rules'
+import type { ChoiceCheckpoint, ClassResource, SpellRule, SubclassFeature, SubclassRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{
@@ -59,6 +59,20 @@ const featureByCheckpointId = computed(() => {
 })
 function featureOptionLabel(checkpointId: string, optionId: string): string | undefined {
   return featureByCheckpointId.value.get(checkpointId)?.optionLabels?.[optionId]
+}
+
+/** 子职候选展开区的「特性」行：让展开区提供折叠摘要之外的信息（逐级特性名）。 */
+function subclassFeatureText(subclass: SubclassRule | undefined): string {
+  if (!subclass?.features.length) return ''
+  return subclass.features.map((feature) => `${feature.level} 级 ${feature.name}`).join('、')
+}
+
+/** 候选卡摘要：优先规则仓库条目描述，其次子职摘要，最后回退特性级标签（无则空串走组件占位提示）。 */
+function optionSummary(checkpoint: ChoiceCheckpoint, optionId: string): string {
+  return rulesRepository.value.getOption(optionId)?.description
+    ?? (checkpoint.kind === 'subclass' ? rulesRepository.value.getSubclass(optionId)?.summary : undefined)
+    ?? featureOptionLabel(checkpoint.id, optionId)
+    ?? ''
 }
 
 function selectedIds(checkpointId: string): readonly string[] {
@@ -126,30 +140,35 @@ function optionDisabledReason(checkpointId: string, optionId: string): string {
   return ''
 }
 
-/** 展开区的先决条件行：由选项字段生成（等级／魔契／法术），无先决时返回 undefined。 */
-function optionPrerequisiteText(optionId: string): string | undefined {
+/** 展开区的先决条件行：由选项字段生成（等级／魔契／法术），子职选择另补「所属职业 · 选择等级」。 */
+function optionPrerequisiteText(checkpoint: ChoiceCheckpoint, optionId: string): string | undefined {
   const option = rulesRepository.value.getOption(optionId)
-  if (!option) return undefined
   const parts: string[] = []
-  if (option.minimumLevel) parts.push(`${option.minimumLevel} 级`)
-  for (const requiredId of option.requiredOptionIds ?? []) {
+  const subclass = checkpoint.kind === 'subclass' ? rulesRepository.value.getSubclass(optionId) : undefined
+  if (subclass) {
+    parts.push(`${rulesRepository.value.getClass(subclass.classId)?.name ?? '本职业'} · ${subclass.selectionLevel} 级可选`)
+  }
+  if (option?.minimumLevel) parts.push(`${option.minimumLevel} 级`)
+  for (const requiredId of option?.requiredOptionIds ?? []) {
     parts.push(rulesRepository.value.getOption(requiredId)?.name ?? requiredId)
   }
-  if (option.requiredSpellIds?.length) {
+  if (option?.requiredSpellIds?.length) {
     const spellNames = option.requiredSpellIds.map((id) => rulesRepository.value.getSpell(id)?.name ?? id)
     parts.push(`已习得法术 ${spellNames.join('、')}`)
   }
   return parts.length ? parts.join('，') : undefined
 }
 
-/** 展开区的来源行：英文名 + 来源简写（如 “The Fiend · PHB”）。 */
+/** 展开区的来源行：英文名 + 来源简写（如 “The Fiend · PHB”）；子职选择回退子职条目自身。 */
 function optionSourceText(optionId: string): string | undefined {
   const option = rulesRepository.value.getOption(optionId)
-  if (!option) return undefined
-  const titles = option.sourceIds
+  const subclass = option ? undefined : rulesRepository.value.getSubclass(optionId)
+  const englishName = option?.englishName ?? subclass?.englishName
+  const sourceIds = option?.sourceIds ?? subclass?.sourceIds ?? []
+  const titles = sourceIds
     .map((id) => rulesRepository.value.sources.find((source) => source.id === id)?.shortTitle ?? id)
     .join('／')
-  return [option.englishName, titles].filter(Boolean).join(' · ') || undefined
+  return [englishName, titles].filter(Boolean).join(' · ') || undefined
 }
 
 function toggle(checkpointId: string, optionId: string, max: number): void {
@@ -266,13 +285,13 @@ function spellCandidateDescription(spell: SpellRule): string {
           @select="saveSpecialSelection(checkpoint.id, $event)"
         />
         <ListShell
-          v-else-if="checkpoint.optionIds.length && checkpoint.optionPresentation === 'expandable'"
+          v-else-if="checkpoint.optionPresentation === 'expandable'"
         >
           <ExpandableOptionCard
             v-for="optionId in checkpoint.optionIds"
             :key="optionId"
             :title="optionTitle(checkpoint.id, optionId)"
-            :description="rulesRepository.getOption(optionId)?.description"
+            :description="optionSummary(checkpoint, optionId)"
             expanded-label="详情"
             :state="optionState(checkpoint.id, optionId)"
             :disabled-reason="optionDisabledReason(checkpoint.id, optionId)"
@@ -284,8 +303,9 @@ function spellCandidateDescription(spell: SpellRule): string {
             </template>
             <template #expanded>
               <div class="timeline-step__option-detail">
-                <p>{{ rulesRepository.getOption(optionId)?.description }}</p>
-                <p v-if="optionPrerequisiteText(optionId)">先决条件：{{ optionPrerequisiteText(optionId) }}</p>
+                <p>{{ optionSummary(checkpoint, optionId) }}</p>
+                <p v-if="subclassFeatureText(rulesRepository.getSubclass(optionId))">特性：{{ subclassFeatureText(rulesRepository.getSubclass(optionId)) }}</p>
+                <p v-if="optionPrerequisiteText(checkpoint, optionId)">先决条件：{{ optionPrerequisiteText(checkpoint, optionId) }}</p>
                 <p v-if="optionSourceText(optionId)">来源：{{ optionSourceText(optionId) }}</p>
               </div>
             </template>
