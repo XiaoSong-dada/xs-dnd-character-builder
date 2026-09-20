@@ -5,9 +5,14 @@ import type { RuleOption } from '@/types/rules'
  *
  * 覆盖全部 `requiresChoice` 子职特性的选项：战斗大师战技 11 项（ID 收录于
  * `SUBCLASS_CHOICE_OPTION_IDS`，选项数据由 `fighter.ts` 既有注册提供，效果摘要已升级核验）+
- * 其余 18 个特性（图腾精魂、猎人猎物、龙族祖先、野兽形态、巨人力量、
+ * 其余特性（图腾精魂、猎人猎物、龙族祖先、野兽形态、巨人力量、
  * 风暴光环、精魂图腾、星体形态、奥术射击、符文雕刻者、元素纪律、
- * 剑圣之道、月之化身、巨灵容器等）的选项 72 项（去重后）。
+ * 剑圣之道、月之化身、巨灵容器、装甲型号、魔能炮台型号等）的选项 77 项（去重后）。
+ *
+ * 装甲型号 2 项与魔能炮台型号 3 项由批次 B（D2）补齐：此前 `subclass-features-2014.ts`
+ * 仅有 `optionLabels` 名称，选项无法被 `getOption` 解析（展开区只能显示占位提示）；
+ * 现按《5e 不全书》CHM v2026.09.13 章节 1273／1274 登记名称与原创摘要，
+ * 译名以 CHM 为准（装甲师第二型号为「渗透者」，原标签「潜行者」同步更正）。
  *
  * 每条登记稳定 ID、中英文名与原创中文摘要（效果要点转述，遵循版权约定）；
  * `status: 'implemented'` 表示名称与摘要已核验，选项本身不参与自动计算，
@@ -111,6 +116,12 @@ export const SUBCLASS_CHOICE_OPTION_IDS: readonly string[] = [
   'genie-vessel-djinni',
   'genie-vessel-efreeti',
   'genie-vessel-marid',
+  // 装甲型号 / 魔能炮台型号（批次 B／D2 补齐）
+  'artificer-armor-model-guardian',
+  'artificer-armor-model-infiltrator',
+  'artificer-cannon-flamethrower',
+  'artificer-cannon-force-ballista',
+  'artificer-cannon-protector',
 ]
 
 const phb = ['phb-2014-index'] as const
@@ -219,4 +230,15 @@ export const subclassChoiceOptions2014: readonly RuleOption[] = [
   { id: 'genie-vessel-djinni', name: '风巨灵', englishName: 'Djinni', description: '选择风巨灵宗主：获得可栖身的魔法容器与对应元素亲和，短休期间可进入容器休整；造成伤害时可附加雷鸣类元素效果（次数与恢复按规则）。', status: 'implemented', sourceIds: tcoe },
   { id: 'genie-vessel-efreeti', name: '火巨灵', englishName: 'Efreeti', description: '选择火巨灵宗主：获得可栖身的魔法容器与对应元素亲和，短休期间可进入容器休整；造成伤害时可附加火焰类元素效果（次数与恢复按规则）。', status: 'implemented', sourceIds: tcoe },
   { id: 'genie-vessel-marid', name: '水巨灵', englishName: 'Marid', description: '选择水巨灵宗主：获得可栖身的魔法容器与对应元素亲和，短休期间可进入容器休整；造成伤害时可附加冷冻类元素效果（次数与恢复按规则）。', status: 'implemented', sourceIds: tcoe },
+
+  // ============ 装甲型号（TCoE，装甲师） ============
+  // 第3级奥能装甲可选型号之一，短休或长休后可用铁匠工具更换；两种型号均附带智力施法的特殊武器。
+  { id: 'artificer-armor-model-guardian', name: '守护者', englishName: 'Guardian', description: '装甲偏向正面作战：附带雷霆战拳（简易近战武器，命中 1d8 雷鸣伤害，被击中者对除你外目标的攻击具有劣势）；每回合可用附赠动作获得等于奇械师等级的临时生命值，次数等于熟练加值、长休后恢复。', status: 'implemented', sourceIds: tcoe },
+  { id: 'artificer-armor-model-infiltrator', name: '渗透者', englishName: 'Infiltrator', description: '装甲偏向隐秘机动：附带闪电发射器（简易远程武器，常规射程 90 尺、最大 300 尺，命中 1d6 闪电伤害，每回合一次可额外造成 1d6）；步行速度 +5 尺，敏捷（隐匿）检定具有优势。', status: 'implemented', sourceIds: tcoe },
+
+  // ============ 魔能炮台型号（TCoE，魔炮师） ============
+  // 第3级创造魔能炮台时选择型号；每回合可用附赠动作激活 60 尺内的炮台。
+  { id: 'artificer-cannon-flamethrower', name: '投火机', englishName: 'Flamethrower', description: '炮台向指定方向的 15 尺锥形范围喷射火焰：范围内生物敏捷豁免失败受 2d8 火焰伤害（成功减半），并可点燃区域内未被穿戴或携带的易燃物。', status: 'implemented', sourceIds: tcoe },
+  { id: 'artificer-cannon-force-ballista', name: '力场弩炮', englishName: 'Force Ballista', description: '以炮台为源点对 120 尺内目标进行一次远程法术攻击：命中造成 2d8 力场伤害，若目标是生物则将其推离炮台 5 尺。', status: 'implemented', sourceIds: tcoe },
+  { id: 'artificer-cannon-protector', name: '防御者', englishName: 'Protector', description: '炮台释放正能量：给予自身与 10 尺内每个你选择的生物 1d8＋智力调整值的临时生命值（最低 +1）。', status: 'implemented', sourceIds: tcoe },
 ]
