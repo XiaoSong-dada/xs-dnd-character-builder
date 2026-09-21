@@ -157,3 +157,42 @@ describe('戏法候选保留已选项与就地取消（v1.9.1 追加）', () => 
     expect(removed.cantripIds).not.toContain(addedId)
   })
 })
+
+describe('法术列表排序与默认页签（v1.9.1 追加）', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  const candidateCards = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.findAll('.list-shell').at(-1)!.findAll('.expandable-option-card')
+  const titleOf = (card: { find: (selector: string) => { text: () => string } }) =>
+    card.find('.expandable-option-card__title-line strong').text()
+  const levelOf = (name: string): number => {
+    const found = rulesRepository.spells.find((item) => item.name === name)
+    if (!found) throw new Error(`missing spell name ${name}`)
+    return found.level
+  }
+  const activeTab = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.findAll('.ui-tabs button').find((button) => button.classes().includes('ui-tabs__tab--active'))
+
+  it('切换任务后环级页签默认「全部」，并展示多个环级的有序候选', async () => {
+    const wrapper = mount(SpellcastingStep, { props: { draft: clericDraft(3) } })
+    await wrapper.get('[data-task-id="spells"]').trigger('click')
+
+    expect(activeTab(wrapper)?.text()).toBe('全部')
+    const levels = candidateCards(wrapper).map((card) => levelOf(titleOf(card)))
+    expect(new Set(levels).size).toBeGreaterThan(1)
+    expect(levels).toEqual([...levels].sort((left, right) => left - right))
+  })
+
+  it('点击单环级页签仍可过滤', async () => {
+    const wrapper = mount(SpellcastingStep, { props: { draft: clericDraft(3) } })
+    await wrapper.get('[data-task-id="spells"]').trigger('click')
+    const levelOneTab = wrapper.findAll('.ui-tabs button').find((button) => button.text() === '1环')!
+    await levelOneTab.trigger('click')
+
+    expect(activeTab(wrapper)?.text()).toBe('1环')
+    const levels = candidateCards(wrapper).map((card) => levelOf(titleOf(card)))
+    expect(levels.length).toBeGreaterThan(0)
+    expect(levels.every((level) => level === 1)).toBe(true)
+  })
+})

@@ -12,6 +12,7 @@ import {
   getMaximumSpellLevel,
   getSpellbookExtraCandidates,
   getSpellSlots,
+  sortSpellsByLevel,
   usesPreparedSelection,
 } from '@/rules/spellcasting'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
@@ -73,7 +74,8 @@ const taskSelectedIds = computed<readonly string[]>(() => {
     default: return selectedSpellIds.value
   }
 })
-const taskCandidates = computed<readonly SpellRule[]>(() => {
+/** 当前任务的候选来源（未排序）：数据登记顺序会因扩表池成块追加而打断环位。 */
+const taskCandidatePool = computed<readonly SpellRule[]>(() => {
   switch (flow.activeTaskId.value) {
     case 'cantrips': return availableSpells.value.filter((spell) => spell.level === 0)
     case 'spellbook': return availableSpells.value.filter((spell) => spell.level > 0)
@@ -84,14 +86,16 @@ const taskCandidates = computed<readonly SpellRule[]>(() => {
     default: return []
   }
 })
+/** 候选池展示顺序：环级升序（戏法最先），同环内按规则表登记顺序（v1.9.1 追加，与角色卡同源）。 */
+const taskCandidates = computed<readonly SpellRule[]>(() => sortSpellsByLevel(taskCandidatePool.value, props.draft.ruleset))
 watch(() => flow.activeTaskId.value, () => {
   search.value = ''
   sourceFilter.value = 'all'
   schoolFilter.value = 'all'
   ritualFilter.value = 'all'
   concentrationFilter.value = 'all'
-  const firstCandidate = taskCandidates.value[0]
-  levelFilter.value = firstCandidate ? String(firstCandidate.level) : 'all'
+  // 默认展示全部环级（v1.9.1 追加）：不再落在首个候选的环级，便于通览有序列表。
+  levelFilter.value = 'all'
 }, { immediate: true, flush: 'post' })
 const levelTabs = computed(() => {
   const levels = [...new Set(taskCandidates.value.map((spell) => spell.level))].sort((left, right) => left - right)
@@ -119,7 +123,10 @@ const filteredCandidates = computed(() => {
     return true
   })
 })
-const selectedSpells = computed(() => taskSelectedIds.value.map((id) => repository.value.getSpell(id)).filter((spell): spell is SpellRule => Boolean(spell)))
+const selectedSpells = computed(() => sortSpellsByLevel(
+  taskSelectedIds.value.map((id) => repository.value.getSpell(id)).filter((spell): spell is SpellRule => Boolean(spell)),
+  props.draft.ruleset,
+))
 const activeRequiredCount = computed(() => flow.activeTaskId.value === 'cantrips' ? requiredCantripCount.value
   : flow.activeTaskId.value === 'spellbook' ? requiredSpellbookCount.value
     : flow.activeTaskId.value === 'spellbook-extra' ? spellbookExtraAllowance.value

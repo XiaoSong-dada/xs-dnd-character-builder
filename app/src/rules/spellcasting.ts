@@ -227,12 +227,23 @@ function getSpellOrderIndex(ruleset: RulesetId): ReadonlyMap<string, number> {
 }
 
 /**
+ * 法术排序比较器：环级升序，同环内按规则表登记顺序；不在规则表内的法术（防御性分支）排到末尾，
+ * 并因 `sort` 稳定而保留其输入相对顺序。`groupSpellsByLevel` 与 `sortSpellsByLevel` 共用这一份规则，
+ * 避免展示顺序再次分叉（角色卡与第 8 步同源）。
+ */
+function compareSpellsByLevel(order: ReadonlyMap<string, number>): (left: SpellRule, right: SpellRule) => number {
+  return (left, right) =>
+    left.level - right.level
+    || (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+}
+
+/**
  * 法术列表统一排序与分组（U01）：环级升序，同环内按规则表登记顺序。
  * 输入数组可能是玩家点选顺序或「候选池 + 人工添加」的拼接结果，不能直接当作展示顺序，
  * 因此这里显式按规则表重排；草稿存储顺序不受影响。
  */
 export function groupSpellsByLevel(spells: readonly SpellRule[], ruleset: RulesetId): readonly SpellLevelGroup[] {
-  const order = getSpellOrderIndex(ruleset)
+  const compare = compareSpellsByLevel(getSpellOrderIndex(ruleset))
   const byLevel = new Map<number, SpellRule[]>()
   for (const spell of spells) {
     const list = byLevel.get(spell.level) ?? []
@@ -241,12 +252,17 @@ export function groupSpellsByLevel(spells: readonly SpellRule[], ruleset: Rulese
   }
   return [...byLevel.entries()]
     .sort(([left], [right]) => left - right)
-    .map(([level, group]) => ({
-      level,
-      // 不在规则表内的法术（防御性分支）排到组内末尾；sort 稳定，保留其输入相对顺序。
-      spells: [...group].sort((left, right) =>
-        (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER)),
-    }))
+    .map(([level, group]) => ({ level, spells: [...group].sort(compare) }))
+}
+
+/**
+ * 扁平的法术列表排序（v1.9.1 追加）：环级升序（戏法 0 环最先），同环内按规则表登记顺序。
+ * 与 `groupSpellsByLevel` 共用比较规则与登记下标缓存，供第 8 步候选列表与「当前已选」区块使用；
+ * 只重排展示顺序，不修改入参、不改变草稿存储顺序。
+ */
+export function sortSpellsByLevel(spells: readonly SpellRule[], ruleset: RulesetId): readonly SpellRule[] {
+  if (spells.length === 0) return []
+  return [...spells].sort(compareSpellsByLevel(getSpellOrderIndex(ruleset)))
 }
 
 /**

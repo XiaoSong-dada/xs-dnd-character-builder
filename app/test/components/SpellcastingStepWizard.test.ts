@@ -181,10 +181,10 @@ describe('法术候选保留已选项与就地取消（v1.9.1 追加）', () => 
     card.find('.expandable-option-card__title-line strong').text()
   const badgeOf = (card: { find: (selector: string) => { text: () => string } }) =>
     card.find('.expandable-option-card__badges').text()
-  /** 任务切换后环级页签默认落在首个候选的环级，这里切到「全部」以便查找任意环级法术。 */
-  const showAllLevels = async (wrapper: ReturnType<typeof mount>) => {
-    const tab = wrapper.findAll('.ui-tabs button').find((button) => button.text() === '全部')!
-    await tab.trigger('click')
+  /** 任务切换后环级页签默认选中「全部」（v1.9.1 追加），因此任意环级的候选都直接可见。 */
+  const expectAllLevels = (wrapper: ReturnType<typeof mount>) => {
+    const active = wrapper.findAll('.ui-tabs button').find((button) => button.classes().includes('ui-tabs__tab--active'))
+    expect(active?.text()).toBe('全部')
   }
 
   it('准备法术任务：已准备法术留在候选中并可就地取消', async () => {
@@ -205,7 +205,7 @@ describe('法术候选保留已选项与就地取消（v1.9.1 追加）', () => 
   it('写入法术书任务：抄录法术在候选中标注不可移除且点击不产生变更', async () => {
     const wrapper = mount(SpellcastingStep, { props: { draft: wizardDraft() } })
     expect(wrapper.get('[data-task-id="spellbook"]').attributes('aria-selected')).toBe('true')
-    await showAllLevels(wrapper)
+    expectAllLevels(wrapper)
 
     const scorching = rulesRepository.getSpell('spell-2014-scorching-ray')!.name
     const card = candidateCards(wrapper).find((item) => titleOf(item) === scorching)
@@ -221,7 +221,7 @@ describe('法术候选保留已选项与就地取消（v1.9.1 追加）', () => 
     let draft = evoker2024Draft()
     const wrapper = mount(SpellcastingStep, { props: { draft } })
     await wrapper.get('[data-task-id="spellbook-extra"]').trigger('click')
-    await showAllLevels(wrapper)
+    expectAllLevels(wrapper)
 
     const burningHands = rulesRepository2024.getSpell('spell-2024-burning-hands')!.name
     const inBook = candidateCards(wrapper).find((item) => titleOf(item) === burningHands)
@@ -247,5 +247,48 @@ describe('法术候选保留已选项与就地取消（v1.9.1 追加）', () => 
     const removed = wrapper.emitted('change')?.at(-1)?.[0] as SpellSelections
     expect(removed.spellbookExtraSpellIds).toEqual([])
     expect(removed.spellbookSpellIds).not.toContain('spell-2024-scorching-ray')
+  })
+})
+
+describe('法术列表按环级升序（v1.9.1 追加）', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  /** 候选列表是最后一个 ListShell（「当前已选」区块存在时排在其后）。 */
+  const candidateCards = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.findAll('.list-shell').at(-1)!.findAll('.expandable-option-card')
+  const titleOf = (card: { find: (selector: string) => { text: () => string } }) =>
+    card.find('.expandable-option-card__title-line strong').text()
+  const levelOf = (name: string): number => {
+    const found = rulesRepository.spells.find((item) => item.name === name)
+    if (!found) throw new Error(`missing spell name ${name}`)
+    return found.level
+  }
+  const levelsOf = (cards: ReturnType<typeof candidateCards>) => cards.map((card) => levelOf(titleOf(card)))
+
+  it('候选列表按环级升序排列（扩表法术归位，「全部」页签下不再成块）', () => {
+    const wrapper = mount(SpellcastingStep, { props: { draft: wizardDraft() } })
+    const levels = levelsOf(candidateCards(wrapper))
+    expect(levels.length).toBeGreaterThan(5)
+    expect(levels).toEqual([...levels].sort((left, right) => left - right))
+  })
+
+  it('「当前已选」区块按环级升序，且不重排草稿存储顺序', async () => {
+    const base = wizardDraft()
+    const preparedSpellIds = ['spell-2014-scorching-ray', 'spell-2014-magic-missile', 'spell-2014-shield']
+    const draft: CharacterDraft = { ...base, spellSelections: { ...base.spellSelections, preparedSpellIds } }
+    const wrapper = mount(SpellcastingStep, { props: { draft } })
+    await wrapper.get('[data-task-id="spells"]').trigger('click')
+
+    const selectedCards = wrapper.findAll('.list-shell')[0]!.findAll('.expandable-option-card')
+    expect(selectedCards).toHaveLength(3)
+    const levels = levelsOf(selectedCards)
+    // 乱序草稿（2 环在前）渲染为环级升序：1 环在 2 环之前
+    expect(levels).toEqual([...levels].sort((left, right) => left - right))
+    expect(levels[0]).toBe(1)
+    expect(levels[levels.length - 1]).toBe(2)
+    // 排序只作用于展示：草稿顺序不变、未产生变更事件
+    expect(draft.spellSelections.preparedSpellIds).toEqual(preparedSpellIds)
+    expect(wrapper.emitted('change')).toBeUndefined()
   })
 })
