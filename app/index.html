@@ -3,8 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="/src/assets/icons/DND.png" />
-    <link rel="apple-touch-icon" href="/src/assets/icons/DND.png" />
+    <!-- 标签页图标用 192px 派生产物：直接引用 1024px 源图会让浏览器每次访问都下载约 1.6 MB -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <!-- PWA 图标由 public/icons/ 提供（由 src/assets/icons/DND.png 派生，生成命令见 docs/需求文档/PWA离线与可安装-更新计划.md） -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <!-- iOS 15.4 以下不读取 manifest 的 display，用该 meta 兜底进入独立窗口 -->
+    <meta name="apple-mobile-web-app-title" content="DND车卡" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>小宋DND快速车卡</title>
     <!-- SEO 站点级元数据：VITE_* 变量在 Vite 构建期替换；本地未配置时保持字面量，不影响功能 -->
     <meta name="description" content="面向新玩家的 D&D 5e 快速车卡工具：分步创建角色、自动计算属性与技能、规则校验，还有 3D 赛博骰娘在线掷骰。" />

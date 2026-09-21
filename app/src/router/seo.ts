@@ -1,4 +1,4 @@
-import { siteConfig } from '@/config/site'
+import { baseUrl, siteConfig } from '@/config/site'
 import type { RouteMeta } from 'vue-router'
 
 export const DEFAULT_TITLE = 'D&D车卡辅助'
@@ -10,10 +10,16 @@ export interface SeoRouteContext {
   readonly path: string
 }
 
+/**
+ * 规范链接 = 站点根 URL + 部署前缀 + 路由路径。
+ * `VITE_SITE_URL` 只描述站点入口（不含部署前缀），前缀统一由 `VITE_BASE_URL` 提供，
+ * 与构建期预渲染的 canonical 规则保持一致（见 scripts/deploy-base.ts）。
+ */
 export function resolveCanonicalUrl(path: string): string | undefined {
   if (!siteConfig.siteUrl) return undefined
+  const basePrefix = baseUrl.replace(/\/+$/, '')
   const normalizedPath = path.length > 1 ? path.replace(/\/+$/, '') : ''
-  return `${siteConfig.siteUrl}${normalizedPath}`
+  return `${siteConfig.siteUrl}${basePrefix}${normalizedPath}`
 }
 
 function setOrRemoveMetaDescription(description: string | undefined) {

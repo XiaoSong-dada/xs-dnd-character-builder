@@ -1,5 +1,9 @@
 node_modules
 dist
+# vite-ssg 的 SSR 中间产物。必须忽略：它只在构建过程中存在，
+# 若被当成未跟踪文件，会让构建期算出的构建标识（见 app/scripts/app-build-id.ts）
+# 在同一次构建的前后两次求值中得到不同结果。
+.vite-ssg-temp
 .DS_Store
 .vscode
 .idea

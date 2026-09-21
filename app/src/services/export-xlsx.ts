@@ -1,9 +1,11 @@
 import type { Workbook } from 'exceljs'
 
-import { baseUrl } from '@/config/site'
 import { formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
+import {
+  CHARACTER_SHEET_OFFLINE_MESSAGE,
+  CHARACTER_SHEET_XLSX_TEMPLATE_URL,
+} from '@/services/character-sheet-templates'
 
-export const CHARACTER_SHEET_TEMPLATE_URL = `${baseUrl}templates/character-sheet-zh.xlsx`
 export const CHARACTER_SHEET_TEMPLATE_VERSION = 4
 
 export type TemplateFieldKind = 'input' | 'formula-cache' | 'optional'
@@ -141,7 +143,9 @@ export function buildXlsxFieldValues(model: CharacterExportModel): { values: Rec
 }
 
 export async function loadCharacterSheetTemplate(): Promise<Workbook> {
-  const response = await fetch(CHARACTER_SHEET_TEMPLATE_URL)
+  // 离线且本地未缓存时会直接 reject；此时 fetch 的原始报错没有指导意义。
+  const response = await fetch(CHARACTER_SHEET_XLSX_TEMPLATE_URL).catch(() => undefined)
+  if (!response) throw new Error(CHARACTER_SHEET_OFFLINE_MESSAGE)
   if (!response.ok) throw new Error(`角色卡模板加载失败（${response.status}）`)
   const ExcelJS = await import('exceljs')
   const workbook = new ExcelJS.Workbook()

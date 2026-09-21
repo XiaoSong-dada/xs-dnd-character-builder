@@ -1,12 +1,13 @@
 import type { PDFCheckBox, PDFField, PDFFont, PDFForm, PDFTextField } from 'pdf-lib'
 
-import { baseUrl } from '@/config/site'
-
 import { formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
+import {
+  CHARACTER_SHEET_FONT_URL,
+  CHARACTER_SHEET_OFFLINE_MESSAGE,
+  CHARACTER_SHEET_PDF_TEMPLATE_URL,
+} from '@/services/character-sheet-templates'
 import type { AbilityKey } from '@/types/character'
 
-export const CHARACTER_SHEET_PDF_TEMPLATE_URL = `${baseUrl}templates/character-sheet-zh-plus.pdf`
-export const PDF_FONT_URL = `${baseUrl}templates/fonts/noto-sans-sc-subset.ttf`
 export const CHARACTER_SHEET_PDF_MAPPING_VERSION = 7
 
 const TEXT_PADDING = 4
@@ -561,7 +562,13 @@ function fillSpellPage(form: PDFForm, index: ReadonlyMap<string, FormField>, fon
 }
 
 export async function buildCharacterSheetPdf(model: CharacterExportModel): Promise<PdfBuildResult> {
-  const [templateResponse, fontResponse] = await Promise.all([fetch(CHARACTER_SHEET_PDF_TEMPLATE_URL), fetch(PDF_FONT_URL)])
+  // 离线且本地未缓存时会直接 reject；此时 fetch 的原始报错没有指导意义。
+  const responses = await Promise.all([
+    fetch(CHARACTER_SHEET_PDF_TEMPLATE_URL),
+    fetch(CHARACTER_SHEET_FONT_URL),
+  ]).catch(() => undefined)
+  if (!responses) throw new Error(CHARACTER_SHEET_OFFLINE_MESSAGE)
+  const [templateResponse, fontResponse] = responses
   if (!templateResponse.ok) throw new Error(`角色卡 PDF 模板加载失败（${templateResponse.status}）`)
   if (!fontResponse.ok) throw new Error(`中文字体加载失败（${fontResponse.status}）`)
   return fillPdfTemplate(new Uint8Array(await templateResponse.arrayBuffer()), new Uint8Array(await fontResponse.arrayBuffer()), model)

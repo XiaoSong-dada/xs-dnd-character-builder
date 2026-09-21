@@ -81,6 +81,8 @@ cp .env.example .env.local
 | `VITE_AUTHOR_NAME` | 主页显示的作者名 |
 | `VITE_GITHUB_URL` | 主页 GitHub 图标的跳转地址 |
 | `VITE_AUTHOR_TAGLINE` | 预留的作者标语，当前尚未展示 |
+| `VITE_SITE_URL` | 站点入口 URL，供 canonical / og:url 使用；只写到站点根，不含部署前缀 |
+| `VITE_BASE_URL` | 部署基路径；站点根部署留空，子路径部署填 `/xs-dnd-character-builder/` 这类前缀 |
 | `VITE_TIP_WECHAT_QR_URL` | “请杯咖啡”微信收款码 URL；真实图片不进入仓库 |
 | `VITE_TIP_ALIPAY_QR_URL` | “请杯咖啡”支付宝收款码 URL；真实图片不进入仓库 |
 | `VITE_UMAMI_SCRIPT_URL` | Umami 统计脚本地址 |
@@ -115,6 +117,7 @@ app/
 │  ├─ config/       # 环境变量与运行配置
 │  └─ styles/       # 全局主题和布局样式
 ├─ test/            # 单元测试与组件测试
+├─ scripts/         # 构建期脚本（构建标识、部署前缀、规则目录生成）
 ├─ Dockerfile       # 多阶段生产镜像
 └─ nginx.conf       # 静态资源与 SPA 回退配置
 ```
@@ -136,6 +139,58 @@ app/
 ```
 
 仓库中的 `nginx.conf` 已配置该回退行为。
+
+### 子路径部署
+
+应用不是挂在域名根、而是挂在子路径（例如 `https://example.com/xs-dnd-character-builder/character-builder`）时，**必须在构建期声明前缀**：
+
+```sh
+cd app
+VITE_BASE_URL=/xs-dnd-character-builder/ pnpm build
+```
+
+`VITE_BASE_URL` 会写进产物内的所有绝对路径：index.html 的资源引用与图标、清单链接、预渲染 HTML 里的导航 href、路由 history base、Service Worker 注册路径与作用域、`version.json` 与 `templates/` 的运行时 URL。因此反向代理只需要把该前缀原样映射到 `dist` 目录：
+
+```nginx
+server {
+    listen 8080;
+    server_name _;
+    root /var/www/html;
+    index index.html;
+
+    # 公开前缀 = 构建期的 VITE_BASE_URL；目录名与前端路由名无关
+    location = /xs-dnd-character-builder { return 301 /xs-dnd-character-builder/; }
+
+    location /xs-dnd-character-builder/ {
+        # $uri/index.html 让 /…/character-builder（不带尾斜杠）直接命中预渲染产物，
+        # 不必先吃一次 301 重定向
+        try_files $uri $uri/index.html $uri/ /xs-dnd-character-builder/index.html;
+    }
+
+    # 带内容哈希的静态资源可以长缓存
+    location ~* ^/xs-dnd-character-builder/assets/ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Service Worker 与构建标识必须每次向服务器校验
+    location = /xs-dnd-character-builder/sw.js {
+        add_header Cache-Control "no-cache";
+    }
+    location = /xs-dnd-character-builder/version.json {
+        add_header Cache-Control "no-cache";
+    }
+}
+```
+
+部署目录与公开前缀同名最省心（`dist/` 的内容整个复制到 `/var/www/html/xs-dnd-character-builder/`）。若目录名不同，用 `alias` 指过去，不要用 `rewrite` 改成别的路径——路由、Service Worker 作用域与模板 URL 都以公开前缀为准。
+
+注意事项：
+
+- **不要在反向代理上用 `sub_filter` 改写 HTML 来伪造前缀。** 那只能改到 HTML 文本，JS 里运行时拼出来的路径（Service Worker 注册、懒加载 chunk、模板与字体 URL）一个都改不到。
+- 一个前缀对应一个 Service Worker 作用域：换前缀等于换一份 PWA 安装，旧前缀下装过的用户不会被新前缀的更新提示覆盖。
+- `public/robots.txt` 与 `public/sitemap.xml` 是静态占位文件，Vite 不处理它们的内容；子路径部署时需要手工把公开前缀写进 `Sitemap:` 与 `<loc>`。
+- 301 兜底的写法（`location = /prefix`）是必要的：只写 `location /prefix/` 时，访问不带尾斜杠的前缀会落到站点根的 404。
 
 ### Docker
 
