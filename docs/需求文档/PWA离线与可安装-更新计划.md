@@ -62,11 +62,26 @@ PDF 模板 1.28 MB、中文字体 1.18 MB、XLSX 模板 0.05 MB，合计约 2.5 
 
 ### 决策 4：放宽预缓存体积上限，但排除 `og-image.png`
 
-workbox 默认 2 MiB 上限会静默跳过超限文件，构建直接失败并提示。
+workbox 只把超限文件记成一条 warning 并跳过；`vite-plugin-pwa` 在 `closeBundle` 阶段**把这条 warning 升级成异常**，于是 `dist/` 已经产出、`sw.js` 没写成、整个构建以非零码失败。
 
-- 骰娘页的 3D 引擎（three + cannon-es）被打成一个约 2.6 MB 的懒加载 chunk，超出上限。它是**核心交互功能**而非仅导出用的资源，故把 `maximumFileSizeToCacheInBytes` 放宽到 3 MiB 让它进入预缓存（gzip 后约 0.6 MB），保证装完离线也能掷骰。
+- 骰娘页的 3D 引擎（three + cannon-es）被打成一个懒加载 chunk。它是**核心交互功能**而非仅导出用的资源，故放宽 `maximumFileSizeToCacheInBytes` 让它进入预缓存（gzip 后约 0.87 MB），保证装完离线也能掷骰。
+- 上限两次数值演进，都记在这里以便下次对账：
+  - v1.9.0 接入时该 chunk 约 **2.6 MB**，上限设为 **3 MiB**；
+  - v1.10.0（扩展书与规则数据扩列，`7358059`）后该 chunk 涨到 **3.52 MB**（3,521,662 字节 = 3.36 MiB），顶穿 3 MiB 天花板导致部署构建失败，上限放宽到 **4 MiB**。
+- 实测阈值行为（对 v1.10.0 产物直接调 `workbox-build.getManifest` 复现，只读）：
+
+  | 上限 | 清单条目 | 预缓存原始体积 | warning | 是否含该 chunk |
+  | --- | --- | --- | --- | --- |
+  | 2 MiB（workbox 默认） | 33 | 3.62 MiB | 1 | ❌ |
+  | 3 MiB（旧值） | 33 | 3.62 MiB | 1 | ❌ 构建在此失败 |
+  | 4 MiB（现值） | 34 | 6.98 MiB | 0 | ✅ |
+
+- **排障陷阱**：超限时插件打印的文案是硬编码的
+  `Configure "workbox.maximumFileSizeToCacheInBytes" to change the limit: the default value is 2 MiB.`
+  —— 配了 3 MiB 或 5 MiB 也照样印这句。**不能**据此推断「配置没生效」，否则会跑去查错方向（容器里的 `vite.config.ts`、`.dockerignore`、构建缓存）。判定依据只看 `dist/assets` 里实际最大的 chunk 字节数。
 - 注意：Rollup 用 chunk 内某个模块名给块命名，这个块叫 `CharacterMediaEditor...`，与实际内容（3D 引擎）无关，排障时不要被文件名误导。
-- `og-image.png`（2.3 MB）仅用于社交分享、客户端永不请求，用 `globIgnores` 排除。
+- `og-image.png`（2.3 MB）仅用于社交分享、客户端永不请求，用 `globIgnores` 排除，不受上限影响。
+- **维护提示**：4 MiB 相对当前 3.36 MiB 只有约 0.64 MiB 余量。再加规则数据或 3D 资源时，构建会以同样的方式失败——届时先量 `dist/assets` 最大 chunk，再决定是继续放宽上限还是改走决策 2 那套「运行时按需缓存」。
 
 ### 决策 5：标签页图标改用 192px 派生产物
 
@@ -223,7 +238,7 @@ maskable 版本额外留出安全边距：图形缩到 512 画布的约 78%，�
 | `vue-tsc -b` 类型检查 | 通过 |
 | `pnpm test:run` | 156 个文件 / 1293 个用例全部通过 |
 | `pnpm build`（含 vite-ssg 预渲染） | 通过，产出 `dist/sw.js`、`dist/manifest.webmanifest`、`dist/version.json` |
-| 预缓存清单 | 41 个 URL（原始约 6.2 MB，gzip 约 1.7 MB）：6 个预渲染 HTML、JS/CSS 分块、4 个图标、manifest |
+| 预缓存清单 | 接入时 41 个 URL（原始约 6.2 MB，gzip 约 1.7 MB）：6 个预渲染 HTML、JS/CSS 分块、4 个图标、manifest。v1.10.0 复测仍为 41 个 URL，原始体积 **7167.70 KiB**（含 3.52 MB 的 3D 引擎 chunk） |
 | `og-image.png`、`/templates/**`、`version.json` 未被预缓存 | 已确认（三者都必须能回源） |
 | 4 个替换前的 1.6 MB 源图不再进入产物 | 已确认 |
 | `sw.js` 含 `SKIP_WAITING` 消息监听 | 已确认（手写注册的握手前提） |
