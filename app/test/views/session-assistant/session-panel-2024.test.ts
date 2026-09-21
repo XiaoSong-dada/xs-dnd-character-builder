@@ -95,4 +95,56 @@ describe('SessionPanel 按草稿版本解析显示数据', () => {
 
     expect(wrapper.findComponent(AddItemModal).props('ruleset')).toBe('5e-2014')
   })
+
+  /** H3：跑团面板的「专长与属性提升」与车卡角色卡同源，背景起源专长必须可见可读。 */
+  it('2024 背景固定授予的起源专长显示名称、来源与完整效果', async () => {
+    const draft = draft2024({
+      id: 'session-panel-origin-feat',
+      classId: 'class-2024-fighter',
+      targetLevel: 1,
+      backgroundId: 'background-2024-soldier',
+    })
+    const wrapper = mount(SessionPanel, { props: { draft } })
+    const store = useSessionAssistantStore()
+
+    store.setActiveTab('features')
+    await nextTick()
+
+    expect(wrapper.text()).toContain('专长与属性提升')
+    expect(wrapper.text()).toContain('凶蛮打手')
+    expect(wrapper.text()).toContain('起源专长 · 士兵')
+
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('凶蛮打手'))
+    await card?.find('.expandable-option-card__arrow').trigger('click')
+    // 展开区显示完整效果（`detail`），不是只有一行摘要。
+    expect(card?.text()).toContain('每回合一次')
+  })
+
+  it('2024 二选一背景按所选专长展示，未选时不出现该专长', async () => {
+    const base = draft2024({
+      id: 'session-panel-choice-feat',
+      classId: 'class-2024-fighter',
+      targetLevel: 1,
+      backgroundId: 'background-2024-tp-vtm-ritualist',
+      enabledSourceIds: ['source-2024-phb', 'source-2024-tp-vtm'],
+    })
+    const unchosen = mount(SessionPanel, { props: { draft: base } })
+    const store = useSessionAssistantStore()
+    store.setActiveTab('features')
+    await nextTick()
+    expect(unchosen.text()).not.toContain('薄血')
+
+    const chosen = mount(SessionPanel, {
+      props: {
+        draft: {
+          ...base,
+          selections: [{ checkpointId: 'background-2024-tp-vtm-ritualist-origin-feat', optionIds: ['feat-2024-tp-thin-blooded'], confirmedAt: '' }],
+        },
+      },
+    })
+    useSessionAssistantStore().setActiveTab('features')
+    await nextTick()
+    expect(chosen.text()).toContain('薄血')
+    expect(chosen.text()).toContain('起源专长 · 仪式专家')
+  })
 })

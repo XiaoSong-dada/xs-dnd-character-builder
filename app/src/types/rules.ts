@@ -14,7 +14,7 @@ export type CheckpointKind =
   | 'infusion'
 
 /** 2024 专长类别：决定授予来源与候选池；2014 条目可省略。 */
-export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon' | 'dragonmark' | 'wild-talent'
+export type FeatCategory = 'origin' | 'general' | 'fighting-style' | 'epic-boon' | 'dragonmark' | 'wild-talent' | 'dark-gift' | 'bloodline'
 
 /** 护甲训练类别；2024 前置与熟练均以此为口径。 */
 export type ArmorTraining = 'light' | 'medium' | 'heavy' | 'shield'
@@ -567,6 +567,16 @@ export interface RaceRule {
   readonly sizeChoices?: readonly ('small' | 'medium')[]
   /** 2024 黑暗视觉范围（尺）；无黑暗视觉省略。 */
   readonly darkvision?: number
+  /** 攀爬速度（尺）；与步行速度相同时仍需显式登记（G3-I1 第三方种族）。展示级。 */
+  readonly climbSpeed?: number
+  /** 游泳速度（尺）。展示级。 */
+  readonly swimSpeed?: number
+  /** 飞行速度（尺）。展示级。 */
+  readonly flySpeed?: number
+  /** 掘穴速度（尺）。展示级。 */
+  readonly burrowSpeed?: number
+  /** 伤害抗性（如心灵、寒冷）；展示级，不参与自动减伤结算。 */
+  readonly damageResistances?: readonly string[]
   /** 2024 其他感官原创释义（如震颤感知、盲视）；展示用。 */
   readonly senses?: readonly string[]
   /** 无条件派生：每级最大生命值加成（如矮人坚韧 +1/级）。 */
@@ -592,6 +602,18 @@ export interface BackgroundRule {
   readonly featureName: string
   /** 2024 背景固定授予的起源专长；2014 背景与待接入数据省略。 */
   readonly originFeatId?: string
+  /**
+   * 2024 背景的**二选一**起源专长候选（如鸦阁「起源专长或一项黑暗赠礼专长」、
+   * 避世潜藏「薄血可替代任何起源专长」）。声明时该背景不再走 `originFeatId` 固定授予，
+   * 改为生成 `background-origin-feat` 选择检查点（G3 决策 Q1-A）。
+   */
+  readonly originFeatOptions?: readonly string[]
+  /**
+   * 2024 背景的「任选起源专长」规格（如火炬光·神话调查员「选择任意起源专长」）。
+   * 候选由 `getFeatPool` 按类别与来源开关展开，选择结果存于 `${background.id}-origin-feat` 检查点。
+   * 三者优先级：`originFeatOptions` > `originFeatChoices` > `originFeatId`。
+   */
+  readonly originFeatChoices?: { readonly count: number; readonly categories: readonly FeatCategory[] }
   /** 起源专长替代：满足条件时可用所列类别专长替换固定起源专长（如贵族／智者＋狂野天赋）。 */
   readonly originFeatSubstitutions?: readonly { readonly category: FeatCategory; readonly sourceIds: readonly string[] }[]
   /** 2024 背景的三项属性候选（+2/+1 或各 +1）；2014 背景省略。 */

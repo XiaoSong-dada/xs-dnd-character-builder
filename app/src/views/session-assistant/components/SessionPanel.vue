@@ -12,7 +12,7 @@ import UiModal from '@/components/ui/UiModal.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
-import { decodeAbilityImprovement } from '@/rules/feats'
+import { decodeAbilityImprovement, formatFeatGrantSource, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { getAvailableSlotLevels } from '@/rules/session-state'
 import { isSourceEnabled } from '@/rules/source-books'
@@ -201,17 +201,38 @@ const backgroundFeatures = computed(() => {
 })
 const featAndAsiEntries = computed(() => {
   const draft = props.draft
-  if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId })
-  const entries: { id: string; level: number; label: string; detail?: string }[] = []
+  const timeline = draft.classId
+    ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+    : []
+  const entries: {
+    id: string
+    level: number
+    label: string
+    summary?: string
+    detail?: string
+    sourceLabel?: string
+  }[] = []
+  const seen = new Set<string>()
+  // 生效专长与车卡角色卡同源（H3）：背景固定授予／候选列表／任选池三类起源专长一并展示。
+  for (const grant of listFeatGrants(draft, repository.value)) {
+    const feat = repository.value.getFeat(grant.featId)
+    if (!feat || seen.has(feat.id)) continue
+    seen.add(feat.id)
+    const checkpoint = grant.checkpointId ? timeline.find((item) => item.id === grant.checkpointId) : undefined
+    entries.push({
+      id: feat.id,
+      level: grant.sourceKind === 'background' || grant.sourceKind === 'species' ? 1 : checkpoint?.level ?? 1,
+      label: `${feat.name} · ${feat.englishName}`,
+      summary: feat.description,
+      detail: feat.detail,
+      sourceLabel: formatFeatGrantSource(grant, repository.value),
+    })
+  }
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
     const checkpoint = timeline.find((item) => item.id === selection.checkpointId)
     for (const optionId of selection.optionIds) {
-      if (optionId.startsWith('feat-')) {
-        const feat = repository.value.getFeat(optionId)
-        if (feat) entries.push({ id: feat.id, level: checkpoint?.level ?? 1, label: `${feat.name} · ${feat.englishName}`, detail: feat.detail })
-      } else if (optionId.startsWith('asi-')) {
+      if (optionId.startsWith('asi-')) {
         const improvement = decodeAbilityImprovement(optionId)
         if (!improvement) continue
         const text = improvement.mode === 'single'
@@ -561,15 +582,18 @@ function openTranscribe(spellId?: string): void {
         <p v-else class="session-panel__empty">该背景暂无已登记特性。</p>
       </section>
       <section v-if="featAndAsiEntries.length" class="session-panel__section">
-        <h3>专长与属性提升</h3>
+        <h3>专长与属性提升 · {{ featAndAsiEntries.length }}</h3>
         <ListShell>
           <ExpandableOptionCard
             v-for="entry in featAndAsiEntries"
             :key="entry.id"
             :title="entry.label"
-            :description="`${entry.level}级`"
+            :description="[`${entry.level}级`, entry.summary].filter(Boolean).join(' · ')"
             expanded-label="效果"
           >
+            <template #suffix>
+              <UiBadge v-if="entry.sourceLabel" tone="primary">{{ entry.sourceLabel }}</UiBadge>
+            </template>
             <template v-if="entry.detail" #expanded>{{ entry.detail }}</template>
           </ExpandableOptionCard>
         </ListShell>

@@ -64,6 +64,33 @@ describe('B09-07 起源步骤完成判定（2024）', () => {
     expect(blockerIds({ ...human, speciesSizeChoice: 'medium' })).not.toContain('species-size-required')
   })
 
+  it('结构化背景工具覆盖缺项、重复与非法候选，合法选择解除阻塞', () => {
+    const artisan = completeOrigin2024({
+      backgroundId: 'background-2024-artisan',
+      backgroundAbilityAllocation: { int: 2, dex: 1 },
+      backgroundToolIds: [],
+    })
+    const optionId = repository2024.getBackground('background-2024-artisan')?.toolChoices?.optionIds?.[0]
+    expect(optionId).toBeDefined()
+    if (!optionId) return
+
+    expect(blockerIds(artisan)).toContain('background-tool-choice-count')
+    expect(blockerIds({ ...artisan, backgroundToolIds: [optionId] })).not.toContain('background-tool-choice-count')
+    expect(blockerIds({ ...artisan, backgroundToolIds: [optionId, optionId] })).toContain('background-tool-choice-count')
+    expect(blockerIds({ ...artisan, backgroundToolIds: ['equipment-2024-invalid'] })).toContain('background-tool-choice-invalid-equipment-2024-invalid')
+  })
+
+  it('旧草稿缺少当前背景工具选择时保留为空并要求补选', () => {
+    const oldDraft = completeOrigin2024({
+      backgroundId: 'background-2024-entertainer',
+      backgroundAbilityAllocation: { dex: 2, cha: 1 },
+      backgroundToolIds: [],
+    })
+    expect(isOriginStepComplete(oldDraft, repository2024)).toBe(false)
+    expect(validateDraft(oldDraft).map((issue) => issue.id)).toContain('background-tool-choice-count')
+    expect(oldDraft.backgroundToolIds).toEqual([])
+  })
+
   it('职业追加语言：2024 游荡者需要 3 门（盗贼黑话 +1）', () => {
     const rogue = completeOrigin2024({
       classId: 'class-2024-rogue',

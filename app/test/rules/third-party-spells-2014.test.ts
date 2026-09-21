@@ -7,7 +7,7 @@ import { getDefaultEnabledSourceIds, isSourceEnabled } from '@/rules/source-book
 import { getAvailableSpells } from '@/rules/spellcasting'
 import type { CharacterDraft } from '@/types/character'
 
-/** S03：第三方合作内容 11 个来源与 250 条法术（Finger Guns 去重后）。 */
+/** S03：第三方合作内容 11 个来源与 250 条法术（Finger Guns 去重后）；G3-I3 补录斯坦哈德 16 条、瓦尔达玩家包Ⅱ 21 条。 */
 const THIRD_PARTY_SOURCE_IDS = [
   'tp-ebon-tides-index',
   'tp-obojima-index',
@@ -20,6 +20,7 @@ const THIRD_PARTY_SOURCE_IDS = [
   'tp-humblewood-tales-index',
   'tp-illrigger-index',
   'tp-taldorei-index',
+  'tp-steinhardt-index',
 ] as const
 
 function wizardDraft(enabledSourceIds?: readonly string[]): CharacterDraft {
@@ -69,13 +70,33 @@ describe('第三方合作法术（S03）', () => {
     expect(isSourceEnabled(['tp-ebon-tides-index'], [])).toBe(false)
   })
 
-  it('250 条第三方法术已登记且摘要非空', () => {
+  it('第三方法术已登记且摘要非空（S03 的 250 条 + G3-I3 补录）', () => {
     const thirdParty = spells2014.filter((spell) => spell.sourceIds.some((id) => id.startsWith('tp-')))
-    expect(thirdParty).toHaveLength(250)
+    // 下界断言：第三方法术随批次增长（S03 250 条 → G3-I3 补录后 287 条），不锁死总数。
+    expect(thirdParty.length).toBeGreaterThanOrEqual(287)
     for (const spell of thirdParty) {
       expect(spell.description.trim().length, spell.id).toBeGreaterThan(0)
-      expect(spell.classIds.every((id) => id.startsWith('class-2014-'))).toBe(true)
+      expect(spell.classIds.every((id) => id.startsWith('class-2014-')), spell.id).toBe(true)
+      expect(spell.name.length, spell.id).toBeGreaterThan(0)
+      expect(spell.englishName.length, spell.id).toBeGreaterThan(1)
+      expect(spell.level, spell.id).toBeGreaterThanOrEqual(0)
+      expect(spell.level, spell.id).toBeLessThanOrEqual(9)
     }
+    // 每条第三方来源都必须有法术覆盖（G3-I3 起斯坦哈德也纳入）
+    const bySource = new Map<string, number>()
+    for (const spell of thirdParty) {
+      for (const id of spell.sourceIds.filter((value) => value.startsWith('tp-'))) {
+        bySource.set(id, (bySource.get(id) ?? 0) + 1)
+      }
+    }
+    for (const id of THIRD_PARTY_SOURCE_IDS) expect(bySource.get(id) ?? 0, id).toBeGreaterThan(0)
+    expect(bySource.get('tp-steinhardt-index')).toBe(16)
+    expect(bySource.get('tp-valdas-spire-index')).toBe(44)
+    // 第三方法术的中文名与英文名均不得与其它法术冲突（重名须改名登记）
+    const names = spells2014.map((spell) => spell.name)
+    expect(new Set(names).size).toBe(names.length)
+    const englishNames = spells2014.map((spell) => spell.englishName)
+    expect(new Set(englishNames).size).toBe(englishNames.length)
   })
 
   it('来源关闭时第三方不进入候选，开启后按职业可选', () => {

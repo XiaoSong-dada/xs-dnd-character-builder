@@ -49,7 +49,7 @@ describe('吟游诗人法术步骤(回归:法术池充足且可在手机宽度�
     await vi.advanceTimersByTimeAsync(250)
   }
 
-  it('1 级渲染至少 2 个戏法与 4 个 1 环法术可选', () => {
+  it('1 级按任务拆分戏法与掌握法术，首次只渲染戏法候选', () => {
     // 模拟手机宽度视口
     window.innerWidth = 375
     window.dispatchEvent(new Event('resize'))
@@ -66,11 +66,11 @@ describe('吟游诗人法术步骤(回归:法术池充足且可在手机宽度�
     expect(level1.length).toBeGreaterThanOrEqual(4)
 
     const wrapper = mount(SpellcastingStep, { props: { draft } })
-    const cards = wrapper.findAll('.expandable-option-card__main')
-    // 渲染出的可点选项数 >= 需求(2 戏法 + 4 法术)
-    expect(cards.length).toBeGreaterThanOrEqual(6)
-    // 顶部计数显示 0 / 4
-    expect(wrapper.text()).toContain('0 / 4')
+    expect(wrapper.find('[data-task-id="cantrips"]').exists()).toBe(true)
+    expect(wrapper.find('[data-task-id="spells"]').exists()).toBe(true)
+    expect(wrapper.get('[data-task-id="cantrips"]').attributes('aria-selected')).toBe('true')
+    expect(wrapper.findAll('.expandable-option-card').length).toBeGreaterThanOrEqual(2)
+    expect(wrapper.text()).not.toContain('1环 ·')
   })
 
   it('在手机宽度下选择 2 戏法 + 4 个 1 环法术后可完成法术步骤', async () => {
@@ -78,13 +78,11 @@ describe('吟游诗人法术步骤(回归:法术池充足且可在手机宽度�
     const wrapper = mount(SpellcastingStep, { props: { draft } })
 
     // 受控组件:每次点击后把 change 结果回写 draft 再渲染
-    const buttons = wrapper.findAll('.expandable-option-card__main')
-    // 前 2 个为戏法;1 环法术按钮文本含 "1环"
-    const cantripButtons = buttons.slice(0, 2)
-    const level1Buttons = buttons.filter((b) => b.text().includes('1环')).slice(0, 4)
-    expect(level1Buttons.length).toBe(4)
-    for (const button of [...cantripButtons, ...level1Buttons]) {
-      await clickMain(wrapper, button)
+    for (let index = 0; index < 6; index += 1) {
+      const candidate = wrapper.findAll('.expandable-option-card')
+        .find((card) => card.find('.expandable-option-card__badges').text().includes('选择'))
+      expect(candidate, `第 ${index + 1} 次选择应存在候选`).toBeTruthy()
+      await clickMain(wrapper, candidate!.get('.expandable-option-card__main'))
       const changes = wrapper.emitted('change')
       const latest = changes?.[changes.length - 1]?.[0] as CharacterDraft['spellSelections']
       draft = { ...draft, spellSelections: latest }
@@ -115,5 +113,14 @@ describe('吟游诗人法术步骤(回归:法术池充足且可在手机宽度�
     await main.trigger('click')
     expect(secondCard.find('.expandable-option-card__growth').exists()).toBe(true)
     expect(wrapper.emitted('change')).toBeUndefined()
+  })
+
+  it('旧失效法术保留在草稿并把对应任务标记为需修正', () => {
+    const base = bardDraft(1)
+    const draft = { ...base, spellSelections: { ...base.spellSelections, knownSpellIds: ['spell-2014-not-available'] } }
+    const wrapper = mount(SpellcastingStep, { props: { draft } })
+    expect(wrapper.text()).toContain('保留了需要重新确认的旧选择')
+    expect(wrapper.get('[data-task-id="spells"]').text()).toContain('需修正')
+    expect(draft.spellSelections.knownSpellIds).toEqual(['spell-2014-not-available'])
   })
 })

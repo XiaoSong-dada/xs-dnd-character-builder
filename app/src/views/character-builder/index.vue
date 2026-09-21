@@ -22,6 +22,7 @@ import StartPanel from '@/views/character-builder/components/StartPanel.vue'
 import TimelineStep from '@/views/character-builder/components/TimelineStep.vue'
 import ValidationStep from '@/views/character-builder/components/ValidationStep.vue'
 import { useCharacterBuilderPage } from '@/views/character-builder/hooks/useCharacterBuilderPage'
+import type { SelectionTaskFocusHandle } from '@/views/character-builder/selection-task'
 import { hasBuildChoices } from '@/rules/draft-progress'
 import type { AbilityMethod, DraftStep } from '@/types/character'
 
@@ -94,6 +95,15 @@ const {
 
 /** 等级调整弹窗：仅由角色卡页发起，目标始终为当前活动草稿。 */
 const levelModalOpen = ref(false)
+
+/** 当前步骤的聚焦句柄（第 4／8 步暴露）：吸底栏「去完成」经此切到首个未完成任务（R3-6）。 */
+const activeStepRef = ref<SelectionTaskFocusHandle | null>(null)
+/** 两步共用同一出口；`v-else-if` 保证同一时刻只挂载一个步骤组件。 */
+const helperFocusAvailable = computed(() => step.value === 'origin' || step.value === 'spells')
+
+function focusIncompleteTask(): void {
+  activeStepRef.value?.focusFirstIncomplete()
+}
 
 /** 已有构筑选择的草稿锁定版本卡片：不原地转换（B00-04；另建流程归 B09-03）。 */
 const rulesetLocked = computed(() => activeDraft.value ? hasBuildChoices(activeDraft.value) : false)
@@ -178,6 +188,7 @@ function updateMethod(value: AbilityMethod): void {
     />
     <OriginStep
       v-else-if="step === 'origin'"
+      ref="activeStepRef"
       :blockers="originBlockers"
       :ruleset="activeDraft.ruleset"
       :class-id="activeDraft.classId"
@@ -189,8 +200,10 @@ function updateMethod(value: AbilityMethod): void {
       :languages="activeDraft.languages"
       :race-skill-choices="activeDraft.raceSkillChoices ?? []"
       :race-tool-choice="activeDraft.raceToolChoice"
+      :background-tool-ids="activeDraft.backgroundToolIds"
       :size-choice="activeDraft.speciesSizeChoice"
       :background-abilities="activeDraft.backgroundAbilityAllocation ?? {}"
+      :selections="activeDraft.selections"
       @race="selectRace"
       @subrace="selectSubrace"
       @background="selectBackground"
@@ -198,8 +211,10 @@ function updateMethod(value: AbilityMethod): void {
       @languages="updateDraft({ languages: $event })"
       @race-skills="updateDraft({ raceSkillChoices: $event })"
       @race-tool="updateDraft({ raceToolChoice: $event })"
+      @background-tools="updateDraft({ backgroundToolIds: $event })"
       @size="updateDraft({ speciesSizeChoice: $event })"
       @background-abilities="updateDraft({ backgroundAbilityAllocation: $event })"
+      @background-feat="saveTimelineSelection"
     />
     <AbilitiesStep
       v-else-if="step === 'abilities'"
@@ -230,7 +245,7 @@ function updateMethod(value: AbilityMethod): void {
       @change="updateEquipment"
       @infusions="updateInfusions"
     />
-    <SpellcastingStep v-else-if="step === 'spells'" :draft="activeDraft" @change="updateSpells" />
+    <SpellcastingStep v-else-if="step === 'spells'" ref="activeStepRef" :draft="activeDraft" @change="updateSpells" />
     <IdentityStep v-else-if="step === 'identity'" :draft="activeDraft" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" @change-media="updateDraft({ media: $event })" />
     <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" :ruleset="activeDraft.ruleset" @go="setStep($event as DraftStep)" />
     <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" :exporting-format="exportingFormat" :export-notice="exportNotice" @export="exportDraft" @export-package="exportPackage" @export-pdf="exportPdf" @export-xlsx="exportXlsx" @adjust-level="openLevelModal" @reedit="startReedit" @change-spell-selections="updateSpells" @change-inventory="updateInventory" @change-adventure-gold="updateAdventureGold" @change-manual-edits="updateManualEdits" @change-media="updateDraft({ media: $event })" />
@@ -243,6 +258,9 @@ function updateMethod(value: AbilityMethod): void {
         :secondary-label="step === 'setup' ? '' : '上一步'"
         :primary-label="step === 'validation' ? '生成角色卡' : '继续'"
         :primary-disabled="!canContinue"
+        :helper-text="!canContinue && step === 'origin' ? originBlockers[0]?.message : !canContinue && step === 'spells' ? '法术选择尚未完成，请按任务清单补齐。' : ''"
+        :helper-action="!canContinue && helperFocusAvailable"
+        @helper-action="focusIncompleteTask"
         @secondary="previousStep"
         @primary="nextStep"
       />

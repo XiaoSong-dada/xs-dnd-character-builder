@@ -1,5 +1,6 @@
 import { ABILITY_LABELS } from '@/rules/data/ability-labels'
 import { SKILL_IDS } from '@/rules/data/skill-ids'
+import { getFeatPool } from '@/rules/feats'
 import { getRequiredLanguageCount } from '@/rules/languages'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, AbilityScores, CharacterDraft } from '@/types/character'
@@ -131,6 +132,38 @@ export function getSpeciesProficiencyBlockers(
 }
 
 /**
+ * 背景起源专长阻塞项（H1，决策 P-1）：
+ * 背景声明候选（`originFeatOptions` 二选一／本书候选，或 `originFeatChoices` 任选池）
+ * 且存在可选候选时，玩家必须在出身步骤完成选择，避免漏选后到角色卡才发现。
+ * 固定授予（`originFeatId`）与无专长背景不产生阻塞。
+ */
+function getBackgroundOriginFeatBlocker(
+  draft: CharacterDraft,
+  repository: RulesRepository,
+): OriginStepBlocker | undefined {
+  const background = draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
+  if (!background || !isSourceEnabled(background.sourceIds, draft.enabledSourceIds, repository)) return undefined
+  const options = background.originFeatOptions
+  const choices = background.originFeatChoices
+  const hasCandidate = options?.length
+    ? options.some((id) => {
+        const feat = repository.getFeat(id)
+        return Boolean(feat && isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository))
+      })
+    : choices && choices.count > 0
+      ? getFeatPool(repository, choices.categories, { enabledSourceIds: draft.enabledSourceIds }).length > 0
+      : false
+  if (!hasCandidate) return undefined
+  const selection = draft.selections.find((item) => item.checkpointId === `${background.id}-origin-feat` && !item.invalidatedAt)
+  if (selection?.optionIds.length) return undefined
+  return {
+    id: 'background-origin-feat',
+    message: `${background.name}需要选择起源专长。`,
+    resolution: '在背景下方的「该背景的起源专长」中选择一项。',
+  }
+}
+
+/**
  * 起源步骤阻塞项（单一来源，B09-07）：
  * 供步骤门禁、起源页提示、完成度与校验共用；仅纳入 `validateDraft` 中错误级的项，
  * 提示级（warning）项目不入闸。
@@ -181,6 +214,35 @@ export function getOriginStepBlockers(
       message: '背景属性加值分配不合法。',
       resolution: allocationIssue,
     })
+  }
+  const originFeatBlocker = getBackgroundOriginFeatBlocker(draft, repository)
+  if (originFeatBlocker) blockers.push(originFeatBlocker)
+  const effectiveBackground = draft.backgroundVariantId
+    ? repository.getBackground(draft.backgroundVariantId)
+    : draft.backgroundId
+      ? repository.getBackground(draft.backgroundId)
+      : undefined
+  const toolChoices = effectiveBackground?.toolChoices
+  if (toolChoices && toolChoices.count > 0) {
+    const fixedToolIds = new Set(effectiveBackground?.toolIds ?? [])
+    const chosen = draft.backgroundToolIds.filter((id) => !fixedToolIds.has(id))
+    const allowed = toolChoices.optionIds
+    if (chosen.length !== toolChoices.count || new Set(chosen).size !== chosen.length) {
+      blockers.push({
+        id: 'background-tool-choice-count',
+        message: `${effectiveBackground?.name ?? '当前背景'}需要选择${toolChoices.count}项工具熟练。`,
+        resolution: `已选 ${chosen.length} 项，请在本步补选或移除。`,
+      })
+    }
+    for (const toolId of chosen) {
+      if (allowed?.length && !allowed.includes(toolId)) {
+        blockers.push({
+          id: `background-tool-choice-invalid-${toolId}`,
+          message: `背景工具选择“${repository.getEquipment(toolId)?.name ?? toolId}”不在可选范围内。`,
+          resolution: '请重新选择当前背景允许的工具。',
+        })
+      }
+    }
   }
   const sizeRules = getDraftSpeciesRules(draft, repository).filter((item) => (item.sizeChoices?.length ?? 0) > 0)
   if (sizeRules.length > 0) {

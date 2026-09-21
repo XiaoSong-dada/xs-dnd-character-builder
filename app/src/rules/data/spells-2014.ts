@@ -825,6 +825,48 @@ const spellSeeds: readonly [
   // 第三方合作内容 · 塔尔多雷（Tal'Dorei Campaign Setting）
   ['Freedom of the Wave', '浪之自由', 3, ['druid', 'ranger', 'sorcerer'], ['tp-taldorei-index']],
   ['Freedom of the Wind', '风之自由', 5, ['druid', 'ranger', 'sorcerer'], ['tp-taldorei-index']],
+  // 第三方合作内容补录（G3-I3，2026-09-21）：S03 未覆盖的两组 —— 《斯坦哈德的诡怖猎杀指南》骨咒法术 16 条
+  // 与《瓦尔达的秘密尖塔》玩家包Ⅱ 法术 21 条。按项目既有口径，第三方法术统一登记在 2014 目录
+  // （`docs/rules.md`：第三方合作内容 11 系列随 S03 接入 2014 目录），环阶／学派／职业列表取自参考资料。
+  // ── 斯坦哈德的诡怖猎杀指南（Steinhardt's Guide to the Eldritch Hunt）──
+  ['Brittle Bone Throw', '脆骨投掷', 0, ['sorcerer', 'warlock', 'wizard'], ['tp-steinhardt-index']],
+  ['Gravity Spike', '重力尖钉', 0, ['druid', 'sorcerer', 'warlock', 'wizard'], ['tp-steinhardt-index']],
+  ['Fractured Shell', '裂生骨甲', 1, ['warlock', 'wizard'], ['tp-steinhardt-index']],
+  ['Phalangeal Shot', '指骨钉枪', 1, ['sorcerer', 'warlock', 'wizard'], ['tp-steinhardt-index']],
+  ['Spectral Slash', '幽灵切', 1, ['paladin', 'ranger'], ['tp-steinhardt-index']],
+  ['Arm Cannon', '臂骨加农', 2, ['sorcerer', 'warlock', 'wizard'], ['tp-steinhardt-index']],
+  ['Blind Ambush', '盲口奇袭', 2, ['bard', 'druid', 'ranger', 'warlock'], ['tp-steinhardt-index']],
+  ['Calcified Memories', '钙化记忆', 2, ['sorcerer', 'wizard'], ['tp-steinhardt-index']],
+  ['Skeletal Tail', '骸骨之尾', 2, ['druid', 'ranger'], ['tp-steinhardt-index']],
+  ['Displacing Maw', '易位肋口', 3, ['warlock', 'wizard'], ['tp-steinhardt-index']],
+  ['Osseous Impalement', '骨刺贯刑', 3, ['sorcerer', 'warlock', 'wizard'], ['tp-steinhardt-index']],
+  ['Spectral Fury', '幽灵狂怒', 3, ['paladin', 'ranger'], ['tp-steinhardt-index']],
+  ['Dread Scarecrow', '悚骨人形', 4, ['bard', 'warlock', 'wizard'], ['tp-steinhardt-index']],
+  ['Maiden of Bones', '骨处女', 4, ['warlock', 'wizard'], ['tp-steinhardt-index']],
+  ['Marrow Transplant', '易骨换髓', 4, ['cleric', 'druid'], ['tp-steinhardt-index']],
+  ['Forest of Dread', '惧骨之森', 5, ['sorcerer', 'warlock', 'wizard'], ['tp-steinhardt-index']],
+  // ── 瓦尔达的秘密尖塔 · 玩家包Ⅱ（Valda's Spire of Secrets, Players Pack 2）──
+  ['Arc Blade', '疾电剑', 0, ['sorcerer', 'warlock', 'wizard'], ['tp-valdas-spire-index']],
+  ['Burning Blade', '烈焰剑', 0, ['sorcerer', 'warlock', 'wizard'], ['tp-valdas-spire-index']],
+  ['Candy Blast', '糖果爆裂', 0, ['sorcerer', 'wizard'], ['tp-valdas-spire-index']],
+  ['Cheat', '出千', 0, ['bard', 'sorcerer', 'warlock', 'wizard'], ['tp-valdas-spire-index']],
+  ['Frigid Blade', '凛霜剑', 0, ['sorcerer', 'warlock', 'wizard'], ['tp-valdas-spire-index']],
+  ['Flawed Reconstruction', '残缺缝合', 1, ['sorcerer', 'warlock', 'wizard'], ['tp-valdas-spire-index']],
+  ['Transient Bulwark', '转瞬壁垒', 1, ['sorcerer', 'wizard'], ['tp-valdas-spire-index']],
+  ['Zephyr\'s Feather', '西风之羽', 1, ['druid', 'ranger', 'sorcerer', 'warlock', 'wizard'], ['tp-valdas-spire-index']],
+  ['Blunder', '弄巧成拙', 2, ['bard', 'wizard'], ['tp-valdas-spire-index']],
+  ['Protect Threshold', '门扉守卫', 2, ['sorcerer', 'wizard'], ['tp-valdas-spire-index']],
+  ['Stone Bones', '岩骨术', 2, ['druid', 'paladin', 'ranger', 'sorcerer', 'wizard'], ['tp-valdas-spire-index']],
+  ['Swift Flight', '迅捷飞行', 2, ['sorcerer', 'wizard'], ['tp-valdas-spire-index']],
+  ['Cosmic Horror', '寰宇怖景', 3, ['sorcerer', 'warlock', 'wizard'], ['tp-valdas-spire-index']],
+  ['Flashback', '时光回溯', 3, ['cleric', 'wizard'], ['tp-valdas-spire-index']],
+  ['Rusting Grasp', '锈蚀之握', 3, ['druid', 'sorcerer', 'wizard'], ['tp-valdas-spire-index']],
+  ['Séance', '通灵仪式', 3, ['bard', 'wizard'], ['tp-valdas-spire-index']],
+  ['Mandy\'s Marvelous Dress', '曼蒂的华美礼裙', 4, ['bard'], ['tp-valdas-spire-index']],
+  ['Soul Effigy', '灵魂替身', 4, ['warlock'], ['tp-valdas-spire-index']],
+  ['Sword of Judgment', '审判之剑', 5, ['cleric', 'paladin'], ['tp-valdas-spire-index']],
+  ['Frenzy', '狂乱不羁', 6, ['bard', 'wizard'], ['tp-valdas-spire-index']],
+  ['Rocks Fall', '石从天降', 8, ['druid', 'sorcerer', 'warlock', 'wizard'], ['tp-valdas-spire-index']],
 ]
 
 /** 2014 法术池中带有仪式标签的法术英文名。 */
@@ -874,6 +916,11 @@ export const ritualSpellNames2014 = [
   'Faerie Toast',
   'Charnel Banquet',
   'Deep Roots of the Moon',
+  // 第三方合作内容补录（G3-I3，2026-09-21）：施法时间含「或仪式」者按同一口径补记
+  'Calcified Memories',
+  'Transient Bulwark',
+  'Protect Threshold',
+  'Soul Effigy',
 ] as const
 
 const ritualSpellNameSet2014 = new Set<string>(ritualSpellNames2014)
@@ -1687,6 +1734,45 @@ const spellDescriptions: Readonly<Record<string, string>> = {
   'spell-2014-wall-of-death': '射程 120 尺，持续 1 分钟（专注）；创造不透明的暗蚀能量墙（直线 60×20 尺或环形直径 20 尺、厚 1 尺）；进入或穿墙者受影响。',
   'spell-2014-freedom-of-the-wave': '射程 120 尺，立即；15 尺半径、10 尺高柱状海水，区域内生物力量豁免失败受 2d8 钝击并倒地；可选至多施法属性调整值（至少 1）个目标免受影响。',
   'spell-2014-freedom-of-the-wind': '自身，持续 1 小时；获得 60 尺飞行速度；为避免擒抱的属性检定与避免束缚／麻痹的豁免具有优势。',
+  // ── 第三方合作内容补录（G3-I3）· 斯坦哈德的诡怖猎杀指南（骨咒法术）──
+  'spell-2014-brittle-bone-throw': '1 动作，射程 60 尺；远程法术攻击命中受 1d8 穿刺；失手可在空中击碎脆骨并重定向至 15 尺内另一生物，再作一次攻击命中受 1d4；5/11/17 级伤害提升。',
+  'spell-2014-gravity-spike': '1 动作，射程 60 尺；地面上的目标敏捷豁免失败受 1d6 穿刺并倒地（成功半伤）；5/11/17 级伤害 +1 骰。',
+  'spell-2014-fractured-shell': '1 动作，触碰自愿生物，其先受 1 点穿刺；持续至多 10 分钟（专注）内，该目标每回合首次被近战命中时攻击者受 2d4 穿刺；升环伤害 +1d12，五环以上无需专注。',
+  'spell-2014-phalangeal-shot': '1 动作，自身；正前方 30 尺长、1 尺宽线状区域内生物敏捷豁免失败受 2d8 穿刺；升环伤害 +1d8。',
+  'spell-2014-spectral-slash': '1 附赠动作，射程 20 尺；近战法术攻击命中受 1d8 武器类型伤害；随后可用动作化作流光直线移动至多 20 尺并以该武器执行攻击动作；升环伤害 +1d8、移动 +10 尺。',
+  'spell-2014-arm-cannon': '1 动作，射程 30 尺；远程法术攻击命中受 4d8 穿刺并须力量豁免，失败被推离 15 尺且撞击障碍时被骨刺束缚至其下回合结束；大型以上豁免有优势；升环伤害 +1d8、推离 +5 尺。',
+  'spell-2014-blind-ambush': '1 动作，射程 60 尺，持续 1 分钟；指定地面一点，首个在该点 10 尺立方内移动至少 5 尺者触发地底巨嘴，范围内各受 2d10 穿刺且其一倒地；升环 +1d10，五环以上可触发两次。',
+  'spell-2014-calcified-memories': '1 动作或仪式，触碰亡者遗骨；灰色幻象重现其生前最后 6 秒的动作（只显轮廓，不显示致其死亡者本体）；对亡灵无效；同一遗骨 24 小时内不可重复使用。',
+  'spell-2014-skeletal-tail': '1 动作，自身，持续 1 分钟；长出骨尾，15 尺光环内生物移动时可反应进行一次近战法术攻击，命中受 2d4＋施法属性调整值穿刺并被拖拽至你身边空位；升环伤害 +2d4。',
+  'spell-2014-displacing-maw': '1 动作，射程 10 尺；目标力量豁免失败受 4d8 穿刺并被传送至你 60 尺内地面指定点（巨口重现后吐出），成功半伤；升环伤害 +1d8、传送 +10 尺。',
+  'spell-2014-osseous-impalement': '1 动作，射程 60 尺，持续至多 1 分钟（专注）；至多 4 名地面生物敏捷豁免失败受 3d10 穿刺并被骨刺贯穿束缚、悬空 5 尺，其每回合开始再受 1d10；可用动作以力量（运动）对抗 DC 挣脱；升环 +1d10。',
+  'spell-2014-spectral-fury': '1 动作，射程 30 尺；三道幽灵分身各作一次近战法术攻击，命中受 4d8 武器类型伤害；随后可用附赠动作化流光直线移动至多 30 尺（不引发借机攻击）并发动一次近战武器攻击；升环 +2d8。',
+  'spell-2014-dread-scarecrow': '1 动作，自身，持续至多 1 分钟（专注）；以你为中心 30 尺球内你选择的生物感知豁免失败陷入恐慌，速度降为 0 且倒地；受伤后可在其回合结束时重试豁免。',
+  'spell-2014-maiden-of-bones': '1 动作，射程 60 尺；目标力量豁免失败被困骨制铁处女：束缚并失能、处于全身掩护且免疫外部伤害，每回合开始受 3d6 穿刺，回合结束可重试豁免；骨处女 AC 10＋施法属性、80 生命值、免疫心灵与毒素、钝击易伤；升环 +1d6 与 +20 生命值。',
+  'spell-2014-marrow-transplant': '1 动作，射程 30 尺；远程法术攻击命中受 4d6 暗蚀，另一名你选择的生物恢复等量生命值（若其死亡不足 1 分钟则复活并恢复等量）；目标无骨骼时法术失败；升环 +1d6。',
+  'spell-2014-forest-of-dread': '1 动作，自身，持续至多 10 分钟（专注）；以你为中心 30 尺半径、20 尺高柱状区域内你选择的生物敏捷豁免失败受 4d8 穿刺（成功半伤）；区域为困难地形且生物进入或在内移动每 5 尺受 2d8 穿刺（你免疫），并提供半身掩护。',
+  // ── 第三方合作内容补录（G3-I3）· 瓦尔达的秘密尖塔 玩家包Ⅱ ──
+  'spell-2014-arc-blade': '1 动作，射程 15 尺；以施法属性代替力量／敏捷用所持近战武器攻击一次（可为 15 尺远程法术攻击），命中造成闪电或武器常规伤害；5/11/17 级额外 +1d6 闪电。',
+  'spell-2014-burning-blade': '1 动作，自身；以施法属性代替力量／敏捷用所持近战武器攻击一次，命中造成火焰或武器常规伤害；伤害骰掷出最高值时可持续加掷（至多追加施法属性调整值枚）；5/11/17 级额外 +1d6 火焰。',
+  'spell-2014-candy-blast': '1 动作，射程 60 尺；远程法术攻击命中受 1d8 力场伤害，糖果堆积使目标空间内 5 尺方格成为困难地形（1 分钟后消失）；5/11/17 级伤害 +1d8。',
+  'spell-2014-cheat': '1 附赠动作，自身，持续 1 轮；你为游玩非魔法技巧游戏所作的属性检定可以重掷，但须接受新结果（无法影响魔法物品抽取等）。',
+  'spell-2014-frigid-blade': '1 动作，自身；以施法属性代替力量／敏捷用所持近战武器攻击一次，武器伤害骰提高一阶（d4→d6→d8→d10→d12 或 2d6），命中造成寒冷或武器常规伤害；5/11/17 级额外 +1d6 寒冷。',
+  'spell-2014-flawed-reconstruction': '1 动作，触碰；目标恢复 3d6 生命值，但生命值上限降低 1d6（最低 1）；升环治疗 +2d6、上限扣减 +1d6。',
+  'spell-2014-transient-bulwark': '1 动作或仪式，自身，持续 8 小时；下一次对你发动的攻击检定承受 -10 减值，随后法术结束。',
+  'spell-2014-zephyr-s-feather': '1 动作，自身，持续至多 1 分钟（专注）；召出 4 根魔法飞羽环绕你，施法时及此后每回合可用附赠动作消耗 1 根，对 120 尺内可见生物作远程法术攻击命中受 1d8 力场伤害；升环 +1d8。',
+  'spell-2014-blunder': '1 反应（30 尺内生物以攻击检定命中时），立即；攻击者感知豁免失败则承受你选择的效应：掉落一件指定持握物（至多 10 尺外），或陷入倒地（其劣势作用于该次触发攻击）。',
+  'spell-2014-protect-threshold': '1 动作或仪式，触碰，持续 10 分钟；隐形怪异生物在受防护的门道处徘徊，试图穿过者感知豁免失败受 4d6 心灵伤害（成功半伤）；升环 +1d6。',
+  'spell-2014-stone-bones': '1 附赠动作，射程 30 尺，持续 1 轮；目标获得对钝击、穿刺、挥砍伤害的抗性，直至你下一回合结束。',
+  'spell-2014-swift-flight': '1 附赠动作，触碰，持续 1 轮；目标背部生出发光双翼，获得 60 尺飞行速度并可悬浮至其下一回合结束，结束时若仍在空中则坠落。',
+  'spell-2014-cosmic-horror': '1 动作，射程 60 尺，持续至多 1 分钟（专注）；以一点为中心 10 尺球内开启通往骇人维度的传送门，范围内生物感知豁免失败受 6d6 心灵伤害并恐慌（成功半伤）；恐慌者每回合结束可重试；升环 +1d6。',
+  'spell-2014-flashback': '1 动作，自身，立即；你对过去 24 小时的经历作微小篡改，为当前局面预设一项准备（由 DM 裁定可行性，必要时需属性检定）；影响有限，无法移除生物或物件、造成伤害或移动未携带之物。',
+  'spell-2014-rusting-grasp': '1 动作，触碰；近战法术攻击命中受 6d4 强酸伤害且 1 小时内 AC 承受 -3 减值（最低 10）；对未被携带的非魔法金属物件可摧毁至多 1 立方尺的部分；升环伤害 +2d4、摧毁体积 +1 立方尺。',
+  'spell-2014-s-ance': '10 分钟，自身，持续 1 分钟；与至少三名自愿者牵手召来精魂，指名一名你熟悉的生物；10 天内已被本法术召唤过的精魂无法响应；可提出至多 3 个问题，回答简短晦涩，敌意精魂无义务说真话，另有 5% 概率联系到错误精魂。',
+  'spell-2014-mandy-s-marvelous-dress': '1 动作，触碰，持续至当地下一个午夜（其他地点为 24 小时，专注）；目标穿上无法脱下的华美礼裙：其魅力 D20 检定可直接取 10；能看见礼裙者攻击时须感知豁免，失败则改为失手（成功者此后免疫该效应）。',
+  'spell-2014-soul-effigy': '1 分钟或仪式，触碰，持续 8 小时；目标类人生物体质豁免失败则一缕灵魂被缚入娃娃，你可对其采取以下之一：操纵其下回合的动作与移动（仅能疾走／撤离／躲藏／操作）、戳刺替身造成 2d8 且无视抗性与免疫、或浸水使其陷入束缚至你下回合结束。',
+  'spell-2014-sword-of-judgment': '1 动作，射程 60 尺，持续至多 1 分钟（专注）；以一点为中心 20 尺球内每名生物头顶悬起灵体长剑，当其发动攻击或施法时可用反应令剑坠下，该生物敏捷豁免失败受 4d8 力场伤害（成功半伤），每回合至多一次；升环 +1d8。',
+  'spell-2014-frenzy': '1 动作，射程 120 尺，持续至多 1 分钟（专注）；以一点为中心 20 尺球内生物感知豁免失败陷入狂乱，失去敌我之分、随机选择攻击与施法目标并必须发动借机攻击；其每回合结束可重试豁免。',
+  'spell-2014-rocks-fall': '1 动作，射程 120 尺，立即；以一点为中心 60 尺半径、120 尺高柱状区域内生物敏捷豁免失败受 10d8 钝击并被瓦砾掩埋（成功半伤）；被掩埋者倒地并束缚，可用动作以力量（运动）对抗 DC 挣脱。',
 }
 
 /** 补充结构化字段（学派与施法参数）；仅登记《5e 不全书》来源有明确值的条目。 */

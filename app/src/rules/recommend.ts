@@ -77,3 +77,29 @@ export function getBackgroundRecommendationReason(background: BackgroundRule, cl
   }
   return '技能与职业常见玩法契合'
 }
+
+/** 推荐排序可消费的最小结构：种族、物种、背景与子种族条目均满足。 */
+interface ClassRecommendedItem {
+  readonly id: string
+  readonly recommendedClassIds: readonly string[]
+}
+
+/**
+ * 推荐优先的稳定分区（v1.9.1 R1-1／R1-5）：
+ * 命中当前职业推荐的条目整体前移，其余条目留在后面；两组内部都保持传入顺序（规则库登记顺序），
+ * 因此同一份候选池在完整目录、中英文搜索与来源筛选下都能得到一致结果。
+ * 未选择职业时原样返回，不产生空推荐分组；不修改入参，也不排序名称。
+ */
+export function sortByClassRecommendation<T extends ClassRecommendedItem>(
+  items: readonly T[],
+  classId?: string,
+): readonly T[] {
+  if (!classId) return items
+  const recommended: T[] = []
+  const rest: T[] = []
+  for (const item of items) {
+    if (item.recommendedClassIds.includes(classId)) recommended.push(item)
+    else rest.push(item)
+  }
+  return [...recommended, ...rest]
+}

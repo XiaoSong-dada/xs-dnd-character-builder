@@ -1,5 +1,5 @@
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
-import { decodeAbilityImprovement, formatFeatBonusOption } from '@/rules/feats'
+import { decodeAbilityImprovement, formatFeatBonusOption, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { listSessionResources } from '@/rules/session-resources'
@@ -174,7 +174,7 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
         enabledSourceIds: draft.enabledSourceIds,
         selections: draft.selections,
         ruleset: draft.ruleset,
-        raceId: draft.raceId,
+        raceId: draft.raceId,        backgroundId: draft.backgroundId,
       })
     : []
   const checkpointById = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint]))
@@ -259,7 +259,22 @@ function buildFeatures(draft: CharacterDraft): ExportFeature[] {
   const background = draft.backgroundVariantId
     ? repository.getBackground(draft.backgroundVariantId)
     : draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
-  const originFeat = background?.originFeatId ? repository.getFeat(background.originFeatId) : undefined
+  // 起源专长（H3）：与规则层授予列表同源，含二选一／任选结果与「狂野天赋替代」结果；
+  // 优先级 9 高于 `resolveSelectedFeatures` 的专长条目，保证同一专长只保留带「（起源专长）」标注的一条。
+  const originFeatEntries = listFeatGrants(draft, repository)
+    .filter((grant) => grant.sourceKind === 'background' || grant.sourceKind === 'species')
+    .flatMap((grant) => {
+      const feat = repository.getFeat(grant.featId)
+      if (!feat) return []
+      const backgroundName = grant.sourceKind === 'background' ? repository.getBackground(grant.sourceId)?.name : undefined
+      return [{
+        id: feat.id,
+        category: 'feat' as const,
+        name: backgroundName ? `${feat.name}（起源专长 · ${backgroundName}）` : `${feat.name}（起源专长）`,
+        summary: feat.detail,
+        priority: 9,
+      }]
+    })
   const allocation = draft.backgroundAbilityAllocation ?? {}
   const allocationText = Object.entries(allocation).length
     ? `属性分配：${Object.entries(allocation).map(([key, value]) => `${ABILITY_LABELS[key as AbilityKey]}${value >= 0 ? '+' : ''}${value}`).join('、')}`
@@ -272,7 +287,7 @@ function buildFeatures(draft: CharacterDraft): ExportFeature[] {
       .map((feature) => ({ id: feature.id, category: 'race' as const, name: feature.name, summary: feature.summary, priority: 40 })))
   const entries: ExportFeature[] = [
     ...resolveSelectedFeatures(draft),
-    ...(originFeat ? [{ id: originFeat.id, category: 'feat' as const, name: `${originFeat.name}（起源专长）`, summary: originFeat.detail, priority: 12 }] : []),
+    ...originFeatEntries,
     ...(subclass?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'subclass' as const, name: feature.name, summary: feature.summary, priority: 20 })),
     ...(classRule?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'class' as const, name: feature.name, summary: feature.summary, priority: 30 })),
     ...raceFeatures,

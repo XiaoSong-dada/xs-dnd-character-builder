@@ -210,18 +210,57 @@ function grantSourceKind(checkpointId: string): FeatGrant['sourceKind'] {
   return 'class'
 }
 
+/** 起源专长检查点的所有者 id（`<所有者>-origin-feat`）；其它检查点返回 undefined。 */
+export function originFeatOwnerId(checkpointId: string): string | undefined {
+  const suffix = '-origin-feat'
+  return checkpointId.endsWith(suffix) ? checkpointId.slice(0, -suffix.length) : undefined
+}
+
+/**
+ * 该选择当前是否仍然生效（H1 孤立选择过滤）。
+ *
+ * 背景与物种的起源专长共用 `<所有者>-origin-feat` 检查点；更换背景或物种后，
+ * 旧检查点的选择会残留在 `draft.selections` 中。若不过滤，旧背景授予的专长
+ * 会继续计入派生与角色卡，故按「所有者是否仍是当前背景／物种」判定。
+ * 专长子选择（`feat-child:<父检查点>:...`）随父检查点一并判定；其它检查点不受影响。
+ */
+export function isSelectionCheckpointActive(draft: CharacterDraft, checkpointId: string): boolean {
+  const ownerId = originFeatOwnerId(checkpointId)
+  if (ownerId) {
+    return ownerId === draft.backgroundId || ownerId === draft.raceId || ownerId === draft.subraceId
+  }
+  if (checkpointId.startsWith('feat-child:')) {
+    const parentCheckpointId = checkpointId.split(':')[1]
+    return parentCheckpointId ? isSelectionCheckpointActive(draft, parentCheckpointId) : true
+  }
+  return true
+}
+
 /** 汇总角色当前实际获得的专长（背景固定授予 + 时间线选择），用于派生、重复校验与来源解释。 */
 export function listFeatGrants(draft: CharacterDraft, repository: RulesRepository): readonly FeatGrant[] {
   const grants: FeatGrant[] = []
   const background = draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
-  if (
-    background?.originFeatId
-    && isSourceEnabled(background.sourceIds, draft.enabledSourceIds, repository)
-  ) {
-    grants.push({ featId: background.originFeatId, sourceKind: 'background', sourceId: background.id })
+  if (background && isSourceEnabled(background.sourceIds, draft.enabledSourceIds, repository)) {
+    // 二选一／任选背景（G3 Q1-A）：先看玩家在 `${background.id}-origin-feat` 检查点的选择。
+    const backgroundCheckpointId = `${background.id}-origin-feat`
+    const hasCandidates = Boolean(background.originFeatOptions?.length || (background.originFeatChoices?.count ?? 0) > 0)
+    const chosen = hasCandidates
+      ? draft.selections.find((item) => item.checkpointId === backgroundCheckpointId && !item.invalidatedAt)
+      : undefined
+    if (chosen) {
+      for (const optionId of chosen.optionIds) {
+        const feat = repository.getFeat(optionId)
+        if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
+        grants.push({ featId: feat.id, sourceKind: 'background', sourceId: background.id, checkpointId: backgroundCheckpointId })
+      }
+    } else if (background.originFeatId) {
+      grants.push({ featId: background.originFeatId, sourceKind: 'background', sourceId: background.id })
+    }
   }
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
+    // 孤立选择（换背景／物种后残留的旧起源专长检查点）不再授予。
+    if (!isSelectionCheckpointActive(draft, selection.checkpointId)) continue
     for (const optionId of selection.optionIds) {
       const feat = repository.getFeat(optionId)
       if (!feat) continue
@@ -243,10 +282,30 @@ export function listFeatGrants(draft: CharacterDraft, repository: RulesRepositor
       return Boolean(feat?.category && substitutions.some((item) => item.category === feat.category && feat.sourceIds.some((id) => item.sourceIds.includes(id))))
     })
     if (replaced) {
-      return grants.filter((grant) => !(grant.sourceKind === 'background' && grant.featId === background?.originFeatId))
+      const replacedIds = new Set<string>()
+      if (background?.originFeatId) replacedIds.add(background.originFeatId)
+      const backgroundFeatCheckpoint = background?.originFeatOptions?.length ? `${background.id}-origin-feat` : undefined
+      return grants.filter((grant) => !(
+        grant.sourceKind === 'background'
+        && (replacedIds.has(grant.featId) || (backgroundFeatCheckpoint !== undefined && grant.checkpointId === backgroundFeatCheckpoint))
+      ))
     }
   }
   return grants
+}
+
+/**
+ * 专长授予来源的中文标签（H3）：角色卡、跑团面板与导出共用，
+ * 让玩家能看出某条专长来自背景、物种还是职业检查点。
+ */
+export function formatFeatGrantSource(grant: FeatGrant, repository: RulesRepository): string {
+  if (grant.sourceKind === 'background') {
+    const background = repository.getBackground(grant.sourceId)
+    return background ? `起源专长 · ${background.name}` : '起源专长'
+  }
+  if (grant.sourceKind === 'species') return '物种授予'
+  if (grant.sourceKind === 'subclass') return '子职选择'
+  return '职业选择'
 }
 
 /** 角色当前生效的专长条目（按授予顺序去重）。 */
@@ -287,6 +346,7 @@ export function collectFeatSkillSelections(draft: CharacterDraft, repository: Ru
     if (!feat) continue
     const parentActive = draft.selections.some((item) => item.checkpointId === parentCheckpointId && !item.invalidatedAt && item.optionIds.includes(featId ?? ''))
     if (!parentActive) continue
+    if (parentCheckpointId && !isSelectionCheckpointActive(draft, parentCheckpointId)) continue
     const choice = feat.choices?.find((item) => item.id === choiceId)
     if (!choice) continue
     for (const optionId of selection.optionIds) {

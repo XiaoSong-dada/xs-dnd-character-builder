@@ -14,7 +14,7 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-media'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
-import { decodeAbilityImprovement, formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
+import { decodeAbilityImprovement, formatFeatBonusOption, formatFeatGrantSource, getCheckpointSelectionBounds, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
@@ -300,7 +300,7 @@ function isAlsoNormallyAcquired(spellId: string): boolean {
 const selectedOptionEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const choiceCheckpointIds = [
     ...(classInfo.value?.features ?? []).flatMap((feature) => feature.checkpointIds ?? []),
     ...(subclassInfo.value?.features ?? [])
@@ -358,7 +358,7 @@ function featureChoiceLabel(feature: ClassFeature): string {
   if (checkpointIds.length === 0) return '需选择'
   const draft = props.draft
   if (!draft.classId) return '需选择'
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const unlocked = checkpointIds
     .map((checkpointId) => timeline.find((item) => item.id === checkpointId))
     .filter((checkpoint): checkpoint is NonNullable<typeof checkpoint> => Boolean(checkpoint))
@@ -459,38 +459,58 @@ const classInfo = computed(() => {
     .filter((feature) => feature.level <= props.draft.targetLevel)
   return { classRule, features }
 })
-/** 已选择的专长与属性提升（来自草稿 selections，只读展示）。 */
+/**
+ * 专长与属性提升条目（H3）：生效专长与规则层 `listFeatGrants` 同源，
+ * 使背景固定授予／候选列表／任选池三类起源专长、以及物种与职业授予的专长
+ * 都出现在角色卡上并可读完整效果；属性提升仍来自草稿选择（`asi-*` 与 `feat-bonus-*`）。
+ */
 const featAndAsiEntries = computed(() => {
   const draft = props.draft
-  if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+  const repository = getRulesRepository(draft.ruleset)
+  const timeline = draft.classId
+    ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+    : []
   const entries: {
     id: string
     level: number
     label: string
+    summary?: string
     detail?: string
+    sourceLabel?: string
   }[] = []
+  const seen = new Set<string>()
+  // 1) 生效专长：背景／物种／职业／子职授予 + 时间线选择。
+  for (const grant of listFeatGrants(draft, repository)) {
+    const feat = repository.getFeat(grant.featId)
+    if (!feat || seen.has(feat.id)) continue
+    seen.add(feat.id)
+    const checkpoint = grant.checkpointId ? timeline.find((item) => item.id === grant.checkpointId) : undefined
+    entries.push({
+      id: feat.id,
+      level: grant.sourceKind === 'background' || grant.sourceKind === 'species' ? 1 : checkpoint?.level ?? 1,
+      label: `${feat.name} · ${feat.englishName}`,
+      summary: feat.description,
+      detail: feat.detail,
+      sourceLabel: formatFeatGrantSource(grant, repository),
+    })
+  }
+  // 2) 属性提升与专长自带属性提升子选项（仍来自草稿选择）。
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
     const checkpoint = timeline.find((item) => item.id === selection.checkpointId)
     for (const optionId of selection.optionIds) {
-      const bonusLabel = formatFeatBonusOption(getRulesRepository(props.draft.ruleset), optionId)
+      const bonusLabel = formatFeatBonusOption(repository, optionId)
       if (bonusLabel) {
         // 专长自带属性提升子选项（feat-child 检查点）：显示“专长名 · 智力 +1”（B09-09）。
         const parentName = checkpoint?.parentOptionId
-          ? getRulesRepository(props.draft.ruleset).getFeat(checkpoint.parentOptionId)?.name
+          ? repository.getFeat(checkpoint.parentOptionId)?.name
           : undefined
         entries.push({
           id: optionId,
           level: checkpoint?.level ?? 1,
           label: parentName ? `${parentName} · ${bonusLabel}` : bonusLabel,
-          detail: getRulesRepository(props.draft.ruleset).getOption(optionId)?.description,
+          detail: repository.getOption(optionId)?.description,
         })
-      } else if (optionId.startsWith('feat-')) {
-        const feat = getRulesRepository(props.draft.ruleset).feats.find((item) => item.id === optionId)
-        if (feat) {
-          entries.push({ id: feat.id, level: checkpoint?.level ?? 1, label: `${feat.name} · ${feat.englishName}`, detail: feat.detail })
-        }
       } else if (optionId.startsWith('asi-')) {
         const improvement = decodeAbilityImprovement(optionId)
         if (!improvement) continue
@@ -548,7 +568,7 @@ const needsReview = computed(() => {
   const draft = props.draft
   const hasInvalidated = draft.selections.some((item) => Boolean(item.invalidatedAt))
   if (!draft.classId) return hasInvalidated
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const incomplete = timeline.some((checkpoint) => {
     const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
     return (selection?.optionIds.length ?? 0) < checkpoint.minSelections
@@ -763,16 +783,19 @@ function handleExportPdf(): void {
       </template>
       <section v-if="featAndAsiEntries.length" class="character-sheet__subclass-features">
         <header class="character-sheet__subclass-features-header">
-          <h3>专长与属性提升</h3>
+          <h3>专长与属性提升 · {{ featAndAsiEntries.length }}</h3>
         </header>
         <ListShell>
           <ExpandableOptionCard
             v-for="entry in featAndAsiEntries"
             :key="entry.id"
             :title="entry.label"
-            :description="`${entry.level}级`"
+            :description="[`${entry.level}级`, entry.summary].filter(Boolean).join(' · ')"
             expanded-label="专长效果"
           >
+            <template #suffix>
+              <UiBadge v-if="entry.sourceLabel" tone="primary">{{ entry.sourceLabel }}</UiBadge>
+            </template>
             <template v-if="entry.detail" #expanded>{{ entry.detail }}</template>
           </ExpandableOptionCard>
         </ListShell>

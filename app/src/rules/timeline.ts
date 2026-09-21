@@ -29,6 +29,10 @@ export interface TimelineContext {
   readonly ruleset?: RulesetId
   /** 已选物种：用于展开物种授予的起源专长（如人类 Versatile）。 */
   readonly raceId?: string
+  /** 已选背景：用于展开背景授予的二选一起源专长（如鸦阁「起源专长或黑暗赠礼专长」）。 */
+  readonly backgroundId?: string
+  /** 显式注入仓库（缺省按 `ruleset` 解析）；供测试注入探针数据，运行期调用方无需传入。 */
+  readonly repository?: RulesRepository
 }
 
 /**
@@ -204,6 +208,49 @@ function buildSpeciesAbilityCheckpoints(
   return checkpoints
 }
 
+/**
+ * 背景授予的起源专长检查点：
+ * - `originFeatOptions`：显式候选列表（二选一，或「本书候选」如歪曲之月·德鲁斯肯瓦尔德居民）；
+ * - `originFeatChoices`：按类别展开的任选池（如火炬光·神话调查员「选择任意起源专长」）。
+ * 两者共用 `${background.id}-origin-feat` 检查点，候选需要读完整效果故走可展开渲染。
+ */
+function buildBackgroundFeatCheckpoints(
+  backgroundId: string,
+  repository: RulesRepository,
+  enabledSourceIds?: readonly string[],
+): readonly ChoiceCheckpoint[] {
+  const background = repository.getBackground(backgroundId)
+  if (!background) return []
+  const options = background.originFeatOptions
+  const choices = background.originFeatChoices
+  const optionIds = options?.length
+    ? options.filter((id) => {
+        const feat = repository.getFeat(id)
+        if (!feat) return false
+        return enabledSourceIds === undefined || isSourceEnabled(feat.sourceIds, enabledSourceIds, repository)
+      })
+    : choices && choices.count > 0
+      ? getFeatPool(repository, choices.categories, { enabledSourceIds }).map((feat) => feat.id)
+      : []
+  if (optionIds.length === 0) return []
+  const count = options?.length ? 1 : Math.max(1, choices?.count ?? 1)
+  return [{
+    id: `${background.id}-origin-feat`,
+    level: 1,
+    step: 'timeline',
+    kind: 'feat',
+    title: '选择起源专长',
+    description: options?.length
+      ? `${background.name}授予其中一项专长（按原书二选一或本书候选）。`
+      : `${background.name}授予任选起源专长（按原书自选）。`,
+    required: true,
+    minSelections: count,
+    maxSelections: count,
+    optionIds,
+    optionPresentation: 'expandable',
+  }]
+}
+
 function buildFeatChoiceCheckpoints(
   parentCheckpoints: readonly ChoiceCheckpoint[],
   selections: readonly ChoiceSelection[],
@@ -243,7 +290,7 @@ function buildFeatChoiceCheckpoints(
 }
 
 export function buildTimeline(classId: string, targetLevel: number, context: TimelineContext = {}): readonly ChoiceCheckpoint[] {
-  const repository = getRulesRepository(context.ruleset ?? '5e-2014')
+  const repository = context.repository ?? getRulesRepository(context.ruleset ?? '5e-2014')
   const classRule = repository.getClass(classId)
   if (!classRule) return []
   const subclassCheckpoint = buildSubclassCheckpoint(classId, repository, context.enabledSourceIds)
@@ -268,6 +315,7 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
   const baseTimeline = [
     ...(context.subraceId === 'race-2014-human-variant' ? [variantHumanCheckpoint] : []),
     ...(context.raceId ? buildSpeciesFeatCheckpoints(context.raceId, repository, context.enabledSourceIds) : []),
+    ...(context.backgroundId ? buildBackgroundFeatCheckpoints(context.backgroundId, repository, context.enabledSourceIds) : []),
     ...buildSpeciesAbilityCheckpoints([context.subraceId, context.raceId], repository),
     ...classCheckpoints,
     ...(context.subclassId ? buildSubclassFeatureCheckpoints(context.subclassId, repository, context.enabledSourceIds) : []),

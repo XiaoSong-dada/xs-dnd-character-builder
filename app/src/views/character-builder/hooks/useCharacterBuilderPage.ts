@@ -103,7 +103,7 @@ export function useCharacterBuilderPage() {
     if (!draft?.classId) return false
     const classRule = getRulesRepository(draft.ruleset).getClass(draft.classId)
     if (classRule?.status !== 'implemented') return true
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
     return timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const bounds = getCheckpointSelectionBounds(draft, checkpoint)
@@ -351,7 +351,7 @@ export function useCharacterBuilderPage() {
       setStep('setup')
       return
     }
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
     const hasInvalidated = draft.selections.some((selection) => Boolean(selection.invalidatedAt))
     const hasIncompleteCheckpoint = timeline.some((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
@@ -473,7 +473,11 @@ export function useCharacterBuilderPage() {
     const draft = activeDraft.value
     const background = repositoryFor(draft).getBackground(id)
     if (!draft || draft.backgroundId === id) return
+    const change = { kind: 'background', value: id, previousValue: draft.backgroundId } as const
     const apply = () => {
+      // 换背景后旧背景的起源专长选择不再适用（H1）：先标失效，再写入新背景。
+      const impact = getDependencyImpact(draft, change)
+      store.invalidateSelections(impact.invalidated, '更换背景后需要重新确认起源专长')
       const equipment = buildStartingEquipmentState({ ...draft, backgroundId: id })
       store.updateDraft({
         backgroundId: id,
@@ -486,7 +490,7 @@ export function useCharacterBuilderPage() {
       })
     }
     requestChange(
-      { kind: 'background', value: id },
+      change,
       '更换背景',
       apply,
       draft.inventory.some((entry) => entry.sourceKind === 'background') ? ['背景固定装备与起始金币'] : [],
@@ -508,7 +512,7 @@ export function useCharacterBuilderPage() {
     store.saveSelection(checkpointId, optionIds)
     const draft = activeDraft.value
     if (!draft?.classId) return
-    const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId })
+    const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
       .find((item) => item.id === checkpointId)
     if (checkpoint?.kind === 'subclass') {
       store.updateDraft({ subclassId: optionIds[0] })

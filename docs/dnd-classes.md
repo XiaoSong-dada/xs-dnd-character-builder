@@ -134,6 +134,34 @@
 - 子职特性：炼金师（实验性灵药）、装甲师（装甲型号）、魔炮师（魔能炮台）、战地匠师（钢铁守卫）、制图师（冒险者的地图匣）。
 - 遗留：仿制物品的创造／绑定交互 UI；聚合物品（+1／+2 武器、护甲等）的基底选择按提示级处理。
 
+## 4.3 第三方子职索引（G3-I2）
+
+第三方合作内容按「**每书一个模块**」登记，全部为 `selectable`（登记等级特性、名称、来源与原创中文摘要，效果不进入自动计算），来源默认关闭并标注「合作内容，需 DM 同意」。与官方内容一样严格区分规则集：适配 2014 职业框架的写入 `subclasses-2014`，适配 2024 框架的写入 `subclasses-2024`，两版不共享 ID、等级特性或数值。
+
+**口径判定依据**：以参考资料中各职业子职特性的**首个等级**为准（2014 的牧师／术士／魔契师从 1 级、德鲁伊／法师从 2 级起；2024 全部子职统一从 3 级起），并用 2024 专属术语（魔法动作、英雄激励、浴血、武器精通）交叉验证。
+
+| 书 | 子职数 | 规则集 | 来源 ID | 模块 |
+| --- | ---: | --- | --- | --- |
+| 《胧忆岛》 | 11 | `5e-2014` | `tp-obojima-index` | `third-party-subclasses-obojima-2014.ts` |
+| 《黯潮之书》 | 10 | `5e-2014` | `tp-ebon-tides-index` | `third-party-subclasses-ebon-tides-2014.ts` |
+| 《塔尔多雷》 | 9 | `5e-2014` | `tp-taldorei-index` | `third-party-subclasses-taldorei-2014.ts` |
+| 《狮鹫的鞍中珍宝Ⅱ》 | 12 | `5e-2014` | `tp-griffin-saddlebag2-index` | `third-party-subclasses-griffin-saddlebag2-2014.ts` |
+| 《鬼魅幽谷》玩家包 | 6 | `5e-2014` | `tp-grim-hollow-index` | `third-party-subclasses-grim-hollow-2014.ts` |
+| 《谦卑林》 | 4 | `5e-2014` | `tp-humblewood-index` | `third-party-subclasses-humblewood-2014.ts` |
+| 《谦卑林故事集》 | 3 | `5e-2014` | `tp-humblewood-tales-index` | `third-party-subclasses-humblewood-2014.ts` |
+| 《火炬光下的克苏鲁》 | 12 | `5e-2024` | `source-2024-tp-cthulhu-torchlight` | `third-party-subclasses-cthulhu-torchlight-2024.ts` |
+| 《瓦尔达的秘密尖塔》 | 12 | `5e-2024` | `source-2024-tp-valdas-spire` | `third-party-subclasses-valdas-spire-2024.ts` |
+| 《斯坦哈德的诡怖猎杀指南》 | 7 | `5e-2024` | `source-2024-tp-steinhardt` | `third-party-subclasses-steinhardt-2024.ts` |
+| 《歪曲之月》 | 15 | `5e-2024` | `source-2024-tp-crooked-moon` | `third-party-subclasses-crooked-moon-2024.ts` |
+| 《花卉龙博考》 | 3 | `5e-2024` | `source-2024-tp-floral-dragons` | `third-party-subclasses-floral-dragons-2024.ts` |
+| **合计** | **104** | 2014 式 55 ／ 2024 式 49 | | 已全部登记，共 565 条等级特性 |
+
+**等级口径的判定与一处勘误**：第三方书的子职按参考资料**实际标注的等级**判定规则集 —— 2014 的牧师／术士／魔契师子职自 **1 级**、德鲁伊／法师自 **2 级**起，2024 全部子职统一自 **3 级**起，并用 2024 专属术语（魔法动作、英雄激励、浴血、武器精通）交叉验证。《花卉龙博考》初次普查时被误判为 2014 式，实施阶段发现其德鲁伊与魔契师子职均记为 3 级起，已改登记为 **2024** 子职（来源 `source-2024-tp-floral-dragons`），2014 注册表不再保留同名来源；等级照资料原样登记，**不做跨版归一**。
+
+**不属于本索引的内容**：依附项目未支持职业的子职不予登记 —— 《瓦尔达的秘密尖塔》的**铳士**职业及其 6 个子职（密间客／花枪客／死瞳客／白帽客／豪赌客／魔弹客）、《鬼魅幽谷》玩家指南的**怪物猎人**职业及其 4 个狩猎公会（刻肉会／吞噬会／捕猎会／秘学会）。若后续开放这些职业，再按同一口径补录。
+
+**文件与 ID 约定**：子职 ID 为 `subclass-<规则集>-tp-<书简称>-<职业slug>-<子职slug>`，特性 ID 为 `tp-<书简称>-<职业slug>-<子职slug>-<特性slug>`；第三方子职**不建立** `docs/classes/subclasses/` 下的逐条资料文件（该目录只登记核心与官方子职），来源、兼容边界与摘要以模块头注释和本节表格为准。
+
 ## 5. 职业章节
 
 以下章节先建立稳定锚点。资料完成后，应在对应章节内按照“职业基础 → 等级特性 → 子职 → 选择与校验 → 来源”的顺序记录。

@@ -331,8 +331,10 @@ src/views/dice/workers/dicePhysics.worker.ts
 ```text
 src/views/character-builder/index.vue
   -> src/views/character-builder/hooks/useCharacterBuilderPage.ts
+  -> src/views/character-builder/hooks/{useSelectionTaskFlow,useSpellcastingStepFlow}.ts（第 4／8 步页面私有任务派生、活动项、自动推进与筛选状态）
   -> src/views/character-builder/steps.ts（STEP_ORDER / STEP_META）
-  -> src/views/character-builder/components/*（步骤组件；FeatChoicePanel 由内部引用）
+  -> src/views/character-builder/selection-task.ts（页面私有任务接口：SelectionTask 与 SelectionTaskFocusHandle）
+  -> src/views/character-builder/components/*（步骤组件；SelectionTaskNavigator 与 FeatChoicePanel 由内部引用）
   -> src/features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
   -> src/components/{AddItemModal,AdjustItemModal}（CharacterSheetStep 物品页签）
   -> src/components/ui/{BaseButton,ExpandableOptionCard,UiModal,UiNotice}
@@ -354,6 +356,8 @@ src/views/character-builder/hooks/useCharacterSheetEditing.ts
   （角色卡私有编辑状态、字段差值换算、人工法术与一键恢复；不持有第二份业务事实）
 
 src/views/character-builder/components/*
+  -> src/views/character-builder/components/SelectionTaskNavigator.vue（OriginStep／SpellcastingStep 共用的页面私有任务导航与键盘操作）
+  -> src/views/character-builder/hooks/{useSelectionTaskFlow,useSpellcastingStepFlow}.ts
   -> src/views/character-builder/components/{EditableStatTile,AddManualSpellModal}（双击/键盘数值编辑与完整系统法术库选择）
   -> src/views/character-builder/components/{FeatChoicePanel}（页面内复用）
   -> src/features/spellbook-transcription（CharacterSheetStep 抄录弹层：同一草稿的 spellSelections 与 adventureGold）
@@ -668,8 +672,10 @@ src/styles/index.scss  -> @use src/styles/flex.scss
 ```text
 views/character-builder/index.vue
   -> views/character-builder/hooks/useCharacterBuilderPage.ts
+  -> views/character-builder/hooks/{useSelectionTaskFlow,useSpellcastingStepFlow}.ts
   -> views/character-builder/steps.ts（STEP_META/STEP_ORDER 步骤顺序与友好文案公共常量，被 hook 与 StartPanel 共用）
-  -> views/character-builder/components/*（16 个：AbilitiesStep、AddItemModal、AdjustItemModal、CharacterSheetStep、ClassStep、EquipmentStep、FeatChoicePanel、IdentityStep、LevelAdjustModal、OriginStep、SourcesStep、SetupStep、SpellcastingStep、StartPanel、TimelineStep、ValidationStep）
+  -> views/character-builder/selection-task.ts（页面私有任务接口：SelectionTask 与步骤向页面暴露的 SelectionTaskFocusHandle）
+  -> views/character-builder/components/*（新增 SelectionTaskNavigator；OriginStep 与 SpellcastingStep 复用，二者均 defineExpose 聚焦句柄）
   -> features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
   -> stores/character-drafts.ts
       -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}

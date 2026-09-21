@@ -1,4 +1,9 @@
 import { ABILITY_KEYS, ABILITY_LABELS } from '@/rules/data/ability-labels'
+import { settingFeats2014 } from '@/rules/data/feats-settings-2014'
+import { grimHollowFeats2014 } from '@/rules/data/third-party-feats-grim-hollow-2014'
+import { humblewoodFeats2014 } from '@/rules/data/third-party-feats-humblewood-2014'
+import { obojimaFeats2014 } from '@/rules/data/third-party-feats-obojima-2014'
+import { taldoreiFeats2014 } from '@/rules/data/third-party-feats-taldorei-2014'
 import type { AbilityKey } from '@/types/character'
 import type { FeatRule, RuleOption } from '@/types/rules'
 
@@ -167,7 +172,24 @@ export const featChoiceOptions2014: readonly RuleOption[] = ABILITY_KEYS.map((ab
   id: `feat-bonus-${ability}-1`, name: `${ABILITY_LABELS[ability]} +1`, description: `由父专长将${ABILITY_LABELS[ability]}提高 1，上限 20。`, status: 'implemented', sourceIds: ['xgte-2017-index', 'tcoe-2020-index'],
 }))
 
-export const feats2014: readonly FeatRule[] = [...coreFeats2014, ...xgteFeats2014, ...tcoeFeats2014]
+/**
+ * 2014 专长全量清单：核心与官方扩展 + 第三方合作专长（G3-I4 起逐书并入）。
+ * 第三方条目的来源默认关闭，启用后才进入 2014 的专长候选。
+ */
+/**
+ * 2014 专长全量清单：核心与官方扩展 + 官方设定书背景授予专长 + 第三方合作专长（G3-I4 起逐书并入）。
+ * 第三方条目的来源默认关闭，启用后才进入 2014 的专长候选。
+ */
+export const feats2014: readonly FeatRule[] = [
+  ...coreFeats2014,
+  ...xgteFeats2014,
+  ...tcoeFeats2014,
+  ...settingFeats2014,
+  ...obojimaFeats2014,
+  ...humblewoodFeats2014,
+  ...taldoreiFeats2014,
+  ...grimHollowFeats2014,
+]
 
 export const FEAT_OPTION_IDS = feats2014.map((item) => item.id)
 export const ABILITY_IMPROVEMENT_AND_FEAT_OPTION_IDS = [

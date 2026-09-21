@@ -354,7 +354,10 @@ describe('B10-01 两版休息与生命骰', () => {
   })
 
   it('生命骰边界：无池/耗尽不改动，恢复量至少 1 且不超过最大 HP', () => {
-    expect(spendHitDice(createInitialSessionState('draft-2014', 20), { count: 1, outcomes: [4], conModifier: 0, maxHp: 20 })).toEqual(createInitialSessionState('draft-2014', 20))
+    // 无池时原样返回同一个对象：用引用断言，避免 updatedAt 时间戳抖动导致的假失败
+    const noPool = createInitialSessionState('draft-2014', 20)
+    expect(spendHitDice(noPool, { count: 1, outcomes: [4], conModifier: 0, maxHp: 20 })).toBe(noPool)
+    expect(noPool.currentHp).toBe(20)
     const exhausted = { ...modern(), hitDice: { total: 5, spent: 5 }, currentHp: 5 }
     expect(spendHitDice(exhausted, { count: 1, outcomes: [6], conModifier: 3, maxHp: 30 })).toBe(exhausted)
     const negative = { ...modern(), currentHp: 10, hitDice: { total: 5, spent: 0 } }

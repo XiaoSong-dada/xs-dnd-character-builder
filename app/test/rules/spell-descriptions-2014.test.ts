@@ -43,6 +43,13 @@ const GROWING_CANTRIP_IDS = [
   'spell-2014-word-of-radiance',
   'spell-2014-booming-blade',
   'spell-2014-green-flame-blade',
+  // G3-I3 第三方法术补录：带 5/11/17 级成长的戏法
+  'spell-2014-brittle-bone-throw',
+  'spell-2014-gravity-spike',
+  'spell-2014-arc-blade',
+  'spell-2014-burning-blade',
+  'spell-2014-candy-blast',
+  'spell-2014-frigid-blade',
 ] as const
 
 /**
