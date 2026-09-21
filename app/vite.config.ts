@@ -172,11 +172,15 @@ export default defineConfig(({ mode }) => {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: false,
-          // 骰娘页的 3D 引擎（three + cannon-es）打成一个约 2.6 MB 的懒加载 chunk，
-          // 超出 workbox 默认 2 MiB 上限会被静默跳过。它是核心交互功能而非仅导出用的资源，
-          // 所以放宽上限让它进入预缓存（gzip 后约 0.6 MB），保证装完离线也能掷骰。
+          // 骰娘页的 3D 引擎（three + cannon-es）打成一个懒加载 chunk。它是核心交互功能而非
+          // 仅导出用的资源，所以放宽上限让它进入预缓存（gzip 后约 0.87 MB），保证装完离线也能掷骰。
           // 注意：Rollup 用 chunk 内某个模块名命名，这个块叫 CharacterMediaEditor，与实际内容无关。
-          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+          //
+          // 上限演进：约 2.6 MB（接入时）→ 3.52 MB（v1.10.0 扩展书与规则数据扩列后），
+          // 3 MiB 天花板被顶穿，workbox 记 warning、vite-plugin-pwa 直接抛错终止构建，故放宽到 4 MiB。
+          // 排障提示：插件的错误文案是硬编码的「the default value is 2 MiB」，配了别的值也照样这么印，
+          // 不能据此判断配置未生效；以 `ls -l dist/assets` 里最大的 chunk 字节数为准。
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           runtimeCaching: [
             {
               urlPattern: /\/templates\//,
