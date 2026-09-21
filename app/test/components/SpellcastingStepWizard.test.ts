@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import SpellcastingStep from '@/views/character-builder/components/SpellcastingStep.vue'
+import type { SelectionTaskFocusHandle } from '@/views/character-builder/selection-task'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
 import { draft2024, emptySpellSelections } from '../fixtures/draft-2024'
 
@@ -126,5 +127,43 @@ describe('法师法术步骤（2024 塑能学者额外入书）', () => {
     const change = wrapper.emitted('change')?.at(-1)?.[0] as SpellSelections
     expect(change.spellbookSpellIds).toContain('spell-2024-scorching-ray')
     expect(change.spellbookExtraSpellIds).toEqual(['spell-2024-scorching-ray'])
+  })
+})
+
+describe('法术步骤去完成聚焦出口（v1.9.1 R3-6）', () => {
+  // 聚焦断言需要元素真实连到文档（happy-dom 下未挂载的元素 focus() 不更新 activeElement）
+  const mountAttached = (draft: CharacterDraft) =>
+    mount(SpellcastingStep, { props: { draft }, attachTo: document.body })
+  const handleOf = (wrapper: ReturnType<typeof mountAttached>) =>
+    wrapper.vm as unknown as SelectionTaskFocusHandle
+
+  afterEach(() => { document.body.innerHTML = '' })
+
+  it('切到首个未完成任务并聚焦该任务标题', async () => {
+    const wrapper = mountAttached(wizardDraft())
+    await wrapper.get('[data-task-id="cantrips"]').trigger('click')
+    expect(wrapper.get('[data-task-id="cantrips"]').attributes('aria-selected')).toBe('true')
+
+    await handleOf(wrapper).focusFirstIncomplete()
+
+    expect(wrapper.get('[data-task-id="spellbook"]').attributes('aria-selected')).toBe('true')
+    expect(document.activeElement).toBe(wrapper.get('.spellcasting-step__panel h2').element)
+  })
+
+  it('活动任务未变化时重复调用仍有聚焦反馈（R3-7）', async () => {
+    const wrapper = mountAttached(wizardDraft())
+    await handleOf(wrapper).focusFirstIncomplete()
+    const heading = wrapper.get('.spellcasting-step__panel h2').element
+    expect(document.activeElement).toBe(heading)
+
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    await handleOf(wrapper).focusFirstIncomplete()
+    expect(document.activeElement).toBe(heading)
+  })
+
+  it('无施法能力时没有任务目标（R3-9 不变量）', () => {
+    const wrapper = mountAttached({ ...wizardDraft(), classId: 'class-2014-fighter', subclassId: undefined })
+    expect(wrapper.find('[data-task-id]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('当前职业无需配置法术')
   })
 })

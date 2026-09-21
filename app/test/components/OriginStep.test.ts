@@ -1,7 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { rulesRepository } from '@/rules/repository'
 import OriginStep from '@/views/character-builder/components/OriginStep.vue'
+import type { SelectionTaskFocusHandle } from '@/views/character-builder/selection-task'
 
 function mountOrigin(patch: Record<string, unknown> = {}) {
   return mount(OriginStep, { props: { languages: [], raceSkillChoices: [], backgroundToolIds: [], ...patch } })
@@ -41,6 +43,45 @@ describe('OriginStep 动态任务与候选目录', () => {
     await wrapper.get('input[aria-label="搜索种族"]').setValue('Aarakocra')
     expect(wrapper.text()).toContain('已选择：人类')
     expect(wrapper.text()).toContain('鸟人')
+  })
+
+  it('查看全部后候选仍按推荐优先排序（v1.9.1 R1-1）', async () => {
+    const wrapper = mountOrigin({ classId: 'class-2014-fighter' })
+    const expand = wrapper.findAll('button').find((button) => button.text().startsWith('查看全部'))
+    expect(expand).toBeTruthy()
+    await expand!.trigger('click')
+
+    // 与组件同源的候选池（基础种族、全部来源可用、未选任何种族），仅排序为被测行为
+    const pool = rulesRepository.races.filter((item) => !item.parentRaceId)
+    const recommendedNames = new Set(
+      pool.filter((item) => item.recommendedClassIds.includes('class-2014-fighter')).map((item) => item.name),
+    )
+    const expected = [
+      ...pool.filter((item) => item.recommendedClassIds.includes('class-2014-fighter')),
+      ...pool.filter((item) => !item.recommendedClassIds.includes('class-2014-fighter')),
+    ].map((item) => item.name)
+
+    const rendered = wrapper.findAll('.expandable-option-card__title-line strong').map((node) => node.text())
+    expect(recommendedNames.size, '用例需覆盖至少一个推荐项').toBeGreaterThan(0)
+    expect(rendered).toEqual(expected)
+
+    const boundary = rendered.findIndex((name) => !recommendedNames.has(name))
+    expect(boundary).toBeGreaterThan(0)
+    expect(rendered.slice(boundary).some((name) => recommendedNames.has(name))).toBe(false)
+  })
+
+  it('搜索结果同样推荐优先（v1.9.1 R1-1）', async () => {
+    const wrapper = mountOrigin({ classId: 'class-2014-barbarian' })
+    await openTask(wrapper, 'race')
+    await wrapper.get('input[aria-label="搜索种族"]').setValue('a')
+    const rendered = wrapper.findAll('.expandable-option-card__title-line strong').map((node) => node.text())
+    const recommendedFlags = rendered.map((name) => {
+      const race = rulesRepository.races.find((item) => !item.parentRaceId && item.name === name)
+      return race ? race.recommendedClassIds.includes('class-2014-barbarian') : false
+    })
+    const boundary = recommendedFlags.indexOf(false)
+    expect(boundary).toBeGreaterThan(0)
+    expect(recommendedFlags.slice(boundary).some(Boolean)).toBe(false)
   })
 
   it('选择主种族后动态出现必选子种族任务', () => {
@@ -125,5 +166,42 @@ describe('OriginStep 动态附加选择', () => {
     await vi.advanceTimersByTimeAsync(260)
     vi.useRealTimers()
     expect(wrapper.emitted('backgroundFeat')?.[0]).toEqual(['background-2024-tp-vtm-ritualist-origin-feat', ['feat-2024-tp-thin-blooded']])
+  })
+})
+
+describe('OriginStep 去完成聚焦出口（v1.9.1 R3-6）', () => {
+  // 聚焦断言需要元素真实连到文档（happy-dom 下未挂载的元素 focus() 不更新 activeElement）
+  const mountAttached = (patch: Record<string, unknown> = {}) =>
+    mount(OriginStep, {
+      props: { languages: [], raceSkillChoices: [], backgroundToolIds: [], ...patch },
+      attachTo: document.body,
+    })
+  const handleOf = (wrapper: ReturnType<typeof mountAttached>) =>
+    wrapper.vm as unknown as SelectionTaskFocusHandle
+
+  afterEach(() => { document.body.innerHTML = '' })
+
+  it('切到首个未完成任务并聚焦该任务标题', async () => {
+    const wrapper = mountAttached({ classId: 'class-2014-fighter' })
+    await openTask(wrapper, 'background')
+    expect(wrapper.get('[data-task-id="background"]').attributes('aria-selected')).toBe('true')
+
+    await handleOf(wrapper).focusFirstIncomplete()
+
+    expect(wrapper.get('[data-task-id="race"]').attributes('aria-selected')).toBe('true')
+    expect(document.activeElement).toBe(wrapper.get('.origin-step__panel h2').element)
+  })
+
+  it('活动任务未变化时重复调用仍有聚焦反馈（R3-7）', async () => {
+    const wrapper = mountAttached({ classId: 'class-2014-fighter' })
+    await handleOf(wrapper).focusFirstIncomplete()
+    const heading = wrapper.get('.origin-step__panel h2').element
+    expect(document.activeElement).toBe(heading)
+
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    expect(document.activeElement).not.toBe(heading)
+
+    await handleOf(wrapper).focusFirstIncomplete()
+    expect(document.activeElement).toBe(heading)
   })
 })

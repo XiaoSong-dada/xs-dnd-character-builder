@@ -9,14 +9,14 @@ import UiNotice from '@/components/ui/UiNotice.vue'
 import { SKILL_IDS } from '@/rules/derive'
 import { getFeatPool } from '@/rules/feats'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
-import { getBackgroundRecommendationReason, getRaceRecommendationReason } from '@/rules/recommend'
+import { getBackgroundRecommendationReason, getRaceRecommendationReason, sortByClassRecommendation } from '@/rules/recommend'
 import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, ChoiceSelection, RulesetId } from '@/types/character'
 import type { BackgroundRule, FeatRule } from '@/types/rules'
 import SelectionTaskNavigator from '@/views/character-builder/components/SelectionTaskNavigator.vue'
 import { useSelectionTaskFlow } from '@/views/character-builder/hooks/useSelectionTaskFlow'
-import type { SelectionTask } from '@/views/character-builder/selection-task'
+import type { SelectionTask, SelectionTaskFocusHandle } from '@/views/character-builder/selection-task'
 
 const props = withDefaults(defineProps<{
   ruleset?: RulesetId
@@ -74,9 +74,11 @@ const filteredRaces = computed(() => {
   return availableBaseRaces.value.filter((item) => (raceSourceFilter.value === 'all' || item.sourceIds.includes(raceSourceFilter.value)) && (!query || `${item.name}${item.englishName}`.toLocaleLowerCase('zh-CN').includes(query)))
 })
 const recommendedRaces = computed(() => filteredRaces.value.filter((item) => item.recommendedClassIds.includes(props.classId ?? '')).slice(0, 6))
+/** 完整目录／搜索／来源筛选共用的候选池：推荐优先，其余保持登记顺序（v1.9.1 R1-1）。 */
+const orderedRaces = computed(() => sortByClassRecommendation(filteredRaces.value, props.classId))
 const visibleRaces = computed(() => {
   const full = showAllRaces.value || Boolean(raceSearch.value.trim()) || raceSourceFilter.value !== 'all'
-  const pool = full ? filteredRaces.value : recommendedRaces.value.length ? recommendedRaces.value : filteredRaces.value.slice(0, 6)
+  const pool = full ? orderedRaces.value : recommendedRaces.value.length ? recommendedRaces.value : orderedRaces.value.slice(0, 6)
   return pool.filter((item) => item.id !== props.raceId)
 })
 const subraces = computed(() => props.raceId ? repository.value.races.filter((item) => item.parentRaceId === props.raceId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)) : [])
@@ -88,9 +90,11 @@ const filteredBackgrounds = computed(() => {
   return availableBaseBackgrounds.value.filter((item) => (backgroundSourceFilter.value === 'all' || item.sourceIds.includes(backgroundSourceFilter.value)) && (!query || `${item.name}${item.englishName}`.toLocaleLowerCase('zh-CN').includes(query)))
 })
 const recommendedBackgrounds = computed(() => filteredBackgrounds.value.filter((item) => item.recommendedClassIds.includes(props.classId ?? '')).slice(0, 6))
+/** 背景候选池与种族同构：完整目录／搜索／来源筛选都推荐优先（v1.9.1 R1-1）。 */
+const orderedBackgrounds = computed(() => sortByClassRecommendation(filteredBackgrounds.value, props.classId))
 const visibleBackgrounds = computed(() => {
   const full = showAllBackgrounds.value || Boolean(backgroundSearch.value.trim()) || backgroundSourceFilter.value !== 'all'
-  const pool = full ? filteredBackgrounds.value : recommendedBackgrounds.value.length ? recommendedBackgrounds.value : filteredBackgrounds.value.slice(0, 6)
+  const pool = full ? orderedBackgrounds.value : recommendedBackgrounds.value.length ? recommendedBackgrounds.value : orderedBackgrounds.value.slice(0, 6)
   return pool.filter((item) => item.id !== props.backgroundId)
 })
 const variants = computed(() => props.backgroundId ? repository.value.backgrounds.filter((item) => item.parentBackgroundId === props.backgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)) : [])
@@ -167,7 +171,11 @@ const tasks = computed<readonly SelectionTask[]>(() => {
   if (backgroundToolSpec.value) result.push({ id: 'background-tools', label: '背景工具', group: '背景', required: true, status: hasInvalidBlocker('background-tool') ? 'invalid' : hasBlocker('background-tool') ? 'pending' : 'complete', summary: selectedBackgroundToolIds.value.map((id) => repository.value.getEquipment(id)?.name ?? id).join('、') || '尚未选择', progress: `${selectedBackgroundToolIds.value.length}/${backgroundToolSpec.value.count}` })
   return result
 })
-const flow = useSelectionTaskFlow(tasks)
+const headingEl = ref<HTMLElement>()
+const flow = useSelectionTaskFlow(tasks, headingEl)
+
+/** 吸底栏「去完成」经页面调用该句柄；页面内提示条的按钮复用同一出口（v1.9.1 R3-6）。 */
+defineExpose<SelectionTaskFocusHandle>({ focusFirstIncomplete: flow.focusFirstIncomplete })
 
 function sizeLabel(size: 'small' | 'medium'): string { return size === 'small' ? '小型' : '中型' }
 function setAllocationMode(mode: 'split' | 'even'): void { if (allocationMode.value !== mode) { allocationMode.value = mode; allocation.value = {}; emit('backgroundAbilities', {}) } }
@@ -201,7 +209,7 @@ function selectBackgroundFeat(featId: string): void { const checkpointId = backg
       <button type="button" class="origin-step__jump" @click="flow.focusFirstIncomplete">去完成</button>
     </UiNotice>
     <section class="origin-step__panel" role="tabpanel">
-      <header><span>{{ flow.activeTask.value?.group }}</span><h2 ref="flow.heading" tabindex="-1">{{ flow.activeTask.value?.label }}</h2></header>
+      <header><span>{{ flow.activeTask.value?.group }}</span><h2 ref="headingEl" tabindex="-1">{{ flow.activeTask.value?.label }}</h2></header>
 
       <template v-if="flow.activeTaskId.value === 'race'">
         <ExpandableOptionCard v-if="selectedRace" :title="`已选择：${selectedRace.name}`" :description="selectedRace.summary" expanded-label="种族介绍" state="complete"><template #suffix><UiBadge tone="success">已选择</UiBadge></template><template #expanded>{{ selectedRace.description }}</template></ExpandableOptionCard>

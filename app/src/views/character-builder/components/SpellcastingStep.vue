@@ -19,13 +19,18 @@ import type { SpellRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 import SelectionTaskNavigator from '@/views/character-builder/components/SelectionTaskNavigator.vue'
 import { useSpellcastingStepFlow } from '@/views/character-builder/hooks/useSpellcastingStepFlow'
+import type { SelectionTaskFocusHandle } from '@/views/character-builder/selection-task'
 
 const props = defineProps<{ draft: CharacterDraft }>()
 const emit = defineEmits<{ change: [value: SpellSelections] }>()
 const draft = toRef(() => props.draft)
-const stepFlow = useSpellcastingStepFlow(draft)
+const headingEl = ref<HTMLElement>()
+const stepFlow = useSpellcastingStepFlow(draft, headingEl)
 const { config, availableSpells, requiredCantripCount, requiredSpellCount, requiredSpellbookCount, selectedSpellIds, spellbookExtraIds, spellbookExtraAllowance, normalSpellbookCount, invalidSpellSelectionCount, tasks, flow } = stepFlow
 const repository = computed(() => getRulesRepository(props.draft.ruleset))
+
+/** 吸底栏「去完成」经页面调用该句柄，与起源步骤同一出口（v1.9.1 R3-6）。 */
+defineExpose<SelectionTaskFocusHandle>({ focusFirstIncomplete: flow.focusFirstIncomplete })
 
 const search = ref('')
 const sourceFilter = ref('all')
@@ -183,7 +188,7 @@ function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value 
       <UiNotice v-if="activeFull && filteredCandidates.length && levelFilter !== 'selected'" tone="info" title="当前名额已选满">请先从上方“当前已选”移除一项，再选择其他法术。</UiNotice>
 
       <section class="spellcasting-step__panel" role="tabpanel">
-        <h2 ref="flow.heading" tabindex="-1">{{ flow.activeTask.value?.label }}</h2>
+        <h2 ref="headingEl" tabindex="-1">{{ flow.activeTask.value?.label }}</h2>
         <p v-if="flow.activeTaskId.value === 'spellbook-extra'" class="spellcasting-step__hint">子职提供的额外入书名额不占升级名额；该任务可选。</p>
         <p v-else-if="config.mode === 'spellbook' && flow.activeTaskId.value === 'spellbook'" class="spellcasting-step__hint">先把升级获得的法术写入法术书，之后再从书中准备法术。</p>
 
@@ -227,10 +232,24 @@ function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value 
   &__panel { display: grid; gap: 0.65rem; }
   &__panel > h2 { margin: 0; font-size: 1rem; outline: none; }
   &__hint { margin: 0; color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; }
-  &__filters { display: grid; grid-template-columns: minmax(12rem, 2fr) repeat(4, minmax(7rem, 1fr)); gap: 0.5rem; }
-  &__filters input,
-  &__filters select { min-height: 2.75rem; min-width: 0; padding: 0 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
-  @media (max-width: 760px) { &__filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } &__filters input { grid-column: 1 / -1; } }
-  @media (max-width: 430px) { &__filters { grid-template-columns: 1fr; } &__filters input { grid-column: auto; } }
+  &__filters {
+    display: grid;
+    // 容器自适应（v1.9.1 R2）：车卡容器恒为 32rem 且不随视口变宽，
+    // 列数必须按容器宽度计算，不得用视口断点或固定 rem 最小列宽（会把筛选行撑出容器）。
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+    gap: 0.5rem;
+
+    input { grid-column: 1 / -1; }
+
+    input,
+    select {
+      min-height: 2.75rem;
+      min-width: 0;
+      padding: 0 0.65rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+    }
+  }
 }
 </style>

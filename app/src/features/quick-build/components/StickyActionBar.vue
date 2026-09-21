@@ -7,24 +7,27 @@ withDefaults(
     secondaryLabel?: string
     primaryDisabled?: boolean
     helperText?: string
-    helperHref?: string
+    /** 提示行是否需要「去完成」动作；动作本身由页面接线到当前步骤（v1.9.1 R3-6）。 */
+    helperAction?: boolean
   }>(),
   {
     secondaryLabel: '',
     primaryDisabled: false,
     helperText: '',
-    helperHref: '',
+    helperAction: false,
   },
 )
 
-defineEmits<{ primary: []; secondary: [] }>()
+defineEmits<{ primary: []; secondary: []; helperAction: [] }>()
 </script>
 
 <template>
   <div class="sticky-action-bar">
     <p v-if="helperText" class="sticky-action-bar__helper">
       {{ helperText }}
-      <a v-if="helperHref" :href="helperHref">去完成</a>
+      <button v-if="helperAction" type="button" class="sticky-action-bar__action" @click="$emit('helperAction')">
+        去完成
+      </button>
     </p>
     <BaseButton v-if="secondaryLabel" variant="secondary" @click="$emit('secondary')">
       {{ secondaryLabel }}
@@ -46,12 +49,27 @@ defineEmits<{ primary: []; secondary: [] }>()
 
   &__helper {
     grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
     margin: 0;
     color: var(--color-warning);
     font-size: 0.72rem;
     line-height: 1.4;
+  }
 
-    a { margin-left: 0.35rem; color: var(--color-primary); font-weight: 700; }
+  &__action {
+    min-height: 2.75rem;
+    padding: 0 0.25rem;
+    border: 0;
+    color: var(--color-primary);
+    background: transparent;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:focus-visible { outline: 0.15rem solid var(--color-primary); outline-offset: 0.15rem; }
   }
 }
 </style>

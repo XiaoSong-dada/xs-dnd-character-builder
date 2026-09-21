@@ -14,7 +14,11 @@ import { useSelectionTaskFlow } from '@/views/character-builder/hooks/useSelecti
 import type { SelectionTask } from '@/views/character-builder/selection-task'
 
 /** 第 8 步按职业施法模式生成的小任务、计数与自动推进状态。 */
-export function useSpellcastingStepFlow(draft: Readonly<Ref<CharacterDraft>>) {
+export function useSpellcastingStepFlow(
+  draft: Readonly<Ref<CharacterDraft>>,
+  /** 任务标题元素；由 `SpellcastingStep` 的本地模板 ref 传入（见 `useSelectionTaskFlow`）。 */
+  headingRef?: Ref<HTMLElement | undefined>,
+) {
   const config = computed(() => getSpellcastingConfig(draft.value))
   const availableSpells = computed(() => config.value ? getAvailableSpells(draft.value, config.value) : [])
   const requiredCantripCount = computed(() => config.value ? getRequiredCantripCount(draft.value, config.value) : 0)
@@ -77,7 +81,7 @@ export function useSpellcastingStepFlow(draft: Readonly<Ref<CharacterDraft>>) {
     return result
   })
 
-  const flow = useSelectionTaskFlow(tasks)
+  const flow = useSelectionTaskFlow(tasks, headingRef)
   return {
     config, availableSpells, requiredCantripCount, requiredSpellCount, requiredSpellbookCount,
     selectedSpellIds, spellbookExtraIds, spellbookExtraAllowance, normalSpellbookCount,
