@@ -5,12 +5,14 @@ import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
+import { getFeatPool } from '@/rules/feats'
 import { getBackgroundRecommendationReason, getRaceRecommendationReason } from '@/rules/recommend'
 import { getRulesRepository } from '@/rules/repositories'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
 import { isSourceEnabled } from '@/rules/source-books'
 import { SKILL_IDS } from '@/rules/derive'
-import type { AbilityKey, RulesetId } from '@/types/character'
+import type { AbilityKey, ChoiceSelection, RulesetId } from '@/types/character'
+import type { FeatRule } from '@/types/rules'
 
 const props = withDefaults(defineProps<{
   ruleset?: RulesetId
@@ -25,9 +27,11 @@ const props = withDefaults(defineProps<{
   enabledSourceIds?: readonly string[]
   sizeChoice?: 'small' | 'medium'
   backgroundAbilities?: Readonly<Partial<Record<AbilityKey, number>>>
+  /** 草稿选择：用于回显背景起源专长的当前选择（H2）。 */
+  selections?: readonly ChoiceSelection[]
   /** 起源步骤未完成原因（与门禁同源，B09-07）。 */
   blockers?: readonly { readonly id: string; readonly message: string; readonly resolution: string }[]
-}>(), { raceSkillChoices: () => [], ruleset: '5e-2014', blockers: () => [] })
+}>(), { raceSkillChoices: () => [], selections: () => [], ruleset: '5e-2014', blockers: () => [] })
 
 const emit = defineEmits<{
   race: [id: string]
@@ -39,6 +43,8 @@ const emit = defineEmits<{
   raceTool: [id: string | undefined]
   size: [size: 'small' | 'medium']
   backgroundAbilities: [allocation: Readonly<Partial<Record<AbilityKey, number>>>]
+  /** 背景起源专长选择：与时间线步骤写入同一检查点（`${background.id}-origin-feat`）。 */
+  backgroundFeat: [checkpointId: string, optionIds: readonly string[]]
 }>()
 
 const repository = computed(() => getRulesRepository(props.ruleset))
@@ -118,6 +124,42 @@ function sizeLabel(size: 'small' | 'medium'): string {
 
 /** 2024 背景属性分配（+2/+1 或三项各 +1）。 */
 const backgroundRule = computed(() => props.backgroundId ? repository.value.getBackground(props.backgroundId) : undefined)
+
+/** 背景起源专长（H2）：固定授予只读展示；`originFeatOptions`／`originFeatChoices` 在本次出身步骤内选择。 */
+const backgroundFeatCheckpointId = computed(() => props.backgroundId ? `${props.backgroundId}-origin-feat` : undefined)
+const backgroundFixedFeat = computed<FeatRule | undefined>(() => {
+  const rule = backgroundRule.value
+  // 优先级与规则层一致：有候选时走选择（候选列表／任选池），只有纯固定授予才只读展示。
+  if (!rule || rule.originFeatOptions?.length || (rule.originFeatChoices?.count ?? 0) > 0) return undefined
+  const featId = rule.originFeatId
+  return featId ? repository.value.getFeat(featId) : undefined
+})
+const backgroundFeatCandidates = computed<readonly FeatRule[]>(() => {
+  const rule = backgroundRule.value
+  if (!rule) return []
+  const options = rule.originFeatOptions
+  const choices = rule.originFeatChoices
+  const ids = options?.length
+    ? options
+    : choices && choices.count > 0
+      ? getFeatPool(repository.value, choices.categories, { enabledSourceIds: props.enabledSourceIds }).map((feat) => feat.id)
+      : []
+  return ids
+    .map((id) => repository.value.getFeat(id))
+    .filter((feat): feat is FeatRule => Boolean(feat))
+    .filter((feat) => isSourceEnabled(feat.sourceIds, props.enabledSourceIds, repository.value))
+})
+const backgroundFeatSelection = computed<readonly string[]>(() => backgroundFeatCheckpointId.value
+  ? props.selections.find((item) => item.checkpointId === backgroundFeatCheckpointId.value && !item.invalidatedAt)?.optionIds ?? []
+  : [])
+const backgroundFeatNeedsChoice = computed(() => backgroundFeatCandidates.value.length > 0 && backgroundFeatSelection.value.length === 0)
+
+function selectBackgroundFeat(featId: string): void {
+  const checkpointId = backgroundFeatCheckpointId.value
+  if (!checkpointId) return
+  emit('backgroundFeat', checkpointId, backgroundFeatSelection.value.includes(featId) ? [] : [featId])
+}
+
 const abilityCandidates = computed(() => backgroundRule.value?.abilityChoices ?? [])
 const abilityLabels: Readonly<Record<AbilityKey, string>> = { str: '力量', dex: '敏捷', con: '体质', int: '智力', wis: '感知', cha: '魅力' }
 const allocationMode = ref<'split' | 'even'>('split')
@@ -316,6 +358,46 @@ function toggleLanguage(id: string): void {
       </ExpandableOptionCard>
     </div>
 
+    <div v-if="backgroundRule && (backgroundFixedFeat || backgroundFeatCandidates.length)" class="origin-step__background-feat">
+      <strong>该背景的起源专长</strong>
+      <template v-if="backgroundFixedFeat">
+        <p class="origin-step__hint">由背景固定授予，按原书不可更换。</p>
+        <ListShell>
+          <ExpandableOptionCard
+            :title="`${backgroundFixedFeat.name} · ${backgroundFixedFeat.englishName}`"
+            :description="backgroundFixedFeat.description"
+            expanded-label="专长效果"
+            state="complete"
+          >
+            <template #suffix><UiBadge tone="success">由背景固定授予</UiBadge></template>
+            <template #expanded>{{ backgroundFixedFeat.detail }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+      </template>
+      <template v-else>
+        <p class="origin-step__hint">
+          {{ backgroundFeatCandidates.length }} 个候选，选择 1 项{{ backgroundFeatNeedsChoice ? '（尚未选择）' : '（已选择）' }}。
+        </p>
+        <ListShell>
+          <ExpandableOptionCard
+            v-for="feat in backgroundFeatCandidates"
+            :key="feat.id"
+            radio
+            :title="`${feat.name} · ${feat.englishName}`"
+            :description="feat.description"
+            expanded-label="专长效果"
+            :state="backgroundFeatSelection.includes(feat.id) ? 'selected' : 'default'"
+            @select="selectBackgroundFeat(feat.id)"
+          >
+            <template #suffix>
+              <UiBadge v-if="backgroundFeatSelection.includes(feat.id)" tone="success">已选</UiBadge>
+            </template>
+            <template #expanded>{{ feat.detail }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
+      </template>
+    </div>
+
     <div v-if="abilityCandidates.length" class="origin-step__branches">
       <strong>背景属性加值</strong>
       <div class="origin-step__choices">
@@ -432,6 +514,23 @@ function toggleLanguage(id: string): void {
 
     > strong { font-size: 0.8rem; }
     > p { margin: 0; color: var(--color-text-muted); font-size: 0.75rem; }
+  }
+
+  &__background-feat {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-left: 0.2rem solid var(--color-primary);
+    background: var(--color-primary-soft);
+
+    > strong { font-size: 0.8rem; }
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    line-height: 1.55;
   }
 
   &__choices {

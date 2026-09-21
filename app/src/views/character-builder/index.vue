@@ -191,6 +191,7 @@ function updateMethod(value: AbilityMethod): void {
       :race-tool-choice="activeDraft.raceToolChoice"
       :size-choice="activeDraft.speciesSizeChoice"
       :background-abilities="activeDraft.backgroundAbilityAllocation ?? {}"
+      :selections="activeDraft.selections"
       @race="selectRace"
       @subrace="selectSubrace"
       @background="selectBackground"
@@ -200,6 +201,7 @@ function updateMethod(value: AbilityMethod): void {
       @race-tool="updateDraft({ raceToolChoice: $event })"
       @size="updateDraft({ speciesSizeChoice: $event })"
       @background-abilities="updateDraft({ backgroundAbilityAllocation: $event })"
+      @background-feat="saveTimelineSelection"
     />
     <AbilitiesStep
       v-else-if="step === 'abilities'"

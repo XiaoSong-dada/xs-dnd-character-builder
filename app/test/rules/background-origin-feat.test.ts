@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { listFeatGrants } from '@/rules/feats'
+import { getDependencyImpact } from '@/rules/dependency'
+import { isSelectionCheckpointActive, listFeatGrants } from '@/rules/feats'
+import { getOriginStepBlockers } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
 import { buildTimeline } from '@/rules/timeline'
 import type { BackgroundRule, RulesRepository } from '@/types/rules'
@@ -18,7 +20,7 @@ const DARK_GIFT_FEAT = 'feat-2024-alert'
 
 function withProbeBackground(
   repository: RulesRepository,
-  patch: Pick<BackgroundRule, 'originFeatId'> & { originFeatOptions?: readonly string[] },
+  patch: { originFeatId: string } & Partial<Pick<BackgroundRule, 'originFeatOptions' | 'originFeatChoices' | 'sourceIds'>>,
 ): RulesRepository {
   const base = repository.getBackground('background-2024-sage')
   if (!base) throw new Error('测试基准背景缺失')
@@ -126,6 +128,8 @@ describe('G3-A 背景二选一起源专长', () => {
 
     const substituted = {
       ...draft,
+      // 人类 Versatile 的检查点只在人类物种在位时生效（H1 孤立选择过滤）。
+      raceId: 'species-2024-human',
       selections: [
         ...draft.selections,
         selection('species-2024-human-origin-feat', ['feat-2024-ua-wild-talent-empath']),
@@ -469,5 +473,227 @@ describe('G3-F 龙纹专长译名与授予链', () => {
     }
     // 乔拉斯科家族后裔 → 医疗龙纹（原 UA 译名为「医疗之纹」）
     expect(repository.getFeat(repository.getBackground('background-2024-efa-jorasco-heir')?.originFeatId ?? '')?.name).toBe('医疗龙纹')
+  })
+})
+
+/**
+ * H1：背景「任选起源专长」池（`originFeatChoices`）、出身步骤阻塞与孤立选择过滤。
+ *
+ * 对应计划 §4.1：类别池授予分支、`getOriginStepBlockers` 新增阻塞项、
+ * 换背景后旧起源专长检查点失效、以及未标失效时的规则层兜底过滤。
+ */
+describe('H1 背景任选起源专长与孤立选择过滤', () => {
+  const allSources = (repository: RulesRepository): readonly string[] => repository.sources.map((source) => source.id)
+  const CURRENT_BACKGROUND = 'background-2024-rthw-haunted-one'
+  const CURRENT_CHECKPOINT = `${CURRENT_BACKGROUND}-origin-feat`
+  const CURRENT_FEAT = 'feat-2024-rthw-watchers'
+
+  function probeWithPool() {
+    return withProbeBackground(getRulesRepository('5e-2024'), {
+      originFeatId: '',
+      originFeatChoices: { count: 1, categories: ['origin'] },
+    })
+  }
+
+  it('声明 originFeatChoices 时按类别展开候选，候选均为起源专长且可解析', () => {
+    const repository = probeWithPool()
+    const timeline = buildTimeline('class-2024-fighter', 1, {
+      ruleset: '5e-2024',
+      backgroundId: 'background-2024-probe',
+      enabledSourceIds: allSources(repository),
+      repository,
+    })
+    const checkpoint = timeline.find((item) => item.id === CHECKPOINT_ID)
+    expect(checkpoint?.kind).toBe('feat')
+    expect(checkpoint?.required).toBe(true)
+    expect(checkpoint?.minSelections).toBe(1)
+    expect(checkpoint?.maxSelections).toBe(1)
+    expect(checkpoint?.optionPresentation).toBe('expandable')
+    // 起源专长全池：核心 10 条已是下界。
+    expect((checkpoint?.optionIds.length ?? 0)).toBeGreaterThanOrEqual(10)
+    for (const optionId of checkpoint?.optionIds ?? []) {
+      expect(repository.getFeat(optionId)?.category, optionId).toBe('origin')
+    }
+  })
+
+  it('未选择时不授予，选择后按所选授予（任选池与二选一共用检查点）', () => {
+    const repository = probeWithPool()
+    const draft = probeDraft(repository)
+    expect(listFeatGrants(draft, repository).filter((grant) => grant.sourceKind === 'background')).toEqual([])
+
+    const chosen = { ...draft, selections: [selection(CHECKPOINT_ID, ['feat-2024-tough'])] }
+    const picked = listFeatGrants(chosen, repository).filter((grant) => grant.sourceKind === 'background')
+    expect(picked.map((grant) => grant.featId)).toEqual(['feat-2024-tough'])
+    expect(picked[0]?.checkpointId).toBe(CHECKPOINT_ID)
+  })
+
+  it('任选池候选随来源开关收缩', () => {
+    const repository = probeWithPool()
+    const context = (enabledSourceIds: readonly string[]) => ({
+      ruleset: '5e-2024' as const,
+      backgroundId: 'background-2024-probe',
+      enabledSourceIds,
+      repository,
+    })
+    const all = buildTimeline('class-2024-fighter', 1, context(allSources(repository)))
+      .find((item) => item.id === CHECKPOINT_ID)
+    const phbOnly = buildTimeline('class-2024-fighter', 1, context(['source-2024-phb']))
+      .find((item) => item.id === CHECKPOINT_ID)
+    expect(phbOnly?.optionIds.length ?? 0).toBeGreaterThan(0)
+    expect(phbOnly?.optionIds.length ?? 0).toBeLessThanOrEqual(all?.optionIds.length ?? 0)
+    for (const optionId of phbOnly?.optionIds ?? []) {
+      expect(repository.getFeat(optionId)?.sourceIds).toContain('source-2024-phb')
+    }
+  })
+
+  it('候选未选时阻塞出身步骤，选定后阻塞消失；固定授予背景不阻塞', () => {
+    const repository = probeWithPool()
+    const draft = probeDraft(repository)
+    const blocker = getOriginStepBlockers(draft, repository).find((item) => item.id === 'background-origin-feat')
+    expect(blocker?.message).toContain('探针背景')
+    expect(blocker?.resolution).toContain('起源专长')
+
+    const chosen = { ...draft, selections: [selection(CHECKPOINT_ID, ['feat-2024-tough'])] }
+    expect(getOriginStepBlockers(chosen, repository).some((item) => item.id === 'background-origin-feat')).toBe(false)
+
+    const fixedRepository = getRulesRepository('5e-2024')
+    const fixedDraft = draft2024({ backgroundId: 'background-2024-sage', enabledSourceIds: allSources(fixedRepository) })
+    expect(getOriginStepBlockers(fixedDraft, fixedRepository).some((item) => item.id === 'background-origin-feat')).toBe(false)
+
+    // 背景来源被关闭时不产生阻塞（否则玩家没有可选项可点）：探针改为第三方来源。
+    const thirdPartyProbe = withProbeBackground(getRulesRepository('5e-2024'), {
+      originFeatId: '',
+      originFeatChoices: { count: 1, categories: ['origin'] },
+      sourceIds: ['source-2024-tp-rthw'],
+    })
+    const disabledDraft = draft2024({ backgroundId: 'background-2024-probe', enabledSourceIds: [] })
+    expect(getOriginStepBlockers(disabledDraft, thirdPartyProbe).some((item) => item.id === 'background-origin-feat')).toBe(false)
+  })
+
+  it('更换背景时返回旧背景起源专长检查点的失效项', () => {
+    const repository = getRulesRepository('5e-2024')
+    const draft = draft2024({ backgroundId: 'background-2024-sage', enabledSourceIds: allSources(repository) })
+    const impact = getDependencyImpact(draft, {
+      kind: 'background',
+      value: 'background-2024-soldier',
+      previousValue: 'background-2024-sage',
+    })
+    expect(impact.invalidated).toContain('background-2024-sage-origin-feat')
+    // 未变化时不产生失效项。
+    const same = getDependencyImpact(draft, {
+      kind: 'background',
+      value: 'background-2024-sage',
+      previousValue: 'background-2024-sage',
+    })
+    expect(same.invalidated).toEqual([])
+  })
+
+  it('孤立起源专长选择不再授予（未标失效时的规则层兜底）', () => {
+    const repository = getRulesRepository('5e-2024')
+    const sources = allSources(repository)
+    const active = draft2024({
+      backgroundId: CURRENT_BACKGROUND,
+      enabledSourceIds: sources,
+      selections: [selection(CURRENT_CHECKPOINT, [CURRENT_FEAT])],
+    })
+    expect(listFeatGrants(active, repository).some((grant) => grant.featId === CURRENT_FEAT)).toBe(true)
+
+    // 换成士兵背景但旧选择仍在（模拟未经过失效流程的历史草稿）。
+    const stale = { ...active, backgroundId: 'background-2024-soldier' }
+    expect(listFeatGrants(stale, repository).some((grant) => grant.featId === CURRENT_FEAT)).toBe(false)
+
+    // 物种起源专长同理：换成非人类物种后，人类 Versatile 的选择不再生效。
+    const speciesStale = draft2024({
+      raceId: 'species-2024-elf',
+      backgroundId: 'background-2024-soldier',
+      enabledSourceIds: sources,
+      selections: [selection('species-2024-human-origin-feat', ['feat-2024-ua-wild-talent-empath'])],
+    })
+    expect(listFeatGrants(speciesStale, repository).some((grant) => grant.featId === 'feat-2024-ua-wild-talent-empath')).toBe(false)
+  })
+
+  it('归属判定覆盖背景／物种与专长子选择，其它检查点不受影响', () => {
+    const draft = draft2024({ backgroundId: 'background-2024-soldier', raceId: 'species-2024-human', subraceId: undefined })
+    expect(isSelectionCheckpointActive(draft, 'background-2024-soldier-origin-feat')).toBe(true)
+    expect(isSelectionCheckpointActive(draft, 'background-2024-sage-origin-feat')).toBe(false)
+    expect(isSelectionCheckpointActive(draft, 'species-2024-human-origin-feat')).toBe(true)
+    expect(isSelectionCheckpointActive(draft, 'species-2024-elf-origin-feat')).toBe(false)
+    // 专长子选择随父检查点判定。
+    expect(isSelectionCheckpointActive(draft, 'feat-child:background-2024-soldier-origin-feat:feat-2024-savage-attacker:ability')).toBe(true)
+    expect(isSelectionCheckpointActive(draft, 'feat-child:background-2024-sage-origin-feat:feat-2024-magic-initiate:ability')).toBe(false)
+    // 其它来源的检查点不受影响（由既有失效机制负责）。
+    expect(isSelectionCheckpointActive(draft, 'class-2024-fighter-maneuvers')).toBe(true)
+    expect(isSelectionCheckpointActive(draft, 'feat-child:class-2024-fighter-4:feat-2024-lucky:ability')).toBe(true)
+  })
+})
+
+/**
+ * H4：两条「原书任选」2024 背景的接线（P-2 按 CHM 原文口径）。
+ * - 德鲁斯肯瓦尔德居民（CHM `5026`「见第五章」）→ 本书 12 条候选；
+ * - 神话调查员（CHM `5115`「任意起源专长」）→ 起源专长全池。
+ */
+describe('H4 2024 任选背景接线', () => {
+  const repository = getRulesRepository('5e-2024')
+  const allSources = repository.sources.map((source) => source.id)
+
+  function checkpointFor(backgroundId: string) {
+    return buildTimeline('class-2024-fighter', 1, {
+      ruleset: '5e-2024',
+      backgroundId,
+      enabledSourceIds: allSources,
+    }).find((item) => item.id === `${backgroundId}-origin-feat`)
+  }
+
+  it('德鲁斯肯瓦尔德居民候选为本书 12 条起源专长', () => {
+    const backgroundId = 'background-2024-tp-druskenvald-dweller'
+    const background = repository.getBackground(backgroundId)
+    expect(background?.originFeatId).toBeUndefined()
+    expect(background?.originFeatOptions?.length).toBe(12)
+
+    const checkpoint = checkpointFor(backgroundId)
+    expect(checkpoint?.kind).toBe('feat')
+    expect(checkpoint?.optionIds.length).toBe(12)
+    for (const optionId of checkpoint?.optionIds ?? []) {
+      const feat = repository.getFeat(optionId)
+      expect(feat?.sourceIds, optionId).toContain('source-2024-tp-crooked-moon')
+      expect(feat?.category, optionId).toBe('origin')
+    }
+  })
+
+  it('神话调查员候选为起源专长全池（含本书 5 条）', () => {
+    const backgroundId = 'background-2024-tp-mythos-investigator'
+    const background = repository.getBackground(backgroundId)
+    expect(background?.originFeatChoices).toEqual({ count: 1, categories: ['origin'] })
+
+    const checkpoint = checkpointFor(backgroundId)
+    const optionIds = checkpoint?.optionIds ?? []
+    expect(optionIds.length).toBeGreaterThanOrEqual(10)
+    for (const optionId of optionIds) {
+      expect(repository.getFeat(optionId)?.category, optionId).toBe('origin')
+    }
+    // 本书 5 条火炬光起源专长在候选内。
+    const torchlight = repository.feats.filter((feat) => feat.sourceIds.includes('source-2024-tp-cthulhu-torchlight'))
+    expect(torchlight.length).toBeGreaterThanOrEqual(5)
+    for (const feat of torchlight) {
+      expect(optionIds, feat.id).toContain(feat.id)
+    }
+  })
+
+  it('两条背景的选择均可授予并按所选生效', () => {
+    const driftDweller = draft2024({
+      backgroundId: 'background-2024-tp-druskenvald-dweller',
+      enabledSourceIds: allSources,
+      selections: [selection('background-2024-tp-druskenvald-dweller-origin-feat', ['feat-2024-tp-memory-hunger'])],
+    })
+    expect(listFeatGrants(driftDweller, repository).filter((grant) => grant.sourceKind === 'background').map((grant) => grant.featId))
+      .toEqual(['feat-2024-tp-memory-hunger'])
+
+    const mythos = draft2024({
+      backgroundId: 'background-2024-tp-mythos-investigator',
+      enabledSourceIds: allSources,
+      selections: [selection('background-2024-tp-mythos-investigator-origin-feat', ['feat-2024-tough'])],
+    })
+    expect(listFeatGrants(mythos, repository).filter((grant) => grant.sourceKind === 'background').map((grant) => grant.featId))
+      .toEqual(['feat-2024-tough'])
   })
 })

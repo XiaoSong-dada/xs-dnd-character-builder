@@ -379,3 +379,52 @@ describe('TimelineStep 邪术师可展开卡片', () => {
     expect(wrapper.findAll('.option-card').length).toBe(0)
   })
 })
+
+/** H2：背景起源专长候选必须解析成专长条目（扩展书专长只在 `feats` 中登记，不能显示原始 ID）。 */
+describe('TimelineStep 背景起源专长候选（H2）', () => {
+  function ritualistDraft(): CharacterDraft {
+    return draft2024({
+      targetLevel: 1,
+      backgroundId: 'background-2024-tp-vtm-ritualist',
+      enabledSourceIds: ['source-2024-phb', 'source-2024-tp-vtm'],
+      selections: [],
+    })
+  }
+
+  it('候选卡显示专长名与摘要，不再显示原始 ID', () => {
+    const wrapper = mountStep(ritualistDraft())
+    const text = wrapper.text()
+    expect(text).toContain('选择起源专长')
+    expect(text).toContain('薄血')
+    expect(text).toContain('魔法学徒')
+    expect(text).not.toContain('feat-2024-tp-thin-blooded')
+    expect(text).not.toContain('feat-2024-magic-initiate')
+  })
+
+  it('展开候选显示效果摘要与来源行', async () => {
+    const wrapper = mountStep(ritualistDraft())
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('薄血'))
+    expect(card).toBeDefined()
+    await card?.find('.expandable-option-card__arrow').trigger('click')
+
+    const detail = wrapper.find('.timeline-step__option-detail')
+    expect(detail.exists()).toBe(true)
+    expect(detail.text()).toContain('专长效果：')
+    expect(detail.text()).toContain('吸血能力')
+    expect(detail.text()).toContain('来源：')
+  })
+
+  it('点击候选写入起源专长检查点', async () => {
+    vi.useFakeTimers()
+    const wrapper = mountStep(ritualistDraft())
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('薄血'))
+    await card?.find('.expandable-option-card__main').trigger('click')
+    await vi.advanceTimersByTimeAsync(300)
+    vi.useRealTimers()
+
+    const emitted = wrapper.emitted('select') ?? []
+    expect(emitted.some(([checkpointId, optionIds]) =>
+      checkpointId === 'background-2024-tp-vtm-ritualist-origin-feat'
+      && (optionIds as readonly string[]).includes('feat-2024-tp-thin-blooded'))).toBe(true)
+  })
+})

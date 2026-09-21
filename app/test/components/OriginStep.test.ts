@@ -160,3 +160,64 @@ describe('OriginStep 起源未完成原因清单（B09-07）', () => {
     expect(empty.text()).not.toContain('还差')
   })
 })
+
+/** H2：背景起源专长在出身步骤内联展示与选择（决策 Q1-A、Q2-A）。 */
+describe('OriginStep 背景起源专长（H2）', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  const VTM_CHECKPOINT = 'background-2024-tp-vtm-ritualist-origin-feat'
+
+  function mountBackground(patch: Record<string, unknown> = {}) {
+    return mount(OriginStep, { props: { ruleset: '5e-2024', languages: [], ...patch } })
+  }
+
+  function featBlock(wrapper: ReturnType<typeof mountBackground>) {
+    return wrapper.find('.origin-step__background-feat')
+  }
+
+  it('固定授予背景只读展示专长效果，不出现候选选择', () => {
+    // 2024 士兵：固定授予「凶蛮打手」，按原书不可更换。
+    const wrapper = mountBackground({ backgroundId: 'background-2024-soldier' })
+    const block = featBlock(wrapper)
+    expect(block.exists()).toBe(true)
+    expect(block.text()).toContain('该背景的起源专长')
+    expect(block.text()).toContain('由背景固定授予')
+    expect(block.text()).toContain('凶蛮打手')
+    expect(block.text()).not.toContain('个候选')
+  })
+
+  it('二选一背景渲染候选，单击写入同一检查点', async () => {
+    // 避世潜藏·仪式专家：原书「魔法学徒 或 薄血」二选一。
+    const wrapper = mountBackground({ backgroundId: 'background-2024-tp-vtm-ritualist' })
+    const block = featBlock(wrapper)
+    expect(block.text()).toContain('个候选')
+    expect(block.text()).toContain('尚未选择')
+
+    const thinBlooded = block.findAll('.expandable-option-card').find((card) => card.text().includes('薄血'))
+    expect(thinBlooded).toBeTruthy()
+    await thinBlooded!.find('.expandable-option-card__main').trigger('click')
+    await vi.advanceTimersByTimeAsync(260)
+    expect(wrapper.emitted('backgroundFeat')?.[0]).toEqual([VTM_CHECKPOINT, ['feat-2024-tp-thin-blooded']])
+  })
+
+  it('已选候选回显选中态，再次单击取消选择', async () => {
+    const wrapper = mountBackground({
+      backgroundId: 'background-2024-tp-vtm-ritualist',
+      selections: [{ checkpointId: VTM_CHECKPOINT, optionIds: ['feat-2024-tp-thin-blooded'], confirmedAt: '' }],
+    })
+    const block = featBlock(wrapper)
+    expect(block.text()).toContain('已选择')
+    const chosen = block.findAll('.expandable-option-card').find((card) => card.text().includes('薄血'))
+    expect(chosen!.classes()).toContain('expandable-option-card--selected')
+    await chosen!.find('.expandable-option-card__main').trigger('click')
+    await vi.advanceTimersByTimeAsync(260)
+    expect(wrapper.emitted('backgroundFeat')?.[0]).toEqual([VTM_CHECKPOINT, []])
+  })
+
+  it('未登记专长的背景不渲染该区块', () => {
+    // 费伦英雄·狂欢客：原书新增专长尚未登记，维持文字说明。
+    const wrapper = mountBackground({ backgroundId: 'background-2024-fr-hf-carouser' })
+    expect(featBlock(wrapper).exists()).toBe(false)
+  })
+})

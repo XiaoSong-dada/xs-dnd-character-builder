@@ -1,4 +1,4 @@
-﻿import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -473,7 +473,11 @@ export function useCharacterBuilderPage() {
     const draft = activeDraft.value
     const background = repositoryFor(draft).getBackground(id)
     if (!draft || draft.backgroundId === id) return
+    const change = { kind: 'background', value: id, previousValue: draft.backgroundId } as const
     const apply = () => {
+      // 换背景后旧背景的起源专长选择不再适用（H1）：先标失效，再写入新背景。
+      const impact = getDependencyImpact(draft, change)
+      store.invalidateSelections(impact.invalidated, '更换背景后需要重新确认起源专长')
       const equipment = buildStartingEquipmentState({ ...draft, backgroundId: id })
       store.updateDraft({
         backgroundId: id,
@@ -486,7 +490,7 @@ export function useCharacterBuilderPage() {
       })
     }
     requestChange(
-      { kind: 'background', value: id },
+      change,
       '更换背景',
       apply,
       draft.inventory.some((entry) => entry.sourceKind === 'background') ? ['背景固定装备与起始金币'] : [],

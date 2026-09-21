@@ -262,13 +262,45 @@ describe('CharacterExportModel 2024 映射（B11-01）', () => {
     const model = buildCharacterExportModel(elf, deriveCharacter(elf))
     const names = model.features.map((feature) => feature.name)
     expect(names).toEqual(expect.arrayContaining(['黑暗视觉', '卓尔魔法', '妖精血统']))
-    expect(names).toContain('魔法学徒（起源专长）')
+    // H3：起源专长标注来源背景，「（起源专长 · 背景名）」。
+    expect(names).toContain('魔法学徒（起源专长 · 学者）')
     const background = model.features.find((feature) => feature.category === 'background')
     expect(background?.summary).toContain('属性分配：智力+2、感知+1')
   })
 
-  it('资源区块按 2024 结算登记（上限与恢复），2014 为空', () => {
-    const barbarian = modernDraft({ id: 'export-2024-barbarian', classId: 'class-2024-barbarian' })
+  /** H3：导出的起源专长与规则层授予同源（含二选一选择与狂野天赋替代结果）。 */
+  it('起源专长导出：二选一按所选、替代后不再导出被替换的固定专长', () => {
+    const ritualist = draft2024({
+      id: 'export-2024-vtm-ritualist',
+      classId: 'class-2024-fighter',
+      targetLevel: 1,
+      backgroundId: 'background-2024-tp-vtm-ritualist',
+      enabledSourceIds: ['source-2024-phb', 'source-2024-tp-vtm'],
+      selections: [selection('background-2024-tp-vtm-ritualist-origin-feat', ['feat-2024-tp-thin-blooded'])],
+    })
+    const picked = buildCharacterExportModel(ritualist, deriveCharacter(ritualist))
+    const pickedNames = picked.features.map((feature) => feature.name)
+    expect(pickedNames).toContain('薄血（起源专长 · 仪式专家）')
+    expect(pickedNames).not.toContain('魔法学徒（起源专长 · 仪式专家）')
+
+    // 贵族（固定魔法学徒）＋人类 Versatile 选狂野天赋 → 固定授予被替代，导出只保留狂野天赋。
+    const noble = draft2024({
+      id: 'export-2024-noble-substitute',
+      classId: 'class-2024-fighter',
+      targetLevel: 1,
+      raceId: 'species-2024-human',
+      backgroundId: 'background-2024-noble',
+      enabledSourceIds: ['source-2024-phb', 'source-2024-ua-psion'],
+      selections: [selection('species-2024-human-origin-feat', ['feat-2024-ua-wild-talent-empath'])],
+    })
+    const substituted = buildCharacterExportModel(noble, deriveCharacter(noble))
+    const substitutedNames = substituted.features.map((feature) => feature.name)
+    // 狂野天赋「超共感」经人类 Versatile 获得，并替代贵族固定的魔法学徒。
+    expect(substitutedNames.some((name) => name.includes('超共感'))).toBe(true)
+    expect(substitutedNames.some((name) => name.includes('魔法学徒'))).toBe(false)
+  })
+
+  it('资源区块按 2024 结算登记（上限与恢复），2014 为空', () => {    const barbarian = modernDraft({ id: 'export-2024-barbarian', classId: 'class-2024-barbarian' })
     const model = buildCharacterExportModel(barbarian, deriveCharacter(barbarian))
     expect(model.resources.find((resource) => resource.name === '狂暴')).toMatchObject({
       max: 3,

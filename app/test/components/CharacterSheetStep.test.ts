@@ -271,6 +271,58 @@ describe('CharacterSheetStep', () => {
     expect(wrapper.text()).toContain('尚未选择专长或属性提升')
   })
 
+  /** H3：背景固定授予的起源专长必须进入角色卡，并标注来源与完整效果。 */
+  it('显示背景固定授予的起源专长、来源标签与完整效果', async () => {
+    const modern: CharacterDraft = {
+      ...draft,
+      ruleset: '5e-2024',
+      classId: 'class-2024-fighter',
+      targetLevel: 1,
+      raceId: 'species-2024-human',
+      backgroundId: 'background-2024-soldier',
+      selections: [],
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: modern, derived: deriveCharacter(modern) },
+    })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+
+    expect(wrapper.text()).toContain('专长与属性提升')
+    expect(wrapper.text()).toContain('凶蛮打手 · Savage Attacker')
+    expect(wrapper.text()).toContain('起源专长 · 士兵')
+
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('凶蛮打手'))
+    await card!.find('.expandable-option-card__arrow').trigger('click')
+    expect(card!.text()).toContain('每回合一次')
+  })
+
+  /** H3：二选一背景按所选专长展示，未选时不显示任何候选。 */
+  it('二选一背景仅在选定后显示对应起源专长', async () => {
+    const base: CharacterDraft = {
+      ...draft,
+      ruleset: '5e-2024',
+      classId: 'class-2024-fighter',
+      targetLevel: 1,
+      raceId: 'species-2024-human',
+      backgroundId: 'background-2024-tp-vtm-ritualist',
+      enabledSourceIds: ['source-2024-phb', 'source-2024-tp-vtm'],
+      selections: [],
+    }
+    const unchosen = mount(CharacterSheetStep, { props: { draft: base, derived: deriveCharacter(base) } })
+    await unchosen.get('[role="tab"]:nth-child(3)').trigger('click')
+    expect(unchosen.text()).not.toContain('薄血')
+
+    const chosenDraft: CharacterDraft = {
+      ...base,
+      selections: [{ checkpointId: 'background-2024-tp-vtm-ritualist-origin-feat', optionIds: ['feat-2024-tp-thin-blooded'], confirmedAt: '' }],
+    }
+    const chosen = mount(CharacterSheetStep, { props: { draft: chosenDraft, derived: deriveCharacter(chosenDraft) } })
+    await chosen.get('[role="tab"]:nth-child(3)').trigger('click')
+    expect(chosen.text()).toContain('薄血 · Thin-Blooded')
+    expect(chosen.text()).toContain('起源专长 · 仪式专家')
+  })
+
   it('shows an empty hint in the features tab when no subclass is selected', async () => {
     const wrapper = mount(CharacterSheetStep, {
       props: { draft, derived: deriveCharacter(draft) },

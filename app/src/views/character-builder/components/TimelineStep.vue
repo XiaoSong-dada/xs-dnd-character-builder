@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
 import ListShell from '@/components/ui/ListShell.vue'
@@ -13,7 +13,7 @@ import { formatResourceText } from '@/rules/resources'
 import { buildTimeline } from '@/rules/timeline'
 import { getCheckpointCandidates } from '@/rules/spellcasting'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
-import type { ChoiceCheckpoint, ClassResource, SpellRule, SubclassFeature, SubclassRule } from '@/types/rules'
+import type { ChoiceCheckpoint, ClassResource, RuleOption, SpellRule, SubclassFeature, SubclassRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{
@@ -69,7 +69,7 @@ function subclassFeatureText(subclass: SubclassRule | undefined): string {
 
 /** 候选卡摘要：优先规则仓库条目描述，其次子职摘要，最后回退特性级标签（无则空串走组件占位提示）。 */
 function optionSummary(checkpoint: ChoiceCheckpoint, optionId: string): string {
-  return rulesRepository.value.getOption(optionId)?.description
+  return candidateRule(optionId)?.description
     ?? (checkpoint.kind === 'subclass' ? rulesRepository.value.getSubclass(optionId)?.summary : undefined)
     ?? featureOptionLabel(checkpoint.id, optionId)
     ?? ''
@@ -116,7 +116,7 @@ function isExpertiseLocked(checkpointId: string, optionId: string): boolean {
 
 /** 静态选项卡片的标题（兼容专长属性提升与子职特性选项标签回退）。 */
 function optionTitle(checkpointId: string, optionId: string): string {
-  return rulesRepository.value.getOption(optionId)?.name
+  return candidateRule(optionId)?.name
     ?? formatFeatBonusOption(rulesRepository.value, optionId)
     ?? featureOptionLabel(checkpointId, optionId)
     ?? optionId
@@ -124,10 +124,20 @@ function optionTitle(checkpointId: string, optionId: string): string {
 
 type OptionCardState = 'default' | 'selected' | 'locked' | 'incompatible'
 
+/** 候选条目解析：专长优先。扩展书专长只登记在 `feats` 中，`options` 仅并入了核心专长（H2 修复原始 ID 展示）。 */
+function candidateRule(optionId: string): RuleOption | undefined {
+  return rulesRepository.value.getFeat(optionId) ?? rulesRepository.value.getOption(optionId)
+}
+
+/** 专长候选的完整效果（`detail`）：候选卡摘要只放一行，展开区补足完整效果。 */
+function candidateFeatDetail(optionId: string): string | undefined {
+  return rulesRepository.value.getFeat(optionId)?.detail
+}
+
 function optionState(checkpointId: string, optionId: string): OptionCardState {
   if (selectedIds(checkpointId).includes(optionId)) return 'selected'
   if (isUniqueOptionUsedElsewhere(checkpointId, optionId) || isBackgroundSkill(checkpointId, optionId) || isExpertiseLocked(checkpointId, optionId)) return 'locked'
-  return rulesRepository.value.getOption(optionId)?.status === 'index-only' ? 'incompatible' : 'default'
+  return candidateRule(optionId)?.status === 'index-only' ? 'incompatible' : 'default'
 }
 
 function optionDisabledReason(checkpointId: string, optionId: string): string {
@@ -142,7 +152,7 @@ function optionDisabledReason(checkpointId: string, optionId: string): string {
 
 /** 展开区的先决条件行：由选项字段生成（等级／魔契／法术），子职选择另补「所属职业 · 选择等级」。 */
 function optionPrerequisiteText(checkpoint: ChoiceCheckpoint, optionId: string): string | undefined {
-  const option = rulesRepository.value.getOption(optionId)
+  const option = candidateRule(optionId)
   const parts: string[] = []
   const subclass = checkpoint.kind === 'subclass' ? rulesRepository.value.getSubclass(optionId) : undefined
   if (subclass) {
@@ -161,7 +171,7 @@ function optionPrerequisiteText(checkpoint: ChoiceCheckpoint, optionId: string):
 
 /** 展开区的来源行：英文名 + 来源简写（如 “The Fiend · PHB”）；子职选择回退子职条目自身。 */
 function optionSourceText(optionId: string): string | undefined {
-  const option = rulesRepository.value.getOption(optionId)
+  const option = candidateRule(optionId)
   const subclass = option ? undefined : rulesRepository.value.getSubclass(optionId)
   const englishName = option?.englishName ?? subclass?.englishName
   const sourceIds = option?.sourceIds ?? subclass?.sourceIds ?? []
@@ -298,12 +308,13 @@ function spellCandidateDescription(spell: SpellRule): string {
             @select="toggle(checkpoint.id, optionId, checkpointBounds(checkpoint).max)"
           >
             <template #suffix>
-              <UiBadge v-if="rulesRepository.getOption(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
-              <UiBadge v-else-if="rulesRepository.getOption(optionId)?.status === 'selectable'" tone="warning">可选择 · 部分效果需手动处理</UiBadge>
+              <UiBadge v-if="candidateRule(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
+              <UiBadge v-else-if="candidateRule(optionId)?.status === 'selectable'" tone="warning">可选择 · 部分效果需手动处理</UiBadge>
             </template>
             <template #expanded>
               <div class="timeline-step__option-detail">
                 <p>{{ optionSummary(checkpoint, optionId) }}</p>
+                <p v-if="candidateFeatDetail(optionId)">专长效果：{{ candidateFeatDetail(optionId) }}</p>
                 <p v-if="subclassFeatureText(rulesRepository.getSubclass(optionId))">特性：{{ subclassFeatureText(rulesRepository.getSubclass(optionId)) }}</p>
                 <p v-if="optionPrerequisiteText(checkpoint, optionId)">先决条件：{{ optionPrerequisiteText(checkpoint, optionId) }}</p>
                 <p v-if="optionSourceText(optionId)">来源：{{ optionSourceText(optionId) }}</p>
@@ -318,14 +329,14 @@ function spellCandidateDescription(spell: SpellRule): string {
             v-for="optionId in checkpoint.optionIds"
             :key="optionId"
             :title="optionTitle(checkpoint.id, optionId)"
-            :description="rulesRepository.getOption(optionId)?.description"
+            :description="candidateRule(optionId)?.description"
             :state="optionState(checkpoint.id, optionId)"
             :disabled-reason="optionDisabledReason(checkpoint.id, optionId)"
             @select="toggle(checkpoint.id, optionId, checkpointBounds(checkpoint).max)"
           >
             <template #suffix>
-              <UiBadge v-if="rulesRepository.getOption(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
-              <UiBadge v-else-if="rulesRepository.getOption(optionId)?.status === 'selectable'" tone="warning">可选择 · 部分效果需手动处理</UiBadge>
+              <UiBadge v-if="candidateRule(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
+              <UiBadge v-else-if="candidateRule(optionId)?.status === 'selectable'" tone="warning">可选择 · 部分效果需手动处理</UiBadge>
             </template>
           </OptionCard>
         </ListShell>
