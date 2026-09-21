@@ -36,6 +36,7 @@
 ### 2.3 部署与基础设施
 
 - 生产域名 `your_url`（占位符，以构建配置为准，站点 URL 应走 `src/config` 环境变量注入）。
+- 站点可能不挂在域名根，而是挂在子路径（如 `https://example.com/<应用前缀>/character-builder`）。该场景由构建期 `VITE_BASE_URL` 提供公开前缀，产物内所有绝对路径自带前缀，反向代理不做 HTML 改写（结论见 §3 P0-4）。
 - nginx 仅配置 SPA fallback（`try_files $uri $uri/ /index.html`），无 gzip、无静态缓存头、无 robots/sitemap 显式服务。
 - 已接入 Umami 统计，不影响 SEO。
 - 站点信息统一由 `src/config/site.ts` 暴露：作者名与 GitHub 链接来自 `VITE_*` 环境变量，版本号由 `app/package.json` 在构建期注入；SEO 相关配置应沿用同一入口，不得在业务模块直接读 `import.meta.env`。
@@ -82,6 +83,7 @@
 
 - `public/robots.txt` 允许爬虫抓取公开页面并声明 `Sitemap` 地址；旧 `/profile` 已删除，无需保留单独禁止规则。
 - `public/sitemap.xml` 收录 `/character-builder`、`/dice`、`/assistant` 与 `/about`（不含 `/` 与 404），URL 使用 `VITE_SITE_URL` 前缀；`lastmod` 由构建期生成或按部署版本维护。
+- 子路径部署时 `<loc>` 与 `Sitemap:` 必须带上公开前缀（`VITE_BASE_URL`）：`public/` 下的文件由 Vite 原样复制，不会被自动改写，这一条需要部署时手工维护。
 - 新增页面路由时必须同步更新 sitemap 与 robots（列入路由开发完成标准）。
 
 **验收：**
@@ -99,6 +101,14 @@
 **验收：**
 
 - 生产环境响应头包含 `Content-Encoding: gzip` 与对应 `Cache-Control`；`/robots.txt`、`/sitemap.xml` 返回 200 且为原始文件内容。
+
+**子路径部署（已确认结论）：**
+
+- 公开前缀由构建期 `VITE_BASE_URL` 声明（归一化规则见 `app/scripts/deploy-base.ts`），它同时决定 index.html 的资源引用与图标、清单链接、预渲染 HTML 的导航 href、路由 history base、Service Worker 注册路径与作用域，以及 `version.json`、`templates/` 的运行时 URL。
+- 反向代理只做「前缀 → dist 目录」的路径映射，**禁止用 `sub_filter`、`<base href>` 或 rewrite 改写 HTML**：这类手段只能改到 HTML 文本，运行时拼出来的路径（SW 注册、懒加载 chunk、模板与字体）必然漏，表现为资源 404 与深链接落进 404 路由。
+- `VITE_SITE_URL` 只描述站点入口（不含部署前缀），canonical / og:url 由「`VITE_SITE_URL` + `VITE_BASE_URL` + 路由路径」在构建期与客户端一致地拼出。
+- 不带尾斜杠的公开前缀与深链接（`/prefix/character-builder`）必须直接命中预渲染产物：nginx 侧用 `try_files $uri $uri/index.html $uri/ /prefix/index.html`，并对 `location = /prefix` 单独 301 到 `/prefix/`。
+- 一个前缀对应一个 Service Worker 作用域；更换前缀等于更换一份 PWA 安装，旧前缀下已安装的用户不会收到新前缀版本的应用内更新提示。
 
 ### P1-1 构建期预渲染（关键改造）
 
