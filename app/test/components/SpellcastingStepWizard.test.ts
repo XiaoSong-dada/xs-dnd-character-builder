@@ -1,6 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { rulesRepository } from '@/rules/repository'
+import { rulesRepository2024 } from '@/rules/repositories'
 import SpellcastingStep from '@/views/character-builder/components/SpellcastingStep.vue'
 import type { SelectionTaskFocusHandle } from '@/views/character-builder/selection-task'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
@@ -165,5 +167,85 @@ describe('法术步骤去完成聚焦出口（v1.9.1 R3-6）', () => {
     const wrapper = mountAttached({ ...wizardDraft(), classId: 'class-2014-fighter', subclassId: undefined })
     expect(wrapper.find('[data-task-id]').exists()).toBe(false)
     expect(wrapper.text()).toContain('当前职业无需配置法术')
+  })
+})
+
+describe('法术候选保留已选项与就地取消（v1.9.1 追加）', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  /** 候选列表是最后一个 ListShell（第一个是「当前已选」区块）。 */
+  const candidateCards = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.findAll('.list-shell').at(-1)!.findAll('.expandable-option-card')
+  const titleOf = (card: { find: (selector: string) => { text: () => string } }) =>
+    card.find('.expandable-option-card__title-line strong').text()
+  const badgeOf = (card: { find: (selector: string) => { text: () => string } }) =>
+    card.find('.expandable-option-card__badges').text()
+  /** 任务切换后环级页签默认落在首个候选的环级，这里切到「全部」以便查找任意环级法术。 */
+  const showAllLevels = async (wrapper: ReturnType<typeof mount>) => {
+    const tab = wrapper.findAll('.ui-tabs button').find((button) => button.text() === '全部')!
+    await tab.trigger('click')
+  }
+
+  it('准备法术任务：已准备法术留在候选中并可就地取消', async () => {
+    const wrapper = mount(SpellcastingStep, { props: { draft: wizardDraft() } })
+    await wrapper.get('[data-task-id="spells"]').trigger('click')
+
+    const magicMissile = rulesRepository.getSpell('spell-2014-magic-missile')!.name
+    const card = candidateCards(wrapper).find((item) => titleOf(item) === magicMissile)
+    expect(card, '已准备法术应留在候选列表中').toBeTruthy()
+    expect(badgeOf(card!)).toBe('已选')
+
+    await card!.get('button[aria-pressed]').trigger('click')
+    await vi.advanceTimersByTimeAsync(260)
+    const change = wrapper.emitted('change')?.at(-1)?.[0] as SpellSelections
+    expect(change.preparedSpellIds).not.toContain('spell-2014-magic-missile')
+  })
+
+  it('写入法术书任务：抄录法术在候选中标注不可移除且点击不产生变更', async () => {
+    const wrapper = mount(SpellcastingStep, { props: { draft: wizardDraft() } })
+    expect(wrapper.get('[data-task-id="spellbook"]').attributes('aria-selected')).toBe('true')
+    await showAllLevels(wrapper)
+
+    const scorching = rulesRepository.getSpell('spell-2014-scorching-ray')!.name
+    const card = candidateCards(wrapper).find((item) => titleOf(item) === scorching)
+    expect(card, '抄录法术应仍在候选列表中').toBeTruthy()
+    expect(badgeOf(card!)).toBe('在书中（抄录，不可移除）')
+
+    await card!.get('button[aria-pressed]').trigger('click')
+    await vi.advanceTimersByTimeAsync(260)
+    expect(wrapper.emitted('change')).toBeUndefined()
+  })
+
+  it('子职额外入书任务：已在书中的候选说明原因，额外名额项可就地移除', async () => {
+    let draft = evoker2024Draft()
+    const wrapper = mount(SpellcastingStep, { props: { draft } })
+    await wrapper.get('[data-task-id="spellbook-extra"]').trigger('click')
+    await showAllLevels(wrapper)
+
+    const burningHands = rulesRepository2024.getSpell('spell-2024-burning-hands')!.name
+    const inBook = candidateCards(wrapper).find((item) => titleOf(item) === burningHands)
+    expect(inBook, '已在书中的法术应留在额外入书候选中').toBeTruthy()
+    expect(badgeOf(inBook!)).toBe('已在书中')
+    await inBook!.get('button[aria-pressed]').trigger('click')
+    await vi.advanceTimersByTimeAsync(260)
+    expect(wrapper.emitted('change')).toBeUndefined()
+
+    const scorching = rulesRepository2024.getSpell('spell-2024-scorching-ray')!.name
+    const add = candidateCards(wrapper).find((item) => titleOf(item) === scorching)!
+    await add.get('button[aria-pressed]').trigger('click')
+    await vi.advanceTimersByTimeAsync(260)
+    const added = wrapper.emitted('change')?.at(-1)?.[0] as SpellSelections
+    expect(added.spellbookExtraSpellIds).toEqual(['spell-2024-scorching-ray'])
+    draft = { ...draft, spellSelections: added }
+    await wrapper.setProps({ draft })
+
+    const selectedExtra = candidateCards(wrapper).find((item) => titleOf(item) === scorching)!
+    expect(badgeOf(selectedExtra)).toBe('已选')
+    await selectedExtra.get('button[aria-pressed]').trigger('click')
+    await vi.advanceTimersByTimeAsync(260)
+    const removed = wrapper.emitted('change')?.at(-1)?.[0] as SpellSelections
+    expect(removed.spellbookExtraSpellIds).toEqual([])
+    expect(removed.spellbookSpellIds).not.toContain('spell-2024-scorching-ray')
   })
 })

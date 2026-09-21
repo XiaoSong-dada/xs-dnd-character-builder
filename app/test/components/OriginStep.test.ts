@@ -205,3 +205,72 @@ describe('OriginStep 去完成聚焦出口（v1.9.1 R3-6）', () => {
     expect(document.activeElement).toBe(heading)
   })
 })
+
+describe('OriginStep 候选保留已选项（v1.9.1 追加）', () => {
+  const titleOf = (card: { find: (selector: string) => { text: () => string } }) =>
+    card.find('.expandable-option-card__title-line strong').text()
+  const badgeOf = (card: { find: (selector: string) => { text: () => string } }) =>
+    card.find('.expandable-option-card__badges').text()
+  const candidateCard = (wrapper: ReturnType<typeof mountOrigin>, name: string) =>
+    wrapper.findAll('.list-shell').at(-1)!.findAll('.expandable-option-card').find((card) => titleOf(card) === name)
+
+  it('已选种族留在候选目录并显示已选，顶部摘要保留', async () => {
+    const human = rulesRepository.getRace('race-2014-human')!.name
+    const wrapper = mountOrigin({ classId: 'class-2014-fighter', raceId: 'race-2014-human' })
+    await openTask(wrapper, 'race')
+
+    const card = candidateCard(wrapper, human)
+    expect(card, '已选种族应留在候选目录中').toBeTruthy()
+    expect(badgeOf(card!)).toContain('已选')
+    expect(wrapper.text()).toContain(`已选择：${human}`)
+  })
+
+  it('已选背景留在候选目录并显示已选，顶部摘要保留', async () => {
+    const soldier = rulesRepository.getBackground('background-2014-soldier')!.name
+    const wrapper = mountOrigin({ classId: 'class-2014-fighter', backgroundId: 'background-2014-soldier' })
+    await openTask(wrapper, 'background')
+
+    const card = candidateCard(wrapper, soldier)
+    expect(card, '已选背景应留在候选目录中').toBeTruthy()
+    expect(badgeOf(card!)).toContain('已选')
+    expect(wrapper.text()).toContain(`已选择：${soldier}`)
+  })
+
+  it('点击已选种族不发出选择事件（必选项保持选中）', async () => {
+    vi.useFakeTimers()
+    const human = rulesRepository.getRace('race-2014-human')!.name
+    const wrapper = mountOrigin({ classId: 'class-2014-fighter', raceId: 'race-2014-human' })
+    await openTask(wrapper, 'race')
+    const card = candidateCard(wrapper, human)!
+
+    await card.get('.expandable-option-card__main').trigger('click')
+    await vi.advanceTimersByTimeAsync(260)
+    vi.useRealTimers()
+
+    expect(wrapper.emitted('race')).toBeUndefined()
+  })
+
+  it('子种族与背景变体带已选徽标，且再点仍可取消', async () => {
+    vi.useFakeTimers()
+    const dwarf = rulesRepository.getRace('race-2014-dwarf')!
+    const mountain = rulesRepository.getRace('race-2014-dwarf-mountain')!
+    const subraceWrapper = mountOrigin({ raceId: dwarf.id, subraceId: mountain.id })
+    await openTask(subraceWrapper, 'subrace')
+    const subraceCard = candidateCard(subraceWrapper, mountain.name)!
+    expect(badgeOf(subraceCard)).toContain('已选')
+    await subraceCard.get('.expandable-option-card__main').trigger('click')
+    await vi.advanceTimersByTimeAsync(260)
+    expect(subraceWrapper.emitted('subrace')?.[0]).toEqual([undefined])
+
+    const variant = rulesRepository.backgrounds.find((item) => item.parentBackgroundId === 'background-2014-sailor')!
+    const variantWrapper = mountOrigin({
+      raceId: 'race-2014-human',
+      backgroundId: 'background-2014-sailor',
+      backgroundVariantId: variant.id,
+    })
+    await openTask(variantWrapper, 'background-variant')
+    const variantCard = candidateCard(variantWrapper, variant.name)!
+    expect(badgeOf(variantCard)).toContain('已选')
+    vi.useRealTimers()
+  })
+})

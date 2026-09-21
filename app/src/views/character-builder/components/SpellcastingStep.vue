@@ -114,7 +114,9 @@ const filteredCandidates = computed(() => {
     if (concentrationFilter.value === 'concentration' && !spell.concentration) return false
     if (concentrationFilter.value === 'non-concentration' && spell.concentration) return false
     if (query && !`${spell.name}${spell.englishName}`.toLocaleLowerCase('zh-CN').includes(query)) return false
-    return levelFilter.value === 'selected' || !selected
+    // 候选保留已选项（v1.9.1 追加）：已选法术留在原位并显示已选态，再点即取消；
+    // 只有「已选择」页签仍过滤未选项（见上方的 selected 判定）。
+    return true
   })
 })
 const selectedSpells = computed(() => taskSelectedIds.value.map((id) => repository.value.getSpell(id)).filter((spell): spell is SpellRule => Boolean(spell)))
@@ -129,6 +131,25 @@ const selectedCountLabel = computed(() => {
   const transcribedCount = props.draft.spellSelections.transcribedSpellIds.length
   return `${activeCount.value} / ${activeRequiredCount.value}${transcribedCount ? `（另有抄录 ${transcribedCount}）` : ''}`
 })
+
+/** 抄录锁定与「已在书中」判定 + 候选徽标（v1.9.1 追加）：不可切换的候选项要说明原因，不能静默失效。 */
+const transcribedIds = computed(() => new Set(props.draft.spellSelections.transcribedSpellIds))
+function isTranscribedLocked(spell: SpellRule): boolean {
+  return flow.activeTaskId.value === 'spellbook' && transcribedIds.value.has(spell.id)
+}
+/** 额外入书候选含已在书中的法术（`getSpellbookExtraCandidates`）；这些法术不能再占额外名额。 */
+function isAlreadyInBook(spell: SpellRule): boolean {
+  return flow.activeTaskId.value === 'spellbook-extra'
+    && props.draft.spellSelections.spellbookSpellIds.includes(spell.id)
+    && !spellbookExtraIds.value.includes(spell.id)
+}
+function candidateBadge(spell: SpellRule): string {
+  if (isTranscribedLocked(spell)) return '在书中（抄录，不可移除）'
+  if (isAlreadyInBook(spell)) return '已在书中'
+  if (taskSelectedIds.value.includes(spell.id)) return '已选'
+  if (activeFull.value) return '已满'
+  return flow.activeTaskId.value.includes('spellbook') ? '写入' : '选择'
+}
 
 function toggleSpell(id: string): void {
   const current = selectedSpellIds.value
@@ -185,7 +206,7 @@ function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value 
       <SelectionTaskNavigator v-model="flow.activeTaskId.value" :tasks="tasks" :completed="flow.completedCount.value" />
       <UiNotice v-if="alwaysPreparedSpells.length" tone="success" title="自动获得／始终准备">{{ alwaysPreparedSpells.map((spell) => spell.name).join('、') }}（不占选择上限）</UiNotice>
       <UiNotice v-if="invalidSpellSelectionCount" tone="warning" title="保留了需要重新确认的旧选择">有 {{ invalidSpellSelectionCount }} 项法术来自之前的职业、等级或法术书状态；它们没有被静默删除，但不会计入合法完成。</UiNotice>
-      <UiNotice v-if="activeFull && filteredCandidates.length && levelFilter !== 'selected'" tone="info" title="当前名额已选满">请先从上方“当前已选”移除一项，再选择其他法术。</UiNotice>
+      <UiNotice v-if="activeFull && filteredCandidates.length && levelFilter !== 'selected'" tone="info" title="当前名额已选满">请先取消一项已选法术，再选择其他法术。</UiNotice>
 
       <section class="spellcasting-step__panel" role="tabpanel">
         <h2 ref="headingEl" tabindex="-1">{{ flow.activeTask.value?.label }}</h2>
@@ -210,7 +231,7 @@ function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value 
 
         <ListShell :empty="filteredCandidates.length === 0" empty-text="没有匹配的法术。">
           <ExpandableOptionCard v-for="spell in filteredCandidates" :key="`${flow.activeTaskId.value}-${spell.id}`" :title="spell.name" :description="`${formatSpellLabel(spell)}${spell.summary ? ` · ${spell.summary}` : ''}`" expanded-label="法术效果" :state="taskSelectedIds.includes(spell.id) ? 'selected' : 'default'" @select="toggleForTask(spell.id)">
-            <template #suffix><span v-if="taskSelectedIds.includes(spell.id)">已选</span><span v-else-if="activeFull">已满</span><span v-else>{{ flow.activeTaskId.value.includes('spellbook') ? '写入' : '选择' }}</span></template>
+            <template #suffix><span>{{ candidateBadge(spell) }}</span></template>
             <template v-if="spell.description" #expanded>{{ spell.description }}</template>
           </ExpandableOptionCard>
         </ListShell>

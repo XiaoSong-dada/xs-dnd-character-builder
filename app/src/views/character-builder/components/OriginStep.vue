@@ -78,8 +78,8 @@ const recommendedRaces = computed(() => filteredRaces.value.filter((item) => ite
 const orderedRaces = computed(() => sortByClassRecommendation(filteredRaces.value, props.classId))
 const visibleRaces = computed(() => {
   const full = showAllRaces.value || Boolean(raceSearch.value.trim()) || raceSourceFilter.value !== 'all'
-  const pool = full ? orderedRaces.value : recommendedRaces.value.length ? recommendedRaces.value : orderedRaces.value.slice(0, 6)
-  return pool.filter((item) => item.id !== props.raceId)
+  // 已选种族保留在候选目录中并显示已选态（v1.9.1 追加），不再把当前选择从候选里移除。
+  return full ? orderedRaces.value : recommendedRaces.value.length ? recommendedRaces.value : orderedRaces.value.slice(0, 6)
 })
 const subraces = computed(() => props.raceId ? repository.value.races.filter((item) => item.parentRaceId === props.raceId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)) : [])
 
@@ -94,8 +94,8 @@ const recommendedBackgrounds = computed(() => filteredBackgrounds.value.filter((
 const orderedBackgrounds = computed(() => sortByClassRecommendation(filteredBackgrounds.value, props.classId))
 const visibleBackgrounds = computed(() => {
   const full = showAllBackgrounds.value || Boolean(backgroundSearch.value.trim()) || backgroundSourceFilter.value !== 'all'
-  const pool = full ? orderedBackgrounds.value : recommendedBackgrounds.value.length ? recommendedBackgrounds.value : orderedBackgrounds.value.slice(0, 6)
-  return pool.filter((item) => item.id !== props.backgroundId)
+  // 与种族同构（v1.9.1 追加）：已选背景保留在候选目录中并显示已选态。
+  return full ? orderedBackgrounds.value : recommendedBackgrounds.value.length ? recommendedBackgrounds.value : orderedBackgrounds.value.slice(0, 6)
 })
 const variants = computed(() => props.backgroundId ? repository.value.backgrounds.filter((item) => item.parentBackgroundId === props.backgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)) : [])
 const effectiveBackground = computed<BackgroundRule | undefined>(() => props.backgroundVariantId ? repository.value.getBackground(props.backgroundVariantId) : selectedBackground.value)
@@ -216,13 +216,26 @@ function selectBackgroundFeat(featId: string): void { const checkpointId = backg
         <p v-if="selectedRace" class="origin-step__hint">需要更改时，可从下方候选中重新选择。</p>
         <div class="origin-step__filters"><input v-model="raceSearch" type="search" placeholder="搜索中文或英文名称" aria-label="搜索种族"><select v-model="raceSourceFilter" aria-label="按种族来源筛选"><option v-for="source in sourceOptions" :key="source.id" :value="source.id">{{ source.label }}</option></select></div>
         <p v-if="!showAllRaces && !raceSearch && raceSourceFilter === 'all'" class="origin-step__hint">优先展示与当前职业常见玩法契合的候选。</p>
-        <ListShell :empty="visibleRaces.length === 0" empty-text="没有匹配的种族。"><ExpandableOptionCard v-for="race in visibleRaces" :key="race.id" :title="race.name" :description="[race.summary, getRaceRecommendationReason(race, classRule)].filter(Boolean).join(' · ')" expanded-label="种族介绍" @select="$emit('race', race.id)"><template #suffix><UiBadge v-if="race.status === 'dm-only'" tone="warning">可选规则</UiBadge><UiBadge v-else-if="race.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template><template #expanded>{{ race.description }}</template></ExpandableOptionCard></ListShell>
+        <ListShell :empty="visibleRaces.length === 0" empty-text="没有匹配的种族。">
+          <ExpandableOptionCard
+            v-for="race in visibleRaces"
+            :key="race.id"
+            :title="race.name"
+            :description="[race.summary, getRaceRecommendationReason(race, classRule)].filter(Boolean).join(' · ')"
+            expanded-label="种族介绍"
+            :state="race.id === raceId ? 'selected' : 'default'"
+            @select="race.id !== raceId && $emit('race', race.id)"
+          >
+            <template #suffix><UiBadge v-if="race.id === raceId" tone="success">已选</UiBadge><UiBadge v-if="race.status === 'dm-only'" tone="warning">可选规则</UiBadge><UiBadge v-else-if="race.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
+            <template #expanded>{{ race.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
         <BaseButton v-if="!showAllRaces && !raceSearch && raceSourceFilter === 'all' && filteredRaces.length > visibleRaces.length" variant="secondary" @click="showAllRaces = true">查看全部 {{ filteredRaces.length }} 项</BaseButton>
       </template>
 
       <template v-else-if="flow.activeTaskId.value === 'subrace'">
         <p class="origin-step__hint">{{ selectedRace?.requiresSubrace ? `${selectedRace.name}必须选择一个分支。` : '这是可选分支，不选择也可以继续。' }}</p>
-        <ListShell><ExpandableOptionCard v-for="subrace in subraces" :key="subrace.id" :title="subrace.name" :description="subrace.summary" expanded-label="分支介绍" :state="subraceId === subrace.id ? 'selected' : 'default'" @select="$emit('subrace', subraceId === subrace.id ? undefined : subrace.id)"><template #expanded>{{ subrace.description }}</template></ExpandableOptionCard></ListShell>
+        <ListShell><ExpandableOptionCard v-for="subrace in subraces" :key="subrace.id" :title="subrace.name" :description="subrace.summary" expanded-label="分支介绍" :state="subraceId === subrace.id ? 'selected' : 'default'" @select="$emit('subrace', subraceId === subrace.id ? undefined : subrace.id)"><template #suffix><UiBadge v-if="subraceId === subrace.id" tone="success">已选</UiBadge></template><template #expanded>{{ subrace.description }}</template></ExpandableOptionCard></ListShell>
       </template>
 
       <div v-else-if="flow.activeTaskId.value === 'species-size'" class="origin-step__choices"><button v-for="size in speciesSizeChoices" :key="size" type="button" :aria-pressed="sizeChoice === size" @click="$emit('size', size)">{{ sizeChoice === size ? '✓ ' : '' }}{{ sizeLabel(size) }}</button></div>
@@ -237,11 +250,24 @@ function selectBackgroundFeat(featId: string): void { const checkpointId = backg
         <p v-if="selectedBackground" class="origin-step__hint">需要更改时，可从下方候选中重新选择。</p>
         <div class="origin-step__filters"><input v-model="backgroundSearch" type="search" placeholder="搜索中文或英文名称" aria-label="搜索背景"><select v-model="backgroundSourceFilter" aria-label="按背景来源筛选"><option v-for="source in sourceOptions" :key="source.id" :value="source.id">{{ source.label }}</option></select></div>
         <p v-if="!showAllBackgrounds && !backgroundSearch && backgroundSourceFilter === 'all'" class="origin-step__hint">优先展示与当前职业常见玩法契合的候选。</p>
-        <ListShell :empty="visibleBackgrounds.length === 0" empty-text="没有匹配的背景。"><ExpandableOptionCard v-for="background in visibleBackgrounds" :key="background.id" :title="background.name" :description="[background.summary, background.featureName, getBackgroundRecommendationReason(background, classRule)].filter(Boolean).join(' · ')" expanded-label="背景介绍" @select="$emit('background', background.id)"><template #suffix><UiBadge v-if="background.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template><template #expanded>{{ background.description }}</template></ExpandableOptionCard></ListShell>
+        <ListShell :empty="visibleBackgrounds.length === 0" empty-text="没有匹配的背景。">
+          <ExpandableOptionCard
+            v-for="background in visibleBackgrounds"
+            :key="background.id"
+            :title="background.name"
+            :description="[background.summary, background.featureName, getBackgroundRecommendationReason(background, classRule)].filter(Boolean).join(' · ')"
+            expanded-label="背景介绍"
+            :state="background.id === backgroundId ? 'selected' : 'default'"
+            @select="background.id !== backgroundId && $emit('background', background.id)"
+          >
+            <template #suffix><UiBadge v-if="background.id === backgroundId" tone="success">已选</UiBadge><UiBadge v-if="background.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
+            <template #expanded>{{ background.description }}</template>
+          </ExpandableOptionCard>
+        </ListShell>
         <BaseButton v-if="!showAllBackgrounds && !backgroundSearch && backgroundSourceFilter === 'all' && filteredBackgrounds.length > visibleBackgrounds.length" variant="secondary" @click="showAllBackgrounds = true">查看全部 {{ filteredBackgrounds.length }} 项</BaseButton>
       </template>
 
-      <template v-else-if="flow.activeTaskId.value === 'background-variant'"><UiNotice tone="info" title="可选内容">不选择背景变体也可以继续。</UiNotice><ListShell><ExpandableOptionCard v-for="variant in variants" :key="variant.id" :title="variant.name" :description="variant.summary" expanded-label="变体介绍" :state="backgroundVariantId === variant.id ? 'selected' : 'default'" @select="$emit('variant', backgroundVariantId === variant.id ? undefined : variant.id)"><template #expanded>{{ variant.description }}</template></ExpandableOptionCard></ListShell></template>
+      <template v-else-if="flow.activeTaskId.value === 'background-variant'"><UiNotice tone="info" title="可选内容">不选择背景变体也可以继续。</UiNotice><ListShell><ExpandableOptionCard v-for="variant in variants" :key="variant.id" :title="variant.name" :description="variant.summary" expanded-label="变体介绍" :state="backgroundVariantId === variant.id ? 'selected' : 'default'" @select="$emit('variant', backgroundVariantId === variant.id ? undefined : variant.id)"><template #suffix><UiBadge v-if="backgroundVariantId === variant.id" tone="success">已选</UiBadge></template><template #expanded>{{ variant.description }}</template></ExpandableOptionCard></ListShell></template>
       <div v-else-if="flow.activeTaskId.value === 'background-languages'" class="origin-step__languages"><strong>选择 {{ languageChoiceCount }} 种不同的额外语言（已选 {{ languages.length }} 种）</strong><button v-for="language in languageOptions" :key="language" type="button" :aria-pressed="languages.includes(language)" @click="toggleLanguage(language)">{{ languages.includes(language) ? '✓ ' : '' }}{{ language }}</button></div>
       <div v-else-if="flow.activeTaskId.value === 'background-abilities'" class="origin-step__branch"><div class="origin-step__choices"><button type="button" :aria-pressed="allocationMode === 'split'" @click="setAllocationMode('split')">一项 +2、另一项 +1</button><button type="button" :aria-pressed="allocationMode === 'even'" @click="setAllocationMode('even')">三项各 +1</button></div><div class="origin-step__choices"><button v-for="key in abilityCandidates" :key="key" type="button" :aria-pressed="(allocation[key] ?? 0) > 0" @click="toggleBackgroundAbility(key)">{{ abilityLabels[key] }}{{ allocation[key] ? ` +${allocation[key]}` : '' }}</button></div></div>
 
