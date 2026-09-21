@@ -608,6 +608,12 @@ export interface BackgroundRule {
    * 改为生成 `background-origin-feat` 选择检查点（G3 决策 Q1-A）。
    */
   readonly originFeatOptions?: readonly string[]
+  /**
+   * 2024 背景的「任选起源专长」规格（如火炬光·神话调查员「选择任意起源专长」）。
+   * 候选由 `getFeatPool` 按类别与来源开关展开，选择结果存于 `${background.id}-origin-feat` 检查点。
+   * 三者优先级：`originFeatOptions` > `originFeatChoices` > `originFeatId`。
+   */
+  readonly originFeatChoices?: { readonly count: number; readonly categories: readonly FeatCategory[] }
   /** 起源专长替代：满足条件时可用所列类别专长替换固定起源专长（如贵族／智者＋狂野天赋）。 */
   readonly originFeatSubstitutions?: readonly { readonly category: FeatCategory; readonly sourceIds: readonly string[] }[]
   /** 2024 背景的三项属性候选（+2/+1 或各 +1）；2014 背景省略。 */

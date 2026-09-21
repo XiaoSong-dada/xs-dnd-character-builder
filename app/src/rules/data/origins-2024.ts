@@ -1,6 +1,12 @@
 import type { BackgroundRule, RaceRule } from '@/types/rules'
 import { backgroundEquipmentA2024 } from '@/rules/data/starting-equipment-2024'
 import { DARK_GIFT_FEAT_IDS } from '@/rules/data/feats-rthw-2024'
+import { thirdPartyOriginFeats2024 } from '@/rules/data/third-party-feats-2024'
+
+/** 歪曲之月（The Crooked Moon）第五章的起源专长候选（H4：德鲁斯肯瓦尔德居民的「见第五章」）。 */
+const crookedMoonOriginFeatIds = thirdPartyOriginFeats2024
+  .filter((feat) => feat.sourceIds.includes('source-2024-tp-crooked-moon'))
+  .map((feat) => feat.id)
 
 /**
  * 2024 核心起源：16 背景、10 主物种与 8 血统／传承。
@@ -24,7 +30,7 @@ const background = (
   abilityChoices: BackgroundRule['abilityChoices'],
   originFeatId: string,
   skillIds: readonly string[],
-  tool: { readonly id?: string; readonly choices?: boolean; readonly feats?: readonly string[] },
+  tool: { readonly id?: string; readonly choices?: boolean; readonly feats?: readonly string[]; readonly featChoices?: BackgroundRule['originFeatChoices'] },
   _equipment: readonly string[],
   summary: string,
   description: string,
@@ -46,6 +52,8 @@ const background = (
   ...(originFeatId ? { originFeatId } : {}),
   // 二选一起源专长候选（G3 决策 Q1-A）：由 `tool.feats` 声明，声明时不再走 originFeatId 固定授予。
   ...(tool.feats?.length ? { originFeatOptions: tool.feats } : {}),
+  // 任选起源专长池（H4）：由 `tool.featChoices` 声明，候选按类别与来源开关展开。
+  ...(tool.featChoices ? { originFeatChoices: tool.featChoices } : {}),
   abilityChoices,
   ...(slug === 'noble' || slug === 'sage'
     ? { originFeatSubstitutions: [{ category: 'wild-talent' as const, sourceIds: ['source-2024-ua-psion'] }] }
@@ -157,10 +165,10 @@ export const backgrounds2024: readonly BackgroundRule[] = [
     ['易容工具', '镜子', '旅行服装'],
     '倒影与阴影被剥离：形体不再稳固。',
     '起源专长：无影之形。技能：欺瞒、调查。工具：易容工具。装备：A 为易容工具、镜子与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
-  background('tp-druskenvald-dweller', '德鲁斯肯瓦尔德居民', 'Druskenvald Dweller', [], '', ['skill-survival'], { choices: true },
+  background('tp-druskenvald-dweller', '德鲁斯肯瓦尔德居民', 'Druskenvald Dweller', [], '', ['skill-survival'], { choices: true, feats: crookedMoonOriginFeatIds },
     ['工匠工具（随所选行省）', '德鲁斯肯瓦尔德行省地图', '旅行服装'],
     '十三个不祥行省之一的当地人：技艺与乡土。',
-    '起源专长：任选一项起源专长（按原书）。技能：求生 + 任选一项（按原书行省亲和表，本项按文字登记）。工具：任选一项（按原书行省亲和表）。装备：A 为所选工匠工具、行省地图与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
+    '起源专长：从《歪曲之月》第五章的起源专长中选择一项（CHM `5026` 原文为「选择一项起源专长（见第五章）」，故候选为本书 12 条，H4 接入）。技能：求生 + 任选一项（按原书行省亲和表，本项按文字登记）。工具：任选一项（按原书行省亲和表）。装备：A 为所选工匠工具、行省地图与旅行服装；B 为 50 GP。原书此背景不提供属性提升。', 'selectable', ['source-2024-tp-crooked-moon']),
   background('tp-night-stalker', '暗夜猎手', 'Night Stalker', [], 'feat-2024-tp-hunt-hunter', ['skill-stealth'], { id: 'equipment-2024-leatherworker-s-tools' },
     ['皮匠工具', '书（一种生物类型）', '附盖提灯', '捕猎陷阱', '灯油（3 瓶）', '旅行服装'],
     '从猎物变成猎人：追猎怪物的经验。',
@@ -206,10 +214,10 @@ export const backgrounds2024: readonly BackgroundRule[] = [
     ['匕首', '照明弹', '纸张（50 张）', '祭献烙印', '旅行者服装'],
     '曾被神秘血月复活、身上留有祭品烙印的人。',
     '起源专长：霜鬓。技能：奥秘、求生。装备：A 为匕首、照明弹、纸张 50 张、祭献烙印、旅行者服装与 40 GP；B 为祭献烙印与 50 GP。祭献烙印为第三方魔法物品（`index-only`），故此处只按原书列出装备名、不做结构化授予，需 DM 按物品条目处理。', 'selectable', ['source-2024-tp-drakkenheim', 'source-2024-tp-steinhardt']),
-  background('tp-mythos-investigator', '神话调查员', 'Mythos Investigator', [], '', [], { choices: true },
+  background('tp-mythos-investigator', '神话调查员', 'Mythos Investigator', [], '', [], { choices: true, featChoices: { count: 1, categories: ['origin'] } },
     ['50 GP'],
     '与克苏鲁神话接触后选择直面它的人。',
-    '属性：任选（将一项 +2、另一项 +1；或三项各 +1，均不超过 20）——原书为自由分配，本项目按文字登记、不固定三项候选。起源专长：任选一项起源专长（玩家自选）。技能：任选两项。工具：任选一项。装备：50 GP。', 'selectable', ['source-2024-tp-cthulhu-torchlight']),
+    '属性：任选（将一项 +2、另一项 +1；或三项各 +1，均不超过 20）——原书为自由分配，本项目按文字登记、不固定三项候选。起源专长：任选一项起源专长（CHM `5115` 原文为「选择任意起源专长」，H4 接入为起源专长全池候选，受来源开关过滤）。技能：任选两项。工具：任选一项。装备：50 GP。', 'selectable', ['source-2024-tp-cthulhu-torchlight']),
 
   // ===== G2-B：艾伯伦：奇械锻炉（EFA 2025）第二章背景（16 条）=====
   // 注 1：家系后裔的「XX龙纹」即官方版龙纹专长，本项目沿用已登记的龙纹专长条目

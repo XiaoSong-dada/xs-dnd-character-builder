@@ -1,4 +1,4 @@
-﻿import { deriveCharacter, proficiencyBonus } from '@/rules/derive'
+import { deriveCharacter, proficiencyBonus } from '@/rules/derive'
 import { getRulesRepository } from '@/rules/repositories'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { buildTimeline } from '@/rules/timeline'
@@ -12,7 +12,7 @@ export type DraftChange =
   | { readonly kind: 'subclass'; readonly value: string }
   | { readonly kind: 'race'; readonly value: string }
   | { readonly kind: 'subrace'; readonly value?: string }
-  | { readonly kind: 'background'; readonly value: string }
+  | { readonly kind: 'background'; readonly value: string; readonly previousValue?: string }
   | { readonly kind: 'abilities' }
 
 /** 界面展示用的检查点标签：等级 + 标题。 */
@@ -169,8 +169,11 @@ export function getDependencyImpact(draft: CharacterDraft, change: DraftChange):
     }
   }
   if (change.kind === 'background') {
+    // 换背景后旧背景的起源专长选择不再适用（H1）：标为失效，未标失效的孤立选择由规则层兜底过滤。
+    const previousId = change.previousValue
+    const previousCheckpointId = previousId && previousId !== change.value ? `${previousId}-origin-feat` : undefined
     return {
-      invalidated: [],
+      invalidated: previousCheckpointId ? [previousCheckpointId] : [],
       review: draft.ruleset === '5e-2024'
         ? ['背景属性加值', '背景技能、工具与语言', '背景授予的起源专长与重复选择', '重复熟练替换']
         : ['背景技能、工具与语言', '重复熟练替换'],

@@ -208,32 +208,46 @@ function buildSpeciesAbilityCheckpoints(
   return checkpoints
 }
 
-/** 背景授予的起源专长检查点（2024 二选一背景，如鸦阁「起源专长或黑暗赠礼专长」）。 */
+/**
+ * 背景授予的起源专长检查点：
+ * - `originFeatOptions`：显式候选列表（二选一，或「本书候选」如歪曲之月·德鲁斯肯瓦尔德居民）；
+ * - `originFeatChoices`：按类别展开的任选池（如火炬光·神话调查员「选择任意起源专长」）。
+ * 两者共用 `${background.id}-origin-feat` 检查点，候选需要读完整效果故走可展开渲染。
+ */
 function buildBackgroundFeatCheckpoints(
   backgroundId: string,
   repository: RulesRepository,
   enabledSourceIds?: readonly string[],
 ): readonly ChoiceCheckpoint[] {
   const background = repository.getBackground(backgroundId)
-  const options = background?.originFeatOptions
-  if (!background || !options?.length) return []
-  const optionIds = options.filter((id) => {
-    const feat = repository.getFeat(id)
-    if (!feat) return false
-    return enabledSourceIds === undefined || isSourceEnabled(feat.sourceIds, enabledSourceIds, repository)
-  })
+  if (!background) return []
+  const options = background.originFeatOptions
+  const choices = background.originFeatChoices
+  const optionIds = options?.length
+    ? options.filter((id) => {
+        const feat = repository.getFeat(id)
+        if (!feat) return false
+        return enabledSourceIds === undefined || isSourceEnabled(feat.sourceIds, enabledSourceIds, repository)
+      })
+    : choices && choices.count > 0
+      ? getFeatPool(repository, choices.categories, { enabledSourceIds }).map((feat) => feat.id)
+      : []
   if (optionIds.length === 0) return []
+  const count = options?.length ? 1 : Math.max(1, choices?.count ?? 1)
   return [{
     id: `${background.id}-origin-feat`,
     level: 1,
     step: 'timeline',
     kind: 'feat',
     title: '选择起源专长',
-    description: `${background.name}授予其中一项专长（按原书二选一）。`,
+    description: options?.length
+      ? `${background.name}授予其中一项专长（按原书二选一或本书候选）。`
+      : `${background.name}授予任选起源专长（按原书自选）。`,
     required: true,
-    minSelections: 1,
-    maxSelections: 1,
+    minSelections: count,
+    maxSelections: count,
     optionIds,
+    optionPresentation: 'expandable',
   }]
 }
 
