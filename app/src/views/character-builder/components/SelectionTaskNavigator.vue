@@ -53,12 +53,15 @@ function handleKeydown(event: KeyboardEvent, index: number): void {
         @click="$emit('update:modelValue', task.id)"
         @keydown="handleKeydown($event, index)"
       >
-        <span class="selection-task-nav__mark" aria-hidden="true">{{ task.status === 'complete' ? '✓' : task.required ? '•' : '○' }}</span>
-        <span class="selection-task-nav__copy">
-          <strong>{{ task.label }}</strong>
-          <small>{{ task.summary }}</small>
+        <span class="selection-task-nav__head">
+          <span class="selection-task-nav__mark" aria-hidden="true">{{ task.status === 'complete' ? '✓' : task.required ? '•' : '○' }}</span>
+          <strong class="selection-task-nav__label">{{ task.label }}</strong>
+          <span class="selection-task-nav__state">{{ displayStatus(task) }}</span>
         </span>
-        <span class="selection-task-nav__status">{{ task.progress ? `${task.progress} · ${displayStatus(task)}` : displayStatus(task) }}</span>
+        <span class="selection-task-nav__meta">
+          <span v-if="task.progress" class="selection-task-nav__progress">{{ task.progress }}</span>
+          <small class="selection-task-nav__summary">{{ task.summary }}</small>
+        </span>
       </button>
     </div>
   </section>
@@ -85,18 +88,20 @@ function handleKeydown(event: KeyboardEvent, index: number): void {
 
   &__list {
     display: grid;
+    // 固定 2 列（v1.9.1 追加）：车卡容器恒为 32rem，原来 ≥680px 视口切 3 列会把每张卡压到约 147px，
+    // 任务名与说明只能被截断；列数必须只看容器，不跟随视口。
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.4rem;
-
-    @media (min-width: 680px) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
 
+  // 两行结构：第一行状态标记 + 任务名 + 状态词，第二行进度 + 说明（整卡宽度），
+  // 避免四类信息在同一行互相抢宽度。
   &__list > button {
-    display: flex;
+    display: grid;
     min-width: 0;
     min-height: 3.75rem;
-    align-items: center;
-    gap: 0.45rem;
+    align-content: center;
+    gap: 0.2rem;
     padding: 0.55rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -111,10 +116,28 @@ function handleKeydown(event: KeyboardEvent, index: number): void {
   &__item--complete .selection-task-nav__mark { color: var(--color-success); }
   &__item--invalid { border-color: var(--color-error) !important; }
 
+  &__head {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
   &__mark { width: 1rem; flex: none; color: var(--color-primary); font-weight: 800; text-align: center; }
-  &__copy { display: grid; min-width: 0; flex: 1; gap: 0.15rem; }
-  &__copy strong { overflow: hidden; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
-  &__copy small { overflow: hidden; color: var(--color-text-muted); font-size: 0.66rem; text-overflow: ellipsis; white-space: nowrap; }
-  &__status { flex: none; color: var(--color-primary); font-size: 0.65rem; font-weight: 700; }
+  &__label { overflow: hidden; min-width: 0; flex: 1; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+  &__state { flex: none; color: var(--color-primary); font-size: 0.65rem; font-weight: 700; white-space: nowrap; }
+
+  &__meta {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-text-muted);
+    font-size: 0.66rem;
+    line-height: 1.4;
+  }
+
+  &__progress { flex: none; font-weight: 700; }
+  &__summary { overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap; }
 }
 </style>
