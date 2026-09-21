@@ -242,6 +242,15 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       resolution: `请选择${requiredLanguages}种不同的额外语言。`,
     })
   }
+  for (const blocker of originBlockers.filter((item) => item.id.startsWith('background-tool-choice'))) {
+    issues.push({
+      id: blocker.id,
+      step: 'origin',
+      severity: 'error',
+      message: blocker.message,
+      resolution: blocker.resolution,
+    })
+  }
   if (draft.ruleset === '5e-2024') {
     const languageOptions = new Set(getLanguageOptions('5e-2024'))
     if (draft.languages.some((language) => !languageOptions.has(language))) {

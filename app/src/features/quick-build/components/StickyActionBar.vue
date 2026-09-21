@@ -6,10 +6,14 @@ withDefaults(
     primaryLabel: string
     secondaryLabel?: string
     primaryDisabled?: boolean
+    helperText?: string
+    helperHref?: string
   }>(),
   {
     secondaryLabel: '',
     primaryDisabled: false,
+    helperText: '',
+    helperHref: '',
   },
 )
 
@@ -18,6 +22,10 @@ defineEmits<{ primary: []; secondary: [] }>()
 
 <template>
   <div class="sticky-action-bar">
+    <p v-if="helperText" class="sticky-action-bar__helper">
+      {{ helperText }}
+      <a v-if="helperHref" :href="helperHref">去完成</a>
+    </p>
     <BaseButton v-if="secondaryLabel" variant="secondary" @click="$emit('secondary')">
       {{ secondaryLabel }}
     </BaseButton>
@@ -35,5 +43,15 @@ defineEmits<{ primary: []; secondary: [] }>()
   background: var(--color-background);
 
   > :only-child { grid-column: 1 / -1; }
+
+  &__helper {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--color-warning);
+    font-size: 0.72rem;
+    line-height: 1.4;
+
+    a { margin-left: 0.35rem; color: var(--color-primary); font-weight: 700; }
+  }
 }
 </style>

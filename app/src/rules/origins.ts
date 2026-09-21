@@ -217,6 +217,33 @@ export function getOriginStepBlockers(
   }
   const originFeatBlocker = getBackgroundOriginFeatBlocker(draft, repository)
   if (originFeatBlocker) blockers.push(originFeatBlocker)
+  const effectiveBackground = draft.backgroundVariantId
+    ? repository.getBackground(draft.backgroundVariantId)
+    : draft.backgroundId
+      ? repository.getBackground(draft.backgroundId)
+      : undefined
+  const toolChoices = effectiveBackground?.toolChoices
+  if (toolChoices && toolChoices.count > 0) {
+    const fixedToolIds = new Set(effectiveBackground?.toolIds ?? [])
+    const chosen = draft.backgroundToolIds.filter((id) => !fixedToolIds.has(id))
+    const allowed = toolChoices.optionIds
+    if (chosen.length !== toolChoices.count || new Set(chosen).size !== chosen.length) {
+      blockers.push({
+        id: 'background-tool-choice-count',
+        message: `${effectiveBackground?.name ?? '当前背景'}需要选择${toolChoices.count}项工具熟练。`,
+        resolution: `已选 ${chosen.length} 项，请在本步补选或移除。`,
+      })
+    }
+    for (const toolId of chosen) {
+      if (allowed?.length && !allowed.includes(toolId)) {
+        blockers.push({
+          id: `background-tool-choice-invalid-${toolId}`,
+          message: `背景工具选择“${repository.getEquipment(toolId)?.name ?? toolId}”不在可选范围内。`,
+          resolution: '请重新选择当前背景允许的工具。',
+        })
+      }
+    }
+  }
   const sizeRules = getDraftSpeciesRules(draft, repository).filter((item) => (item.sizeChoices?.length ?? 0) > 0)
   if (sizeRules.length > 0) {
     const size = draft.speciesSizeChoice

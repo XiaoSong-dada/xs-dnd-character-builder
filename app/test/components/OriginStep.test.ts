@@ -3,221 +3,127 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import OriginStep from '@/views/character-builder/components/OriginStep.vue'
 
-describe('OriginStep 种族展开', () => {
+function mountOrigin(patch: Record<string, unknown> = {}) {
+  return mount(OriginStep, { props: { languages: [], raceSkillChoices: [], backgroundToolIds: [], ...patch } })
+}
+
+async function openTask(wrapper: ReturnType<typeof mountOrigin>, id: string) {
+  await wrapper.get(`[data-task-id="${id}"]`).trigger('click')
+}
+
+describe('OriginStep 动态任务与候选目录', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 
-  it('种族卡片展开显示种族介绍与推荐徽标', async () => {
-    // 模拟手机宽度视口
-    window.innerWidth = 375
-    window.dispatchEvent(new Event('resize'))
-    const wrapper = mount(OriginStep, { props: { languages: [] } })
-    const dwarfCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('矮人'))
-    expect(dwarfCard).toBeTruthy()
-    await dwarfCard!.find('.expandable-option-card__arrow').trigger('click')
-    expect(dwarfCard!.find('.expandable-option-card__growth').exists()).toBe(true)
-    expect(dwarfCard!.text()).toContain('种族介绍')
-    expect(dwarfCard!.text()).toContain('黑暗视觉')
+  it('首次只打开第一个缺项，并可自由跳转到背景任务', async () => {
+    const wrapper = mountOrigin()
+    expect(wrapper.get('[data-task-id="race"]').attributes('aria-selected')).toBe('true')
+    expect(wrapper.find('input[aria-label="搜索种族"]').exists()).toBe(true)
+    expect(wrapper.find('input[aria-label="搜索背景"]').exists()).toBe(false)
+    await openTask(wrapper, 'background')
+    expect(wrapper.get('[data-task-id="background"]').attributes('aria-selected')).toBe('true')
+    expect(wrapper.find('input[aria-label="搜索背景"]').exists()).toBe(true)
   })
 
-  it('单击选择种族经 250ms 判定后 emit race，展开不触发选择', async () => {
-    const wrapper = mount(OriginStep, { props: { languages: [] } })
-    const dwarfMain = wrapper.findAll('.expandable-option-card__main').find((button) => button.text().includes('矮人'))
-    expect(dwarfMain).toBeTruthy()
-    await dwarfMain!.trigger('click')
-    expect(wrapper.emitted('race')).toBeUndefined()
+  it('默认只展示推荐/前六项，展开完整目录后可见可选规则种族', async () => {
+    const wrapper = mountOrigin()
+    const expand = wrapper.findAll('button').find((button) => button.text().startsWith('查看全部'))
+    expect(expand).toBeTruthy()
+    await expand!.trigger('click')
+    const bird = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('鸟人'))
+    expect(bird).toBeTruthy()
+    expect(bird!.text()).toContain('可选规则')
+  })
+
+  it('搜索自动查询完整种族池，且已选摘要不会被隐藏', async () => {
+    const wrapper = mountOrigin({ raceId: 'race-2014-human' })
+    await openTask(wrapper, 'race')
+    await wrapper.get('input[aria-label="搜索种族"]').setValue('Aarakocra')
+    expect(wrapper.text()).toContain('已选择：人类')
+    expect(wrapper.text()).toContain('鸟人')
+  })
+
+  it('选择主种族后动态出现必选子种族任务', () => {
+    const wrapper = mountOrigin({ raceId: 'race-2014-shifter' })
+    expect(wrapper.find('[data-task-id="subrace"]').exists()).toBe(true)
+    expect(wrapper.get('[data-task-id="subrace"]').text()).toContain('当前')
+    expect(wrapper.text()).toContain('熊皮兽化人')
+    expect(wrapper.text()).toContain('野猎兽化人')
+  })
+
+  it('种族卡片展开查看详情，主按钮单击后发出选择', async () => {
+    const wrapper = mountOrigin()
+    const dwarf = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('矮人'))!
+    await dwarf.get('.expandable-option-card__arrow').trigger('click')
+    expect(dwarf.text()).toContain('黑暗视觉')
+    await dwarf.get('.expandable-option-card__main').trigger('click')
     await vi.advanceTimersByTimeAsync(250)
-    expect(wrapper.emitted('race')).toHaveLength(1)
+    expect(wrapper.emitted('race')?.[0]).toEqual(['race-2014-dwarf'])
   })
 
-  it('dm-only 基础种族显示可选规则徽章，普通种族不显示', () => {
-    const wrapper = mount(OriginStep, { props: { languages: [] } })
-    const cards = wrapper.findAll('.expandable-option-card')
-    const aarakocraBadges = cards.find((card) => card.text().includes('鸟人'))!.findAll('.ui-badge').map((badge) => badge.text())
-    const dwarfBadges = cards.find((card) => card.text().includes('矮人'))!.findAll('.ui-badge').map((badge) => badge.text())
-    expect(aarakocraBadges).toContain('可选规则')
-    expect(dwarfBadges).not.toContain('可选规则')
-  })
-
-  it('选择兽化人后手机宽度下渲染四个子种族卡片', () => {
-    window.innerWidth = 375
-    window.dispatchEvent(new Event('resize'))
-    const wrapper = mount(OriginStep, { props: { languages: [], raceId: 'race-2014-shifter' } })
-    const text = wrapper.text()
-    expect(text).toContain('选择子种族')
-    expect(text).toContain('熊皮兽化人')
-    expect(text).toContain('长牙兽化人')
-    expect(text).toContain('疾行兽化人')
-    expect(text).toContain('野猎兽化人')
-  })
-
-  it('选择费兹本龙裔后渲染色龙/宝石/金属三类型', () => {
-    const wrapper = mount(OriginStep, { props: { languages: [], raceId: 'race-2014-dragonborn-fizban' } })
-    const text = wrapper.text()
-    expect(text).toContain('色龙裔')
-    expect(text).toContain('宝石龙裔')
-    expect(text).toContain('金属龙裔')
-  })
-
-  it('背景卡片展开显示背景介绍，选择经 250ms 判定后 emit background', async () => {
-    const wrapper = mount(OriginStep, { props: { languages: [] } })
-    const acolyteCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('侍僧'))
-    expect(acolyteCard).toBeTruthy()
-    await acolyteCard!.find('.expandable-option-card__arrow').trigger('click')
-    expect(acolyteCard!.text()).toContain('背景介绍')
-    expect(acolyteCard!.text()).toContain('信仰庇护')
-    await acolyteCard!.find('.expandable-option-card__main').trigger('click')
-    expect(wrapper.emitted('background')).toBeUndefined()
-    await vi.advanceTimersByTimeAsync(250)
-    expect(wrapper.emitted('background')).toHaveLength(1)
-    expect(wrapper.emitted('background')![0]).toEqual(['background-2014-acolyte'])
-  })
-
-  it('正式背景变体卡片可展开并显示变体介绍', async () => {
-    const wrapper = mount(OriginStep, { props: { languages: [], backgroundId: 'background-2014-sailor' } })
-    const pirateCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('海盗'))
-    expect(pirateCard).toBeTruthy()
-    await pirateCard!.find('.expandable-option-card__arrow').trigger('click')
-    expect(pirateCard!.text()).toContain('变体介绍')
-    expect(pirateCard!.text()).toContain('恶名')
+  it('背景变体是可选任务，不参与必选门禁', async () => {
+    const wrapper = mountOrigin({ raceId: 'race-2014-human', backgroundId: 'background-2014-sailor' })
+    expect(wrapper.get('[data-task-id="background-variant"]').text()).toContain('可选')
+    await openTask(wrapper, 'background-variant')
+    expect(wrapper.text()).toContain('海盗')
+    expect(wrapper.text()).toContain('不选择背景变体也可以继续')
   })
 })
 
-describe('OriginStep 种族熟练自选', () => {
-  beforeEach(() => vi.useFakeTimers())
-  afterEach(() => vi.useRealTimers())
-
-  function mountWith(patch: Record<string, unknown> = {}) {
-    return mount(OriginStep, { props: { languages: [], raceSkillChoices: [], ...patch } })
-  }
-
-  function choiceButtons(wrapper: ReturnType<typeof mount>, block: string): ReturnType<typeof mount>['element'][] {
-    return Array.from(wrapper.element.querySelectorAll(`.origin-step__race-choices .origin-step__choices button`))
-  }
-
-  it('半精灵展示全技能 2 选且点击 emit raceSkills', async () => {
-    const wrapper = mountWith({ raceId: 'race-2014-half-elf' })
-    expect(wrapper.text()).toContain('半精灵熟练选择')
-    expect(wrapper.text()).toContain('选择2项技能熟练')
-    const buttons = choiceButtons(wrapper)
-    expect(buttons.length).toBe(18)
-    // 模拟父组件回写：每次点击后把 emit 结果写回 props。
-    ;(buttons.find((button) => button.textContent?.includes('欺瞒')) as HTMLButtonElement).click()
-    await wrapper.setProps({ raceSkillChoices: ['skill-deception'] })
-    const nextButtons = choiceButtons(wrapper)
-    ;(nextButtons.find((button) => button.textContent?.includes('游说')) as HTMLButtonElement).click()
-    expect(wrapper.emitted('raceSkills')).toHaveLength(2)
-    expect(wrapper.emitted('raceSkills')![1][0]).toEqual(['skill-deception', 'skill-persuasion'])
+describe('OriginStep 动态附加选择', () => {
+  it('半精灵熟练任务展示全技能二选并发出选择', async () => {
+    const wrapper = mountOrigin({ raceId: 'race-2014-half-elf' })
+    await openTask(wrapper, 'race-proficiencies')
+    const buttons = wrapper.findAll('.origin-step__choices button')
+    expect(buttons).toHaveLength(18)
+    await buttons.find((button) => button.text().includes('欺瞒'))!.trigger('click')
+    expect(wrapper.emitted('raceSkills')?.[0]).toEqual([['skill-deception']])
   })
 
-  it('兽人限定 7 项技能', () => {
-    const wrapper = mountWith({ raceId: 'race-2014-orc' })
-    const block = wrapper.find('.origin-step__race-choices')
-    expect(block.findAll('button').length).toBe(7)
-    // 区块内不包含限定列表外的技能（背景列表中的“欺瞒”不影响）。
-    expect(block.text()).not.toContain('欺瞒')
+  it('工具型种族熟练作为独立任务，选择后发出 raceTool', async () => {
+    const wrapper = mountOrigin({ raceId: 'race-2014-dwarf', subraceId: 'race-2014-dwarf-mountain' })
+    await openTask(wrapper, 'race-proficiencies')
+    const thieves = wrapper.findAll('.origin-step__choices button').find((button) => button.text().includes('盗贼工具'))!
+    await thieves.trigger('click')
+    expect(wrapper.emitted('raceTool')?.[0]).toEqual(['tool-thieves-tools'])
   })
 
-  it('矮人展示工具选择并 emit raceTool（子种族继承父种族工具规格）', () => {
-    const wrapper = mountWith({ raceId: 'race-2014-dwarf', subraceId: 'race-2014-dwarf-mountain' })
-    expect(wrapper.text()).toContain('选择一项工具熟练')
-    const buttons = choiceButtons(wrapper)
-    ;(buttons.find((button) => button.textContent?.includes('盗贼工具')) as HTMLButtonElement).click()
-    expect(wrapper.emitted('raceTool')).toEqual([['tool-thieves-tools']])
+  it('吉斯洋基技能与工具互斥', async () => {
+    const wrapper = mountOrigin({ raceId: 'race-2014-gith-githyanki', raceSkillChoices: ['skill-arcana'] })
+    await openTask(wrapper, 'race-proficiencies')
+    const thieves = wrapper.findAll('.origin-step__choices button').find((button) => button.text().includes('盗贼工具'))!
+    await thieves.trigger('click')
+    expect(wrapper.emitted('raceTool')?.[0]).toEqual(['tool-thieves-tools'])
+    expect(wrapper.emitted('raceSkills')?.[0]).toEqual([[]])
   })
 
-  it('吉斯洋基技能/工具二选一互斥：选工具清空技能，选技能清空工具', async () => {
-    const wrapper = mountWith({ raceId: 'race-2014-gith-githyanki', raceSkillChoices: ['skill-arcana'] })
-    expect(wrapper.text()).toContain('或选择一项工具熟练（与技能二选一）')
-    const buttons = choiceButtons(wrapper)
-    ;(buttons.find((button) => button.textContent?.includes('盗贼工具')) as HTMLButtonElement).click()
-    expect(wrapper.emitted('raceTool')?.[0]?.[0]).toBe('tool-thieves-tools')
-    // 选工具时清空技能侧。
-    expect(wrapper.emitted('raceSkills')?.[0]?.[0]).toEqual([])
-
-    const skillOnly = mountWith({ raceId: 'race-2014-gith-githyanki', raceToolChoice: 'tool-thieves-tools' })
-    const skillButtons = choiceButtons(skillOnly)
-    ;(skillButtons.find((button) => button.textContent?.includes('奥秘')) as HTMLButtonElement).click()
-    expect(skillOnly.emitted('raceSkills')?.[0]?.[0]).toEqual(['skill-arcana'])
-    expect(skillOnly.emitted('raceTool')?.[0]?.[0]).toBeUndefined()
-  })
-
-  it('无熟练规格的种族不显示自选区块', () => {
-    const wrapper = mountWith({ raceId: 'race-2014-human' })
-    expect(wrapper.text()).not.toContain('熟练选择')
-  })
-})
-
-describe('OriginStep 起源未完成原因清单（B09-07）', () => {
-  it('展示阻塞项与处理建议，为空时不渲染', () => {
-    const blocker = { id: 'background-languages', message: '语言选择尚未完成。', resolution: '请选择2种不同的额外语言。' }
-    const wrapper = mount(OriginStep, { props: { ruleset: '5e-2024', languages: [], blockers: [blocker] } })
-    expect(wrapper.text()).toContain('还差 1 项才能继续')
-    expect(wrapper.text()).toContain('语言选择尚未完成。')
-    expect(wrapper.text()).toContain('请选择2种不同的额外语言。')
-
-    const empty = mount(OriginStep, { props: { ruleset: '5e-2024', languages: [] } })
-    expect(empty.text()).not.toContain('还差')
-  })
-})
-
-/** H2：背景起源专长在出身步骤内联展示与选择（决策 Q1-A、Q2-A）。 */
-describe('OriginStep 背景起源专长（H2）', () => {
-  beforeEach(() => vi.useFakeTimers())
-  afterEach(() => vi.useRealTimers())
-
-  const VTM_CHECKPOINT = 'background-2024-tp-vtm-ritualist-origin-feat'
-
-  function mountBackground(patch: Record<string, unknown> = {}) {
-    return mount(OriginStep, { props: { ruleset: '5e-2024', languages: [], ...patch } })
-  }
-
-  function featBlock(wrapper: ReturnType<typeof mountBackground>) {
-    return wrapper.find('.origin-step__background-feat')
-  }
-
-  it('固定授予背景只读展示专长效果，不出现候选选择', () => {
-    // 2024 士兵：固定授予「凶蛮打手」，按原书不可更换。
-    const wrapper = mountBackground({ backgroundId: 'background-2024-soldier' })
-    const block = featBlock(wrapper)
-    expect(block.exists()).toBe(true)
-    expect(block.text()).toContain('该背景的起源专长')
-    expect(block.text()).toContain('由背景固定授予')
-    expect(block.text()).toContain('凶蛮打手')
-    expect(block.text()).not.toContain('个候选')
-  })
-
-  it('二选一背景渲染候选，单击写入同一检查点', async () => {
-    // 避世潜藏·仪式专家：原书「魔法学徒 或 薄血」二选一。
-    const wrapper = mountBackground({ backgroundId: 'background-2024-tp-vtm-ritualist' })
-    const block = featBlock(wrapper)
-    expect(block.text()).toContain('个候选')
-    expect(block.text()).toContain('尚未选择')
-
-    const thinBlooded = block.findAll('.expandable-option-card').find((card) => card.text().includes('薄血'))
-    expect(thinBlooded).toBeTruthy()
-    await thinBlooded!.find('.expandable-option-card__main').trigger('click')
-    await vi.advanceTimersByTimeAsync(260)
-    expect(wrapper.emitted('backgroundFeat')?.[0]).toEqual([VTM_CHECKPOINT, ['feat-2024-tp-thin-blooded']])
-  })
-
-  it('已选候选回显选中态，再次单击取消选择', async () => {
-    const wrapper = mountBackground({
-      backgroundId: 'background-2024-tp-vtm-ritualist',
-      selections: [{ checkpointId: VTM_CHECKPOINT, optionIds: ['feat-2024-tp-thin-blooded'], confirmedAt: '' }],
+  it('背景属性、固定专长与结构化工具分别生成任务', async () => {
+    const wrapper = mountOrigin({
+      ruleset: '5e-2024', raceId: 'species-2024-dwarf', backgroundId: 'background-2024-artisan',
+      backgroundAbilities: { str: 2, dex: 1 },
+      blockers: [{ id: 'background-tool-choice-count', message: '工具未完成', resolution: '请选择工具。' }],
     })
-    const block = featBlock(wrapper)
-    expect(block.text()).toContain('已选择')
-    const chosen = block.findAll('.expandable-option-card').find((card) => card.text().includes('薄血'))
-    expect(chosen!.classes()).toContain('expandable-option-card--selected')
-    await chosen!.find('.expandable-option-card__main').trigger('click')
-    await vi.advanceTimersByTimeAsync(260)
-    expect(wrapper.emitted('backgroundFeat')?.[0]).toEqual([VTM_CHECKPOINT, []])
+    expect(wrapper.find('[data-task-id="background-abilities"]').exists()).toBe(true)
+    expect(wrapper.find('[data-task-id="background-feat"]').exists()).toBe(true)
+    expect(wrapper.find('[data-task-id="background-tools"]').exists()).toBe(true)
+    await openTask(wrapper, 'background-feat')
+    expect(wrapper.text()).toContain('自动获得')
+    expect(wrapper.text()).toContain('巧匠')
+    await openTask(wrapper, 'background-tools')
+    const firstTool = wrapper.find('.origin-step__choices button')
+    expect(firstTool.exists()).toBe(true)
+    await firstTool.trigger('click')
+    expect(wrapper.emitted('backgroundTools')?.[0]?.[0]).toHaveLength(1)
   })
 
-  it('未登记专长的背景不渲染该区块', () => {
-    // 费伦英雄·狂欢客：原书新增专长尚未登记，维持文字说明。
-    const wrapper = mountBackground({ backgroundId: 'background-2024-fr-hf-carouser' })
-    expect(featBlock(wrapper).exists()).toBe(false)
+  it('候选型起源专长在独立任务中写入检查点', async () => {
+    vi.useFakeTimers()
+    const wrapper = mountOrigin({ ruleset: '5e-2024', raceId: 'species-2024-dwarf', backgroundId: 'background-2024-tp-vtm-ritualist' })
+    await openTask(wrapper, 'background-feat')
+    const thinBlooded = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('薄血'))!
+    await thinBlooded.get('.expandable-option-card__main').trigger('click')
+    await vi.advanceTimersByTimeAsync(260)
+    vi.useRealTimers()
+    expect(wrapper.emitted('backgroundFeat')?.[0]).toEqual(['background-2024-tp-vtm-ritualist-origin-feat', ['feat-2024-tp-thin-blooded']])
   })
 })

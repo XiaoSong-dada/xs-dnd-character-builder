@@ -54,7 +54,7 @@ describe('法师法术步骤（缺陷回归：抄录法术不可移除、计数�
 
   it('法术书计数按非抄录法术数 / 升级名额显示，抄录数量另计', () => {
     const wrapper = mount(SpellcastingStep, { props: { draft: wizardDraft() } })
-    expect(wrapper.text()).toContain('6 / 14（抄录 2）')
+    expect(wrapper.text()).toContain('6 / 14（另有抄录 2）')
     expect(wrapper.text()).toContain('1环 · Find Familiar · 仪式')
     expect(wrapper.text()).toContain('1环 · Magic Missile')
     expect(wrapper.text()).not.toContain('Magic Missile · 仪式')
@@ -64,7 +64,7 @@ describe('法师法术步骤（缺陷回归：抄录法术不可移除、计数�
     const wrapper = mount(SpellcastingStep, { props: { draft: wizardDraft() } })
     const cards = wrapper.findAll('.expandable-option-card')
     const scorchingCard = cards.find((card) => card.text().includes('灼热射线'))!
-    expect(scorchingCard.text()).toContain('在书中（抄录）')
+    expect(scorchingCard.text()).toContain('在书中（抄录，不可移除）')
 
     // 点击主按钮并推进双击判定窗口：不得发出变更（抄录不可撤销）
     const emittedBefore = wrapper.emitted('change')?.length ?? 0
@@ -113,10 +113,12 @@ describe('法师法术步骤（2024 塑能学者额外入书）', () => {
   it('显示子职额外入书区与名额，选择同时写入法术书', async () => {
     const wrapper = mount(SpellcastingStep, { props: { draft: evoker2024Draft() } })
     expect(wrapper.text()).toContain('子职额外入书')
-    expect(wrapper.text()).toContain('0 / 2')
+    expect(wrapper.get('[data-task-id="spellbook-extra"]').text()).toContain('0/2')
+    await wrapper.get('[data-task-id="spellbook-extra"]').trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '2环')!.trigger('click')
 
     const extraCard = wrapper.findAll('.expandable-option-card')
-      .find((card) => card.text().includes('灼热射线') && card.text().includes('额外入书'))
+      .find((card) => card.text().includes('灼热射线'))
     expect(extraCard).toBeDefined()
     await extraCard?.get('button[aria-pressed]').trigger('click')
     await vi.advanceTimersByTimeAsync(300)

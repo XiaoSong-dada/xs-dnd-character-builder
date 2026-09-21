@@ -60,10 +60,9 @@ describe('牧师法术步骤（缺陷回归：1 级可选 3 个职业戏法）',
     expect(cantrips.length).toBeGreaterThanOrEqual(3)
 
     const wrapper = mount(SpellcastingStep, { props: { draft } })
-    // 戏法区块存在且计数为 0 / 3；准备法术计数为 0 / 2（wis 调整 +1、1 级）
-    expect(wrapper.text()).toContain('戏法')
-    expect(wrapper.text()).toContain('0 / 3')
-    expect(wrapper.text()).toContain('0 / 2')
+    expect(wrapper.get('[data-task-id="cantrips"]').text()).toContain('0/3')
+    expect(wrapper.get('[data-task-id="spells"]').text()).toContain('0/2')
+    expect(wrapper.get('[data-task-id="cantrips"]').attributes('aria-selected')).toBe('true')
   })
 
   it('选择 3 个戏法与 2 个准备法术后计数与校验均通过', async () => {
@@ -71,12 +70,11 @@ describe('牧师法术步骤（缺陷回归：1 级可选 3 个职业戏法）',
     const wrapper = mount(SpellcastingStep, { props: { draft } })
 
     // 受控组件：每次点击后把 change 结果回写 draft 再渲染
-    const buttons = wrapper.findAll('.expandable-option-card__main')
-    const cantripButtons = buttons.slice(0, 3)
-    const level1Buttons = buttons.filter((b) => b.text().includes('1环')).slice(0, 2)
-    expect(level1Buttons.length).toBe(2)
-    for (const button of [...cantripButtons, ...level1Buttons]) {
-      await clickMain(wrapper, button)
+    for (let index = 0; index < 5; index += 1) {
+      const candidate = wrapper.findAll('.expandable-option-card')
+        .find((card) => card.find('.expandable-option-card__badges').text().includes('选择'))
+      expect(candidate).toBeTruthy()
+      await clickMain(wrapper, candidate!.get('.expandable-option-card__main'))
       const changes = wrapper.emitted('change')
       const latest = changes?.[changes.length - 1]?.[0] as CharacterDraft['spellSelections']
       draft = { ...draft, spellSelections: latest }
@@ -86,17 +84,17 @@ describe('牧师法术步骤（缺陷回归：1 级可选 3 个职业戏法）',
     expect(draft.spellSelections.cantripIds.length).toBe(3)
     expect(draft.spellSelections.preparedSpellIds.length).toBe(2)
     expect(validateSpellSelections(draft)).toBe(true)
-    expect(wrapper.text()).toContain('3 / 3')
+    expect(wrapper.get('[data-task-id="cantrips"]').text()).toContain('3/3')
   })
 
   it('戏法已满（3/3）时再点击第 4 个候选不会增加选择', async () => {
     let draft = clericDraft(1)
     const wrapper = mount(SpellcastingStep, { props: { draft } })
 
-    const buttons = wrapper.findAll('.expandable-option-card__main')
-    const cantripButtons = buttons.slice(0, 3)
-    for (const button of cantripButtons) {
-      await clickMain(wrapper, button)
+    for (let index = 0; index < 3; index += 1) {
+      const candidate = wrapper.findAll('.expandable-option-card')
+        .find((card) => card.find('.expandable-option-card__badges').text().includes('选择'))!
+      await clickMain(wrapper, candidate.get('.expandable-option-card__main'))
       const changes = wrapper.emitted('change')
       const latest = changes?.[changes.length - 1]?.[0] as CharacterDraft['spellSelections']
       draft = { ...draft, spellSelections: latest }
@@ -105,11 +103,11 @@ describe('牧师法术步骤（缺陷回归：1 级可选 3 个职业戏法）',
     expect(draft.spellSelections.cantripIds.length).toBe(3)
 
     // 已满状态下点击第 4 个戏法候选（第 4 张卡片，1 环区块之前）不产生新选择
-    const fullWrapper = wrapper
-    const fourth = fullWrapper.findAll('.expandable-option-card')[3]
-    expect(fourth.text()).toContain('已满')
-    await clickMain(fullWrapper, fourth.find('.expandable-option-card__main'))
-    const changes = fullWrapper.emitted('change')
+    await wrapper.get('[data-task-id="cantrips"]').trigger('click')
+    expect(wrapper.text()).toContain('当前名额已选满')
+    const fourth = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('已满'))!
+    await clickMain(wrapper, fourth.get('.expandable-option-card__main'))
+    const changes = wrapper.emitted('change')
     const latest = changes?.[changes.length - 1]?.[0] as CharacterDraft['spellSelections']
     expect(latest.cantripIds.length).toBe(3)
   })
