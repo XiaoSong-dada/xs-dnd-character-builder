@@ -183,7 +183,7 @@ feat-2014-alert
 | 语言学家 | Linguist | 后续批次建立 | 商业摘要 |
 | 幸运 | Lucky | 后续批次建立 | 商业摘要 |
 | 巫师杀手 | Mage Slayer | 后续批次建立 | 商业摘要 |
-| 魔法学徒 | Magic Initiate | 后续批次建立 | 商业摘要 |
+| 魔法学徒 | Magic Initiate | 已结构化施法职业、2 道戏法与 1 道一环法术选择 | 商业摘要 |
 | 战技专家 | Martial Adept | 后续批次建立 | 商业摘要 |
 | 中甲大师 | Medium Armor Master | 后续批次建立 | 商业摘要 |
 | 灵活移动 | Mobile | 后续批次建立 | 商业摘要 |

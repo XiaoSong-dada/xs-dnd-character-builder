@@ -602,6 +602,8 @@ export interface BackgroundRule {
   readonly featureName: string
   /** 2024 背景固定授予的起源专长；2014 背景与待接入数据省略。 */
   readonly originFeatId?: string
+  /** 固定背景专长中由背景预先锁定的子选择；其余子选择仍由玩家完成。 */
+  readonly originFeatChoicePresets?: Readonly<Record<string, readonly string[]>>
   /**
    * 2024 背景的**二选一**起源专长候选（如鸦阁「起源专长或一项黑暗赠礼专长」、
    * 避世潜藏「薄血可替代任何起源专长」）。声明时该背景不再走 `originFeatId` 固定授予，

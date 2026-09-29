@@ -4,6 +4,7 @@ import { grimHollowFeats2014 } from '@/rules/data/third-party-feats-grim-hollow-
 import { humblewoodFeats2014 } from '@/rules/data/third-party-feats-humblewood-2014'
 import { obojimaFeats2014 } from '@/rules/data/third-party-feats-obojima-2014'
 import { taldoreiFeats2014 } from '@/rules/data/third-party-feats-taldorei-2014'
+import { SPELL_LIST_OPTION_IDS_2014 } from '@/rules/data/spell-lists-2014'
 import type { AbilityKey } from '@/types/character'
 import type { FeatRule, RuleOption } from '@/types/rules'
 
@@ -83,7 +84,11 @@ const coreFeats2014: readonly FeatRule[] = [
   feat('feat-linguist', '语言学家', 'Linguist', '提高智力，学习更多语言并能制作密码。', '智力 +1（上限 20）。学会三门语言；可创建书面密码，他人破译需进行智力检定对抗你的智力检定。', ['属性', '语言'], { abilityMinimum: { anyOf: ['int'], score: 13 } }),
   feat('feat-lucky', '幸运', 'Lucky', '获得可在关键检定中改变结果的幸运资源。', '获得 3 个幸运点，长休后恢复。进行攻击、属性检定、豁免或技能检定前，可消耗 1 点令自己另掷一次并选用较优结果；也可在敌人攻击检定掷出后消耗 1 点，令其重掷并取较差结果。', ['泛用', '检定']),
   feat('feat-mage-slayer', '巫师杀手', 'Mage Slayer', '强化贴身压制施法者和抵抗法术的能力。', '5 尺内生物施法时，可用反应进行一次近战攻击（在法术生效前）；对被你近战攻击命中的生物施放的豁免法术，其豁免检定具有劣势；施法者对你施放的专注法术被中断时，你对其的豁免获得优势。', ['战斗', '反制']),
-  feat('feat-magic-initiate', '魔法学徒', 'Magic Initiate', '从一个施法职业学习少量基础魔法。', '选择一个施法职业：习得其 2 个戏法，以及 1 个 1 环法术（每长休可用该 1 环法术一次）；施法属性为该职业的施法属性。', ['施法', '泛用']),
+  feat('feat-magic-initiate', '魔法学徒', 'Magic Initiate', '从一个施法职业学习少量基础魔法。', '选择一个施法职业：习得其 2 个戏法，以及 1 个 1 环法术（每长休可用该 1 环法术一次）；施法属性为该职业的施法属性。', ['施法', '泛用'], undefined, [
+    { id: 'list', title: '选择施法职业', description: '选择吟游诗人、牧师、德鲁伊、术士、邪术师或法师法术表。', minSelections: 1, maxSelections: 1, optionIds: SPELL_LIST_OPTION_IDS_2014 },
+    { id: 'cantrips', title: '选择戏法', description: '从所选职业法术表选择 2 道戏法。', minSelections: 2, maxSelections: 2, optionIds: [], candidateKind: 'spell-pool', spellPool: { level: 0, fromListChoiceId: 'list' } },
+    { id: 'spell', title: '选择一环法术', description: '从所选职业法术表选择 1 道一环法术；每长休可免费施放 1 次。', minSelections: 1, maxSelections: 1, optionIds: [], candidateKind: 'spell-pool', spellPool: { level: 1, fromListChoiceId: 'list' }, spellGrant: { freeCastings: 1, recovery: 'long-rest' } },
+  ]),
   feat('feat-martial-adept', '战技专家', 'Martial Adept', '学习战斗大师战技并获得一枚优势骰。', '习得两项战斗大师战技；获得一枚 d6 优势骰（随战技使用，短休或长休后恢复）。若已拥有优势骰，则其骰面提升一级。', ['战斗', '战技']),
   feat('feat-medium-armor-master', '中甲大师', 'Medium Armor Master', '改善穿着中甲时的机动、隐匿与防御上限。', '穿着中甲时，敏捷调整值对护甲等级的加值上限提升至 3；中甲不再对隐匿检定施加劣势。前置：中甲熟练。', ['战斗', '护甲'], { requiredCapability: 'armor-medium' }),
   feat('feat-mobile', '灵活移动', 'Mobile', '提高速度并降低高速近战后的脱离风险。', '移动速度 +10 尺；困难地形不额外消耗移动力（冲刺时）；近战攻击后，目标无法对该回合内你对它发起的借机攻击做出反应（若你攻击了多个目标则分别判定）。', ['移动', '战斗']),

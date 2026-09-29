@@ -118,6 +118,21 @@ describe('TimelineStep 专精选择', () => {
   })
 })
 
+describe('TimelineStep 固定背景专长', () => {
+  it('学者背景直接展示魔法学徒的剩余子任务，法师表不要求重复选择', () => {
+    const wrapper = mountStep(draft2024({
+      classId: 'class-2024-fighter',
+      backgroundId: 'background-2024-sage',
+    }))
+
+    expect(wrapper.text()).toContain('魔法学徒 · 属性提升')
+    expect(wrapper.text()).toContain('魔法学徒 · 选择戏法')
+    expect(wrapper.text()).toContain('魔法学徒 · 选择法术')
+    expect(wrapper.text()).toContain('背景已固定：法师法术表')
+    expect(wrapper.text()).not.toContain('魔法学徒 · 选择法术表')
+  })
+})
+
 describe('TimelineStep 静态选项可展开', () => {
   it('技能候选卡默认折叠，可展开查看详情与来源', async () => {
     const wrapper = mountStep(bardDraft())

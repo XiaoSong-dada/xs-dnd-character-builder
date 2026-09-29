@@ -5,7 +5,7 @@ import { getDraftSpeciesRules } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
 import { getWeaponMasteryCandidates } from '@/rules/weapon-mastery'
 import { isWeaponTrainingCovered } from '@/rules/weapon-training'
-import { abilityFromSpeciesSpellAbilityOption, classIdFromSpellListOption } from '@/rules/data/spell-lists-2024'
+import { abilityFromSpeciesSpellAbilityOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, CharacterDraft, ChoiceSelection, RulesetId } from '@/types/character'
 import type { ChoiceCheckpoint, FixedSpellGrant, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant, SpellRule } from '@/types/rules'
@@ -363,8 +363,14 @@ function resolveSpellListClassId(
   if (!parentCheckpointId || !featId) return undefined
   const selection = draft.selections.find((item) =>
     item.checkpointId === `feat-child:${parentCheckpointId}:${featId}:${listChoiceId}` && !item.invalidatedAt)
-  const optionId = selection?.optionIds[0]
-  return optionId ? classIdFromSpellListOption(optionId) : undefined
+  const background = draft.backgroundId && parentCheckpointId === `${draft.backgroundId}-origin-feat`
+    ? getRulesRepository(draft.ruleset).getBackground(draft.backgroundId)
+    : undefined
+  const optionId = selection?.optionIds[0] ?? background?.originFeatChoicePresets?.[listChoiceId]?.[0]
+  if (!optionId || !getRulesRepository(draft.ruleset).getOption(optionId)) return undefined
+  const slug = optionId.replace(/^spell-list-/, '')
+  const classId = `class-${draft.ruleset.slice(3)}-${slug}`
+  return getRulesRepository(draft.ruleset).getClass(classId) ? classId : undefined
 }
 
 /** 物种按等级授予的固定法术（纯函数，供派生与测试）。 */
