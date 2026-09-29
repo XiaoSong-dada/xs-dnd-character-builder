@@ -4,6 +4,15 @@ export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 export type AbilityMethod = 'standard-array' | 'point-buy' | 'custom'
 export type SpellcastingMode = 'prepared' | 'known' | 'spellbook' | 'pact'
 export type ManualSpellDestination = 'known' | 'pact-known' | 'prepared-list' | 'spellbook' | 'granted'
+export type InactiveSpellBucket =
+  | 'cantripIds'
+  | 'knownSpellIds'
+  | 'preparedSpellIds'
+  | 'spellbookSpellIds'
+  | 'transcribedSpellIds'
+  | 'spellbookExtraSpellIds'
+  | 'manualAddedSpells'
+export type InactiveSpellReason = 'class-changed' | 'level-reduced' | 'source-removed' | 'user-archived'
 export type ManualDerivedField =
   | 'armorClass'
   | 'hitPoints'
@@ -75,12 +84,30 @@ export interface SpellSelections {
   readonly transcribedSpellIds: readonly string[]
   /** 通过子职额外入书规则写入法术书的法术 ID（spellbookSpellIds 的子集，如 2024 塑能学者）。 */
   readonly spellbookExtraSpellIds?: readonly string[]
+  /** 由法术精通／招牌法术等前置节点预留、并计入正常法术书学习额度的法术。 */
+  readonly spellbookReservedSpellIds?: readonly string[]
+}
+
+export interface InactiveSpellSelection {
+  readonly id: string
+  readonly spellId: string
+  readonly originalBucket: InactiveSpellBucket
+  readonly reason: InactiveSpellReason
+  readonly sourceKey?: string
+  readonly invalidatedAt: string
 }
 
 export interface ManualAddedSpell {
   readonly spellId: string
   readonly destination: ManualSpellDestination
   readonly prepared: boolean
+}
+
+export interface ManualFeatGrant {
+  readonly instanceId: string
+  readonly featId: string
+  readonly addedAt: string
+  readonly note?: string
 }
 
 /** 角色卡人工编辑只保存相对系统计算值的差值；空对象代表完全使用系统规则。 */
@@ -92,6 +119,7 @@ export interface CharacterManualEdits {
   readonly skillAdjustments: Readonly<Record<string, number>>
   readonly spellSlotAdjustments: Readonly<Record<number, number>>
   readonly addedSpells: readonly ManualAddedSpell[]
+  readonly addedFeats: readonly ManualFeatGrant[]
 }
 
 export interface StartingEquipmentSelection {
@@ -143,7 +171,7 @@ export interface CharacterMedia {
 }
 
 export interface CharacterDraft {
-  readonly schemaVersion: 8
+  readonly schemaVersion: 9
   readonly id: string
   readonly ruleset: RulesetId
   readonly createdAt: string
@@ -181,6 +209,8 @@ export interface CharacterDraft {
   readonly adventureGold: number
   readonly equipmentNeedsReview: boolean
   readonly spellSelections: SpellSelections
+  /** 因转职、降级或来源失效退出当前规则的法术选择历史。 */
+  readonly inactiveSpellSelections: readonly InactiveSpellSelection[]
   readonly manualEdits: CharacterManualEdits
   readonly name: string
   readonly alignment: string

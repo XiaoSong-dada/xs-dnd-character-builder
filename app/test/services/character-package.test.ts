@@ -71,7 +71,7 @@ describe('完整角色包', () => {
     const bytes = await CharacterPackageService.build(draft)
     const imported = await CharacterPackageService.import(new Blob([bytes as BlobPart], { type: 'application/zip' }))
     expect(imported.ruleset).toBe('5e-2024')
-    expect(imported.schemaVersion).toBe(8)
+    expect(imported.schemaVersion).toBe(9)
     expect(imported.enabledSourceIds).toEqual([])
   })
 

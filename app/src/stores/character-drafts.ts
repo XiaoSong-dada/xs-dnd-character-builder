@@ -42,7 +42,7 @@ function newId(): string {
 function createCharacterDraft(ruleset: RulesetId): CharacterDraft {
   const now = new Date().toISOString()
   return {
-    schemaVersion: 8,
+    schemaVersion: 9,
     id: newId(),
     ruleset,
     createdAt: now,
@@ -70,7 +70,9 @@ function createCharacterDraft(ruleset: RulesetId): CharacterDraft {
       spellbookSpellIds: [],
       transcribedSpellIds: [],
       spellbookExtraSpellIds: [],
+      spellbookReservedSpellIds: [],
     },
+    inactiveSpellSelections: [],
     manualEdits: EMPTY_MANUAL_EDITS,
     name: '',
     alignment: '',

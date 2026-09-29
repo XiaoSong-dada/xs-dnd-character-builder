@@ -3,6 +3,7 @@ import type {
   CharacterManualEdits,
   ManualAddedSpell,
   ManualDerivedField,
+  ManualFeatGrant,
 } from '@/types/character'
 
 export const EMPTY_MANUAL_EDITS: CharacterManualEdits = {
@@ -13,6 +14,7 @@ export const EMPTY_MANUAL_EDITS: CharacterManualEdits = {
   skillAdjustments: {},
   spellSlotAdjustments: {},
   addedSpells: [],
+  addedFeats: [],
 }
 
 function finiteInteger(value: unknown): value is number {
@@ -30,6 +32,23 @@ const derivedKeys = new Set<ManualDerivedField>([
   'passivePerception', 'spellAttackBonus', 'spellSaveDc',
 ])
 const destinations = new Set<ManualAddedSpell['destination']>(['known', 'pact-known', 'prepared-list', 'spellbook', 'granted'])
+
+function normalizeManualFeatGrants(value: unknown): readonly ManualFeatGrant[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const grant = item as Partial<ManualFeatGrant>
+    if (typeof grant.instanceId !== 'string' || grant.instanceId.trim().length === 0) return []
+    if (typeof grant.featId !== 'string' || grant.featId.trim().length === 0) return []
+    if (typeof grant.addedAt !== 'string' || grant.addedAt.trim().length === 0) return []
+    return [{
+      instanceId: grant.instanceId,
+      featId: grant.featId,
+      addedAt: grant.addedAt,
+      ...(typeof grant.note === 'string' && grant.note.trim().length > 0 ? { note: grant.note.trim() } : {}),
+    }]
+  }).filter((item, index, all) => all.findIndex((candidate) => candidate.instanceId === item.instanceId) === index)
+}
 
 export function normalizeManualEdits(value: unknown): CharacterManualEdits {
   const edits = value && typeof value === 'object' ? value as Partial<CharacterManualEdits> : {}
@@ -53,6 +72,7 @@ export function normalizeManualEdits(value: unknown): CharacterManualEdits {
     skillAdjustments: normalizeNumberRecord(edits.skillAdjustments),
     spellSlotAdjustments: Object.fromEntries(Object.entries(slots).filter(([key]) => Number(key) >= 1 && Number(key) <= 9)),
     addedSpells,
+    addedFeats: normalizeManualFeatGrants(edits.addedFeats),
   }
 }
 
@@ -79,4 +99,5 @@ export function hasManualEdits(edits: CharacterManualEdits): boolean {
     || Object.keys(edits.skillAdjustments).length > 0
     || Object.keys(edits.spellSlotAdjustments).length > 0
     || edits.addedSpells.length > 0
+    || edits.addedFeats.length > 0
 }

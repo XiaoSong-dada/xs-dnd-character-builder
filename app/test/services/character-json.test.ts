@@ -16,7 +16,7 @@ describe('CharacterJsonService', () => {
     expect(() => CharacterJsonService.importDraft(JSON.stringify({ ...base, ruleset: '5e-2025' }))).toThrowError('不支持的规则版本：5e-2025')
   })
 
-  it('imports a 2014 v2 draft as schema v8 without silently dropping equipment', () => {
+  it('imports a 2014 v2 draft as schema v9 without silently dropping equipment', () => {
     const imported = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 2,
       id: 'old-wizard',
@@ -27,7 +27,7 @@ describe('CharacterJsonService', () => {
       equippedItemIds: ['dagger'],
     }))
 
-    expect(imported.schemaVersion).toBe(8)
+    expect(imported.schemaVersion).toBe(9)
     expect(imported.equipmentNeedsReview).toBe(true)
     expect(imported.adventureGold).toBe(0)
     expect(imported.inventory.find((entry) => entry.itemId === 'dagger')).toMatchObject({
@@ -38,7 +38,7 @@ describe('CharacterJsonService', () => {
     expect(imported.manualEdits.addedSpells).toEqual([])
   })
 
-  it('v3 导入保留 adventureGold，缺省时兜底为 0，并升级为 v8 补全转录字段', () => {
+  it('v3 导入保留 adventureGold，缺省时兜底为 0，并升级为 v9 补全转录字段', () => {
     const withGold = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 3,
       id: 'v3-with-gold',
@@ -48,7 +48,7 @@ describe('CharacterJsonService', () => {
       adventureGold: 42,
     }))
     expect(withGold.adventureGold).toBe(42)
-    expect(withGold.schemaVersion).toBe(8)
+    expect(withGold.schemaVersion).toBe(9)
     expect(withGold.spellSelections.transcribedSpellIds).toEqual([])
 
     const withoutGold = CharacterJsonService.importDraft(JSON.stringify({
@@ -61,7 +61,7 @@ describe('CharacterJsonService', () => {
     expect(withoutGold.adventureGold).toBe(0)
   })
 
-  it('v4 导入升级到 v8，导出往返保留 transcribedSpellIds 与人工编辑', () => {
+  it('v4 导入升级到 v9，导出往返保留 transcribedSpellIds 与人工编辑', () => {
     const imported = CharacterJsonService.importDraft(JSON.stringify({
       schemaVersion: 4,
       id: 'v4-with-transcribed',
@@ -76,7 +76,7 @@ describe('CharacterJsonService', () => {
         transcribedSpellIds: ['spell-2014-magic-missile'],
       },
     }))
-    expect(imported.schemaVersion).toBe(8)
+    expect(imported.schemaVersion).toBe(9)
     expect(imported.spellSelections.transcribedSpellIds).toEqual(['spell-2014-magic-missile'])
     const roundTrip = CharacterJsonService.importDraft(CharacterJsonService.exportDraft(imported))
     expect(roundTrip.spellSelections.transcribedSpellIds).toEqual(['spell-2014-magic-missile'])
@@ -92,7 +92,7 @@ describe('CharacterJsonService', () => {
       selections: [{ checkpointId: 'fighter-2024-style-1', optionIds: ['style-defense'], confirmedAt: '2026-09-11T00:00:00.000Z' }],
       enabledSourceIds: ['source-2024-ua-eberron'],
     }))
-    expect(imported.schemaVersion).toBe(8)
+    expect(imported.schemaVersion).toBe(9)
     expect(imported.ruleset).toBe('5e-2024')
     expect(imported.enabledSourceIds).toEqual(['source-2024-ua-eberron'])
     const roundTrip = CharacterJsonService.importDraft(CharacterJsonService.exportDraft(imported))
@@ -173,6 +173,38 @@ describe('CharacterJsonService', () => {
     }))
     const roundTrip = CharacterJsonService.importDraft(CharacterJsonService.exportDraft(withExtras))
     expect(roundTrip.spellSelections.spellbookExtraSpellIds).toEqual(['spell-2024-scorching-ray'])
+  })
+
+  it('v9 JSON 往返保留停用法术、法术书预留与手动专长实例', () => {
+    const imported = CharacterJsonService.importDraft(JSON.stringify({
+      schemaVersion: 9,
+      id: 'v9-coordination',
+      ruleset: '5e-2024',
+      baseAbilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
+      selections: [],
+      spellSelections: {
+        cantripIds: [], knownSpellIds: [], preparedSpellIds: [],
+        spellbookSpellIds: ['spell-2024-shield'], transcribedSpellIds: [],
+        spellbookReservedSpellIds: ['spell-2024-shield'],
+      },
+      inactiveSpellSelections: [{
+        id: 'inactive-fireball',
+        spellId: 'spell-2024-fireball',
+        originalBucket: 'preparedSpellIds',
+        reason: 'level-reduced',
+        invalidatedAt: '2026-09-29T00:00:00.000Z',
+      }],
+      manualEdits: {
+        addedFeats: [{
+          instanceId: 'manual-alert', featId: 'feat-2024-alert', addedAt: '2026-09-29T00:00:00.000Z',
+        }],
+      },
+    }))
+    const roundTrip = CharacterJsonService.importDraft(CharacterJsonService.exportDraft(imported))
+    expect(roundTrip.schemaVersion).toBe(9)
+    expect(roundTrip.spellSelections.spellbookReservedSpellIds).toEqual(['spell-2024-shield'])
+    expect(roundTrip.inactiveSpellSelections).toEqual(imported.inactiveSpellSelections)
+    expect(roundTrip.manualEdits.addedFeats).toEqual(imported.manualEdits.addedFeats)
   })
 
   it('普通 JSON 导出移除媒体引用，避免跨设备产生失效图片', () => {
