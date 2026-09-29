@@ -553,6 +553,8 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 
 `rules/derive.ts` 是有效属性、熟练、技能、豁免与派生战斗数值的唯一规则出口；`rules/manual-edits.ts` 负责人工数据归一化和字段差值换算；`rules/spellcasting.ts` 负责有效环位及有效法术集合；`rules/weapon-attacks.ts` 将公共人工武器调整应用到每件可计算武器。角色卡、摘要、跑团助手和导出模型均消费这些有效结果。
 
+职业或等级变更后的法术协调由纯规则模块 `rules/spell-selection-reconciliation.ts` 负责：它依赖 `rules/spellcasting.ts` 与 `types/character.ts`，输出仍有效的选择、停用历史和恢复状态，不依赖 Vue、Store 或页面。`views/character-builder/hooks/useCharacterBuilderPage.ts` 在转职和降级入口调用协调器，`SpellcastingStep.vue` 只展示停用记录并上报恢复／删除意图；最终有效法术及导出仍只读取 `spellSelections`。
+
 草稿替换由 `character-drafts` Store 统一协调：写入前归一化人工编辑；若已有局内状态，则比较变更前后有效最大生命值、环位、生命骰总数与职业资源上限（`rules/session-resources.ts` 枚举，含免费施法），并通过 `rules/session-state.ts` 的 `reconcileSessionLimits` 同步当前状态与休息快照：资源已用量按新上限钳制、失效条目移除。页面组件不得直接改写 localStorage 或自行复制协调公式。
 
 跑团局内状态的休息与资源结算由 `rules/session-state.ts` 与 `rules/session-resources.ts` 分工：前者负责 HP、法术位、力竭、生命骰与两版休息口径，后者按草稿枚举 2024 职业／子职的资源与可消耗骰池（上限、恢复时机与 `shortRestRecovery`），并负责消耗／恢复与短休力竭差额。已用量以稳定特性 id 存入 `SessionState.resourceUsage`，与休息快照共用撤回语义；2014 没有资源登记，天然为空（Q-B10-1）。
@@ -569,6 +571,7 @@ src/rules/draft-progress.ts      （无内部依赖，纯函数：是否存在�
 src/rules/dependency.ts          -> src/rules/{derive,repositories,feats,timeline}
 src/rules/timeline.ts            -> src/rules/{repositories,feats} + src/rules/data/feats-2014
 src/rules/spellcasting.ts        -> src/rules/{repositories,derive,origins}（双版本施法配置、表定准备数、始终准备与免费施法来源解析）
+src/rules/spell-selection-reconciliation.ts -> src/rules/spellcasting + src/types/character（转职／降级后的有效选择、停用历史与显式恢复纯函数）
 src/rules/spellbook.ts           -> src/rules/{repositories,spellcasting}（抄录候选池、双费率费用、金币校验与抄录应用纯函数）
 src/rules/starting-equipment.ts  -> src/rules/{repositories,repository,currency}（按草稿版本解析；无版本兼容入口固定 2014）
 src/rules/weapon-mastery.ts      -> src/types/rules（2024 精通候选与选择校验纯函数）

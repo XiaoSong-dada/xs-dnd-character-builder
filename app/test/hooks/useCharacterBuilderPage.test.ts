@@ -332,17 +332,19 @@ describe('useCharacterBuilderPage 改版与改职业的数据保护（B09-03）'
     expect(RulesetPreferenceService.loadPreferredRuleset()).toBe('5e-2024')
   })
 
-  it('更换职业会清空法术选择并在确认中列出影响', async () => {
+  it('更换职业会停用原法术选择并在确认中列出影响', async () => {
     const { page, store } = await setupPage(makeSorcererDraft())
 
     page.selectClass('class-2014-wizard')
 
-    expect(page.pendingChange.value?.affected).toContain('法术选择（将清空并重新选择）')
+    expect(page.pendingChange.value?.affected).toContain('法术选择（将移入停用记录，可在法术步骤查看）')
     page.confirmPendingChange()
 
     expect(store.activeDraft?.classId).toBe('class-2014-wizard')
     expect(store.activeDraft?.spellSelections.cantripIds).toEqual([])
     expect(store.activeDraft?.spellSelections.knownSpellIds).toEqual([])
+    expect(store.activeDraft?.inactiveSpellSelections.map((item) => item.spellId)).toContain('spell-2014-burning-hands')
+    expect(store.activeDraft?.inactiveSpellSelections.every((item) => item.reason === 'class-changed')).toBe(true)
   })
 
   it('取消改职业不产生任何修改', async () => {

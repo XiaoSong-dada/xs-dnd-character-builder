@@ -74,7 +74,7 @@ function normalizeSpellSelections(value: unknown): SpellSelections {
 
 const inactiveSpellBuckets = new Set<InactiveSpellBucket>([
   'cantripIds', 'knownSpellIds', 'preparedSpellIds', 'spellbookSpellIds',
-  'transcribedSpellIds', 'spellbookExtraSpellIds', 'manualAddedSpells',
+  'transcribedSpellIds', 'spellbookExtraSpellIds', 'spellbookReservedSpellIds', 'manualAddedSpells',
 ])
 const inactiveSpellReasons = new Set<InactiveSpellReason>([
   'class-changed', 'level-reduced', 'source-removed', 'user-archived',

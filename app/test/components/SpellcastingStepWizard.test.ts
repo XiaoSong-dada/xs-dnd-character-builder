@@ -292,3 +292,32 @@ describe('法术列表按环级升序（v1.9.1 追加）', () => {
     expect(wrapper.emitted('change')).toBeUndefined()
   })
 })
+
+describe('法术停用记录', () => {
+  it('展示停用原因，并分别发出恢复与删除记录事件', async () => {
+    const base = wizardDraft()
+    const draft = {
+      ...base,
+      spellSelections: {
+        ...base.spellSelections,
+        preparedSpellIds: base.spellSelections.preparedSpellIds.filter((id) => id !== 'spell-2014-magic-missile'),
+      },
+      inactiveSpellSelections: [{
+        id: 'inactive-magic-missile',
+        spellId: 'spell-2014-magic-missile',
+        originalBucket: 'preparedSpellIds' as const,
+        reason: 'level-reduced' as const,
+        invalidatedAt: '2026-09-29T00:00:00.000Z',
+      }],
+    }
+    const wrapper = mount(SpellcastingStep, { props: { draft } })
+
+    expect(wrapper.text()).toContain('停用记录')
+    expect(wrapper.text()).toContain('降低等级 · 准备法术')
+    const buttons = wrapper.findAll('.spellcasting-step__inactive-actions button')
+    await buttons.find((button) => button.text() === '恢复')!.trigger('click')
+    await buttons.find((button) => button.text() === '删除记录')!.trigger('click')
+    expect(wrapper.emitted('restoreInactive')?.[0]).toEqual(['inactive-magic-missile'])
+    expect(wrapper.emitted('deleteInactive')?.[0]).toEqual(['inactive-magic-missile'])
+  })
+})

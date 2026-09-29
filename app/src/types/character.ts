@@ -11,6 +11,7 @@ export type InactiveSpellBucket =
   | 'spellbookSpellIds'
   | 'transcribedSpellIds'
   | 'spellbookExtraSpellIds'
+  | 'spellbookReservedSpellIds'
   | 'manualAddedSpells'
 export type InactiveSpellReason = 'class-changed' | 'level-reduced' | 'source-removed' | 'user-archived'
 export type ManualDerivedField =

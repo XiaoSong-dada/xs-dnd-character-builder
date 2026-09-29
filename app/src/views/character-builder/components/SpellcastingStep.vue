@@ -7,6 +7,7 @@ import UiNotice from '@/components/ui/UiNotice.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/ability-labels'
 import { getRulesRepository } from '@/rules/repositories'
+import { getInactiveSpellRestoreStatus } from '@/rules/spell-selection-reconciliation'
 import {
   getAlwaysPreparedSpellIds,
   getMaximumSpellLevel,
@@ -15,7 +16,7 @@ import {
   sortSpellsByLevel,
   usesPreparedSelection,
 } from '@/rules/spellcasting'
-import type { CharacterDraft, SpellSelections } from '@/types/character'
+import type { CharacterDraft, InactiveSpellReason, SpellSelections } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 import SelectionTaskNavigator from '@/views/character-builder/components/SelectionTaskNavigator.vue'
@@ -23,7 +24,11 @@ import { useSpellcastingStepFlow } from '@/views/character-builder/hooks/useSpel
 import type { SelectionTaskFocusHandle } from '@/views/character-builder/selection-task'
 
 const props = defineProps<{ draft: CharacterDraft }>()
-const emit = defineEmits<{ change: [value: SpellSelections] }>()
+const emit = defineEmits<{
+  change: [value: SpellSelections]
+  restoreInactive: [inactiveId: string]
+  deleteInactive: [inactiveId: string]
+}>()
 const draft = toRef(() => props.draft)
 const headingEl = ref<HTMLElement>()
 const stepFlow = useSpellcastingStepFlow(draft, headingEl)
@@ -65,6 +70,27 @@ const spellSlotsLabel = computed(() => {
 })
 const alwaysPreparedSpells = computed(() => getAlwaysPreparedSpellIds(props.draft).map((id) => repository.value.getSpell(id)).filter((spell): spell is SpellRule => Boolean(spell)))
 const spellbookExtraCandidates = computed(() => config.value ? getSpellbookExtraCandidates(props.draft, config.value) : [])
+const inactiveReasonLabels: Readonly<Record<InactiveSpellReason, string>> = {
+  'class-changed': '更换职业',
+  'level-reduced': '降低等级',
+  'source-removed': '来源失效',
+  'user-archived': '手动停用',
+}
+const inactiveBucketLabels = {
+  cantripIds: '戏法',
+  knownSpellIds: '已知法术',
+  preparedSpellIds: '准备法术',
+  spellbookSpellIds: '法术书',
+  transcribedSpellIds: '抄录法术',
+  spellbookExtraSpellIds: '子职额外入书',
+  spellbookReservedSpellIds: '高等级能力预留',
+  manualAddedSpells: '人工添加法术',
+} as const
+const inactiveSpellEntries = computed(() => (props.draft.inactiveSpellSelections ?? []).map((entry) => ({
+  entry,
+  spell: repository.value.getSpell(entry.spellId),
+  restore: getInactiveSpellRestoreStatus(props.draft, entry),
+})))
 
 const taskSelectedIds = computed<readonly string[]>(() => {
   switch (flow.activeTaskId.value) {
@@ -244,6 +270,23 @@ function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value 
         </ListShell>
       </section>
     </template>
+    <section v-if="inactiveSpellEntries.length" class="spellcasting-step__inactive" aria-labelledby="inactive-spells-title">
+      <div>
+        <h2 id="inactive-spells-title">停用记录</h2>
+        <p>这些法术已退出当前规则，不参与校验、角色卡或资源计算。满足当前条件时可显式恢复。</p>
+      </div>
+      <article v-for="item in inactiveSpellEntries" :key="item.entry.id" class="spellcasting-step__inactive-item">
+        <div>
+          <strong>{{ item.spell?.name ?? item.entry.spellId }}</strong>
+          <span>{{ inactiveReasonLabels[item.entry.reason] }} · {{ inactiveBucketLabels[item.entry.originalBucket] }}</span>
+          <small v-if="!item.restore.available">{{ item.restore.reason }}</small>
+        </div>
+        <div class="spellcasting-step__inactive-actions">
+          <button type="button" :disabled="!item.restore.available" @click="emit('restoreInactive', item.entry.id)">恢复</button>
+          <button type="button" @click="emit('deleteInactive', item.entry.id)">删除记录</button>
+        </div>
+      </article>
+    </section>
   </section>
 </template>
 
@@ -260,6 +303,49 @@ function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value 
   &__panel { display: grid; gap: 0.65rem; }
   &__panel > h2 { margin: 0; font-size: 1rem; outline: none; }
   &__hint { margin: 0; color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; }
+  &__inactive {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.8rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+
+    h2,
+    p { margin: 0; }
+
+    p,
+    span,
+    small { color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; }
+  }
+  &__inactive-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--color-border);
+
+    > div:first-child { display: grid; gap: 0.1rem; }
+  }
+  &__inactive-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+
+    button {
+      min-height: 2.75rem;
+      padding: 0 0.7rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font: inherit;
+      cursor: pointer;
+
+      &:disabled { cursor: not-allowed; opacity: 0.5; }
+    }
+  }
   &__filters {
     display: grid;
     // 容器自适应（v1.9.1 R2）：车卡容器恒为 32rem 且不随视口变宽，

@@ -75,6 +75,8 @@ const {
   updateInfusions,
   updateAdventureGold,
   updateSpells,
+  restoreInactiveSpell,
+  deleteInactiveSpell,
   updateManualEdits,
   updateIdentity,
   updateAbilities,
@@ -245,7 +247,14 @@ function updateMethod(value: AbilityMethod): void {
       @change="updateEquipment"
       @infusions="updateInfusions"
     />
-    <SpellcastingStep v-else-if="step === 'spells'" ref="activeStepRef" :draft="activeDraft" @change="updateSpells" />
+    <SpellcastingStep
+      v-else-if="step === 'spells'"
+      ref="activeStepRef"
+      :draft="activeDraft"
+      @change="updateSpells"
+      @restore-inactive="restoreInactiveSpell"
+      @delete-inactive="deleteInactiveSpell"
+    />
     <IdentityStep v-else-if="step === 'identity'" :draft="activeDraft" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" @change-media="updateDraft({ media: $event })" />
     <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" :ruleset="activeDraft.ruleset" @go="setStep($event as DraftStep)" />
     <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" :exporting-format="exportingFormat" :export-notice="exportNotice" @export="exportDraft" @export-package="exportPackage" @export-pdf="exportPdf" @export-xlsx="exportXlsx" @adjust-level="openLevelModal" @reedit="startReedit" @change-spell-selections="updateSpells" @change-inventory="updateInventory" @change-adventure-gold="updateAdventureGold" @change-manual-edits="updateManualEdits" @change-media="updateDraft({ media: $event })" />
@@ -304,6 +313,12 @@ function updateMethod(value: AbilityMethod): void {
       <h4>保留</h4>
       <ul>
         <li v-for="item in pendingChange.impact.preserved" :key="item">{{ item }}</li>
+      </ul>
+    </section>
+    <section v-if="pendingChange?.explicitAffected.length" class="builder-impact">
+      <h4>将协调</h4>
+      <ul>
+        <li v-for="item in pendingChange.explicitAffected" :key="item">{{ item }}</li>
       </ul>
     </section>
     <template #footer>
