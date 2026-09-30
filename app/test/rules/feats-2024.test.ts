@@ -132,6 +132,7 @@ describe('2024 专长目录', () => {
       featId: 'feat-2024-alert',
       sourceKind: 'manual',
       sourceId: 'manual-feat-alert-1',
+      checkpointId: 'manual-feat-manual-feat-alert-1',
     })
   })
 

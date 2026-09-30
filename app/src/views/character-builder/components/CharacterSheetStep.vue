@@ -4,6 +4,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AddItemModal from '@/components/AddItemModal.vue'
 import AdjustItemModal from '@/components/AdjustItemModal.vue'
 import AddManualSpellModal from '@/views/character-builder/components/AddManualSpellModal.vue'
+import AddManualFeatModal from '@/views/character-builder/components/AddManualFeatModal.vue'
+import ManualFeatConfigModal from '@/views/character-builder/components/ManualFeatConfigModal.vue'
 import EditableStatTile from '@/views/character-builder/components/EditableStatTile.vue'
 import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import UiModal from '@/components/ui/UiModal.vue'
@@ -14,14 +16,14 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-media'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
-import { decodeAbilityImprovement, formatFeatBonusOption, formatFeatGrantSource, getCheckpointSelectionBounds, listFeatGrants } from '@/rules/feats'
+import { decodeAbilityImprovement, formatFeatBonusOption, formatFeatGrantSource, getCheckpointSelectionBounds, getFeatStructuredEffectLabels, manualFeatParentCheckpointId, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
-import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, DerivedCharacter, InventoryEntry, ManualAddedSpell, SpellSelections } from '@/types/character'
+import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, ChoiceSelection, DerivedCharacter, InventoryEntry, ManualAddedSpell, ManualFeatGrant, SpellSelections } from '@/types/character'
 import type { ClassFeature, SpellRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 
@@ -42,11 +44,15 @@ const emit = defineEmits<{
   changeInventory: [inventory: readonly InventoryEntry[]]
   changeAdventureGold: [adventureGold: number]
   changeManualEdits: [manualEdits: CharacterManualEdits]
+  changeSelections: [selections: readonly ChoiceSelection[]]
   changeMedia: [media: CharacterMedia | undefined]
 }>()
 /** 角色卡解析与名称一律使用草稿版本仓库（B09-02）。 */
 const repository = computed(() => getRulesRepository(props.draft.ruleset))
 const showMediaEditor = ref(false)
+const showAddFeatModal = ref(false)
+const configuringManualFeat = ref<ManualFeatGrant>()
+const removingManualFeat = ref<ManualFeatGrant>()
 const showMoreActions = ref(false)
 const moreButtonRef = ref<HTMLButtonElement>()
 const morePanelRef = ref<HTMLElement>()
@@ -300,7 +306,7 @@ function isAlsoNormallyAcquired(spellId: string): boolean {
 const selectedOptionEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const choiceCheckpointIds = [
     ...(classInfo.value?.features ?? []).flatMap((feature) => feature.checkpointIds ?? []),
     ...(subclassInfo.value?.features ?? [])
@@ -358,7 +364,7 @@ function featureChoiceLabel(feature: ClassFeature): string {
   if (checkpointIds.length === 0) return '需选择'
   const draft = props.draft
   if (!draft.classId) return '需选择'
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const unlocked = checkpointIds
     .map((checkpointId) => timeline.find((item) => item.id === checkpointId))
     .filter((checkpoint): checkpoint is NonNullable<typeof checkpoint> => Boolean(checkpoint))
@@ -468,7 +474,7 @@ const featAndAsiEntries = computed(() => {
   const draft = props.draft
   const repository = getRulesRepository(draft.ruleset)
   const timeline = draft.classId
-    ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+    ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
     : []
   const entries: {
     id: string
@@ -477,21 +483,38 @@ const featAndAsiEntries = computed(() => {
     summary?: string
     detail?: string
     sourceLabel?: string
+    sourceKind?: 'system' | 'manual'
+    instanceId?: string
+    incomplete?: boolean
+    structuredLabels?: readonly string[]
   }[] = []
   const seen = new Set<string>()
   // 1) 生效专长：背景／物种／职业／子职授予 + 时间线选择。
   for (const grant of listFeatGrants(draft, repository)) {
     const feat = repository.getFeat(grant.featId)
-    if (!feat || seen.has(feat.id)) continue
-    seen.add(feat.id)
+    const seenKey = feat?.repeatable ? grant.instanceId : grant.featId
+    if (!feat || seen.has(seenKey)) continue
+    seen.add(seenKey)
     const checkpoint = grant.checkpointId ? timeline.find((item) => item.id === grant.checkpointId) : undefined
+    const childCheckpoints = grant.sourceKind === 'manual'
+      ? timeline.filter((item) => item.parentCheckpointId === manualFeatParentCheckpointId(grant.instanceId))
+      : []
+    const incomplete = childCheckpoints.some((item) => {
+      const count = draft.selections.find((selection) => selection.checkpointId === item.id && !selection.invalidatedAt)?.optionIds.length ?? 0
+      const bounds = getCheckpointSelectionBounds(draft, item)
+      return count < bounds.min || count > bounds.max
+    })
     entries.push({
-      id: feat.id,
+      id: grant.sourceKind === 'manual' ? grant.instanceId : feat.id,
       level: grant.sourceKind === 'background' || grant.sourceKind === 'species' ? 1 : checkpoint?.level ?? 1,
       label: `${feat.name} · ${feat.englishName}`,
       summary: feat.description,
       detail: feat.detail,
       sourceLabel: formatFeatGrantSource(grant, repository),
+      sourceKind: grant.sourceKind === 'manual' ? 'manual' : 'system',
+      instanceId: grant.sourceKind === 'manual' ? grant.instanceId : undefined,
+      incomplete,
+      structuredLabels: getFeatStructuredEffectLabels(feat),
     })
   }
   // 2) 属性提升与专长自带属性提升子选项（仍来自草稿选择）。
@@ -523,6 +546,47 @@ const featAndAsiEntries = computed(() => {
   }
   return entries.sort((left, right) => left.level - right.level)
 })
+
+function newManualFeatInstanceId(): string {
+  return `manual-feat-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`}`
+}
+function addManualFeat(featId: string): void {
+  const feat = repository.value.getFeat(featId)
+  if (!feat) return
+  const current = editing.manual.value
+  if (!feat.repeatable && listFeatGrants(props.draft, repository.value).some((grant) => grant.featId === featId)) return
+  const grant: ManualFeatGrant = { instanceId: newManualFeatInstanceId(), featId, addedAt: new Date().toISOString() }
+  emit('changeManualEdits', { ...current, addedFeats: [...current.addedFeats, grant] })
+  showAddFeatModal.value = false
+  if (feat.choices?.length) configuringManualFeat.value = grant
+}
+function configureManualFeat(instanceId: string | undefined): void {
+  configuringManualFeat.value = props.draft.manualEdits?.addedFeats.find((grant) => grant.instanceId === instanceId)
+}
+function openRemoveManualFeat(instanceId: string | undefined): void {
+  removingManualFeat.value = props.draft.manualEdits?.addedFeats.find((grant) => grant.instanceId === instanceId)
+}
+function saveManualFeatSelection(checkpointId: string, optionIds: readonly string[]): void {
+  const next: ChoiceSelection = { checkpointId, optionIds, confirmedAt: new Date().toISOString() }
+  emit('changeSelections', [...props.draft.selections.filter((selection) => selection.checkpointId !== checkpointId), next])
+}
+function confirmRemoveManualFeat(): void {
+  const grant = removingManualFeat.value
+  if (!grant) return
+  const parentId = manualFeatParentCheckpointId(grant.instanceId)
+  emit('changeManualEdits', { ...editing.manual.value, addedFeats: editing.manual.value.addedFeats.filter((item) => item.instanceId !== grant.instanceId) })
+  emit('changeSelections', props.draft.selections.filter((selection) => !selection.checkpointId.startsWith(`feat-child:${parentId}:`)))
+  if (configuringManualFeat.value?.instanceId === grant.instanceId) configuringManualFeat.value = undefined
+  removingManualFeat.value = undefined
+}
+function removalEffectText(): string {
+  const feat = removingManualFeat.value ? repository.value.getFeat(removingManualFeat.value.featId) : undefined
+  return feat ? getFeatStructuredEffectLabels(feat).join('、') || '仅展示说明' : '仅展示说明'
+}
+function resetManualEdits(): void {
+  emit('changeSelections', props.draft.selections.filter((selection) => !selection.checkpointId.startsWith('feat-child:manual-feat-')))
+  editing.resetAll()
+}
 const subclassInfo = computed(() => {
   const subclassId = props.draft.subclassId
   if (!subclassId) return undefined
@@ -568,7 +632,7 @@ const needsReview = computed(() => {
   const draft = props.draft
   const hasInvalidated = draft.selections.some((item) => Boolean(item.invalidatedAt))
   if (!draft.classId) return hasInvalidated
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const incomplete = timeline.some((checkpoint) => {
     const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
     return (selection?.optionIds.length ?? 0) < checkpoint.minSelections
@@ -781,11 +845,13 @@ function handleExportPdf(): void {
           </ListShell>
         </section>
       </template>
-      <section v-if="featAndAsiEntries.length" class="character-sheet__subclass-features">
+      <section v-if="featAndAsiEntries.length || editing.editMode.value" class="character-sheet__subclass-features">
         <header class="character-sheet__subclass-features-header">
           <h3>专长与属性提升 · {{ featAndAsiEntries.length }}</h3>
+          <button v-if="editing.editMode.value" type="button" class="character-sheet__spell-action" @click="showAddFeatModal = true">添加专长</button>
         </header>
-        <ListShell>
+        <UiNotice v-if="editing.editMode.value" tone="info" title="手动专长的生效范围">已结构化效果会自动计入角色数据；仅有说明文本的效果只展示，不推断数值。</UiNotice>
+        <ListShell v-if="featAndAsiEntries.length">
           <ExpandableOptionCard
             v-for="entry in featAndAsiEntries"
             :key="entry.id"
@@ -795,8 +861,15 @@ function handleExportPdf(): void {
           >
             <template #suffix>
               <UiBadge v-if="entry.sourceLabel" tone="primary">{{ entry.sourceLabel }}</UiBadge>
+              <UiBadge v-if="entry.sourceKind === 'manual' && entry.incomplete" tone="warning">待配置</UiBadge>
+              <UiBadge v-else-if="entry.sourceKind === 'manual' && entry.structuredLabels?.length" tone="success">结构化效果已生效</UiBadge>
+              <UiBadge v-else-if="entry.sourceKind === 'manual'" tone="neutral">仅展示</UiBadge>
+              <span v-if="editing.editMode.value && entry.sourceKind === 'manual'" class="character-sheet__feat-actions">
+                <button v-if="entry.structuredLabels?.includes('子选择')" type="button" class="character-sheet__spell-action" @click.stop="configureManualFeat(entry.instanceId)">{{ entry.incomplete ? '继续配置' : '修改配置' }}</button>
+                <button type="button" class="character-sheet__spell-action character-sheet__spell-action--danger" @click.stop="openRemoveManualFeat(entry.instanceId)">移除</button>
+              </span>
             </template>
-            <template v-if="entry.detail" #expanded>{{ entry.detail }}</template>
+            <template v-if="entry.detail" #expanded><p>{{ entry.detail }}</p><p v-if="entry.sourceKind === 'manual' && !entry.structuredLabels?.length" class="character-sheet__manual-feat-warning">部分效果仅供查阅，未自动计入角色数据。</p></template>
           </ExpandableOptionCard>
         </ListShell>
       </section>
@@ -1091,6 +1164,8 @@ function handleExportPdf(): void {
       @close="showManualSpellModal = false"
       @add="editing.addSpell"
     />
+    <AddManualFeatModal :open="showAddFeatModal" :draft="draft" @close="showAddFeatModal = false" @add="addManualFeat" />
+    <ManualFeatConfigModal :open="Boolean(configuringManualFeat)" :draft="draft" :grant="configuringManualFeat" @close="configuringManualFeat = undefined" @select="saveManualFeatSelection" />
     <AddItemModal :open="showAddItemModal" :enabled-source-ids="draft.enabledSourceIds" :ruleset="draft.ruleset" @close="showAddItemModal = false" @add="handleAddItem" />
     <AdjustItemModal
       v-if="adjustEntry"
@@ -1118,10 +1193,17 @@ function handleExportPdf(): void {
       </div>
     </UiModal>
     <UiModal :open="editing.showResetConfirm.value" title="恢复系统默认" @close="editing.showResetConfirm.value = false">
-      <p>这会清除全部人工数值调整和人工添加法术，但不会删除正常车卡选择、抄录法术、装备或跑团状态。</p>
+      <p>这会清除全部人工数值调整、人工添加法术和手动专长（含其配置），但不会删除正常车卡选择、抄录法术、装备或跑团状态。</p>
       <template #footer>
         <button type="button" class="character-sheet__export character-sheet__export--secondary" @click="editing.showResetConfirm.value = false">取消</button>
-        <button type="button" class="character-sheet__export" @click="editing.resetAll">确认恢复</button>
+        <button type="button" class="character-sheet__export" @click="resetManualEdits">确认恢复</button>
+      </template>
+    </UiModal>
+    <UiModal :open="Boolean(removingManualFeat)" title="移除手动专长" @close="removingManualFeat = undefined">
+      <p>移除“{{ repository.getFeat(removingManualFeat?.featId ?? '')?.name ?? '该专长' }}”后，将同时失去其结构化效果与本实例的子选择：{{ removalEffectText() }}。</p>
+      <template #footer>
+        <button type="button" class="character-sheet__export character-sheet__export--secondary" @click="removingManualFeat = undefined">取消</button>
+        <button type="button" class="character-sheet__export" @click="confirmRemoveManualFeat">确认移除</button>
       </template>
     </UiModal>
   </section>
@@ -1242,6 +1324,8 @@ function handleExportPdf(): void {
       color: var(--color-text-muted);
       background: var(--color-surface);
     }
+
+    &--danger { border-color: var(--color-error); color: var(--color-error); }
   }
 
   &__spell-badge {
@@ -1422,6 +1506,8 @@ function handleExportPdf(): void {
   &__feature strong small { color: var(--color-text-muted); font-weight: 400; }
   &__feature-choice { margin-left: 0.3rem; padding: 0.05rem 0.4rem; border: 1px solid var(--color-primary); border-radius: 999px; color: var(--color-primary); font-size: 0.62rem; font-style: normal; vertical-align: 0.1em; }
   &__feature-selected { margin-left: 0.3rem; color: var(--color-text-muted); font-size: 0.68rem; line-height: 1.5; }
+  &__feat-actions { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; }
+  &__manual-feat-warning { color: var(--color-warning); font-weight: 700; }
   &__feature p { margin: 0; color: var(--color-text-muted); font-size: 0.72rem; line-height: 1.45; }
 }
 </style>

@@ -1,9 +1,9 @@
 import { getRulesRepository } from '@/rules/repositories'
 import { FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
-import { getFeatPool } from '@/rules/feats'
+import { buildManualFeatChoiceCheckpoints, getFeatPool } from '@/rules/feats'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { CheckpointKind, ChoiceCheckpoint, RulesRepository } from '@/types/rules'
-import type { ChoiceSelection, RulesetId } from '@/types/character'
+import type { ChoiceSelection, ManualFeatGrant, RulesetId } from '@/types/character'
 import { SKILL_IDS } from '@/rules/derive'
 
 const variantHumanCheckpoint: ChoiceCheckpoint = {
@@ -25,6 +25,8 @@ export interface TimelineContext {
   readonly subclassId?: string
   readonly enabledSourceIds?: readonly string[]
   readonly selections?: readonly ChoiceSelection[]
+  /** 角色卡手动添加的专长实例；提供时追加实例隔离的必选子检查点。 */
+  readonly manualFeatGrants?: readonly ManualFeatGrant[]
   /** 草稿规则版本；省略时按 2014 解析，保持既有调用方行为。 */
   readonly ruleset?: RulesetId
   /** 已选物种：用于展开物种授予的起源专长（如人类 Versatile）。 */
@@ -377,6 +379,7 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
       presetChoices,
       presetFeatIds,
     ).map(withOptionPresentation),
+    ...buildManualFeatChoiceCheckpoints(context.manualFeatGrants ?? [], repository, targetLevel).map(withOptionPresentation),
   ]
     .sort((left, right) => left.level - right.level)
 }

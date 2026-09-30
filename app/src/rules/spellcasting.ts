@@ -1,5 +1,5 @@
 import { abilityModifier, deriveAbilities, deriveCharacter, proficiencyBonus } from '@/rules/derive'
-import { getFeatChosenAbility, isSelectionCheckpointActive, listActiveFeats, listFeatGrants } from '@/rules/feats'
+import { getFeatChosenAbility, isFeatGrantParentActive, isSelectionCheckpointActive, listActiveFeats, listFeatGrants } from '@/rules/feats'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getDraftSpeciesRules } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
@@ -470,7 +470,9 @@ function selectionAlwaysPreparedSpellIds(draft: CharacterDraft, repository: Rule
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
     if (selection.checkpointId.startsWith('feat-child:')) {
-      const [, , featId, choiceId] = selection.checkpointId.split(':')
+      const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
+      if (!parentCheckpointId || !featId || !isFeatGrantParentActive(draft, parentCheckpointId, featId)) continue
+      if (!isSelectionCheckpointActive(draft, parentCheckpointId)) continue
       const choice = featId ? repository.getFeat(featId)?.choices?.find((item) => item.id === choiceId) : undefined
       if (choice?.spellGrant?.alwaysPrepared) ids.push(...selection.optionIds)
       continue
@@ -600,6 +602,7 @@ export function getSpellFreeCastings(
     const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
     // 孤立选择（换背景／物种后残留的旧起源专长检查点）不再授予免费施法。
     if (parentCheckpointId && !isSelectionCheckpointActive(draft, parentCheckpointId)) continue
+    if (!parentCheckpointId || !featId || !isFeatGrantParentActive(draft, parentCheckpointId, featId)) continue
     const feat = featId ? repository.getFeat(featId) : undefined
     const choice = feat?.choices?.find((item) => item.id === choiceId)
     const grant = choice?.spellGrant
