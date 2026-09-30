@@ -59,6 +59,14 @@ function inactiveId(
   return `inactive-spell:${reason}:${invalidatedAt}:${bucket}:${spellId}`
 }
 
+function reservationCheckpointRemainsActive(checkpointId: string, classId: string | undefined, targetLevel: number): boolean {
+  if (checkpointId.startsWith('wizard-2014-spell-mastery-')) return classId === 'class-2014-wizard' && targetLevel >= 18
+  if (checkpointId.startsWith('wizard-2014-signature-spells-')) return classId === 'class-2014-wizard' && targetLevel >= 20
+  if (checkpointId.startsWith('class-2024-wizard-spell-mastery-')) return classId === 'class-2024-wizard' && targetLevel >= 18
+  if (checkpointId.startsWith('class-2024-wizard-signature-spells-')) return classId === 'class-2024-wizard' && targetLevel >= 20
+  return false
+}
+
 /**
  * 在职业或等级变化发生时，把不再属于当前有效构筑的法术移入历史。
  * 合法但超出新数量上限的项目不会被自动挑选删除，仍留给用户在当前页面处理。
@@ -80,13 +88,19 @@ export function reconcileSpellSelections(
   const availableCantrips = new Set(available.filter((spell) => spell.level === 0).map((spell) => spell.id))
   const availableSpells = new Set(available.filter((spell) => spell.level > 0).map((spell) => spell.id))
   const archiveAll = change.reason === 'class-changed'
+  const activeReservationIds = new Set(draft.selections
+    .filter((selection) => !selection.invalidatedAt
+      && reservationCheckpointRemainsActive(selection.checkpointId, nextDraft.classId, nextDraft.targetLevel))
+    .flatMap((selection) => selection.optionIds))
   const archived: InactiveSpellSelection[] = []
   const existingHistory = [...(draft.inactiveSpellSelections ?? [])]
 
   const nextBuckets = Object.fromEntries(ACTIVE_BUCKETS.map((bucket) => {
     const retained: string[] = []
     for (const spellId of bucketIds(draft.spellSelections, bucket)) {
-      const remainsAvailable = bucket === 'cantripIds' ? availableCantrips.has(spellId) : availableSpells.has(spellId)
+      const remainsAvailable = bucket === 'cantripIds'
+        ? availableCantrips.has(spellId)
+        : availableSpells.has(spellId) && (bucket !== 'spellbookReservedSpellIds' || activeReservationIds.has(spellId))
       if (!archiveAll && remainsAvailable) {
         retained.push(spellId)
         continue
@@ -186,7 +200,8 @@ export function getInactiveSpellRestoreStatus(
       item.spellId === entry.spellId && item.originalBucket === 'spellbookExtraSpellIds')
     const normalCount = draft.spellSelections.spellbookSpellIds.filter((id) =>
       !(draft.spellSelections.transcribedSpellIds ?? []).includes(id)
-      && !(draft.spellSelections.spellbookExtraSpellIds ?? []).includes(id)).length
+      && (!(draft.spellSelections.spellbookExtraSpellIds ?? []).includes(id)
+        || (draft.spellSelections.spellbookReservedSpellIds ?? []).includes(id))).length
     return transcribedHistory || extraHistory || normalCount < getRequiredSpellbookCount(draft, config)
       ? { available: true, reason: '' }
       : { available: false, reason: '请先腾出一个正常学习法术名额。' }

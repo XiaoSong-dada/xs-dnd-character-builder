@@ -32,7 +32,7 @@ const emit = defineEmits<{
 const draft = toRef(() => props.draft)
 const headingEl = ref<HTMLElement>()
 const stepFlow = useSpellcastingStepFlow(draft, headingEl)
-const { config, availableSpells, requiredCantripCount, requiredSpellCount, requiredSpellbookCount, selectedSpellIds, spellbookExtraIds, spellbookExtraAllowance, normalSpellbookCount, invalidSpellSelectionCount, tasks, flow } = stepFlow
+const { config, availableSpells, requiredCantripCount, requiredSpellCount, requiredSpellbookCount, selectedSpellIds, spellbookExtraIds, spellbookReservedIds, spellbookExtraAllowance, normalSpellbookCount, invalidSpellSelectionCount, tasks, flow } = stepFlow
 const repository = computed(() => getRulesRepository(props.draft.ruleset))
 
 /** 吸底栏「去完成」经页面调用该句柄，与起源步骤同一出口（v1.9.1 R3-6）。 */
@@ -162,13 +162,17 @@ const activeFull = computed(() => activeCount.value >= activeRequiredCount.value
 const selectedCountLabel = computed(() => {
   if (flow.activeTaskId.value !== 'spellbook') return `${activeCount.value} / ${activeRequiredCount.value}`
   const transcribedCount = props.draft.spellSelections.transcribedSpellIds.length
-  return `${activeCount.value} / ${activeRequiredCount.value}${transcribedCount ? `（另有抄录 ${transcribedCount}）` : ''}`
+  const reservedCount = spellbookReservedIds.value.length
+  return `${activeCount.value} / ${activeRequiredCount.value}${reservedCount ? `（含预留 ${reservedCount}）` : ''}${transcribedCount ? `（另有抄录 ${transcribedCount}）` : ''}`
 })
 
 /** 抄录锁定与「已在书中」判定 + 候选徽标（v1.9.1 追加）：不可切换的候选项要说明原因，不能静默失效。 */
 const transcribedIds = computed(() => new Set(props.draft.spellSelections.transcribedSpellIds))
 function isTranscribedLocked(spell: SpellRule): boolean {
   return flow.activeTaskId.value === 'spellbook' && transcribedIds.value.has(spell.id)
+}
+function isReservedLocked(spell: SpellRule): boolean {
+  return flow.activeTaskId.value === 'spellbook' && spellbookReservedIds.value.includes(spell.id)
 }
 /** 额外入书候选含已在书中的法术（`getSpellbookExtraCandidates`）；这些法术不能再占额外名额。 */
 function isAlreadyInBook(spell: SpellRule): boolean {
@@ -177,6 +181,7 @@ function isAlreadyInBook(spell: SpellRule): boolean {
     && !spellbookExtraIds.value.includes(spell.id)
 }
 function candidateBadge(spell: SpellRule): string {
+  if (isReservedLocked(spell)) return '能力预留（占正常名额）'
   if (isTranscribedLocked(spell)) return '在书中（抄录，不可移除）'
   if (isAlreadyInBook(spell)) return '已在书中'
   if (taskSelectedIds.value.includes(spell.id)) return '已选'
@@ -199,7 +204,7 @@ function toggleSpellbook(id: string): void {
   const current = props.draft.spellSelections.spellbookSpellIds
   const transcribed = props.draft.spellSelections.transcribedSpellIds
   const removing = current.includes(id)
-  if (removing && transcribed.includes(id)) return
+  if (removing && (transcribed.includes(id) || spellbookReservedIds.value.includes(id))) return
   const nextBook = removing ? current.filter((spellId) => spellId !== id) : normalSpellbookCount.value < requiredSpellbookCount.value ? [...current, id] : current
   if (nextBook === current) return
   emit('change', {
@@ -212,7 +217,8 @@ function toggleSpellbook(id: string): void {
 function toggleSpellbookExtra(id: string): void {
   const book = props.draft.spellSelections.spellbookSpellIds
   if (spellbookExtraIds.value.includes(id)) {
-    emit('change', { ...props.draft.spellSelections, spellbookSpellIds: book.filter((spellId) => spellId !== id), spellbookExtraSpellIds: spellbookExtraIds.value.filter((spellId) => spellId !== id), preparedSpellIds: props.draft.spellSelections.preparedSpellIds.filter((spellId) => spellId !== id) })
+    const keepInBook = spellbookReservedIds.value.includes(id)
+    emit('change', { ...props.draft.spellSelections, spellbookSpellIds: keepInBook ? book : book.filter((spellId) => spellId !== id), spellbookExtraSpellIds: spellbookExtraIds.value.filter((spellId) => spellId !== id), preparedSpellIds: keepInBook ? props.draft.spellSelections.preparedSpellIds : props.draft.spellSelections.preparedSpellIds.filter((spellId) => spellId !== id) })
     return
   }
   if (book.includes(id) || spellbookExtraIds.value.length >= spellbookExtraAllowance.value) return
@@ -224,7 +230,13 @@ function toggleForTask(id: string): void {
   else if (flow.activeTaskId.value === 'spellbook-extra') toggleSpellbookExtra(id)
   else toggleSpell(id)
 }
-function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value === 'spellbook' && props.draft.spellSelections.transcribedSpellIds.includes(spellId)) }
+function canRemove(spellId: string): boolean {
+  return !(flow.activeTaskId.value === 'spellbook'
+    && (props.draft.spellSelections.transcribedSpellIds.includes(spellId) || spellbookReservedIds.value.includes(spellId)))
+}
+function lockedSelectionLabel(spellId: string): string {
+  return spellbookReservedIds.value.includes(spellId) ? '能力预留（占正常名额，不可移除）' : '在书中（抄录，不可移除）'
+}
 </script>
 
 <template>
@@ -244,11 +256,11 @@ function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value 
       <section class="spellcasting-step__panel" role="tabpanel">
         <h2 ref="headingEl" tabindex="-1">{{ flow.activeTask.value?.label }}</h2>
         <p v-if="flow.activeTaskId.value === 'spellbook-extra'" class="spellcasting-step__hint">子职提供的额外入书名额不占升级名额；该任务可选。</p>
-        <p v-else-if="config.mode === 'spellbook' && flow.activeTaskId.value === 'spellbook'" class="spellcasting-step__hint">先把升级获得的法术写入法术书，之后再从书中准备法术。</p>
+        <p v-else-if="config.mode === 'spellbook' && flow.activeTaskId.value === 'spellbook'" class="spellcasting-step__hint">先把升级获得的法术写入法术书，之后再从书中准备法术。精通法术／招牌法术的预留项已计入正常学习名额，需回到对应能力节点才能更换。</p>
 
         <ListShell v-if="selectedSpells.length" title="当前已选" :count="selectedCountLabel">
           <ExpandableOptionCard v-for="spell in selectedSpells" :key="`selected-${spell.id}`" :title="spell.name" :description="formatSpellLabel(spell)" expanded-label="法术效果" state="selected" @select="canRemove(spell.id) && toggleForTask(spell.id)">
-            <template #suffix><span v-if="!canRemove(spell.id)">在书中（抄录，不可移除）</span><span v-else>点击移除</span></template>
+            <template #suffix><span v-if="!canRemove(spell.id)">{{ lockedSelectionLabel(spell.id) }}</span><span v-else>点击移除</span></template>
             <template v-if="spell.description" #expanded>{{ spell.description }}</template>
           </ExpandableOptionCard>
         </ListShell>

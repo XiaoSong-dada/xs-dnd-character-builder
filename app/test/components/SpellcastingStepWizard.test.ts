@@ -88,6 +88,26 @@ describe('法师法术步骤（缺陷回归：抄录法术不可移除、计数�
     expect(change.spellbookSpellIds).toContain('spell-2014-sleep')
     expect(change.transcribedSpellIds).toEqual(['spell-2014-scorching-ray', 'spell-2014-misty-step'])
   })
+
+  it('能力预留法术计入正常名额并锁定，不能从法术书步骤移除', async () => {
+    const draft = wizardDraft()
+    const wrapper = mount(SpellcastingStep, {
+      props: {
+        draft: {
+          ...draft,
+          spellSelections: { ...draft.spellSelections, spellbookReservedSpellIds: ['spell-2014-magic-missile'] },
+        },
+      },
+    })
+    expect(wrapper.text()).toContain('6 / 14（含预留 1）（另有抄录 2）')
+    const reservedCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('魔法飞弹'))!
+    expect(reservedCard.text()).toContain('能力预留（占正常名额，不可移除）')
+
+    const emittedBefore = wrapper.emitted('change')?.length ?? 0
+    await reservedCard.get('button[aria-pressed]').trigger('click')
+    await vi.advanceTimersByTimeAsync(250)
+    expect(wrapper.emitted('change')?.length ?? 0).toBe(emittedBefore)
+  })
 })
 
 /** 3 级塑能师：升级名额 10 道已满，额外入书名额 2 道。 */

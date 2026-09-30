@@ -127,6 +127,30 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     routerReplace.mockClear()
   })
 
+  it('时间线保存法术精通时同步法术书预留，首次构筑更换选择会释放旧预留', async () => {
+    const wizard = makeFighterDraft({
+      id: 'test-wizard-reservation',
+      classId: 'class-2014-wizard',
+      subclassId: undefined,
+      targetLevel: 18,
+      name: '',
+      currentStep: 'timeline',
+      spellSelections: {
+        cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [],
+        spellbookReservedSpellIds: [],
+      },
+    })
+    const { page, store } = await setupPage(wizard)
+
+    page.saveTimelineSelection('wizard-2014-spell-mastery-1', ['spell-2014-magic-missile'])
+    expect(store.activeDraft?.spellSelections.spellbookSpellIds).toEqual(['spell-2014-magic-missile'])
+    expect(store.activeDraft?.spellSelections.spellbookReservedSpellIds).toEqual(['spell-2014-magic-missile'])
+
+    page.saveTimelineSelection('wizard-2014-spell-mastery-1', ['spell-2014-shield'])
+    expect(store.activeDraft?.spellSelections.spellbookSpellIds).toEqual(['spell-2014-shield'])
+    expect(store.activeDraft?.spellSelections.spellbookReservedSpellIds).toEqual(['spell-2014-shield'])
+  })
+
   it('adjustLevel 升级：始终弹确认，确认后更新等级并跳转时间线', async () => {
     const { page, store } = await setupPage(makeFighterDraft({ selections: level5Selections }))
 

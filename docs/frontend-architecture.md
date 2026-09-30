@@ -551,9 +551,9 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 
 `CharacterDraft` schema v9 在 v8 双规则版本契约上新增 `inactiveSpellSelections`、`spellbookReservedSpellIds` 与 `manualEdits.addedFeats`。专长授予以稳定 `instanceId` 区分重复实例；系统来源实例可确定性重建，手动来源实例持久化。两版草稿存于同一 `drafts:v9` 数组并以记录内 `ruleset` 区分。v2—v8 草稿与 JSON 导入统一经过 `draft-storage` 的 v9 迁移入口：v8 的 2014／2024 草稿均可无损补字段，v2—v7 继续只迁移 2014；v9 key 与旧 key 并存读取（旧键原文保留不删），保存只写 v9。当前键中无法解析、缺少版本、未知版本或非法 ID 的条目移入 `drafts:unsupported:v1` 隔离区原样保留，不进入草稿列表。产品入口通过 `rules/repositories.ts` 的 `OPEN_RULESETS`／`isRulesetOpen` 判断已开放版本，未开放版本的 JSON／ZIP 导入由 store 拦截并给出中文原因。车卡各步骤与导出模型一律通过 `getRulesRepository(draft.ruleset)` 解析候选和名称。图片 Blob 保存在 IndexedDB，普通 JSON 导出移除 `media`，ZIP 完整角色包负责跨设备迁移角色与图片。JSON 保存原始选择、人工差值、人工法术、手动专长与停用法术历史，不持久化可重算的派生结果。
 
-`rules/derive.ts` 是有效属性、熟练、技能、豁免与派生战斗数值的唯一规则出口；`rules/manual-edits.ts` 负责人工数据归一化和字段差值换算；`rules/spellcasting.ts` 负责有效环位及有效法术集合；`rules/weapon-attacks.ts` 将公共人工武器调整应用到每件可计算武器。角色卡、摘要、跑团助手和导出模型均消费这些有效结果。
+`rules/derive.ts` 是有效属性、熟练、技能、豁免与派生战斗数值的唯一规则出口；`rules/manual-edits.ts` 负责人工数据归一化和字段差值换算；`rules/spellcasting.ts` 负责有效环位、有效法术集合，以及高等级法师精通／招牌法术的首次候选与法术书预留协调（`getCheckpointCandidates`、`applySpellbookReservationSelection`）；`rules/weapon-attacks.ts` 将公共人工武器调整应用到每件可计算武器。角色卡、摘要、跑团助手和导出模型均消费这些有效结果。
 
-职业或等级变更后的法术协调由纯规则模块 `rules/spell-selection-reconciliation.ts` 负责：它依赖 `rules/spellcasting.ts` 与 `types/character.ts`，输出仍有效的选择、停用历史和恢复状态，不依赖 Vue、Store 或页面。`views/character-builder/hooks/useCharacterBuilderPage.ts` 在转职和降级入口调用协调器，`SpellcastingStep.vue` 只展示停用记录并上报恢复／删除意图；最终有效法术及导出仍只读取 `spellSelections`。
+职业或等级变更后的法术协调由纯规则模块 `rules/spell-selection-reconciliation.ts` 负责：它依赖 `rules/spellcasting.ts` 与 `types/character.ts`，输出仍有效的选择、停用历史和恢复状态，不依赖 Vue、Store 或页面。`views/character-builder/hooks/useCharacterBuilderPage.ts` 在转职和降级入口调用协调器，并在法术精通／招牌法术保存时原子写入选择与法术书预留；`SpellcastingStep.vue` 展示停用记录和预留锁定，并上报恢复／删除或普通法术选择意图；最终有效法术及导出仍只读取 `spellSelections`。
 
 草稿替换由 `character-drafts` Store 统一协调：写入前归一化人工编辑；若已有局内状态，则比较变更前后有效最大生命值、环位、生命骰总数与职业资源上限（`rules/session-resources.ts` 枚举，含免费施法），并通过 `rules/session-state.ts` 的 `reconcileSessionLimits` 同步当前状态与休息快照：资源已用量按新上限钳制、失效条目移除。页面组件不得直接改写 localStorage 或自行复制协调公式。
 

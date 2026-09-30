@@ -11,7 +11,7 @@ import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { hasBuildChoices } from '@/rules/draft-progress'
 import { isSourceEnabled, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { buildTimeline } from '@/rules/timeline'
-import { validateSpellSelections } from '@/rules/spellcasting'
+import { applySpellbookReservationSelection, isSpellbookReservationCheckpoint, validateSpellSelections } from '@/rules/spellcasting'
 import {
   deleteInactiveSpellSelection,
   reconcileSpellSelections,
@@ -561,7 +561,14 @@ export function useCharacterBuilderPage() {
   }
 
   function saveTimelineSelection(checkpointId: string, optionIds: readonly string[]): void {
-    store.saveSelection(checkpointId, optionIds)
+    const current = activeDraft.value
+    if (!current) return
+    if (isSpellbookReservationCheckpoint(checkpointId)) {
+      const reconciled = applySpellbookReservationSelection(current, checkpointId, optionIds)
+      store.updateDraft(reconciled)
+    } else {
+      store.saveSelection(checkpointId, optionIds)
+    }
     const draft = activeDraft.value
     if (!draft?.classId) return
     const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })

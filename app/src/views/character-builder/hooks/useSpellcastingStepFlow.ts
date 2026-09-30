@@ -6,6 +6,7 @@ import {
   getRequiredSpellbookCount,
   getRequiredSpellCount,
   getSelectedSpellIds,
+  getSelectedSpellbookReservationIds,
   getSpellbookExtraAllowance,
   getSpellcastingConfig,
 } from '@/rules/spellcasting'
@@ -26,9 +27,14 @@ export function useSpellcastingStepFlow(
   const requiredSpellbookCount = computed(() => config.value ? getRequiredSpellbookCount(draft.value, config.value) : 0)
   const selectedSpellIds = computed(() => config.value ? getSelectedSpellIds(draft.value, config.value) : [])
   const spellbookExtraIds = computed(() => draft.value.spellSelections.spellbookExtraSpellIds ?? [])
+  const spellbookReservedIds = computed(() => [...new Set([
+    ...(draft.value.spellSelections.spellbookReservedSpellIds ?? []),
+    ...getSelectedSpellbookReservationIds(draft.value),
+  ])])
   const spellbookExtraAllowance = computed(() => config.value ? getSpellbookExtraAllowance(draft.value, config.value) : 0)
   const normalSpellbookCount = computed(() => draft.value.spellSelections.spellbookSpellIds
-    .filter((id) => !draft.value.spellSelections.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
+    .filter((id) => !draft.value.spellSelections.transcribedSpellIds.includes(id)
+      && (!spellbookExtraIds.value.includes(id) || spellbookReservedIds.value.includes(id))).length)
 
   const availableIds = computed(() => new Set(availableSpells.value.map((spell) => spell.id)))
   const invalidCantripCount = computed(() => draft.value.spellSelections.cantripIds.filter((id) => !availableSpells.value.some((spell) => spell.id === id && spell.level === 0)).length)
@@ -84,7 +90,7 @@ export function useSpellcastingStepFlow(
   const flow = useSelectionTaskFlow(tasks, headingRef)
   return {
     config, availableSpells, requiredCantripCount, requiredSpellCount, requiredSpellbookCount,
-    selectedSpellIds, spellbookExtraIds, spellbookExtraAllowance, normalSpellbookCount,
+    selectedSpellIds, spellbookExtraIds, spellbookReservedIds, spellbookExtraAllowance, normalSpellbookCount,
     invalidCantripCount, invalidSpellbookCount, invalidSelectedCount, invalidSpellSelectionCount, tasks, flow,
   }
 }

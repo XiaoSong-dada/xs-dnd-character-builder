@@ -63,6 +63,23 @@ function optionCard(wrapper: ReturnType<typeof mountStep>, name: string) {
   return wrapper.findAll('.option-card').find((card) => card.text().includes(name))
 }
 
+describe('TimelineStep 高等级法师法术书预留', () => {
+  it('首次创建 18 级法师时展示职业表候选和占用正常名额提示', async () => {
+    const draft = draft2024({
+      classId: 'class-2024-wizard',
+      targetLevel: 18,
+      name: '',
+      currentStep: 'timeline',
+    })
+    const wrapper = mountStep(draft)
+    const header = wrapper.findAll('.timeline-step__header').find((item) => item.text().includes('选择1个一环法术精通'))!
+    await header.trigger('click')
+
+    expect(wrapper.text()).toContain('所选法术会预留到法术书，并占用正常学习名额')
+    expect(wrapper.findAll('.timeline-step__spell-group .option-card').length).toBeGreaterThan(0)
+  })
+})
+
 /** 点击可展开候选卡完成选择：需跳过 250ms 双击判定窗口（配合假定时器使用）。 */
 async function selectStaticCard(wrapper: ReturnType<typeof mountStep>, name: string) {
   await staticCard(wrapper, name)?.find('.expandable-option-card__main').trigger('click')

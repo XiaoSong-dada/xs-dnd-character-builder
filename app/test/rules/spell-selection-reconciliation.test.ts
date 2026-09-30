@@ -137,6 +137,32 @@ describe('法术选择协调', () => {
     ])
   })
 
+  it.each([
+    ['5e-2014', 'class-2014-wizard', 'wizard-2014-spell-mastery-1', 'spell-2014-magic-missile'],
+    ['5e-2024', 'class-2024-wizard', 'class-2024-wizard-spell-mastery-1', 'spell-2024-magic-missile'],
+  ] as const)('%s 降到 18 级以下会解除能力预留，但保留仍合法的法术书记录', (ruleset, classId, checkpointId, spellId) => {
+    const highDraft = draftFor(ruleset, classId, 20)
+    const draft: CharacterDraft = {
+      ...highDraft,
+      selections: [{ checkpointId, optionIds: [spellId], confirmedAt: '' }],
+      spellSelections: {
+        ...highDraft.spellSelections,
+        spellbookSpellIds: [spellId],
+        spellbookReservedSpellIds: [spellId],
+      },
+    }
+    const result = reconcileSpellSelections(draft, {
+      nextClassId: classId,
+      nextTargetLevel: 17,
+      reason: 'level-reduced',
+      invalidatedAt: '2026-09-29T01:00:00.000Z',
+    })
+
+    expect(result.spellSelections.spellbookSpellIds).toEqual([spellId])
+    expect(result.spellSelections.spellbookReservedSpellIds).toEqual([])
+    expect(result.archived).toContainEqual(expect.objectContaining({ spellId, originalBucket: 'spellbookReservedSpellIds' }))
+  })
+
   it('降级后仍合法但超出数量的已知法术保持有效，交给用户选择归档', () => {
     const highDraft = draftFor('5e-2014', 'class-2014-bard', 5)
     const lowDraft = { ...highDraft, targetLevel: 1 }

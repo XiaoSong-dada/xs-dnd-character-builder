@@ -11,7 +11,7 @@ import { abilityModifier, deriveAbilities } from '@/rules/derive'
 import { formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
 import { formatResourceText } from '@/rules/resources'
 import { buildTimeline } from '@/rules/timeline'
-import { getCheckpointCandidates } from '@/rules/spellcasting'
+import { getCheckpointCandidates, isSpellbookReservationCheckpoint } from '@/rules/spellcasting'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
 import type { ChoiceCheckpoint, ClassResource, RuleOption, SpellRule, SubclassFeature, SubclassRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
@@ -359,6 +359,7 @@ function spellCandidateDescription(spell: SpellRule): string {
           </ListShell>
         </div>
         <div v-else-if="checkpoint.candidateKind" class="timeline-step__spell-candidates">
+          <p v-if="isSpellbookReservationCheckpoint(checkpoint.id)" class="timeline-step__spell-reservation-hint">所选法术会预留到法术书，并占用正常学习名额；之后可在法术步骤继续补齐。</p>
           <label class="timeline-step__spell-search">
             <input v-model="spellCandidateSearch" type="search" placeholder="搜索法术名称" aria-label="搜索法术名称">
           </label>
@@ -379,7 +380,7 @@ function spellCandidateDescription(spell: SpellRule): string {
               </OptionCard>
             </ListShell>
           </section>
-          <p v-if="spellCandidateGroups(checkpoint).length === 0" class="timeline-step__spell-empty">没有匹配的法术{{ checkpoint.candidateKind.startsWith('spellbook') ? '（需先在法术步骤将法术写入法术书）' : '' }}。</p>
+          <p v-if="spellCandidateGroups(checkpoint).length === 0" class="timeline-step__spell-empty">没有匹配的法术{{ checkpoint.candidateKind.startsWith('spellbook') ? '（已有角色只能从当前有效法术书中选择）' : '' }}。</p>
         </div>
         <div v-if="checkpoint.kind === 'subclass' && subclassFeatures.length" class="timeline-step__subclass-features">
           <h4>子职特性 · {{ rulesRepository.getSubclass(selectedSubclassId ?? '')?.name ?? '' }}</h4>
@@ -449,6 +450,7 @@ function spellCandidateDescription(spell: SpellRule): string {
   &__options { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
 
   &__spell-candidates { display: grid; gap: 0.75rem; }
+  &__spell-reservation-hint { margin: 0; color: var(--color-text-muted); font-size: 0.78rem; line-height: 1.6; }
   &__mastery-candidates { display: grid; gap: 0.5rem; }
   &__spell-search input {
     width: 100%;
