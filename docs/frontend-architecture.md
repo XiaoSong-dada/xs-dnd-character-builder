@@ -547,11 +547,13 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
   -> src/types/character
 ```
 
-### 8.6.1 schema v8 与有效角色数据
+### 8.6.1 schema v9 与有效角色数据
 
-`CharacterDraft` schema v8 在 v7 的 `media` 引用基础上把 `ruleset` 升级为 `RulesetId`（`5e-2014`／`5e-2024`），两版草稿存于同一 `drafts:v8` 数组并以记录内 `ruleset` 区分。v2—v7 草稿与 JSON 导入统一经过 `draft-storage` 的 v8 迁移入口；v8 localStorage key 与旧 key 并存读取（旧键原文保留不删），保存只写 v8。当前键中无法解析、缺少版本、未知版本或非法 ID 的条目移入 `drafts:unsupported:v1` 隔离区原样保留，不进入草稿列表。产品入口通过 `rules/repositories.ts` 的 `OPEN_RULESETS`／`isRulesetOpen` 判断已开放版本（B09-01 起包含 2014 与 2024；2024 声明范围限于车卡流程），未开放版本的 JSON／ZIP 导入由 store 拦截并给出中文原因。车卡全部步骤（职业、起源、属性、时间线、装备、施法、身份、角色卡与导出模型）一律通过 `getRulesRepository(draft.ruleset)` 解析候选与名称，不得使用固定 2014 仓库；组件层通过 `ruleset` prop 或 `draft.ruleset` 传递版本（B09-02）。改版遵循“无构筑原地改、已有构筑另建”：`store.changeRuleset` 仅在无构筑时生效，`store.duplicateAsRuleset` 新建目标版本草稿（仅复制名称与图片）并保留原卡；更换职业会清空法术选择（保留人工添加法术）并在确认弹窗中列出影响（B09-03）。2024 来源步骤只展示核心书且不提供扩展书开关；无施法职业或未达施法子职等级的草稿在法术步骤显示说明并允许继续。图片 Blob 保存在 IndexedDB，普通 JSON 导出移除 `media`，ZIP 完整角色包负责跨设备迁移角色与图片。JSON 仍保存差值和人工法术来源，不降格为不可重算的绝对最终值。
+`CharacterDraft` schema v9 在 v8 双规则版本契约上新增 `inactiveSpellSelections`、`spellbookReservedSpellIds` 与 `manualEdits.addedFeats`。专长授予以稳定 `instanceId` 区分重复实例；系统来源实例可确定性重建，手动来源实例持久化。两版草稿存于同一 `drafts:v9` 数组并以记录内 `ruleset` 区分。v2—v8 草稿与 JSON 导入统一经过 `draft-storage` 的 v9 迁移入口：v8 的 2014／2024 草稿均可无损补字段，v2—v7 继续只迁移 2014；v9 key 与旧 key 并存读取（旧键原文保留不删），保存只写 v9。当前键中无法解析、缺少版本、未知版本或非法 ID 的条目移入 `drafts:unsupported:v1` 隔离区原样保留，不进入草稿列表。产品入口通过 `rules/repositories.ts` 的 `OPEN_RULESETS`／`isRulesetOpen` 判断已开放版本，未开放版本的 JSON／ZIP 导入由 store 拦截并给出中文原因。车卡各步骤与导出模型一律通过 `getRulesRepository(draft.ruleset)` 解析候选和名称。图片 Blob 保存在 IndexedDB，普通 JSON 导出移除 `media`，ZIP 完整角色包负责跨设备迁移角色与图片。JSON 保存原始选择、人工差值、人工法术、手动专长与停用法术历史，不持久化可重算的派生结果。
 
-`rules/derive.ts` 是有效属性、熟练、技能、豁免与派生战斗数值的唯一规则出口；`rules/manual-edits.ts` 负责人工数据归一化和字段差值换算；`rules/spellcasting.ts` 负责有效环位及有效法术集合；`rules/weapon-attacks.ts` 将公共人工武器调整应用到每件可计算武器。角色卡、摘要、跑团助手和导出模型均消费这些有效结果。
+`rules/derive.ts` 是有效属性、熟练、技能、豁免与派生战斗数值的唯一规则出口；`rules/manual-edits.ts` 负责人工数据归一化和字段差值换算；`rules/spellcasting.ts` 负责有效环位、有效法术集合，以及高等级法师精通／招牌法术的首次候选与法术书预留协调（`getCheckpointCandidates`、`applySpellbookReservationSelection`）；`rules/weapon-attacks.ts` 将公共人工武器调整应用到每件可计算武器。手动专长由能力页的 `AddManualFeatModal`／`ManualFeatConfigModal` 写入授予实例与实例级 `feat-child` 选择；`rules/feats.ts` 统一判断系统／手动父实例是否仍生效，`timeline` 只在校验、角色卡与导出上下文展开这些能力页检查点，避免污染普通重编时间线。角色卡、摘要、跑团助手和导出模型均消费这些有效结果。
+
+职业或等级变更后的法术协调由纯规则模块 `rules/spell-selection-reconciliation.ts` 负责：它依赖 `rules/spellcasting.ts` 与 `types/character.ts`，输出仍有效的选择、停用历史和恢复状态，不依赖 Vue、Store 或页面。`views/character-builder/hooks/useCharacterBuilderPage.ts` 在转职和降级入口调用协调器，并在法术精通／招牌法术保存时原子写入选择与法术书预留；`SpellcastingStep.vue` 展示停用记录和预留锁定，并上报恢复／删除或普通法术选择意图；最终有效法术及导出仍只读取 `spellSelections`。
 
 草稿替换由 `character-drafts` Store 统一协调：写入前归一化人工编辑；若已有局内状态，则比较变更前后有效最大生命值、环位、生命骰总数与职业资源上限（`rules/session-resources.ts` 枚举，含免费施法），并通过 `rules/session-state.ts` 的 `reconcileSessionLimits` 同步当前状态与休息快照：资源已用量按新上限钳制、失效条目移除。页面组件不得直接改写 localStorage 或自行复制协调公式。
 
@@ -560,15 +562,16 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 ### 8.7 rules 层
 
 ```text
-src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-expansions-2014,magic-items-xgte-tcoe-2014,generated/magic-items-catalog-index-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,starting-equipment-2014,subclasses-2014,spells-2014}
+src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-expansions-2014,magic-items-xgte-tcoe-2014,generated/magic-items-catalog-index-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,spell-lists-2014,starting-equipment-2014,subclasses-2014,spells-2014}
 src/rules/repositories.ts        -> src/rules/data/{classes-2024,sources-2024,subclasses-2024,skill-options-2024,barbarian-2024,bard-2024,cleric-2024,druid-2024,fighter-2024,invocations-2024,metamagic-2024,monk-2024,paladin-2024,ranger-2024,rogue-2024,sorcerer-2024,warlock-2024,wizard-2024,feats-2024,spells-2024,origins-2024,species-traits-2024,equipment-2024,equipment-packs-2024,magic-items-2024,starting-equipment-2024,weapon-masteries-2024} + src/rules/repository（双版本仓库注册、未知版本拒绝与已开放版本判断）
 src/rules/item-catalog-loader.ts  -> src/rules/data/generated/magic-items-catalog-2014（2014 动态 import，模块级 Promise 缓存 + 失败重试）；ruleset 为 5e-2024 时返回 equipment-2024 与 magic-items-2024 的静态装配（B09-06 最小切片；购买与来源关闭全量语义归 B07-05）
 src/rules/derive.ts              -> src/rules/{repositories,feats,origins,subclass-effects}
 src/rules/validate.ts            -> src/rules/{repositories,derive,feats,abilities,timeline,spellcasting,starting-equipment,weapon-mastery}（含子职必备戏法等提示级校验）
 src/rules/draft-progress.ts      （无内部依赖，纯函数：是否存在构筑选择，供改版门禁与后续影响提示使用）
 src/rules/dependency.ts          -> src/rules/{derive,repositories,feats,timeline}
-src/rules/timeline.ts            -> src/rules/{repositories,feats} + src/rules/data/feats-2014
+src/rules/timeline.ts            -> src/rules/{repositories,feats} + src/rules/data/feats-2014（含固定背景专长与手动授予实例的未预设子任务展开）
 src/rules/spellcasting.ts        -> src/rules/{repositories,derive,origins}（双版本施法配置、表定准备数、始终准备与免费施法来源解析）
+src/rules/spell-selection-reconciliation.ts -> src/rules/spellcasting + src/types/character（转职／降级后的有效选择、停用历史与显式恢复纯函数）
 src/rules/spellbook.ts           -> src/rules/{repositories,spellcasting}（抄录候选池、双费率费用、金币校验与抄录应用纯函数）
 src/rules/starting-equipment.ts  -> src/rules/{repositories,repository,currency}（按草稿版本解析；无版本兼容入口固定 2014）
 src/rules/weapon-mastery.ts      -> src/types/rules（2024 精通候选与选择校验纯函数）
@@ -576,7 +579,7 @@ src/rules/weapon-training.ts     （无依赖，纯函数：武器类别与训�
 src/rules/weapon-attacks.ts      -> src/rules/{repositories,weapon-training}（按草稿版本解析职业武器训练；2014 回退兼容映射）
 src/rules/resources.ts           （无依赖，纯函数：资源上限／恢复文本与骰池文本）
 src/rules/session-resources.ts   -> src/rules/{repositories,resources,spellcasting} + src/types/{character,rules,session-state}（跑团资源结算：枚举 2024 职业资源、可消耗骰池与免费施法授予、消耗／恢复 reducer、休息回充与短休力竭差额；2014 无登记保持为空）
-src/rules/feats.ts               -> src/rules/{repositories,source-books} + src/rules/data/{feats-2014,feats-2024}（双版本专长能力：授予、候选池、前置、复选、属性上限与护甲训练）
+src/rules/feats.ts               -> src/rules/{repositories,source-books} + src/rules/data/{feats-2014,feats-2024}（双版本专长能力：稳定授予实例、手动实例子检查点／存活判断、结构化效果摘要、候选池、前置、复选、属性上限与护甲训练）
 src/rules/origins.ts             -> src/rules/{repositories,source-books}（物种链、背景属性分配与校验、物种生命值）
 src/rules/languages.ts           （无 rules 内部依赖，纯函数：2024 标准语言表与 2014 候选；必选数＝规则基础值＋职业特性追加 `ClassFeature.languageChoices`）
 src/rules/origins.ts             -> src/rules/{languages,source-books}（起源派生与完成判定单一来源：`getOriginStepBlockers`／`isOriginStepComplete`，供步骤门禁、起源页提示、完成度与 validate 共用；B09-07）

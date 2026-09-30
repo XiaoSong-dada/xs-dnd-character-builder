@@ -381,7 +381,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         issues.push({ id: 'spellbook-transcription-invalid', step: 'spells', severity: 'error', message: '抄录记录包含不在法术书中或当前不可用的法术。', resolution: '返回角色卡法术页签检查抄录记录。' })
       }
     }
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
     const checkpointLevels = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint.level]))
     const isV2024 = repository.ruleset === '5e-2024'
     for (const checkpoint of timeline) {
@@ -389,12 +389,15 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       const count = selection?.optionIds.length ?? 0
       const bounds = getCheckpointSelectionBounds(draft, checkpoint)
       if (checkpoint.required && (count < bounds.min || count > bounds.max)) {
+        const manualFeatChoice = checkpoint.parentCheckpointId?.startsWith('manual-feat-') === true
         issues.push({
           id: `checkpoint-${checkpoint.id}`,
           step: checkpoint.step,
-          severity: 'error',
+          severity: manualFeatChoice ? 'warning' : 'error',
           message: `${checkpoint.level}级「${checkpoint.title}」尚未完成。`,
-          resolution: `需要选择${bounds.min === bounds.max ? bounds.min : `${bounds.min}—${bounds.max}`}项。`,
+          resolution: manualFeatChoice
+            ? `返回角色卡能力页配置手动专长，需要选择${bounds.min === bounds.max ? bounds.min : `${bounds.min}—${bounds.max}`}项。`
+            : `需要选择${bounds.min === bounds.max ? bounds.min : `${bounds.min}—${bounds.max}`}项。`,
         })
       }
       if (isV2024 && checkpoint.candidateKind === 'weapon-mastery' && selection) {

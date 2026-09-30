@@ -7,6 +7,21 @@ import { draft2024, emptySpellSelections, selection } from '../../fixtures/draft
 import { fighterDraft, fighterExportModel, wizardExportModel } from '../../fixtures/export-character'
 
 describe('CharacterExportModel', () => {
+  it('手动专长按实例导出中文来源，不暴露内部 ID', () => {
+    const base = draft2024({ classId: 'class-2024-fighter', targetLevel: 4 })
+    const draft = {
+      ...base,
+      manualEdits: {
+        ...base.manualEdits,
+        addedFeats: [{ instanceId: 'manual-secret-id', featId: 'feat-2024-tough', addedAt: '2026-09-30T00:00:00.000Z' }],
+      },
+    }
+    const model = buildCharacterExportModel(draft, deriveCharacter(draft))
+    const entry = model.features.find((feature) => feature.id === 'manual-secret-id')
+    expect(entry?.name).toBe('健壮（手动添加）')
+    expect(entry?.summary).not.toContain('manual-secret-id')
+  })
+
   it('集中提供身份、属性、战斗、钱币和人物资料', () => {
     const model = fighterExportModel()
     expect(model.identity).toMatchObject({ characterName: '测试角色', className: '战士', level: 4, raceName: '半兽人', backgroundName: '士兵' })

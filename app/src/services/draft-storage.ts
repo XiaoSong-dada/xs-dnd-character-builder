@@ -1,13 +1,23 @@
-import type { AbilityKey, CharacterDraft, CharacterMedia, LegacyDraftRecord, SpellSelections } from '@/types/character'
+import type {
+  AbilityKey,
+  CharacterDraft,
+  CharacterMedia,
+  InactiveSpellBucket,
+  InactiveSpellReason,
+  InactiveSpellSelection,
+  LegacyDraftRecord,
+  SpellSelections,
+} from '@/types/character'
 import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
 import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { rulesRepository } from '@/rules/repository'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { isRulesetId } from '@/rules/repositories'
 
-const STORAGE_KEY = 'dnd-character-builder:drafts:v8'
+const STORAGE_KEY = 'dnd-character-builder:drafts:v9'
 /** 无法解析的当前键条目隔离区；与草稿键分开，避免被 saveAll 覆盖。 */
 const QUARANTINE_KEY = 'dnd-character-builder:drafts:unsupported:v1'
+const V8_STORAGE_KEY = 'dnd-character-builder:drafts:v8'
 const V7_STORAGE_KEY = 'dnd-character-builder:drafts:v7'
 const V6_STORAGE_KEY = 'dnd-character-builder:drafts:v6'
 const V5_STORAGE_KEY = 'dnd-character-builder:drafts:v5'
@@ -16,8 +26,8 @@ const V3_STORAGE_KEY = 'dnd-character-builder:drafts:v3'
 const V2_STORAGE_KEY = 'dnd-character-builder:drafts:v2'
 const LEGACY_STORAGE_KEY = 'dnd-character-builder:drafts:v1'
 
-const SUPPORTED_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8])
-const MIGRATABLE_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7])
+const SUPPORTED_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8, 9])
+const MIGRATABLE_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8])
 
 interface QuarantinedDraftRecord {
   readonly fingerprint: string
@@ -37,13 +47,64 @@ function emptySpellSelections(): SpellSelections {
     spellbookSpellIds: [],
     transcribedSpellIds: [],
     spellbookExtraSpellIds: [],
+    spellbookReservedSpellIds: [],
   }
+}
+
+function normalizeStringIds(value: unknown): readonly string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    .filter((item, index, all) => all.indexOf(item) === index)
+}
+
+function normalizeSpellSelections(value: unknown): SpellSelections {
+  if (!value || typeof value !== 'object') return emptySpellSelections()
+  const selections = value as Partial<Record<keyof SpellSelections, unknown>>
+  return {
+    cantripIds: normalizeStringIds(selections.cantripIds),
+    knownSpellIds: normalizeStringIds(selections.knownSpellIds),
+    preparedSpellIds: normalizeStringIds(selections.preparedSpellIds),
+    spellbookSpellIds: normalizeStringIds(selections.spellbookSpellIds),
+    transcribedSpellIds: normalizeStringIds(selections.transcribedSpellIds),
+    spellbookExtraSpellIds: normalizeStringIds(selections.spellbookExtraSpellIds),
+    spellbookReservedSpellIds: normalizeStringIds(selections.spellbookReservedSpellIds),
+  }
+}
+
+const inactiveSpellBuckets = new Set<InactiveSpellBucket>([
+  'cantripIds', 'knownSpellIds', 'preparedSpellIds', 'spellbookSpellIds',
+  'transcribedSpellIds', 'spellbookExtraSpellIds', 'spellbookReservedSpellIds', 'manualAddedSpells',
+])
+const inactiveSpellReasons = new Set<InactiveSpellReason>([
+  'class-changed', 'level-reduced', 'source-removed', 'user-archived',
+])
+
+function normalizeInactiveSpellSelections(value: unknown): readonly InactiveSpellSelection[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const entry = item as Partial<InactiveSpellSelection>
+    if (typeof entry.id !== 'string' || entry.id.trim().length === 0) return []
+    if (typeof entry.spellId !== 'string' || entry.spellId.trim().length === 0) return []
+    if (!inactiveSpellBuckets.has(entry.originalBucket as InactiveSpellBucket)) return []
+    if (!inactiveSpellReasons.has(entry.reason as InactiveSpellReason)) return []
+    if (typeof entry.invalidatedAt !== 'string' || entry.invalidatedAt.trim().length === 0) return []
+    return [{
+      id: entry.id,
+      spellId: entry.spellId,
+      originalBucket: entry.originalBucket as InactiveSpellBucket,
+      reason: entry.reason as InactiveSpellReason,
+      ...(typeof entry.sourceKey === 'string' && entry.sourceKey.trim().length > 0 ? { sourceKey: entry.sourceKey } : {}),
+      invalidatedAt: entry.invalidatedAt,
+    }]
+  }).filter((item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index)
 }
 
 function isDraft(value: unknown): value is CharacterDraft {
   if (!value || typeof value !== 'object') return false
   const draft = value as Partial<CharacterDraft>
-  return draft.schemaVersion === 8 && isRulesetId(draft.ruleset) && typeof draft.id === 'string'
+  return draft.schemaVersion === 9 && isRulesetId(draft.ruleset) && typeof draft.id === 'string'
 }
 
 function normalizeMedia(value: unknown): CharacterMedia | undefined {
@@ -102,24 +163,21 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     currency: draft.currency ?? EMPTY_CURRENCY,
     adventureGold: draft.adventureGold ?? 0,
     equipmentNeedsReview: draft.equipmentNeedsReview ?? false,
-    spellSelections: draft.spellSelections
-      ? {
-          ...draft.spellSelections,
-          transcribedSpellIds: draft.spellSelections.transcribedSpellIds ?? [],
-          spellbookExtraSpellIds: draft.spellSelections.spellbookExtraSpellIds ?? [],
-        }
-      : emptySpellSelections(),
+    spellSelections: normalizeSpellSelections(draft.spellSelections),
+    inactiveSpellSelections: normalizeInactiveSpellSelections(draft.inactiveSpellSelections),
     manualEdits: normalizeManualEdits(draft.manualEdits),
     media: normalizeMedia(draft.media),
   }
 }
 
-/** v2—v7 统一迁移入口；旧格式均为 2014 草稿，无法识别的记录返回 undefined。 */
-export function migrateDraftToV8(value: unknown): CharacterDraft | undefined {
+/** v2—v8 统一迁移入口；v2—v7 仅支持 2014，v8 支持两版。 */
+export function migrateDraftToV9(value: unknown): CharacterDraft | undefined {
   if (!value || typeof value !== 'object') return undefined
   const draft = value as Record<string, unknown>
   const oldVersion = Number(draft.schemaVersion)
-  if (!MIGRATABLE_SCHEMA_VERSIONS.has(oldVersion) || draft.ruleset !== '5e-2014' || typeof draft.id !== 'string') return undefined
+  if (!MIGRATABLE_SCHEMA_VERSIONS.has(oldVersion) || typeof draft.id !== 'string') return undefined
+  if (oldVersion < 8 && draft.ruleset !== '5e-2014') return undefined
+  if (oldVersion === 8 && !isRulesetId(draft.ruleset)) return undefined
   const inventoryItemIds = oldVersion === 2 && Array.isArray(draft.inventoryItemIds)
     ? draft.inventoryItemIds.filter((item): item is string => typeof item === 'string')
     : []
@@ -139,7 +197,10 @@ export function migrateDraftToV8(value: unknown): CharacterDraft | undefined {
     }))
     : (draft.inventory as CharacterDraft['inventory'] | undefined) ?? []
   const enabledSourceIds = oldVersion >= 5
-    ? normalizeEnabledSourceIds(draft.enabledSourceIds as readonly string[] | undefined)
+    ? normalizeEnabledSourceIds(
+        draft.enabledSourceIds as readonly string[] | undefined,
+        oldVersion >= 8 && isRulesetId(draft.ruleset) ? draft.ruleset : '5e-2014',
+      )
     : inferEnabledSourceIds({
       ...draft,
       inventory: migratedInventory,
@@ -147,7 +208,7 @@ export function migrateDraftToV8(value: unknown): CharacterDraft | undefined {
   const { preferences: _preferences, inventoryItemIds: _inventoryItemIds, equippedItemIds: _equippedItemIds, ...rest } = draft
   return normalizeDraft({
     ...rest,
-    schemaVersion: 8,
+    schemaVersion: 9,
     currentStep: draft.currentStep === 'preferences' ? 'sources' : draft.currentStep,
     enabledSourceIds,
     startingEquipmentSelections: oldVersion === 2 ? [] : draft.startingEquipmentSelections,
@@ -158,19 +219,21 @@ export function migrateDraftToV8(value: unknown): CharacterDraft | undefined {
     equipmentNeedsReview: oldVersion === 2 ? true : draft.equipmentNeedsReview,
     manualEdits: oldVersion >= 6 ? draft.manualEdits : EMPTY_MANUAL_EDITS,
     media: oldVersion >= 7 ? draft.media : undefined,
+    inactiveSpellSelections: oldVersion >= 9 ? draft.inactiveSpellSelections : [],
   } as unknown as CharacterDraft)
 }
 
-/** 当前键与导入共用的解析入口：v8 记录规范化，v2—v7 记录迁移；其余返回 undefined。 */
+/** 当前键与导入共用的解析入口：v9 规范化，v2—v8 迁移。 */
 export function parseCharacterDraft(value: unknown): CharacterDraft | undefined {
   if (isDraft(value)) return normalizeDraft(value)
-  return migrateDraftToV8(value)
+  return migrateDraftToV9(value)
 }
 
-/** 兼容旧调用名；统一返回当前 v8 草稿。 */
-export const migrateDraftToV7 = migrateDraftToV8
-export const migrateDraftToV6 = migrateDraftToV8
-export const migrateDraftToV5 = migrateDraftToV8
+/** 兼容旧调用名；统一返回当前 v9 草稿。 */
+export const migrateDraftToV8 = migrateDraftToV9
+export const migrateDraftToV7 = migrateDraftToV9
+export const migrateDraftToV6 = migrateDraftToV9
+export const migrateDraftToV5 = migrateDraftToV9
 
 /** 无法解析条目的中文原因；与 JSON 导入提示保持一致。 */
 function draftFailureReason(value: unknown): string {
@@ -245,12 +308,13 @@ export const DraftStorageService = {
     quarantineRejected(rejected)
     const seenIds = new Set(current.map((draft) => draft.id))
     const migrated = [
-      ...readArray(V7_STORAGE_KEY).map(migrateDraftToV8),
-      ...readArray(V6_STORAGE_KEY).map(migrateDraftToV8),
-      ...readArray(V5_STORAGE_KEY).map(migrateDraftToV8),
-      ...readArray(V4_STORAGE_KEY).map(migrateDraftToV8),
-      ...readArray(V3_STORAGE_KEY).map(migrateDraftToV8),
-      ...readArray(V2_STORAGE_KEY).map(migrateDraftToV8),
+      ...readArray(V8_STORAGE_KEY).map(migrateDraftToV9),
+      ...readArray(V7_STORAGE_KEY).map(migrateDraftToV9),
+      ...readArray(V6_STORAGE_KEY).map(migrateDraftToV9),
+      ...readArray(V5_STORAGE_KEY).map(migrateDraftToV9),
+      ...readArray(V4_STORAGE_KEY).map(migrateDraftToV9),
+      ...readArray(V3_STORAGE_KEY).map(migrateDraftToV9),
+      ...readArray(V2_STORAGE_KEY).map(migrateDraftToV9),
     ]
       .filter((draft): draft is CharacterDraft => {
         if (!draft || seenIds.has(draft.id)) return false

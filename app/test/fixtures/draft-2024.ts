@@ -16,7 +16,7 @@ export function emptySpellSelections(): CharacterDraft['spellSelections'] {
 export function draft2024(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
   const now = '2026-09-11T00:00:00.000Z'
   return {
-    schemaVersion: 8,
+    schemaVersion: 9,
     id: 'b04-test-draft',
     ruleset: '5e-2024',
     createdAt: now,
@@ -39,6 +39,7 @@ export function draft2024(overrides: Partial<CharacterDraft> = {}): CharacterDra
     adventureGold: 0,
     equipmentNeedsReview: false,
     spellSelections: emptySpellSelections(),
+    inactiveSpellSelections: [],
     manualEdits: EMPTY_MANUAL_EDITS,
     name: '测试角色',
     alignment: '',

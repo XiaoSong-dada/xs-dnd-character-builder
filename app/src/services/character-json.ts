@@ -4,7 +4,7 @@ import { isRulesetId } from '@/rules/repositories'
 
 export type ImportErrorCode = 'invalid-json' | 'unsupported-schema' | 'ruleset-mismatch' | 'incomplete-data'
 
-const SUPPORTED_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8])
+const SUPPORTED_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8, 9])
 
 export class CharacterImportError extends Error {
   constructor(

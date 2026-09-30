@@ -7,6 +7,7 @@ import UiNotice from '@/components/ui/UiNotice.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/ability-labels'
 import { getRulesRepository } from '@/rules/repositories'
+import { getInactiveSpellRestoreStatus } from '@/rules/spell-selection-reconciliation'
 import {
   getAlwaysPreparedSpellIds,
   getMaximumSpellLevel,
@@ -15,7 +16,7 @@ import {
   sortSpellsByLevel,
   usesPreparedSelection,
 } from '@/rules/spellcasting'
-import type { CharacterDraft, SpellSelections } from '@/types/character'
+import type { CharacterDraft, InactiveSpellReason, SpellSelections } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 import SelectionTaskNavigator from '@/views/character-builder/components/SelectionTaskNavigator.vue'
@@ -23,11 +24,15 @@ import { useSpellcastingStepFlow } from '@/views/character-builder/hooks/useSpel
 import type { SelectionTaskFocusHandle } from '@/views/character-builder/selection-task'
 
 const props = defineProps<{ draft: CharacterDraft }>()
-const emit = defineEmits<{ change: [value: SpellSelections] }>()
+const emit = defineEmits<{
+  change: [value: SpellSelections]
+  restoreInactive: [inactiveId: string]
+  deleteInactive: [inactiveId: string]
+}>()
 const draft = toRef(() => props.draft)
 const headingEl = ref<HTMLElement>()
 const stepFlow = useSpellcastingStepFlow(draft, headingEl)
-const { config, availableSpells, requiredCantripCount, requiredSpellCount, requiredSpellbookCount, selectedSpellIds, spellbookExtraIds, spellbookExtraAllowance, normalSpellbookCount, invalidSpellSelectionCount, tasks, flow } = stepFlow
+const { config, availableSpells, requiredCantripCount, requiredSpellCount, requiredSpellbookCount, selectedSpellIds, spellbookExtraIds, spellbookReservedIds, spellbookExtraAllowance, normalSpellbookCount, invalidSpellSelectionCount, tasks, flow } = stepFlow
 const repository = computed(() => getRulesRepository(props.draft.ruleset))
 
 /** 吸底栏「去完成」经页面调用该句柄，与起源步骤同一出口（v1.9.1 R3-6）。 */
@@ -65,6 +70,27 @@ const spellSlotsLabel = computed(() => {
 })
 const alwaysPreparedSpells = computed(() => getAlwaysPreparedSpellIds(props.draft).map((id) => repository.value.getSpell(id)).filter((spell): spell is SpellRule => Boolean(spell)))
 const spellbookExtraCandidates = computed(() => config.value ? getSpellbookExtraCandidates(props.draft, config.value) : [])
+const inactiveReasonLabels: Readonly<Record<InactiveSpellReason, string>> = {
+  'class-changed': '更换职业',
+  'level-reduced': '降低等级',
+  'source-removed': '来源失效',
+  'user-archived': '手动停用',
+}
+const inactiveBucketLabels = {
+  cantripIds: '戏法',
+  knownSpellIds: '已知法术',
+  preparedSpellIds: '准备法术',
+  spellbookSpellIds: '法术书',
+  transcribedSpellIds: '抄录法术',
+  spellbookExtraSpellIds: '子职额外入书',
+  spellbookReservedSpellIds: '高等级能力预留',
+  manualAddedSpells: '人工添加法术',
+} as const
+const inactiveSpellEntries = computed(() => (props.draft.inactiveSpellSelections ?? []).map((entry) => ({
+  entry,
+  spell: repository.value.getSpell(entry.spellId),
+  restore: getInactiveSpellRestoreStatus(props.draft, entry),
+})))
 
 const taskSelectedIds = computed<readonly string[]>(() => {
   switch (flow.activeTaskId.value) {
@@ -136,13 +162,17 @@ const activeFull = computed(() => activeCount.value >= activeRequiredCount.value
 const selectedCountLabel = computed(() => {
   if (flow.activeTaskId.value !== 'spellbook') return `${activeCount.value} / ${activeRequiredCount.value}`
   const transcribedCount = props.draft.spellSelections.transcribedSpellIds.length
-  return `${activeCount.value} / ${activeRequiredCount.value}${transcribedCount ? `（另有抄录 ${transcribedCount}）` : ''}`
+  const reservedCount = spellbookReservedIds.value.length
+  return `${activeCount.value} / ${activeRequiredCount.value}${reservedCount ? `（含预留 ${reservedCount}）` : ''}${transcribedCount ? `（另有抄录 ${transcribedCount}）` : ''}`
 })
 
 /** 抄录锁定与「已在书中」判定 + 候选徽标（v1.9.1 追加）：不可切换的候选项要说明原因，不能静默失效。 */
 const transcribedIds = computed(() => new Set(props.draft.spellSelections.transcribedSpellIds))
 function isTranscribedLocked(spell: SpellRule): boolean {
   return flow.activeTaskId.value === 'spellbook' && transcribedIds.value.has(spell.id)
+}
+function isReservedLocked(spell: SpellRule): boolean {
+  return flow.activeTaskId.value === 'spellbook' && spellbookReservedIds.value.includes(spell.id)
 }
 /** 额外入书候选含已在书中的法术（`getSpellbookExtraCandidates`）；这些法术不能再占额外名额。 */
 function isAlreadyInBook(spell: SpellRule): boolean {
@@ -151,6 +181,7 @@ function isAlreadyInBook(spell: SpellRule): boolean {
     && !spellbookExtraIds.value.includes(spell.id)
 }
 function candidateBadge(spell: SpellRule): string {
+  if (isReservedLocked(spell)) return '能力预留（占正常名额）'
   if (isTranscribedLocked(spell)) return '在书中（抄录，不可移除）'
   if (isAlreadyInBook(spell)) return '已在书中'
   if (taskSelectedIds.value.includes(spell.id)) return '已选'
@@ -173,7 +204,7 @@ function toggleSpellbook(id: string): void {
   const current = props.draft.spellSelections.spellbookSpellIds
   const transcribed = props.draft.spellSelections.transcribedSpellIds
   const removing = current.includes(id)
-  if (removing && transcribed.includes(id)) return
+  if (removing && (transcribed.includes(id) || spellbookReservedIds.value.includes(id))) return
   const nextBook = removing ? current.filter((spellId) => spellId !== id) : normalSpellbookCount.value < requiredSpellbookCount.value ? [...current, id] : current
   if (nextBook === current) return
   emit('change', {
@@ -186,7 +217,8 @@ function toggleSpellbook(id: string): void {
 function toggleSpellbookExtra(id: string): void {
   const book = props.draft.spellSelections.spellbookSpellIds
   if (spellbookExtraIds.value.includes(id)) {
-    emit('change', { ...props.draft.spellSelections, spellbookSpellIds: book.filter((spellId) => spellId !== id), spellbookExtraSpellIds: spellbookExtraIds.value.filter((spellId) => spellId !== id), preparedSpellIds: props.draft.spellSelections.preparedSpellIds.filter((spellId) => spellId !== id) })
+    const keepInBook = spellbookReservedIds.value.includes(id)
+    emit('change', { ...props.draft.spellSelections, spellbookSpellIds: keepInBook ? book : book.filter((spellId) => spellId !== id), spellbookExtraSpellIds: spellbookExtraIds.value.filter((spellId) => spellId !== id), preparedSpellIds: keepInBook ? props.draft.spellSelections.preparedSpellIds : props.draft.spellSelections.preparedSpellIds.filter((spellId) => spellId !== id) })
     return
   }
   if (book.includes(id) || spellbookExtraIds.value.length >= spellbookExtraAllowance.value) return
@@ -198,7 +230,13 @@ function toggleForTask(id: string): void {
   else if (flow.activeTaskId.value === 'spellbook-extra') toggleSpellbookExtra(id)
   else toggleSpell(id)
 }
-function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value === 'spellbook' && props.draft.spellSelections.transcribedSpellIds.includes(spellId)) }
+function canRemove(spellId: string): boolean {
+  return !(flow.activeTaskId.value === 'spellbook'
+    && (props.draft.spellSelections.transcribedSpellIds.includes(spellId) || spellbookReservedIds.value.includes(spellId)))
+}
+function lockedSelectionLabel(spellId: string): string {
+  return spellbookReservedIds.value.includes(spellId) ? '能力预留（占正常名额，不可移除）' : '在书中（抄录，不可移除）'
+}
 </script>
 
 <template>
@@ -218,11 +256,11 @@ function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value 
       <section class="spellcasting-step__panel" role="tabpanel">
         <h2 ref="headingEl" tabindex="-1">{{ flow.activeTask.value?.label }}</h2>
         <p v-if="flow.activeTaskId.value === 'spellbook-extra'" class="spellcasting-step__hint">子职提供的额外入书名额不占升级名额；该任务可选。</p>
-        <p v-else-if="config.mode === 'spellbook' && flow.activeTaskId.value === 'spellbook'" class="spellcasting-step__hint">先把升级获得的法术写入法术书，之后再从书中准备法术。</p>
+        <p v-else-if="config.mode === 'spellbook' && flow.activeTaskId.value === 'spellbook'" class="spellcasting-step__hint">先把升级获得的法术写入法术书，之后再从书中准备法术。精通法术／招牌法术的预留项已计入正常学习名额，需回到对应能力节点才能更换。</p>
 
         <ListShell v-if="selectedSpells.length" title="当前已选" :count="selectedCountLabel">
           <ExpandableOptionCard v-for="spell in selectedSpells" :key="`selected-${spell.id}`" :title="spell.name" :description="formatSpellLabel(spell)" expanded-label="法术效果" state="selected" @select="canRemove(spell.id) && toggleForTask(spell.id)">
-            <template #suffix><span v-if="!canRemove(spell.id)">在书中（抄录，不可移除）</span><span v-else>点击移除</span></template>
+            <template #suffix><span v-if="!canRemove(spell.id)">{{ lockedSelectionLabel(spell.id) }}</span><span v-else>点击移除</span></template>
             <template v-if="spell.description" #expanded>{{ spell.description }}</template>
           </ExpandableOptionCard>
         </ListShell>
@@ -244,6 +282,23 @@ function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value 
         </ListShell>
       </section>
     </template>
+    <section v-if="inactiveSpellEntries.length" class="spellcasting-step__inactive" aria-labelledby="inactive-spells-title">
+      <div>
+        <h2 id="inactive-spells-title">停用记录</h2>
+        <p>这些法术已退出当前规则，不参与校验、角色卡或资源计算。满足当前条件时可显式恢复。</p>
+      </div>
+      <article v-for="item in inactiveSpellEntries" :key="item.entry.id" class="spellcasting-step__inactive-item">
+        <div>
+          <strong>{{ item.spell?.name ?? item.entry.spellId }}</strong>
+          <span>{{ inactiveReasonLabels[item.entry.reason] }} · {{ inactiveBucketLabels[item.entry.originalBucket] }}</span>
+          <small v-if="!item.restore.available">{{ item.restore.reason }}</small>
+        </div>
+        <div class="spellcasting-step__inactive-actions">
+          <button type="button" :disabled="!item.restore.available" @click="emit('restoreInactive', item.entry.id)">恢复</button>
+          <button type="button" @click="emit('deleteInactive', item.entry.id)">删除记录</button>
+        </div>
+      </article>
+    </section>
   </section>
 </template>
 
@@ -260,6 +315,49 @@ function canRemove(spellId: string): boolean { return !(flow.activeTaskId.value 
   &__panel { display: grid; gap: 0.65rem; }
   &__panel > h2 { margin: 0; font-size: 1rem; outline: none; }
   &__hint { margin: 0; color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; }
+  &__inactive {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.8rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+
+    h2,
+    p { margin: 0; }
+
+    p,
+    span,
+    small { color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; }
+  }
+  &__inactive-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--color-border);
+
+    > div:first-child { display: grid; gap: 0.1rem; }
+  }
+  &__inactive-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+
+    button {
+      min-height: 2.75rem;
+      padding: 0 0.7rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font: inherit;
+      cursor: pointer;
+
+      &:disabled { cursor: not-allowed; opacity: 0.5; }
+    }
+  }
   &__filters {
     display: grid;
     // 容器自适应（v1.9.1 R2）：车卡容器恒为 32rem 且不随视口变宽，

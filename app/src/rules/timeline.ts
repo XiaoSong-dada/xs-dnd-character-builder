@@ -1,9 +1,9 @@
 import { getRulesRepository } from '@/rules/repositories'
 import { FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
-import { getFeatPool } from '@/rules/feats'
+import { buildManualFeatChoiceCheckpoints, getFeatPool } from '@/rules/feats'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { CheckpointKind, ChoiceCheckpoint, RulesRepository } from '@/types/rules'
-import type { ChoiceSelection, RulesetId } from '@/types/character'
+import type { ChoiceSelection, ManualFeatGrant, RulesetId } from '@/types/character'
 import { SKILL_IDS } from '@/rules/derive'
 
 const variantHumanCheckpoint: ChoiceCheckpoint = {
@@ -25,6 +25,8 @@ export interface TimelineContext {
   readonly subclassId?: string
   readonly enabledSourceIds?: readonly string[]
   readonly selections?: readonly ChoiceSelection[]
+  /** 角色卡手动添加的专长实例；提供时追加实例隔离的必选子检查点。 */
+  readonly manualFeatGrants?: readonly ManualFeatGrant[]
   /** 草稿规则版本；省略时按 2014 解析，保持既有调用方行为。 */
   readonly ruleset?: RulesetId
   /** 已选物种：用于展开物种授予的起源专长（如人类 Versatile）。 */
@@ -255,18 +257,27 @@ function buildFeatChoiceCheckpoints(
   parentCheckpoints: readonly ChoiceCheckpoint[],
   selections: readonly ChoiceSelection[],
   repository: RulesRepository,
+  fixedFeatIds: Readonly<Record<string, string>> = {},
+  presetChoices: Readonly<Record<string, Readonly<Record<string, readonly string[]>>>> = {},
+  presetFeatIds: Readonly<Record<string, string>> = {},
 ): readonly ChoiceCheckpoint[] {
   return parentCheckpoints.flatMap((parent) => {
     const selected = selections.find((item) => item.checkpointId === parent.id && !item.invalidatedAt)
-    const feat = selected?.optionIds.flatMap((id) => repository.getFeat(id) ?? [])[0]
+    const selectedFeatId = selected?.optionIds[0] ?? fixedFeatIds[parent.id]
+    const feat = selectedFeatId ? repository.getFeat(selectedFeatId) : undefined
     if (!feat?.choices?.length) return []
-    return feat.choices.map((choice) => ({
+    const presets = presetFeatIds[parent.id] === feat.id ? (presetChoices[parent.id] ?? {}) : {}
+    const presetLabels = Object.values(presets)
+      .flatMap((ids) => ids.map((id) => repository.getOption(id)?.name ?? id))
+    return feat.choices.filter((choice) => !presets[choice.id]).map((choice) => ({
       id: `feat-child:${parent.id}:${feat.id}:${choice.id}`,
       level: parent.level,
       step: 'timeline' as const,
       kind: choice.candidateKind === 'proficient-skills' ? 'expertise' as const : 'feat-feature' as const,
       title: `${feat.name} · ${choice.title}`,
-      description: choice.description,
+      description: presetLabels.length > 0
+        ? `背景已固定：${presetLabels.join('、')}。${choice.description}`
+        : choice.description,
       required: true,
       minSelections: choice.minSelections,
       maxSelections: choice.maxSelections,
@@ -329,6 +340,46 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
         return !option || context.enabledSourceIds === undefined || isSourceEnabled(option.sourceIds, context.enabledSourceIds, repository)
       }),
     }))
-  return [...baseTimeline, ...buildFeatChoiceCheckpoints(baseTimeline, context.selections ?? [], repository).map(withOptionPresentation)]
+  const background = context.backgroundId ? repository.getBackground(context.backgroundId) : undefined
+  const fixedBackgroundParentId = background?.originFeatId
+    && !background.originFeatOptions?.length
+    && !(background.originFeatChoices?.count)
+    && repository.getFeat(background.originFeatId)?.choices?.length
+    ? `${background.id}-origin-feat`
+    : undefined
+  const fixedBackgroundParent: ChoiceCheckpoint[] = fixedBackgroundParentId ? [{
+    id: fixedBackgroundParentId,
+    level: 1,
+    step: 'timeline',
+    kind: 'feat',
+    title: `${background?.name ?? ''}固定专长`,
+    description: '背景自动授予的专长。',
+    required: false,
+    minSelections: 0,
+    maxSelections: 0,
+    optionIds: [],
+  }] : []
+  const fixedFeatIds = fixedBackgroundParentId && background?.originFeatId
+    ? { [fixedBackgroundParentId]: background.originFeatId }
+    : {}
+  const backgroundParentId = background ? `${background.id}-origin-feat` : undefined
+  const presetChoices = backgroundParentId && background?.originFeatChoicePresets
+    ? { [backgroundParentId]: background.originFeatChoicePresets }
+    : {}
+  const presetFeatIds = backgroundParentId && background?.originFeatId
+    ? { [backgroundParentId]: background.originFeatId }
+    : {}
+  return [
+    ...baseTimeline,
+    ...buildFeatChoiceCheckpoints(
+      [...baseTimeline, ...fixedBackgroundParent],
+      context.selections ?? [],
+      repository,
+      fixedFeatIds,
+      presetChoices,
+      presetFeatIds,
+    ).map(withOptionPresentation),
+    ...buildManualFeatChoiceCheckpoints(context.manualFeatGrants ?? [], repository, targetLevel).map(withOptionPresentation),
+  ]
     .sort((left, right) => left.level - right.level)
 }

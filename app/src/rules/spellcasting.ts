@@ -1,13 +1,13 @@
 import { abilityModifier, deriveAbilities, deriveCharacter, proficiencyBonus } from '@/rules/derive'
-import { getFeatChosenAbility, isSelectionCheckpointActive, listActiveFeats, listFeatGrants } from '@/rules/feats'
+import { getFeatChosenAbility, isFeatGrantParentActive, isSelectionCheckpointActive, listActiveFeats, listFeatGrants } from '@/rules/feats'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getDraftSpeciesRules } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
 import { getWeaponMasteryCandidates } from '@/rules/weapon-mastery'
 import { isWeaponTrainingCovered } from '@/rules/weapon-training'
-import { abilityFromSpeciesSpellAbilityOption, classIdFromSpellListOption } from '@/rules/data/spell-lists-2024'
+import { abilityFromSpeciesSpellAbilityOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { AbilityKey, CharacterDraft, ChoiceSelection, RulesetId } from '@/types/character'
+import type { AbilityKey, CharacterDraft, ChoiceSelection, RulesetId, SpellSelections } from '@/types/character'
 import type { ChoiceCheckpoint, FixedSpellGrant, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant, SpellRule } from '@/types/rules'
 
 type SpellcraftDraft = Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds' | 'ruleset'>
@@ -265,11 +265,79 @@ export function sortSpellsByLevel(spells: readonly SpellRule[], ruleset: Ruleset
   return [...spells].sort(compareSpellsByLevel(getSpellOrderIndex(ruleset)))
 }
 
+/** 法术精通／招牌法术检查点：两版规则使用稳定前缀，且只有这些节点会预留法术书法术。 */
+export function isSpellbookReservationCheckpoint(checkpointId: string): boolean {
+  return checkpointId.startsWith('wizard-2014-spell-mastery-')
+    || checkpointId.startsWith('wizard-2014-signature-spells-')
+    || checkpointId.startsWith('class-2024-wizard-spell-mastery-')
+    || checkpointId.startsWith('class-2024-wizard-signature-spells-')
+}
+
+/** 当前有效的高等级法师能力选择；用于最终一致性校验与旧草稿兼容。 */
+export function getSelectedSpellbookReservationIds(draft: Pick<CharacterDraft, 'selections'>): readonly string[] {
+  return [...new Set(draft.selections
+    .filter((selection) => !selection.invalidatedAt && isSpellbookReservationCheckpoint(selection.checkpointId))
+    .flatMap((selection) => selection.optionIds))]
+}
+
+/**
+ * 首次高等级车卡在时间线先于法术页：此时只有预留法术可以已经在书中。
+ * 完成角色必须有名称；重新编辑会保留名称，因此清空既有法术书不会绕过候选限制。
+ */
+function isInitialWizardSpellbookBuild(draft: CharacterDraft): boolean {
+  if (draft.name.trim() || draft.currentStep === 'sheet') return false
+  const reserved = new Set([
+    ...(draft.spellSelections.spellbookReservedSpellIds ?? []),
+    ...getSelectedSpellbookReservationIds(draft),
+  ])
+  return draft.spellSelections.spellbookSpellIds.every((id) => reserved.has(id))
+}
+
+/**
+ * 保存法术精通／招牌法术时同步法术书预留。
+ * 首次构筑且法术书仅由预留组成时可安全移除被替换项；已有角色只解除锁定，不猜测并删除
+ * 既有法术书记录。抄录和子职额外入书来源始终优先保留。
+ */
+export function applySpellbookReservationSelection(
+  draft: CharacterDraft,
+  checkpointId: string,
+  optionIds: readonly string[],
+  confirmedAt = new Date().toISOString(),
+): { readonly selections: readonly ChoiceSelection[]; readonly spellSelections: SpellSelections } {
+  const nextSelection: ChoiceSelection = { checkpointId, optionIds: [...new Set(optionIds)], confirmedAt }
+  const selections = [...draft.selections.filter((selection) => selection.checkpointId !== checkpointId), nextSelection]
+  if (!isSpellbookReservationCheckpoint(checkpointId)) return { selections, spellSelections: draft.spellSelections }
+
+  const previousReserved = new Set(draft.spellSelections.spellbookReservedSpellIds ?? [])
+  const reserved = getSelectedSpellbookReservationIds({ selections })
+  const reservedSet = new Set(reserved)
+  const retainedByOtherSource = new Set([
+    ...draft.spellSelections.transcribedSpellIds,
+    ...(draft.spellSelections.spellbookExtraSpellIds ?? []),
+  ])
+  const safelyReleased = isInitialWizardSpellbookBuild(draft)
+    ? new Set([...previousReserved].filter((id) => !reservedSet.has(id) && !retainedByOtherSource.has(id)))
+    : new Set<string>()
+  const spellbookSpellIds = [...new Set([
+    ...draft.spellSelections.spellbookSpellIds.filter((id) => !safelyReleased.has(id)),
+    ...reserved,
+  ])]
+  return {
+    selections,
+    spellSelections: {
+      ...draft.spellSelections,
+      spellbookSpellIds,
+      spellbookReservedSpellIds: reserved,
+    },
+  }
+}
+
 /**
  * 动态候选池：解析检查点在当前草稿下的候选选项。
  * 普通检查点返回静态 optionIds；法术级候选（candidateKind）按草稿状态生成：
  * `all-spells` 为全部已登记 1 环及以上法术（环级不高于当前可用最高环，魔法奥秘用）；
- * `spellbook-level-N` 为法术书中对应环级的法术（法师法术精通/招牌法术用）。
+ * `spellbook-level-N` 通常为法术书中对应环级的法术；首次高等级车卡且法术书尚未建立时，
+ * 临时使用对应版本的法师职业法术表，保存后立即预留进法术书。
  */
 export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: ChoiceCheckpoint): readonly string[] {
   if (checkpoint.optionIds.length > 0) return checkpoint.optionIds
@@ -314,12 +382,17 @@ export function getCheckpointCandidates(draft: CharacterDraft, checkpoint: Choic
   const targetLevel = checkpoint.candidateKind === 'spellbook-level-1' ? 1
     : checkpoint.candidateKind === 'spellbook-level-2' ? 2
       : 3
-  return draft.spellSelections.spellbookSpellIds
+  const config = getSpellcastingConfig(draft)
+  const candidateIds = isInitialWizardSpellbookBuild(draft) && config?.mode === 'spellbook'
+    ? config.classSpellIds
+    : draft.spellSelections.spellbookSpellIds
+  return candidateIds
     .map((id) => repository.getSpell(id))
     .filter((spell): spell is NonNullable<typeof spell> => Boolean(
       spell
       && spell.level === targetLevel
-      && (!checkpoint.spellCastingTime || spell.castingTime === checkpoint.spellCastingTime),
+      && (!checkpoint.spellCastingTime || spell.castingTime === checkpoint.spellCastingTime)
+      && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds, repository),
     ))
     .map((spell) => spell.id)
 }
@@ -363,8 +436,14 @@ function resolveSpellListClassId(
   if (!parentCheckpointId || !featId) return undefined
   const selection = draft.selections.find((item) =>
     item.checkpointId === `feat-child:${parentCheckpointId}:${featId}:${listChoiceId}` && !item.invalidatedAt)
-  const optionId = selection?.optionIds[0]
-  return optionId ? classIdFromSpellListOption(optionId) : undefined
+  const background = draft.backgroundId && parentCheckpointId === `${draft.backgroundId}-origin-feat`
+    ? getRulesRepository(draft.ruleset).getBackground(draft.backgroundId)
+    : undefined
+  const optionId = selection?.optionIds[0] ?? background?.originFeatChoicePresets?.[listChoiceId]?.[0]
+  if (!optionId || !getRulesRepository(draft.ruleset).getOption(optionId)) return undefined
+  const slug = optionId.replace(/^spell-list-/, '')
+  const classId = `class-${draft.ruleset.slice(3)}-${slug}`
+  return getRulesRepository(draft.ruleset).getClass(classId) ? classId : undefined
 }
 
 /** 物种按等级授予的固定法术（纯函数，供派生与测试）。 */
@@ -391,7 +470,9 @@ function selectionAlwaysPreparedSpellIds(draft: CharacterDraft, repository: Rule
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
     if (selection.checkpointId.startsWith('feat-child:')) {
-      const [, , featId, choiceId] = selection.checkpointId.split(':')
+      const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
+      if (!parentCheckpointId || !featId || !isFeatGrantParentActive(draft, parentCheckpointId, featId)) continue
+      if (!isSelectionCheckpointActive(draft, parentCheckpointId)) continue
       const choice = featId ? repository.getFeat(featId)?.choices?.find((item) => item.id === choiceId) : undefined
       if (choice?.spellGrant?.alwaysPrepared) ids.push(...selection.optionIds)
       continue
@@ -521,6 +602,7 @@ export function getSpellFreeCastings(
     const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
     // 孤立选择（换背景／物种后残留的旧起源专长检查点）不再授予免费施法。
     if (parentCheckpointId && !isSelectionCheckpointActive(draft, parentCheckpointId)) continue
+    if (!parentCheckpointId || !featId || !isFeatGrantParentActive(draft, parentCheckpointId, featId)) continue
     const feat = featId ? repository.getFeat(featId) : undefined
     const choice = feat?.choices?.find((item) => item.id === choiceId)
     const grant = choice?.spellGrant
@@ -596,8 +678,15 @@ export function validateSpellSelections(draft: CharacterDraft): boolean {
   const spellbookSpells = draft.spellSelections.spellbookSpellIds
   const transcribed = draft.spellSelections.transcribedSpellIds
   const extras = draft.spellSelections.spellbookExtraSpellIds ?? []
+  const storedReservations = draft.spellSelections.spellbookReservedSpellIds ?? []
+  const selectedReservations = getSelectedSpellbookReservationIds(draft)
+  const reservationsValid = config.mode !== 'spellbook'
+    || (storedReservations.length === new Set(storedReservations).size
+      && storedReservations.every((id) => spellbookSpells.includes(id) && selectedReservations.includes(id))
+      && selectedReservations.every((id) => spellbookSpells.includes(id) && availableIds.has(id)))
   const extraAllowance = getSpellbookExtraAllowance(draft, config)
-  const normalBookCount = spellbookSpells.filter((id) => !transcribed.includes(id) && !extras.includes(id)).length
+  const normalBookCount = spellbookSpells.filter((id) => !transcribed.includes(id)
+    && (!extras.includes(id) || selectedReservations.includes(id))).length
   const extraCandidates = new Set(getSpellbookExtraCandidates(draft, config).map((spell) => spell.id))
   const extrasValid = config.mode !== 'spellbook'
     || (extras.length <= extraAllowance
@@ -611,6 +700,7 @@ export function validateSpellSelections(draft: CharacterDraft): boolean {
   return cantripsValid
     && spellbookValid
     && extrasValid
+    && reservationsValid
     && selected.length === getRequiredSpellCount(draft, config)
     && selected.length === new Set(selected).size
     && selected.every((id) => availableIds.has(id))

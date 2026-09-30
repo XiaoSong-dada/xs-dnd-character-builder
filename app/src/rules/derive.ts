@@ -1,7 +1,7 @@
 import { ABILITY_LABELS, formatAbilityModifierLabel } from '@/rules/data/ability-labels'
 import { SKILL_IDS } from '@/rules/data/skill-ids'
 import { getRulesRepository } from '@/rules/repositories'
-import { applyAbilityImprovement, collectFeatSkillSelections, decodeAbilityImprovement, getFeatAbilityCap, isSelectionCheckpointActive, listActiveFeats } from '@/rules/feats'
+import { applyAbilityImprovement, collectFeatSkillSelections, decodeAbilityImprovement, getFeatAbilityCap, isFeatGrantParentActive, isSelectionCheckpointActive, listActiveFeats } from '@/rules/feats'
 import { getBackgroundAbilityBonuses, getSpeciesHitPointBonus } from '@/rules/origins'
 import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
 import { isSourceEnabled } from '@/rules/source-books'
@@ -55,7 +55,7 @@ function collectFeatSavingThrowAbilities(draft: CharacterDraft): Readonly<Partia
     const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
     const feat = featId ? repository.getFeat(featId) : undefined
     if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
-    const parentActive = draft.selections.some((item) => item.checkpointId === parentCheckpointId && !item.invalidatedAt && item.optionIds.includes(featId ?? ''))
+    const parentActive = Boolean(parentCheckpointId && featId && isFeatGrantParentActive(draft, parentCheckpointId, featId))
     if (!parentActive) continue
     if (parentCheckpointId && !isSelectionCheckpointActive(draft, parentCheckpointId)) continue
     const choice = feat.choices?.find((item) => item.id === choiceId && item.grantSavingThrowProficiency)
@@ -148,7 +148,7 @@ function applyAbilityImprovements(
     }
     if (selection.checkpointId.startsWith('feat-child:')) {
       const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
-      const parentActive = draft.selections.some((item) => item.checkpointId === parentCheckpointId && !item.invalidatedAt && item.optionIds.includes(featId ?? ''))
+      const parentActive = Boolean(parentCheckpointId && featId && isFeatGrantParentActive(draft, parentCheckpointId, featId))
       const parentOwned = !parentCheckpointId || isSelectionCheckpointActive(draft, parentCheckpointId)
       const feat = featId ? repository.getFeat(featId) : undefined
       if (!parentActive || !parentOwned || !feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue

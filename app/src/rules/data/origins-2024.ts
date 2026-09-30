@@ -22,6 +22,14 @@ const artisanToolIds = ['alchemist-s-supplies','brewer-s-supplies','calligrapher
 const gamingToolIds = ['dice','dragonchess','playing-cards','three-dragon-ante'].map((id) => `equipment-2024-${id}`)
 const musicalToolIds = ['bagpipes','drum','dulcimer','flute','horn','lute','lyre','pan-flute','shawm','viol'].map((id) => `equipment-2024-${id}`)
 const fixedToolIds: Readonly<Record<string, string>> = { 'tool-2024-calligrapher': 'equipment-2024-calligrapher-s-supplies', 'tool-2024-forgery': 'equipment-2024-forgery-kit', 'tool-2024-thieves-tools': 'equipment-2024-thieves-tools', 'tool-2024-carpenter': 'equipment-2024-carpenter-s-tools', 'tool-cartographer': 'equipment-2024-cartographer-s-tools', 'tool-2024-herbalism': 'equipment-2024-herbalism-kit', 'tool-2024-navigator': 'equipment-2024-navigator-s-tools', 'tool-2024-smith': 'equipment-2024-smith-s-tools' }
+const magicInitiateListByBackgroundSlug: Readonly<Record<string, string>> = {
+  acolyte: 'spell-list-cleric',
+  guide: 'spell-list-druid',
+  sage: 'spell-list-wizard',
+  'fr-ai-genie-touched': 'spell-list-wizard',
+  'fr-ai-moonwell-pilgrim': 'spell-list-druid',
+  'tp-vtm-ritualist': 'spell-list-wizard',
+}
 
 const background = (
   slug: string,
@@ -50,6 +58,9 @@ const background = (
   languageChoices: 0,
   featureName: '',
   ...(originFeatId ? { originFeatId } : {}),
+  ...(originFeatId === 'feat-2024-magic-initiate' && magicInitiateListByBackgroundSlug[slug]
+    ? { originFeatChoicePresets: { list: [magicInitiateListByBackgroundSlug[slug]] } }
+    : {}),
   // 二选一起源专长候选（G3 决策 Q1-A）：由 `tool.feats` 声明，声明时不再走 originFeatId 固定授予。
   ...(tool.feats?.length ? { originFeatOptions: tool.feats } : {}),
   // 任选起源专长池（H4）：由 `tool.featChoices` 声明，候选按类别与来源开关展开。

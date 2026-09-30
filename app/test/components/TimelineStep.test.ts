@@ -63,6 +63,23 @@ function optionCard(wrapper: ReturnType<typeof mountStep>, name: string) {
   return wrapper.findAll('.option-card').find((card) => card.text().includes(name))
 }
 
+describe('TimelineStep 高等级法师法术书预留', () => {
+  it('首次创建 18 级法师时展示职业表候选和占用正常名额提示', async () => {
+    const draft = draft2024({
+      classId: 'class-2024-wizard',
+      targetLevel: 18,
+      name: '',
+      currentStep: 'timeline',
+    })
+    const wrapper = mountStep(draft)
+    const header = wrapper.findAll('.timeline-step__header').find((item) => item.text().includes('选择1个一环法术精通'))!
+    await header.trigger('click')
+
+    expect(wrapper.text()).toContain('所选法术会预留到法术书，并占用正常学习名额')
+    expect(wrapper.findAll('.timeline-step__spell-group .option-card').length).toBeGreaterThan(0)
+  })
+})
+
 /** 点击可展开候选卡完成选择：需跳过 250ms 双击判定窗口（配合假定时器使用）。 */
 async function selectStaticCard(wrapper: ReturnType<typeof mountStep>, name: string) {
   await staticCard(wrapper, name)?.find('.expandable-option-card__main').trigger('click')
@@ -115,6 +132,21 @@ describe('TimelineStep 专精选择', () => {
     await selectStaticCard(wrapper, '欺瞒')
 
     expect(wrapper.emitted('select')?.[0]).toEqual(['bard-2014-expertise-3', []])
+  })
+})
+
+describe('TimelineStep 固定背景专长', () => {
+  it('学者背景直接展示魔法学徒的剩余子任务，法师表不要求重复选择', () => {
+    const wrapper = mountStep(draft2024({
+      classId: 'class-2024-fighter',
+      backgroundId: 'background-2024-sage',
+    }))
+
+    expect(wrapper.text()).toContain('魔法学徒 · 属性提升')
+    expect(wrapper.text()).toContain('魔法学徒 · 选择戏法')
+    expect(wrapper.text()).toContain('魔法学徒 · 选择法术')
+    expect(wrapper.text()).toContain('背景已固定：法师法术表')
+    expect(wrapper.text()).not.toContain('魔法学徒 · 选择法术表')
   })
 })
 

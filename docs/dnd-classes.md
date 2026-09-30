@@ -278,6 +278,7 @@
 - 2024子职：[防护师](classes/subclasses/wizard/wizard-abjurer.md)、[预言师](classes/subclasses/wizard/wizard-diviner.md)、[塑能师](classes/subclasses/wizard/wizard-evoker.md)、[幻术师](classes/subclasses/wizard/wizard-illusionist.md)
 - 旧版与扩展子职：[咒法学派](classes/subclasses/wizard/wizard-conjuration.md)、[附魔学派](classes/subclasses/wizard/wizard-enchantment.md)、[死灵学派](classes/subclasses/wizard/wizard-necromancy.md)、[变化学派](classes/subclasses/wizard/wizard-transmutation.md)、[剑咏](classes/subclasses/wizard/wizard-bladesinging.md)、[战争魔法](classes/subclasses/wizard/wizard-war-magic.md)、[时间魔法](classes/subclasses/wizard/wizard-chronurgy-magic.md)、[重力魔法](classes/subclasses/wizard/wizard-graviturgy-magic.md)、[书士会](classes/subclasses/wizard/wizard-order-of-scribes.md)
 - 选择与校验：已记录法术书、准备法术、抄录、仪式、奥术回想、法术精通、招牌法术和旧版2级特性映射
+- 首次直接创建 18／20 级法师时，法术精通／招牌法术可先从对应版本法师表选择合法环阶法术，随后自动预留进法术书并占用正常学习名额；已有角色重新编辑仍只从有效法术书选择，更换选择、降级或转职会释放或协调预留。
 - 来源与核验：首批法师／塑能师已按项目内5e不全书复核，且职业、塑能师特性、学者专精、法术精通／招牌法术与额外入书已由 B08-02 接入运行时（其余子职待 B08-13）；其他子职仍沿用既有参考来源；最后核验日期 2026-09-14
 
 ## 6. 单项特性记录模板

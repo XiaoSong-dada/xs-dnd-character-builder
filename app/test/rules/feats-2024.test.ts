@@ -96,15 +96,44 @@ describe('2024 专长目录', () => {
       ],
     })
     expect(listFeatGrants(draft, rulesRepository2024)).toEqual([
-      { featId: 'feat-2024-magic-initiate', sourceKind: 'background', sourceId: 'background-2024-sage' },
-      { featId: 'feat-2024-archery', sourceKind: 'class', sourceId: 'class-2024-fighter-style-1', checkpointId: 'class-2024-fighter-style-1' },
-      { featId: 'feat-2024-tough', sourceKind: 'class', sourceId: 'class-2024-fighter-feat-4', checkpointId: 'class-2024-fighter-feat-4' },
+      {
+        instanceId: 'feat-grant:background:background-2024-sage:fixed:feat-2024-magic-initiate',
+        featId: 'feat-2024-magic-initiate', sourceKind: 'background', sourceId: 'background-2024-sage',
+      },
+      {
+        instanceId: 'feat-grant:class:class-2024-fighter-style-1:class-2024-fighter-style-1:feat-2024-archery',
+        featId: 'feat-2024-archery', sourceKind: 'class', sourceId: 'class-2024-fighter-style-1', checkpointId: 'class-2024-fighter-style-1',
+      },
+      {
+        instanceId: 'feat-grant:class:class-2024-fighter-feat-4:class-2024-fighter-feat-4:feat-2024-tough',
+        featId: 'feat-2024-tough', sourceKind: 'class', sourceId: 'class-2024-fighter-feat-4', checkpointId: 'class-2024-fighter-feat-4',
+      },
     ])
     expect(listActiveFeats(draft, rulesRepository2024).map((item) => item.id)).toEqual([
       'feat-2024-magic-initiate',
       'feat-2024-archery',
       'feat-2024-tough',
     ])
+  })
+
+  it('手动添加专长使用持久化实例 ID，并与系统授予共同进入清单', () => {
+    const draft = draft2024({
+      manualEdits: {
+        ...draft2024().manualEdits,
+        addedFeats: [{
+          instanceId: 'manual-feat-alert-1',
+          featId: 'feat-2024-alert',
+          addedAt: '2026-09-29T00:00:00.000Z',
+        }],
+      },
+    })
+    expect(listFeatGrants(draft, rulesRepository2024)).toContainEqual({
+      instanceId: 'manual-feat-alert-1',
+      featId: 'feat-2024-alert',
+      sourceKind: 'manual',
+      sourceId: 'manual-feat-alert-1',
+      checkpointId: 'manual-feat-manual-feat-alert-1',
+    })
   })
 
   it('失效选择不进入授予清单', () => {

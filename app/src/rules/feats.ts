@@ -4,8 +4,10 @@ import {
   abilityImprovementOptions2014,
 } from '@/rules/data/feats-2014'
 import { ABILITY_IMPROVEMENT_OPTION_IDS_2024 } from '@/rules/data/feats-2024'
+import { SKILL_IDS } from '@/rules/data/skill-ids'
+import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { AbilityKey, AbilityScores, CharacterDraft, RulesetId } from '@/types/character'
+import type { AbilityKey, AbilityScores, CharacterDraft, ManualFeatGrant, RulesetId } from '@/types/character'
 import type { ArmorTraining, ChoiceCheckpoint, FeatCategory, FeatChoiceSpec, FeatRule, RulesRepository } from '@/types/rules'
 
 export type AbilityImprovementMode = 'single' | 'split'
@@ -35,10 +37,94 @@ export interface FeatEligibilityContext {
 
 /** 专长授予来源；用于重复选择校验与数值来源解释。 */
 export interface FeatGrant {
+  readonly instanceId: string
   readonly featId: string
-  readonly sourceKind: 'background' | 'species' | 'class' | 'subclass'
+  readonly sourceKind: 'background' | 'species' | 'class' | 'subclass' | 'manual'
   readonly sourceId: string
   readonly checkpointId?: string
+}
+
+/** 系统授予使用可重建的稳定实例 ID；手动授予沿用草稿内持久化的 instanceId。 */
+export function buildFeatGrantInstanceId(
+  sourceKind: Exclude<FeatGrant['sourceKind'], 'manual'>,
+  sourceId: string,
+  featId: string,
+  checkpointId?: string,
+): string {
+  return `feat-grant:${sourceKind}:${sourceId}:${checkpointId ?? 'fixed'}:${featId}`
+}
+
+/** 手动专长的虚拟父检查点；编码 instanceId，避免冒号破坏 feat-child 的稳定分段格式。 */
+export function manualFeatParentCheckpointId(instanceId: string): string {
+  return `manual-feat-${encodeURIComponent(instanceId)}`
+}
+
+/** 系统／手动授予共用的父实例存活判断，避免已移除手动专长的孤立子选择继续派生。 */
+export function isFeatGrantParentActive(draft: CharacterDraft, parentCheckpointId: string, featId: string): boolean {
+  if (parentCheckpointId.startsWith('manual-feat-')) {
+    return (draft.manualEdits?.addedFeats ?? []).some((grant) =>
+      manualFeatParentCheckpointId(grant.instanceId) === parentCheckpointId && grant.featId === featId)
+  }
+  if (draft.selections.some((item) =>
+    item.checkpointId === parentCheckpointId && !item.invalidatedAt && item.optionIds.includes(featId))) return true
+  // 固定背景专长没有父选择记录，但它的子任务仍以 `<背景>-origin-feat` 作为父检查点。
+  return listFeatGrants(draft, getRulesRepository(draft.ruleset)).some((grant) =>
+    grant.sourceKind === 'background'
+    && grant.checkpointId === undefined
+    && `${grant.sourceId}-origin-feat` === parentCheckpointId
+    && grant.featId === featId)
+}
+
+/** 为每个手动授予实例建立隔离的子选择检查点；同一可重复专长不会共享配置。 */
+export function buildManualFeatChoiceCheckpoints(
+  grants: readonly ManualFeatGrant[],
+  repository: RulesRepository,
+  level: number,
+): readonly ChoiceCheckpoint[] {
+  return grants.flatMap((grant) => {
+    const feat = repository.getFeat(grant.featId)
+    if (!feat?.choices?.length) return []
+    const parentId = manualFeatParentCheckpointId(grant.instanceId)
+    return feat.choices.map((choice) => ({
+      id: `feat-child:${parentId}:${feat.id}:${choice.id}`,
+      level,
+      step: 'sheet' as const,
+      kind: choice.candidateKind === 'proficient-skills' ? 'expertise' as const : 'feat-feature' as const,
+      title: `${feat.name} · ${choice.title}`,
+      description: choice.description,
+      required: true,
+      minSelections: choice.minSelections,
+      maxSelections: choice.maxSelections,
+      optionIds: choice.optionIds.length > 0
+        ? choice.optionIds
+        : choice.candidateKind === 'all-skills' || choice.candidateKind === 'proficient-skills'
+          ? SKILL_IDS
+          : [],
+      uniqueGroup: choice.uniqueGroup,
+      parentCheckpointId: parentId,
+      parentOptionId: feat.id,
+      abilityBonus: choice.abilityBonus,
+      abilityCap: choice.abilityCap,
+      grantSavingThrowProficiency: choice.grantSavingThrowProficiency,
+      candidateKind: choice.candidateKind,
+      spellGrant: choice.spellGrant,
+      spellPool: choice.spellPool,
+      selectionCountFrom: choice.selectionCountFrom,
+    }))
+  })
+}
+
+/** 已结构化、可自动生效的专长能力摘要；空数组表示仅展示自然语言效果。 */
+export function getFeatStructuredEffectLabels(feat: FeatRule): readonly string[] {
+  const labels: string[] = []
+  if (feat.choices?.length) labels.push('子选择')
+  if (feat.grantedSpells?.length) labels.push('授予法术')
+  if (feat.expandedSpellPool?.length) labels.push('扩展法术表')
+  if (feat.hitPointBonusPerLevel !== undefined || feat.hitPointBonus !== undefined) labels.push('生命值')
+  if (feat.speedBonus !== undefined) labels.push('速度')
+  if (feat.armorTraining?.length) labels.push('护甲训练')
+  if (feat.grantsAllSkillProficiencies) labels.push('技能熟练')
+  return labels
 }
 
 const abilityImprovementOptionIds = new Set([
@@ -204,7 +290,7 @@ export function getFeatPool(
   })
 }
 
-function grantSourceKind(checkpointId: string): FeatGrant['sourceKind'] {
+function grantSourceKind(checkpointId: string): Exclude<FeatGrant['sourceKind'], 'manual'> {
   if (checkpointId.startsWith('race-') || checkpointId.startsWith('species-')) return 'species'
   if (checkpointId.includes('-subclass-') || checkpointId.startsWith('subclass-feature-')) return 'subclass'
   return 'class'
@@ -225,6 +311,9 @@ export function originFeatOwnerId(checkpointId: string): string | undefined {
  * 专长子选择（`feat-child:<父检查点>:...`）随父检查点一并判定；其它检查点不受影响。
  */
 export function isSelectionCheckpointActive(draft: CharacterDraft, checkpointId: string): boolean {
+  if (checkpointId.startsWith('manual-feat-')) {
+    return (draft.manualEdits?.addedFeats ?? []).some((grant) => manualFeatParentCheckpointId(grant.instanceId) === checkpointId)
+  }
   const ownerId = originFeatOwnerId(checkpointId)
   if (ownerId) {
     return ownerId === draft.backgroundId || ownerId === draft.raceId || ownerId === draft.subraceId
@@ -251,10 +340,21 @@ export function listFeatGrants(draft: CharacterDraft, repository: RulesRepositor
       for (const optionId of chosen.optionIds) {
         const feat = repository.getFeat(optionId)
         if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
-        grants.push({ featId: feat.id, sourceKind: 'background', sourceId: background.id, checkpointId: backgroundCheckpointId })
+        grants.push({
+          instanceId: buildFeatGrantInstanceId('background', background.id, feat.id, backgroundCheckpointId),
+          featId: feat.id,
+          sourceKind: 'background',
+          sourceId: background.id,
+          checkpointId: backgroundCheckpointId,
+        })
       }
     } else if (background.originFeatId) {
-      grants.push({ featId: background.originFeatId, sourceKind: 'background', sourceId: background.id })
+      grants.push({
+        instanceId: buildFeatGrantInstanceId('background', background.id, background.originFeatId),
+        featId: background.originFeatId,
+        sourceKind: 'background',
+        sourceId: background.id,
+      })
     }
   }
   for (const selection of draft.selections) {
@@ -265,13 +365,26 @@ export function listFeatGrants(draft: CharacterDraft, repository: RulesRepositor
       const feat = repository.getFeat(optionId)
       if (!feat) continue
       if (!isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
+      const sourceKind = grantSourceKind(selection.checkpointId)
       grants.push({
+        instanceId: buildFeatGrantInstanceId(sourceKind, selection.checkpointId, feat.id, selection.checkpointId),
         featId: feat.id,
-        sourceKind: grantSourceKind(selection.checkpointId),
+        sourceKind,
         sourceId: selection.checkpointId,
         checkpointId: selection.checkpointId,
       })
     }
+  }
+  for (const manualGrant of draft.manualEdits?.addedFeats ?? []) {
+    const feat = repository.getFeat(manualGrant.featId)
+    if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
+    grants.push({
+      instanceId: manualGrant.instanceId,
+      featId: feat.id,
+      sourceKind: 'manual',
+      sourceId: manualGrant.instanceId,
+      checkpointId: manualFeatParentCheckpointId(manualGrant.instanceId),
+    })
   }
   // 起源专长替代（如贵族／智者背景用狂野天赋替换固定起源专长）：
   // 当背景声明可替代类别且已获得该类别专长时，移除固定起源专长授予。
@@ -299,6 +412,7 @@ export function listFeatGrants(draft: CharacterDraft, repository: RulesRepositor
  * 让玩家能看出某条专长来自背景、物种还是职业检查点。
  */
 export function formatFeatGrantSource(grant: FeatGrant, repository: RulesRepository): string {
+  if (grant.sourceKind === 'manual') return '手动添加'
   if (grant.sourceKind === 'background') {
     const background = repository.getBackground(grant.sourceId)
     return background ? `起源专长 · ${background.name}` : '起源专长'
@@ -344,7 +458,7 @@ export function collectFeatSkillSelections(draft: CharacterDraft, repository: Ru
     const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
     const feat = featId ? repository.getFeat(featId) : undefined
     if (!feat) continue
-    const parentActive = draft.selections.some((item) => item.checkpointId === parentCheckpointId && !item.invalidatedAt && item.optionIds.includes(featId ?? ''))
+    const parentActive = Boolean(parentCheckpointId && featId && isFeatGrantParentActive(draft, parentCheckpointId, featId))
     if (!parentActive) continue
     if (parentCheckpointId && !isSelectionCheckpointActive(draft, parentCheckpointId)) continue
     const choice = feat.choices?.find((item) => item.id === choiceId)

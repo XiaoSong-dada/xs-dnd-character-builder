@@ -173,6 +173,7 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
         subclassId: draft.subclassId,
         enabledSourceIds: draft.enabledSourceIds,
         selections: draft.selections,
+        manualFeatGrants: draft.manualEdits?.addedFeats ?? [],
         ruleset: draft.ruleset,
         raceId: draft.raceId,        backgroundId: draft.backgroundId,
       })
@@ -275,6 +276,18 @@ function buildFeatures(draft: CharacterDraft): ExportFeature[] {
         priority: 9,
       }]
     })
+  const manualFeatEntries = listFeatGrants(draft, repository)
+    .filter((grant) => grant.sourceKind === 'manual')
+    .flatMap((grant) => {
+      const feat = repository.getFeat(grant.featId)
+      return feat ? [{
+        id: grant.instanceId,
+        category: 'feat' as const,
+        name: `${feat.name}（手动添加）`,
+        summary: feat.detail,
+        priority: 9,
+      }] : []
+    })
   const allocation = draft.backgroundAbilityAllocation ?? {}
   const allocationText = Object.entries(allocation).length
     ? `属性分配：${Object.entries(allocation).map(([key, value]) => `${ABILITY_LABELS[key as AbilityKey]}${value >= 0 ? '+' : ''}${value}`).join('、')}`
@@ -288,6 +301,7 @@ function buildFeatures(draft: CharacterDraft): ExportFeature[] {
   const entries: ExportFeature[] = [
     ...resolveSelectedFeatures(draft),
     ...originFeatEntries,
+    ...manualFeatEntries,
     ...(subclass?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'subclass' as const, name: feature.name, summary: feature.summary, priority: 20 })),
     ...(classRule?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'class' as const, name: feature.name, summary: feature.summary, priority: 30 })),
     ...raceFeatures,

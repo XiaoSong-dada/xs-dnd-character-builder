@@ -101,10 +101,10 @@ describe('character drafts store', () => {
     const modern = store.createDraft('5e-2024')
 
     expect(legacy.ruleset).toBe('5e-2014')
-    expect(legacy.schemaVersion).toBe(8)
+    expect(legacy.schemaVersion).toBe(9)
     expect(legacy.enabledSourceIds.length).toBeGreaterThan(0)
     expect(modern.ruleset).toBe('5e-2024')
-    expect(modern.schemaVersion).toBe(8)
+    expect(modern.schemaVersion).toBe(9)
     expect(modern.enabledSourceIds).toEqual([])
     expect(modern.targetLevel).toBe(10)
   })

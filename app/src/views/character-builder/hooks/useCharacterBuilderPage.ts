@@ -11,7 +11,12 @@ import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { hasBuildChoices } from '@/rules/draft-progress'
 import { isSourceEnabled, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { buildTimeline } from '@/rules/timeline'
-import { validateSpellSelections } from '@/rules/spellcasting'
+import { applySpellbookReservationSelection, isSpellbookReservationCheckpoint, validateSpellSelections } from '@/rules/spellcasting'
+import {
+  deleteInactiveSpellSelection,
+  reconcileSpellSelections,
+  restoreInactiveSpellSelection,
+} from '@/rules/spell-selection-reconciliation'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
@@ -60,6 +65,7 @@ export function useCharacterBuilderPage() {
   const pendingChange = ref<{
     readonly title: string
     readonly affected: readonly string[]
+    readonly explicitAffected: readonly string[]
     readonly impact?: DependencyImpact
     readonly apply: () => void
   }>()
@@ -243,7 +249,7 @@ export function useCharacterBuilderPage() {
       apply()
       return
     }
-    pendingChange.value = { title, affected, impact, apply }
+    pendingChange.value = { title, affected, explicitAffected: additionalAffected, impact, apply }
   }
 
   function confirmPendingChange(): void {
@@ -269,11 +275,37 @@ export function useCharacterBuilderPage() {
       return
     }
     const change = { kind: 'target-level', value: targetLevel } as const
+    const archivedSpellCount = targetLevel < draft.targetLevel
+      ? reconcileSpellSelections(draft, {
+          nextClassId: draft.classId,
+          nextSubclassId: draft.subclassId,
+          nextTargetLevel: targetLevel,
+          reason: 'level-reduced',
+          invalidatedAt: new Date().toISOString(),
+        }).archived.length
+      : 0
     requestChange(change, '修改目标等级', () => {
       const impact = getDependencyImpact(draft, change)
+      const spellReconciliation = targetLevel < draft.targetLevel
+        ? reconcileSpellSelections(draft, {
+            nextClassId: draft.classId,
+            nextSubclassId: draft.subclassId,
+            nextTargetLevel: targetLevel,
+            reason: 'level-reduced',
+            invalidatedAt: new Date().toISOString(),
+          })
+        : undefined
       store.invalidateSelections(impact.invalidated, `目标等级调整为${targetLevel}级`)
-      store.updateDraft({ targetLevel, abilityMethod, ...abilityPatch })
-    })
+      store.updateDraft({
+        targetLevel,
+        abilityMethod,
+        ...abilityPatch,
+        ...(spellReconciliation ? {
+          spellSelections: spellReconciliation.spellSelections,
+          inactiveSpellSelections: spellReconciliation.inactiveSpellSelections,
+        } : {}),
+      })
+    }, archivedSpellCount > 0 ? [`${archivedSpellCount} 项高等级法术将移入停用记录`] : [])
   }
 
   /** 角色完成后升级/降级引导条：升级提示补全新检查点，降级提示复查失效选择。 */
@@ -283,6 +315,7 @@ export function useCharacterBuilderPage() {
     direction: 'up' | 'down',
     targetLevel: number,
     impact: DependencyImpact,
+    archivedSpellCount = 0,
   ): { tone: 'success' | 'warning'; message: string; step?: DraftStep } {
     if (direction === 'up') {
       const added = impact.added ?? []
@@ -301,13 +334,17 @@ export function useCharacterBuilderPage() {
     }
     const invalidated = impact.invalidatedDetails ?? []
     const reviews = impact.reviews ?? []
-    const parts = [...invalidated.map((item) => item.title), ...reviews]
+    const parts = [
+      ...invalidated.map((item) => item.title),
+      ...(archivedSpellCount > 0 ? [`${archivedSpellCount} 项高等级法术已移入停用记录`] : []),
+      ...reviews,
+    ]
     return {
       tone: 'warning',
       message: parts.length
         ? `等级降至 ${targetLevel} 级，需复查：${parts.join('、')}`
         : `等级已降至 ${targetLevel} 级，派生数值已更新。`,
-      step: 'timeline',
+      step: archivedSpellCount > 0 ? 'spells' : 'timeline',
     }
   }
 
@@ -327,9 +364,24 @@ export function useCharacterBuilderPage() {
       direction === 'up' ? `升级至 ${targetLevel} 级` : `降级至 ${targetLevel} 级`,
       () => {
         const impact = getDependencyImpact(draft, change)
+        const spellReconciliation = direction === 'down'
+          ? reconcileSpellSelections(draft, {
+              nextClassId: draft.classId,
+              nextSubclassId: draft.subclassId,
+              nextTargetLevel: targetLevel,
+              reason: 'level-reduced',
+              invalidatedAt: new Date().toISOString(),
+            })
+          : undefined
         store.invalidateSelections(impact.invalidated, `目标等级调整为${targetLevel}级`)
-        store.updateDraft({ targetLevel })
-        levelAdjustNotice.value = buildLevelAdjustNotice(direction, targetLevel, impact)
+        store.updateDraft({
+          targetLevel,
+          ...(spellReconciliation ? {
+            spellSelections: spellReconciliation.spellSelections,
+            inactiveSpellSelections: spellReconciliation.inactiveSpellSelections,
+          } : {}),
+        })
+        levelAdjustNotice.value = buildLevelAdjustNotice(direction, targetLevel, impact, spellReconciliation?.archived.length ?? 0)
         if (direction === 'up') {
           if ((impact.added?.length ?? 0) > 0) {
             setStep('timeline')
@@ -377,6 +429,13 @@ export function useCharacterBuilderPage() {
     const hadSpells = Object.values(draft.spellSelections).some((ids) => ids.length > 0)
     requestChange(change, '更换职业', () => {
       const impact = getDependencyImpact(draft, change)
+      const spellReconciliation = reconcileSpellSelections(draft, {
+        nextClassId: classId,
+        nextSubclassId: undefined,
+        nextTargetLevel: draft.targetLevel,
+        reason: 'class-changed',
+        invalidatedAt: new Date().toISOString(),
+      })
       store.invalidateSelections(impact.invalidated, '更换职业后需要重新确认')
       const equipmentDraft = { ...draft, classId, startingEquipmentSelections: [] }
       const equipment = buildStartingEquipmentState(equipmentDraft)
@@ -387,19 +446,12 @@ export function useCharacterBuilderPage() {
         inventory: equipment.inventory,
         currency: equipment.currency,
         equipmentNeedsReview: false,
-        // 法术候选随职业变化：旧选择不再适用，清空并由法术步骤重新选择（保留人工添加）。
-        spellSelections: {
-          cantripIds: [],
-          knownSpellIds: [],
-          preparedSpellIds: [],
-          spellbookSpellIds: [],
-          transcribedSpellIds: [],
-          spellbookExtraSpellIds: [],
-        },
+        spellSelections: spellReconciliation.spellSelections,
+        inactiveSpellSelections: spellReconciliation.inactiveSpellSelections,
       })
     }, [
       ...(draft.inventory.some((entry) => entry.sourceKind === 'class') ? ['职业起始装备'] : []),
-      ...(hadSpells ? ['法术选择（将清空并重新选择）'] : []),
+      ...(hadSpells ? ['法术选择（将移入停用记录，可在法术步骤查看）'] : []),
     ])
   }
 
@@ -444,7 +496,7 @@ export function useCharacterBuilderPage() {
       apply()
       return
     }
-    pendingChange.value = { title: '调整扩展书', affected, apply }
+    pendingChange.value = { title: '调整扩展书', affected, explicitAffected: [], apply }
   }
 
   function selectRace(id: string): void {
@@ -509,7 +561,14 @@ export function useCharacterBuilderPage() {
   }
 
   function saveTimelineSelection(checkpointId: string, optionIds: readonly string[]): void {
-    store.saveSelection(checkpointId, optionIds)
+    const current = activeDraft.value
+    if (!current) return
+    if (isSpellbookReservationCheckpoint(checkpointId)) {
+      const reconciled = applySpellbookReservationSelection(current, checkpointId, optionIds)
+      store.updateDraft(reconciled)
+    } else {
+      store.saveSelection(checkpointId, optionIds)
+    }
     const draft = activeDraft.value
     if (!draft?.classId) return
     const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
@@ -546,6 +605,19 @@ export function useCharacterBuilderPage() {
 
   function updateSpells(value: SpellSelections): void {
     store.updateDraft({ spellSelections: value })
+  }
+
+  function restoreInactiveSpell(inactiveId: string): void {
+    const draft = activeDraft.value
+    if (!draft) return
+    const restored = restoreInactiveSpellSelection(draft, inactiveId)
+    if (restored) store.updateDraft(restored)
+  }
+
+  function deleteInactiveSpell(inactiveId: string): void {
+    const draft = activeDraft.value
+    if (!draft) return
+    store.updateDraft({ inactiveSpellSelections: deleteInactiveSpellSelection(draft, inactiveId) })
   }
 
   async function importPackage(file: File): Promise<void> {
@@ -721,6 +793,8 @@ export function useCharacterBuilderPage() {
     updateInfusions,
     updateAdventureGold,
     updateSpells,
+    restoreInactiveSpell,
+    deleteInactiveSpell,
     updateManualEdits,
     updateIdentity,
     updateAbilities,

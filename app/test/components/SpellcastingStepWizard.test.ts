@@ -88,6 +88,26 @@ describe('法师法术步骤（缺陷回归：抄录法术不可移除、计数�
     expect(change.spellbookSpellIds).toContain('spell-2014-sleep')
     expect(change.transcribedSpellIds).toEqual(['spell-2014-scorching-ray', 'spell-2014-misty-step'])
   })
+
+  it('能力预留法术计入正常名额并锁定，不能从法术书步骤移除', async () => {
+    const draft = wizardDraft()
+    const wrapper = mount(SpellcastingStep, {
+      props: {
+        draft: {
+          ...draft,
+          spellSelections: { ...draft.spellSelections, spellbookReservedSpellIds: ['spell-2014-magic-missile'] },
+        },
+      },
+    })
+    expect(wrapper.text()).toContain('6 / 14（含预留 1）（另有抄录 2）')
+    const reservedCard = wrapper.findAll('.expandable-option-card').find((card) => card.text().includes('魔法飞弹'))!
+    expect(reservedCard.text()).toContain('能力预留（占正常名额，不可移除）')
+
+    const emittedBefore = wrapper.emitted('change')?.length ?? 0
+    await reservedCard.get('button[aria-pressed]').trigger('click')
+    await vi.advanceTimersByTimeAsync(250)
+    expect(wrapper.emitted('change')?.length ?? 0).toBe(emittedBefore)
+  })
 })
 
 /** 3 级塑能师：升级名额 10 道已满，额外入书名额 2 道。 */
@@ -290,5 +310,34 @@ describe('法术列表按环级升序（v1.9.1 追加）', () => {
     // 排序只作用于展示：草稿顺序不变、未产生变更事件
     expect(draft.spellSelections.preparedSpellIds).toEqual(preparedSpellIds)
     expect(wrapper.emitted('change')).toBeUndefined()
+  })
+})
+
+describe('法术停用记录', () => {
+  it('展示停用原因，并分别发出恢复与删除记录事件', async () => {
+    const base = wizardDraft()
+    const draft = {
+      ...base,
+      spellSelections: {
+        ...base.spellSelections,
+        preparedSpellIds: base.spellSelections.preparedSpellIds.filter((id) => id !== 'spell-2014-magic-missile'),
+      },
+      inactiveSpellSelections: [{
+        id: 'inactive-magic-missile',
+        spellId: 'spell-2014-magic-missile',
+        originalBucket: 'preparedSpellIds' as const,
+        reason: 'level-reduced' as const,
+        invalidatedAt: '2026-09-29T00:00:00.000Z',
+      }],
+    }
+    const wrapper = mount(SpellcastingStep, { props: { draft } })
+
+    expect(wrapper.text()).toContain('停用记录')
+    expect(wrapper.text()).toContain('降低等级 · 准备法术')
+    const buttons = wrapper.findAll('.spellcasting-step__inactive-actions button')
+    await buttons.find((button) => button.text() === '恢复')!.trigger('click')
+    await buttons.find((button) => button.text() === '删除记录')!.trigger('click')
+    expect(wrapper.emitted('restoreInactive')?.[0]).toEqual(['inactive-magic-missile'])
+    expect(wrapper.emitted('deleteInactive')?.[0]).toEqual(['inactive-magic-missile'])
   })
 })
