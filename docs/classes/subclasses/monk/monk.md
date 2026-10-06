@@ -70,6 +70,8 @@
 
 ## 来源与边界
 
+C02：逐武器攻击在武艺条件有效时允许合格武僧武器取较高力量/敏捷，条件失效后按基础武器属性计算。力量/敏捷参考卡不随职业切换；武艺替换伤害骰及其他情境选择不在本批自动推断范围。
+
 - [2024 Free Rules](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes)
 - [SRD 5.2.1](https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf)
 - [官方2024武僧更新](https://www.dndbeyond.com/posts/1758-2024-monk-vs-2014-monk-whats-new)

@@ -17,6 +17,7 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatGrantSource, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { getEquipmentWarnings } from '@/rules/equipment-state'
+import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import { getAvailableSlotLevels } from '@/rules/session-state'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
@@ -143,7 +144,10 @@ function equipmentSummary(itemId: string): string {
 function weaponBonusLabel(entry: InventoryEntry): string {
   const equipment = repository.value.getEquipment(entry.itemId)
   if (equipment?.category !== 'weapon') return ''
-  return `命中 +${panel.derived.value.attackBonus.value} · 伤害 +${panel.derived.value.attackDamageBonus.value}`
+  const attack = deriveWeaponAttack(props.draft, panel.derived.value, equipment)
+  if (!attack) return ''
+  const signed = (value: number) => value >= 0 ? `+${value}` : String(value)
+  return `命中 ${signed(attack.attackBonus)} · 伤害 ${signed(attack.damageBonus)}`
 }
 function inventorySourceLabel(entry: InventoryEntry): string {
   return entry.sourceKind === 'class' || entry.sourceKind === 'background' ? '起始装备' : '冒险获得'

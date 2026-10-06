@@ -715,6 +715,11 @@ function handleExportPdf(): void {
         <EditableStatTile label="武器命中加值" :value="derived.attackBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.attackBonus.sources)" @commit="editing.commitDerived('attackBonus', $event)" />
         <EditableStatTile label="武器伤害加值" :value="derived.attackDamageBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.attackDamageBonus.sources)" @commit="editing.commitDerived('attackDamageBonus', $event)" />
       </div>
+      <h3>使用灵巧武器</h3>
+      <div class="character-sheet__combat-stats">
+        <EditableStatTile label="武器命中加值" :value="derived.dexterityAttackBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.dexterityAttackBonus.sources)" @commit="editing.commitDerived('dexterityAttackBonus', $event)" />
+        <EditableStatTile label="武器伤害加值" :value="derived.dexterityAttackDamageBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.dexterityAttackDamageBonus.sources)" @commit="editing.commitDerived('dexterityAttackDamageBonus', $event)" />
+      </div>
     </div>
     <div v-else-if="activeTab === 'features'" class="character-sheet__derived">
       <section>

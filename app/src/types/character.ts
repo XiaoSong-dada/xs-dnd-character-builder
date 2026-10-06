@@ -21,6 +21,8 @@ export type ManualDerivedField =
   | 'speed'
   | 'attackBonus'
   | 'attackDamageBonus'
+  | 'dexterityAttackBonus'
+  | 'dexterityAttackDamageBonus'
   | 'passivePerception'
   | 'spellAttackBonus'
   | 'spellSaveDc'
@@ -250,6 +252,8 @@ export interface DerivedCharacter {
   readonly initiative: DerivedValue<number>
   readonly attackBonus: DerivedValue<number>
   readonly attackDamageBonus: DerivedValue<number>
+  readonly dexterityAttackBonus: DerivedValue<number>
+  readonly dexterityAttackDamageBonus: DerivedValue<number>
   readonly spellAttackBonus?: DerivedValue<number>
   readonly spellSaveDc?: DerivedValue<number>
   readonly speed: DerivedValue<number>

@@ -712,6 +712,10 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 
 `rules/equipment-state.ts` 提供来源有效的已装备物品、两版持盾收益条件及装备警告。其下游仅为 `rules/{feats,repositories,source-books}` 与共享类型；`derive`、`validate` 以及 `EquipmentStep` / `CharacterSheetStep` / `SessionPanel` 复用该模块，不复制手部或受训判定。规则模块不改变草稿状态，不访问 Vue、存储、DOM 或网络；警告由页面用既有 `UiNotice` 展示。`starting-equipment` 重建仅向新条目推荐护甲/武器，保留旧装备数量。`collectArmorTrainings` 加入职业、选项和子职特性的来源检查，仍由规则层收集训练。
 
+### 双攻击参考与逐武器计算（C02）
+
+`rules/derive` 提供力量/敏捷两组带来源的固定参考值；共享 `ManualDerivedField` 与 `rules/manual-edits` 承载独立人工修正，角色卡既有 `useCharacterSheetEditing` 通用处理四格提交，不增加存储结构。`rules/weapon-attacks` 不再从参考值来源倒推实际武器加值，改为依赖 `rules/{equipment-state,source-books,manual-edits,subclass-effects}` 与既有灌注数据，选定实际属性后匹配对应修正。`SessionPanel` 与 `features/character-export/build-export-data` 共用该纯函数。方向仍为页面/features → rules → rules/types，无框架或存储反向依赖。`EditableStatTile` 阻止输入提交的 Enter 冒泡，避免提交后重新开始编辑。
+
 ### 骰娘音效试听工具
 
 `app/scripts/render-dice-audio-previews.mjs` 经 Vite SSR 加载 `src/services/dice-audio/synthesis.ts`，使用与实时播放相同的 PCM 合成器导出 WAV；旧版通过原算法离线复现作为对照。输出在根目录已忽略的 `tmp/dice-audio-previews/`，不进入生产资源或 Git。运行时服务保持 services 内部单向依赖，不引用脚本或页面。

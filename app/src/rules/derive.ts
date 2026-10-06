@@ -244,7 +244,6 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     .find((item) => item?.category === 'armor')
   const equippedShield = equippedItems
     .find((item) => item?.category === 'shield')
-  const equippedWeapon = equippedItems.find((item) => item?.category === 'weapon')
   const activeInfusions = draft.classId === 'class-2014-artificer'
     ? (draft.infusionAssignments ?? []).flatMap((assignment) => {
       const entry = draft.inventory.find((item) => item.id === assignment.inventoryEntryId && item.equippedQuantity > 0)
@@ -385,12 +384,6 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
       ? draft.targetLevel >= 18 ? 30 : draft.targetLevel >= 14 ? 25 : draft.targetLevel >= 10 ? 20 : draft.targetLevel >= 6 ? 15 : draft.targetLevel >= 2 ? 10 : 0
       : 0
   const speed = raceSpeed + classSpeedBonus + subclassEffects.speedBonus + featSpeedBonus
-  const battleSmithMagicWeapon = subclassId === 'subclass-2014-artificer-battle-smith'
-    && Boolean(equippedWeapon && ((equippedWeapon.magicBonus ?? 0) > 0 || infusionBonusFor(equippedWeapon.id) > 0))
-  const attackAbility: AbilityKey = battleSmithMagicWeapon
-    ? 'int'
-    : ['class-2014-rogue', 'class-2014-monk', 'class-2014-ranger'].includes(draft.classId ?? '') ? 'dex' : 'str'
-  const weaponMagicBonus = (equippedWeapon?.magicBonus ?? 0) + infusionBonusFor(equippedWeapon?.id)
   const spellcasting = getSpellcastingConfig(draft)
   const spellAbilityModifier = spellcasting ? modifiers[spellcasting.ability] : undefined
 
@@ -429,18 +422,17 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${repository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
   ]), manual.derivedAdjustments.armorClass, 'armor-class')
   const initiativeValue = withManualAdjustment(derived(modifiers.dex, [{ id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` }]), manual.derivedAdjustments.initiative, 'initiative')
-  const attackValue = withManualAdjustment(derived(proficiency + modifiers[attackAbility] + weaponMagicBonus + subclassEffects.attackBonus, [
-    { id: 'attack-proficiency', label: '熟练加值', value: proficiency, detail: '熟练武器' },
-    { id: `attack-${attackAbility}`, label: formatAbilityModifierLabel(attackAbility), value: modifiers[attackAbility], detail: `属性 ${abilities[attackAbility]}` },
-    ...(weaponMagicBonus ? [{ id: 'magic-weapon-attack', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []),
-    ...(subclassEffects.attackBonus !== 0 ? [{ id: 'subclass-attack', label: '子职攻击加成', value: subclassEffects.attackBonus, detail: '来自子职特性' }] : []),
-  ]), manual.derivedAdjustments.attackBonus, 'attack')
-  const damageValue = withManualAdjustment(derived(modifiers[attackAbility] + weaponMagicBonus + subclassEffects.damageBonus, [{
-    id: `damage-${attackAbility}`,
-    label: formatAbilityModifierLabel(attackAbility),
-    value: modifiers[attackAbility],
-    detail: `属性 ${abilities[attackAbility]}`,
-  }, ...(weaponMagicBonus ? [{ id: 'magic-weapon-damage', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []), ...(subclassEffects.damageBonus !== 0 ? [{ id: 'subclass-damage', label: '子职伤害加成', value: subclassEffects.damageBonus, detail: '来自子职特性' }] : [])]), manual.derivedAdjustments.attackDamageBonus, 'damage')
+  const referenceAttack = (ability: 'str' | 'dex', adjustment: number | undefined, sourceId: string) => withManualAdjustment(derived(proficiency + modifiers[ability], [
+    { id: 'attack-proficiency', label: '熟练加值', value: proficiency, detail: '熟练武器参考，不含具体武器加值' },
+    { id: `attack-${ability}`, label: formatAbilityModifierLabel(ability), value: modifiers[ability], detail: `属性 ${abilities[ability]}` },
+  ]), adjustment, sourceId)
+  const referenceDamage = (ability: 'str' | 'dex', adjustment: number | undefined, sourceId: string) => withManualAdjustment(derived(modifiers[ability], [
+    { id: `damage-${ability}`, label: formatAbilityModifierLabel(ability), value: modifiers[ability], detail: `属性 ${abilities[ability]}` },
+  ]), adjustment, sourceId)
+  const attackValue = referenceAttack('str', manual.derivedAdjustments.attackBonus, 'attack')
+  const damageValue = referenceDamage('str', manual.derivedAdjustments.attackDamageBonus, 'damage')
+  const dexterityAttackValue = referenceAttack('dex', manual.derivedAdjustments.dexterityAttackBonus, 'dexterity-attack')
+  const dexterityDamageValue = referenceDamage('dex', manual.derivedAdjustments.dexterityAttackDamageBonus, 'dexterity-damage')
   const speedValue = withManualAdjustment(derived(speed, [{
     id: 'race-speed', label: '种族速度', value: raceSpeed, detail: subrace?.speed ? subrace.name : race?.name ?? '默认',
   }, ...(classSpeedBonus ? [{ id: 'class-speed', label: '职业移动加值', value: classSpeedBonus, detail: classRule?.name ?? '' }] : []), ...(subclassEffects.speedBonus !== 0 ? [{ id: 'subclass-speed', label: '子职移动加值', value: subclassEffects.speedBonus, detail: '来自子职特性' }] : []), ...(featSpeedBonus !== 0 ? [{ id: 'feat-speed', label: '专长移动加值', value: featSpeedBonus, detail: featSpeedNames.join('、') }] : [])]), manual.derivedAdjustments.speed, 'speed')
@@ -475,6 +467,8 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     initiative: initiativeValue,
     attackBonus: attackValue,
     attackDamageBonus: damageValue,
+    dexterityAttackBonus: dexterityAttackValue,
+    dexterityAttackDamageBonus: dexterityDamageValue,
     ...(baseSpellAttack ? { spellAttackBonus: withManualAdjustment(baseSpellAttack, manual.derivedAdjustments.spellAttackBonus, 'spell-attack') } : {}),
     ...(baseSpellDc ? { spellSaveDc: withManualAdjustment(baseSpellDc, manual.derivedAdjustments.spellSaveDc, 'spell-dc') } : {}),
     speed: speedValue,

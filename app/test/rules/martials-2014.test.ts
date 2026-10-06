@@ -62,7 +62,8 @@ describe('2014 pure martial classes', () => {
 
     expect(result.armorClass.value).toBe(13)
     expect(result.speed.value).toBe(50)
-    expect(result.attackBonus.value).toBe(6)
+    expect(result.attackBonus.value).toBe(7)
+    expect(result.dexterityAttackBonus.value).toBe(6)
     expect(result.armorClass.sources[0]?.label).toBe('武僧无甲防御')
   })
 

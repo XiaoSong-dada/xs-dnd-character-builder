@@ -29,6 +29,7 @@ function normalizeNumberRecord(value: unknown): Readonly<Record<string, number>>
 const abilityKeys = new Set<AbilityKey>(['str', 'dex', 'con', 'int', 'wis', 'cha'])
 const derivedKeys = new Set<ManualDerivedField>([
   'armorClass', 'hitPoints', 'initiative', 'speed', 'attackBonus', 'attackDamageBonus',
+  'dexterityAttackBonus', 'dexterityAttackDamageBonus',
   'passivePerception', 'spellAttackBonus', 'spellSaveDc',
 ])
 const destinations = new Set<ManualAddedSpell['destination']>(['known', 'pact-known', 'prepared-list', 'spellbook', 'granted'])
