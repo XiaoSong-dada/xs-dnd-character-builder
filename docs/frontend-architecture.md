@@ -704,6 +704,10 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 `src/config/site.ts` 是站点与统计配置模块，为项目内**唯一**读取 `import.meta.env` 的入口（站点信息及 `VITE_UMAMI_SCRIPT_URL`/`VITE_UMAMI_WEBSITE_ID`/`VITE_UMAMI_DOMAINS`，空串归一化为 `undefined`，统计域名解析为列表），导出 `siteConfig`；`StartPanel` 消费站点信息渲染署名行，`main.ts` 在应用挂载后调用 `services/umami.ts`，由该服务校验当前域名并幂等加载 Umami 脚本。Umami 自行监听 History API，不额外注册 Router 页面访问钩子。其余业务模块一律不直接读取 `import.meta.env`。
 
 
+### 物品装备与卸下操作（C01-A）
+
+`components/InventoryEquipmentToggle.vue` 为角色卡与跑团助手共用的展示组件，仅依赖共享类型 `InventoryEntry` / `EquipmentRule`，按可装备性、拥有数量与装备数量显示按钮并发送条目 ID，不读取规则仓库、store 或存储。`CharacterSheetStep` 与 `SessionPanel` 调用框架无关的 `rules/starting-equipment.toggleInventoryEquipment`，分别通过既有 `changeInventory` 事件和 `useSessionPanel.updateInventory` 保存原始装备数量。规则函数在版本仓库中核对可装备性，再复用 `updateEquippedQuantity`；依赖方向保持 `views → components/types` 与 `views/hooks → stores/rules`，无反向依赖。
+
 ### 骰娘音效试听工具
 
 `app/scripts/render-dice-audio-previews.mjs` 经 Vite SSR 加载 `src/services/dice-audio/synthesis.ts`，使用与实时播放相同的 PCM 合成器导出 WAV；旧版通过原算法离线复现作为对照。输出在根目录已忽略的 `tmp/dice-audio-previews/`，不进入生产资源或 Git。运行时服务保持 services 内部单向依赖，不引用脚本或页面。

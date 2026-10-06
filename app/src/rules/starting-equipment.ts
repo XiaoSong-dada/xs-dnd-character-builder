@@ -165,6 +165,16 @@ export function updateEquippedQuantity(
     : entry)
 }
 
+export function toggleInventoryEquipment(
+  inventory: readonly InventoryEntry[],
+  entryId: string,
+  repository: RulesRepository,
+): readonly InventoryEntry[] {
+  const entry = inventory.find((item) => item.id === entryId)
+  if (!entry || entry.quantity < 1 || !repository.getEquipment(entry.itemId)?.equippable) return inventory
+  return updateEquippedQuantity(inventory, entryId, entry.equippedQuantity > 0 ? 0 : 1)
+}
+
 /** 添加冒险物品的入参。 */
 export interface AdventureItemInput {
   readonly itemId: string

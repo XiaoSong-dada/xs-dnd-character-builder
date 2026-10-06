@@ -302,9 +302,10 @@ function sourceLabel(entry: InventoryEntry): string {
             type="button"
             :class="{ 'equipment-step__equip--active': entry.equippedQuantity > 0 }"
             :aria-pressed="entry.equippedQuantity > 0"
+            :aria-label="`${entry.equippedQuantity > 0 ? '卸下' : '装备'}${rulesRepository.getEquipment(entry.itemId)?.name ?? entry.itemId}`"
             @click="toggleEquipped(entry)"
           >
-            {{ entry.equippedQuantity > 0 ? '✓ 已装备' : '装备' }}
+            {{ entry.equippedQuantity > 0 ? '卸下' : '装备' }}
           </button>
         </li>
       </ul>

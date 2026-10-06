@@ -4,6 +4,7 @@ import { CharacterMediaImage } from '@/features/character-media'
 
 import AddItemModal from '@/components/AddItemModal.vue'
 import AdjustItemModal from '@/components/AdjustItemModal.vue'
+import InventoryEquipmentToggle from '@/components/InventoryEquipmentToggle.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import StatTile from '@/components/ui/StatTile.vue'
@@ -16,7 +17,7 @@ import { decodeAbilityImprovement, formatFeatGrantSource, listFeatGrants } from 
 import { getRulesRepository } from '@/rules/repositories'
 import { getAvailableSlotLevels } from '@/rules/session-state'
 import { isSourceEnabled } from '@/rules/source-books'
-import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
+import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
 import { getEffectiveSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
 import { useSessionAssistantStore } from '@/stores/session-assistant'
@@ -117,6 +118,9 @@ function handleAdjustItem(payload: { action: 'decrease' | 'increase' | 'remove';
 }
 function updateInventory(inventory: readonly InventoryEntry[]): void {
   void panel.updateInventory(inventory)
+}
+function toggleEquipment(entryId: string): void {
+  updateInventory(toggleInventoryEquipment(props.draft.inventory, entryId, repository.value))
 }
 
 function equipmentName(itemId: string): string {
@@ -734,9 +738,10 @@ function openTranscribe(spellId?: string): void {
             expanded-label="装备详情"
           >
             <template #suffix>
-              <span class="session-panel__qty">×{{ entry.quantity }}</span>
+              <span class="session-panel__qty">×{{ entry.equippedQuantity }}</span>
               <UiBadge v-if="entry.sourceKind !== 'adventure'">{{ inventorySourceLabel(entry) }}</UiBadge>
               <UiBadge v-if="isFromClosedSource(entry.itemId)" tone="warning">来源已关闭</UiBadge>
+              <InventoryEquipmentToggle :entry="entry" :equipment="repository.getEquipment(entry.itemId)" @toggle="toggleEquipment" />
               <button v-if="entry.sourceKind === 'adventure'" type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
             </template>
             <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>
@@ -759,6 +764,7 @@ function openTranscribe(spellId?: string): void {
               <span class="session-panel__qty">×{{ entry.quantity }}</span>
               <UiBadge v-if="entry.sourceKind !== 'adventure'">{{ inventorySourceLabel(entry) }}</UiBadge>
               <UiBadge v-if="isFromClosedSource(entry.itemId)" tone="warning">来源已关闭</UiBadge>
+              <InventoryEquipmentToggle :entry="entry" :equipment="repository.getEquipment(entry.itemId)" @toggle="toggleEquipment" />
               <button v-if="entry.sourceKind === 'adventure'" type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
             </template>
             <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import AddItemModal from '@/components/AddItemModal.vue'
 import AdjustItemModal from '@/components/AdjustItemModal.vue'
+import InventoryEquipmentToggle from '@/components/InventoryEquipmentToggle.vue'
 import AddManualSpellModal from '@/views/character-builder/components/AddManualSpellModal.vue'
 import AddManualFeatModal from '@/views/character-builder/components/AddManualFeatModal.vue'
 import ManualFeatConfigModal from '@/views/character-builder/components/ManualFeatConfigModal.vue'
@@ -19,7 +20,7 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, formatFeatGrantSource, getCheckpointSelectionBounds, getFeatStructuredEffectLabels, manualFeatParentCheckpointId, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
-import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
+import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
@@ -378,6 +379,9 @@ function isPreparedSpell(id: string): boolean {
 }
 /** 物品页签：已装备（equippedQuantity > 0）与全部物品栏条目。 */
 const equippedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity > 0))
+function toggleEquipment(entryId: string): void {
+  emit('changeInventory', toggleInventoryEquipment(props.draft.inventory, entryId, repository.value))
+}
 function equipmentName(itemId: string): string {
   return repository.value.getEquipment(itemId)?.name ?? itemId
 }
@@ -1104,6 +1108,7 @@ function handleExportPdf(): void {
           >
             <template #suffix>
               <span class="character-sheet__item-qty">×{{ entry.equippedQuantity }}</span>
+              <InventoryEquipmentToggle :entry="entry" :equipment="repository.getEquipment(entry.itemId)" @toggle="toggleEquipment" />
               <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
               <em v-if="isFromClosedSource(entry.itemId)" class="character-sheet__item-source character-sheet__item-source--closed">来源已关闭</em>
               <button v-if="entry.sourceKind === 'adventure'" type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
@@ -1125,6 +1130,7 @@ function handleExportPdf(): void {
           >
             <template #suffix>
               <span class="character-sheet__item-qty">×{{ entry.quantity }}</span>
+              <InventoryEquipmentToggle :entry="entry" :equipment="repository.getEquipment(entry.itemId)" @toggle="toggleEquipment" />
               <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
               <em v-if="isFromClosedSource(entry.itemId)" class="character-sheet__item-source character-sheet__item-source--closed">来源已关闭</em>
               <button v-if="entry.sourceKind === 'adventure'" type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
