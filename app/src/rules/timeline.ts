@@ -182,10 +182,11 @@ function buildSpeciesFeatCheckpoints(
   }]
 }
 
-/** 物种法术施法属性检查点（2024 精灵、侏儒、提夫林等选择 INT／WIS／CHA）。 */
+/** 种族／物种法术施法属性检查点，按独立规则集与有效来源生成。 */
 function buildSpeciesAbilityCheckpoints(
   raceIds: readonly (string | undefined)[],
   repository: RulesRepository,
+  enabledSourceIds: readonly string[] | undefined,
 ): readonly ChoiceCheckpoint[] {
   const checkpoints: ChoiceCheckpoint[] = []
   const seen = new Set<string>()
@@ -194,6 +195,7 @@ function buildSpeciesAbilityCheckpoints(
     seen.add(raceId)
     const race = repository.getRace(raceId)
     if (!race?.spellcastingAbilityChoices?.length) continue
+    if (enabledSourceIds !== undefined && !isSourceEnabled(race.sourceIds, enabledSourceIds, repository)) continue
     checkpoints.push({
       id: `${race.id}-spellcasting-ability`,
       level: 1,
@@ -327,7 +329,7 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
     ...(context.subraceId === 'race-2014-human-variant' ? [variantHumanCheckpoint] : []),
     ...(context.raceId ? buildSpeciesFeatCheckpoints(context.raceId, repository, context.enabledSourceIds) : []),
     ...(context.backgroundId ? buildBackgroundFeatCheckpoints(context.backgroundId, repository, context.enabledSourceIds) : []),
-    ...buildSpeciesAbilityCheckpoints([context.subraceId, context.raceId], repository),
+    ...buildSpeciesAbilityCheckpoints([context.subraceId, context.raceId], repository, context.enabledSourceIds),
     ...classCheckpoints,
     ...(context.subclassId ? buildSubclassFeatureCheckpoints(context.subclassId, repository, context.enabledSourceIds) : []),
   ]

@@ -460,7 +460,9 @@ export function getSpeciesSpellAbility(
   selections: readonly ChoiceSelection[],
 ): AbilityKey | undefined {
   const selection = selections.find((item) => !item.invalidatedAt && item.checkpointId === `${race.id}-spellcasting-ability`)
-  return abilityFromSpeciesSpellAbilityOption(selection?.optionIds[0])
+  if (selection?.optionIds.length !== 1) return undefined
+  const ability = abilityFromSpeciesSpellAbilityOption(selection.optionIds[0])
+  return ability && race.spellcastingAbilityChoices?.includes(ability) ? ability : undefined
 }
 
 /** 检查点或专长子选择声明的始终准备法术（法术精通、招牌法术、专长授予等）。 */

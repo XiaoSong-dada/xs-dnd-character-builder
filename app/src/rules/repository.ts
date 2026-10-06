@@ -28,7 +28,7 @@ import { thirdPartyItems2014 } from '@/rules/data/third-party-items-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
 import { sources2014 } from '@/rules/data/sources-2014'
 import { artificerClass2014, artificerInfusions2014 } from '@/rules/data/artificer-2014'
-import { spellListOptions2014 } from '@/rules/data/spell-lists-2014'
+import { speciesSpellAbilityOptions2014, spellListOptions2014 } from '@/rules/data/spell-lists-2014'
 import type { RulesRepository } from '@/types/rules'
 import type { CharacterDraft } from '@/types/character'
 
@@ -53,6 +53,7 @@ export const rulesRepository2014: RulesRepository = {
     ...abilityImprovementOptions2014,
     ...featChoiceOptions2014,
     ...spellListOptions2014,
+    ...speciesSpellAbilityOptions2014,
     ...feats2014,
     ...subclassOptions2014,
     ...withoutLegacySubclassOptions(fighterOptions),
