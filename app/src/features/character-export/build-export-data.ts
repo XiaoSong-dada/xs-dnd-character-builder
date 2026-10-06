@@ -5,6 +5,7 @@ import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getDraftSpeciesRules } from '@/rules/origins'
 import { listSessionResources } from '@/rules/session-resources'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpellcastingConfig, usesPreparedSelection } from '@/rules/spellcasting'
+import { getFixedSpeciesLanguages } from '@/rules/languages'
 import { isSourceEnabled } from '@/rules/source-books'
 import { buildTimeline } from '@/rules/timeline'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
@@ -296,8 +297,9 @@ function buildFeatures(draft: CharacterDraft): ExportFeature[] {
   // 2024 物种特性（含血统）逐条导出；种族名称已在身份区展示。
   const raceFeatures = [race, subrace]
     .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .filter((item) => isSourceEnabled(item.sourceIds, draft.enabledSourceIds, repository))
     .flatMap((item) => repository.getRaceFeatures(item.id)
-      .filter((feature) => feature.level <= draft.targetLevel)
+      .filter((feature) => feature.level <= draft.targetLevel && isSourceEnabled(feature.sourceIds, draft.enabledSourceIds, repository))
       .map((feature) => ({ id: feature.id, category: 'race' as const, name: feature.name, summary: feature.summary, priority: 40 })))
   const entries: ExportFeature[] = [
     ...resolveSelectedFeatures(draft),
@@ -428,7 +430,7 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
     const labels = value.sources.map((source) => source.label)
     return { id, name: optionName(repository, id), value: value.value, proficiency: labels.includes('专精') ? 'expertise' as const : labels.includes('技能熟练') ? 'proficient' as const : 'none' as const }
   })
-  const languages = draft.languages.map((id) => optionName(repository, id))
+  const languages = [...new Set([...getFixedSpeciesLanguages(draft, repository), ...draft.languages.map((id) => optionName(repository, id))])]
   const spellcastingConfig = getSpellcastingConfig(draft)
 
   return {

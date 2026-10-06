@@ -39,7 +39,7 @@ describe('2014 origins', () => {
     // 种族数量随第三方补录批次增长（G3-I1 起含胧忆岛／谦卑林），按「核心 35 主族 / 37 亚种齐备」+ 下界断言。
     const baseRaces = rulesRepository.races.filter((item) => !item.parentRaceId)
     const subraces = rulesRepository.races.filter((item) => item.parentRaceId)
-    const coreRaceIds = baseRaces.filter((item) => !item.id.startsWith('race-2014-tp-'))
+    const coreRaceIds = baseRaces.filter((item) => !item.id.startsWith('race-2014-tp-') && !item.id.startsWith('race-2014-motm-'))
     expect(coreRaceIds).toHaveLength(35)
     expect(subraces.filter((item) => !item.id.startsWith('race-2014-tp-'))).toHaveLength(37)
     expect(baseRaces.length).toBeGreaterThanOrEqual(35)

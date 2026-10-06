@@ -99,7 +99,7 @@ const visibleBackgrounds = computed(() => {
 })
 const variants = computed(() => props.backgroundId ? repository.value.backgrounds.filter((item) => item.parentBackgroundId === props.backgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)) : [])
 const effectiveBackground = computed<BackgroundRule | undefined>(() => props.backgroundVariantId ? repository.value.getBackground(props.backgroundVariantId) : selectedBackground.value)
-const languageChoiceCount = computed(() => getRequiredLanguageCount({ ruleset: props.ruleset, classId: props.classId, backgroundId: props.backgroundId, backgroundVariantId: props.backgroundVariantId }, repository.value))
+const languageChoiceCount = computed(() => getRequiredLanguageCount({ ruleset: props.ruleset, classId: props.classId, raceId: props.raceId, subraceId: props.subraceId, enabledSourceIds: props.enabledSourceIds, backgroundId: props.backgroundId, backgroundVariantId: props.backgroundVariantId }, repository.value))
 const languageOptions = computed(() => getLanguageOptions(props.ruleset))
 
 const currentRace = computed(() => props.subraceId ? repository.value.getRace(props.subraceId) : selectedRace.value)

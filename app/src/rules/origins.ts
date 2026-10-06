@@ -203,7 +203,7 @@ export function getOriginStepBlockers(
   ) {
     blockers.push({
       id: 'background-languages',
-      message: draft.ruleset === '5e-2024' ? '语言选择尚未完成。' : '背景语言选择尚未完成。',
+      message: '语言选择尚未完成。',
       resolution: `请选择${requiredLanguages}种不同的额外语言。`,
     })
   }

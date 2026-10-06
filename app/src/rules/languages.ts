@@ -1,5 +1,27 @@
 import type { CharacterDraft, RulesetId } from '@/types/character'
-import type { RulesRepository } from '@/types/rules'
+import type { RaceRule, RulesRepository } from '@/types/rules'
+import { isSourceEnabled } from '@/rules/source-books'
+
+type LanguageContext = Pick<CharacterDraft, 'ruleset'> & Partial<Pick<CharacterDraft, 'raceId' | 'subraceId' | 'enabledSourceIds'>>
+
+function languageRaceRules(draft: LanguageContext, repository: RulesRepository): readonly RaceRule[] {
+  if (draft.ruleset !== '5e-2014') return []
+  const rules: RaceRule[] = []
+  const seen = new Set<string>()
+  let id = draft.subraceId ?? draft.raceId
+  while (id && !seen.has(id)) {
+    seen.add(id)
+    const race = repository.getRace(id)
+    if (!race || !isSourceEnabled(race.sourceIds, draft.enabledSourceIds, repository)) break
+    rules.push(race)
+    id = race.parentRaceId
+  }
+  return rules
+}
+
+export function getFixedSpeciesLanguages(draft: LanguageContext, repository: RulesRepository): readonly string[] {
+  return [...new Set(languageRaceRules(draft, repository).flatMap((race) => race.fixedLanguages ?? []))]
+}
 
 /** 2024 标准语言表（OC-012）：通用语默认掌握，另从本表选 2 种。 */
 export const STANDARD_LANGUAGES_2024 = [
@@ -33,9 +55,9 @@ export function getLanguageOptions(ruleset: RulesetId): readonly string[] {
   return ruleset === '5e-2024' ? STANDARD_LANGUAGES_2024 : LEGACY_LANGUAGE_OPTIONS_2014
 }
 
-/** 必选语言数量：2024 基础 2 种 + 职业特性追加；2014 取背景的语言选择数量（变体优先）。 */
+/** 必选语言数量：2024 基础2种及职业追加；2014背景（变体优先）及明确登记的种族追加。 */
 export function getRequiredLanguageCount(
-  draft: Pick<CharacterDraft, 'ruleset' | 'backgroundId' | 'backgroundVariantId'> & Partial<Pick<CharacterDraft, 'classId' | 'subclassId' | 'targetLevel'>>,
+  draft: Pick<CharacterDraft, 'ruleset' | 'backgroundId' | 'backgroundVariantId'> & Partial<Pick<CharacterDraft, 'classId' | 'subclassId' | 'targetLevel' | 'raceId' | 'subraceId' | 'enabledSourceIds'>>,
   repository: RulesRepository,
 ): number {
   const level = draft.targetLevel ?? 1
@@ -52,5 +74,6 @@ export function getRequiredLanguageCount(
   if (draft.ruleset === '5e-2024') return 2 + classBonus + subclassBonus
   const backgroundId = draft.backgroundVariantId ?? draft.backgroundId
   const backgroundChoices = backgroundId ? repository.getBackground(backgroundId)?.languageChoices ?? 0 : 0
-  return backgroundChoices + classBonus
+  const raceChoices = languageRaceRules(draft, repository).reduce((sum, race) => sum + (race.languageChoices ?? 0), 0)
+  return backgroundChoices + classBonus + raceChoices
 }

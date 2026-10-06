@@ -12,6 +12,8 @@
 
 ## 2. 总体依赖方向
 
+S02-A1：新增纯数据模块`rules/data/races-motm-2014.ts`，由2014仓库登记种族、由`race-features-2014`合并特性；仅依赖共享类型。`rules/languages`新增依赖`source-books`解析有效种族语言声明，导出feature复用`languages`获取固定语言；沿用UI→rules→types方向，无反向或跨feature依赖。
+
 ```text
 main
   -> router

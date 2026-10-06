@@ -43,6 +43,7 @@ export const sources2014: readonly RuleSource[] = [
   source('ftd-2021-index', 'FTD', '费兹班的巨龙宝库', 'supplement'),
   source('dsotdq-2022-index', 'DSotDQ', '龙枪：龙后之影', 'supplement'),
   source('aag-2022-index', 'AAG', '星界冒险者指南', 'supplement'),
+  source('motm-2022-index', 'MotM', '魔邓肯出品：多元宇宙的怪物', 'supplement', { contentKind: 'official' }),
   source('bigby-2023-index', 'Bigby', '毕格比的巨人荣光', 'supplement'),
   source('bmt-2023-index', 'BMT', '万象无常书', 'supplement'),
   source('sato-2023-index', 'SatO', '印记城与外域', 'supplement'),

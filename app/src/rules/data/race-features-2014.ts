@@ -1,4 +1,5 @@
 import type { RaceFeature } from '@/types/rules'
+import { motmRaceFeatures2014 } from '@/rules/data/races-motm-2014'
 
 /**
  * 2014 种族特性注册表（纵向切片）。
@@ -8,6 +9,7 @@ import type { RaceFeature } from '@/types/rules'
  * 常驻或按等级自动获得，不建立时间线检查点。规则集：`5e-2014`。
  */
 export const raceFeatures2014: readonly RaceFeature[] = [
+  ...motmRaceFeatures2014,
   { id: 'race-2014-aarakocra-ability-score-increase', raceId: 'race-2014-aarakocra', name: '属性提升', englishName: 'Ability Score Increase', level: 1, summary: '敏捷 +2、感知 +1', description: '敏捷 +2、感知 +1', kind: 'passive', status: 'implemented', sourceIds: ['vgm-2016-index', 'eepc-2015-index'] },
   { id: 'race-2014-aarakocra-flight', raceId: 'race-2014-aarakocra', name: '飞行', englishName: 'Flight', level: 1, summary: '50 尺飞行速度；穿中甲/重甲时不可用', description: '获得 50 尺飞行速度；穿戴中甲或重甲时不能使用。', kind: 'passive', status: 'implemented', sourceIds: ['vgm-2016-index', 'eepc-2015-index'] },
   { id: 'race-2014-aarakocra-talons', raceId: 'race-2014-aarakocra', name: '利爪', englishName: 'Talons', level: 1, summary: '徒手打击熟练；命中 1d4 挥砍伤害', description: '徒手打击熟练；命中 1d4 挥砍伤害', kind: 'passive', status: 'implemented', sourceIds: ['vgm-2016-index', 'eepc-2015-index'] },

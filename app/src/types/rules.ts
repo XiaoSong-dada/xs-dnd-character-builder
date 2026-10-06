@@ -542,6 +542,10 @@ export interface RaceRule {
   readonly requiresSubrace?: boolean
   readonly replacesParentBonuses?: boolean
   readonly fixedAbilityBonuses: Readonly<Partial<Record<AbilityKey, number>>>
+  /** 2014 种族明确登记的固定语言；旧条目未声明时不推断。 */
+  readonly fixedLanguages?: readonly string[]
+  /** 2014 种族额外自选语言数量，与背景数量相加。 */
+  readonly languageChoices?: number
   readonly speed?: number
   readonly flexibleBonusCount?: number
   readonly flexibleBonusValue?: number

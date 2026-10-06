@@ -17,6 +17,24 @@ describe('OriginStep 动态任务与候选目录', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 
+  it('MotM与旧艾伯伦幻身灵可分别发现，种族额外语言生成任务', async () => {
+    const wrapper = mountOrigin({ raceId: 'race-2014-motm-changeling', backgroundId: 'background-2014-criminal', enabledSourceIds: ['motm-2022-index', 'erftlw-2019-index'] })
+    await openTask(wrapper, 'race')
+    await wrapper.get('input[aria-label="搜索种族"]').setValue('Changeling')
+    expect(wrapper.findAll('.expandable-option-card__title-line strong').map((item) => item.text()).filter((title) => !title.startsWith('已选择：'))).toEqual(['幻身灵', '幻身灵（多元宇宙）'])
+    await openTask(wrapper, 'background-languages')
+    expect(wrapper.text()).toContain('选择 1 种不同的额外语言')
+    const button = wrapper.findAll('button').find((item) => item.text() === '精灵语')
+    if (!button) throw new Error('missing language option')
+    await button.trigger('click')
+    expect(wrapper.emitted('languages')?.[0]).toEqual([['精灵语']])
+    await wrapper.setProps({ enabledSourceIds: ['erftlw-2019-index'] })
+    expect(wrapper.find('[data-task-id="background-languages"]').exists()).toBe(false)
+    await openTask(wrapper, 'race')
+    expect(wrapper.findAll('.expandable-option-card__title-line strong').map((item) => item.text()).filter((title) => !title.startsWith('已选择：'))).toEqual(['幻身灵'])
+    wrapper.unmount()
+  })
+
   it('幻身灵在完整目录中可发现，中文、旧名和英文搜索返回同一个稳定条目', async () => {
     const wrapper = mountOrigin({ enabledSourceIds: ['erftlw-2019-index'] })
     expect(wrapper.findAll('.expandable-option-card')).toHaveLength(6)
