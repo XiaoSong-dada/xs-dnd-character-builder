@@ -532,6 +532,7 @@ export interface RaceRule {
   readonly ruleset: RulesetId
   readonly name: string
   readonly englishName: string
+  readonly searchAliases?: readonly string[]
   /** 一行概括（卡片摘要行）。 */
   readonly summary: string
   /** 原创中文详细介绍（体型/速度/感官/语言/特性要点）；展开区展示。 */

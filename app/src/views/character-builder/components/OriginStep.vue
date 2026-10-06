@@ -71,7 +71,7 @@ const availableBaseRaces = computed(() => repository.value.races.filter((item) =
 const selectedRace = computed(() => props.raceId ? repository.value.getRace(props.raceId) : undefined)
 const filteredRaces = computed(() => {
   const query = raceSearch.value.trim().toLocaleLowerCase('zh-CN')
-  return availableBaseRaces.value.filter((item) => (raceSourceFilter.value === 'all' || item.sourceIds.includes(raceSourceFilter.value)) && (!query || `${item.name}${item.englishName}`.toLocaleLowerCase('zh-CN').includes(query)))
+  return availableBaseRaces.value.filter((item) => (raceSourceFilter.value === 'all' || item.sourceIds.includes(raceSourceFilter.value)) && (!query || [item.name, item.englishName, ...(item.searchAliases ?? [])].some((name) => name.toLocaleLowerCase('zh-CN').includes(query))))
 })
 const recommendedRaces = computed(() => filteredRaces.value.filter((item) => item.recommendedClassIds.includes(props.classId ?? '')).slice(0, 6))
 /** 完整目录／搜索／来源筛选共用的候选池：推荐优先，其余保持登记顺序（v1.9.1 R1-1）。 */

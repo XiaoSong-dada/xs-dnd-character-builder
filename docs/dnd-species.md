@@ -11,6 +11,7 @@
 | `5e-2014` | 种族（Race） | 基础种族和部分子种族 | 子种族（Subrace） | 独立参考层，不自动进入 2024 车卡流程 |
 
 - 两套规则的物种、种族、分支和特性 ID 必须完全独立；同名能力也不得隐式复用数值。
+- `RaceRule.searchAliases` 仅服务目录检索，不创建条目或修改规则；2014 幻身灵保留旧译「变形怪」，英文 Changeling 与主译名均可搜索，已有草稿稳定 ID 不变。
 - 角色只能绑定一个明确的 `ruleset`。跨版本采用内容必须由 DM 明确许可，并建立显式映射，不能叠加两个版本的同名能力。
 - 2024 的语言由角色创建规则的其他步骤决定，不把 2014 种族语言直接移植到 2024 物种。
 
@@ -96,7 +97,7 @@ race-2014-elf-drow
 | 蜥蜴人 | Lizardfolk | VGM | [2014 蜥蜴人](species/5e-2014/lizardfolk/lizardfolk.md) | 无 | 已实现；商业摘要 |
 | 蛇人 | Yuan-ti Pureblood | VGM | [2014 蛇人](species/5e-2014/yuan-ti/yuan-ti.md) | 无 | 已实现；商业摘要 |
 | 战俑 | Warforged | ERftLW | [2014 战俑](species/5e-2014/warforged/warforged.md) | 无 | 已实现；商业摘要 |
-| 变形怪 | Changeling | ERftLW | [2014 变形怪](species/5e-2014/changeling/changeling.md) | 无 | 已实现；商业摘要 |
+| 幻身灵 | Changeling | ERftLW | [2014 幻身灵](species/5e-2014/changeling/changeling.md) | 无 | 已实现；商业摘要；旧名「变形怪」可搜索 |
 | 卡拉司塔 | Kalashtar | ERftLW | [2014 卡拉司塔](species/5e-2014/kalashtar/kalashtar.md) | 无 | 已实现；商业摘要 |
 | 龟人 | Tortle | Tortle Package | [2014 龟人](species/5e-2014/tortle/tortle.md) | 无 | 已实现；商业摘要 |
 | 吉斯 | Gith | MToF | [2014 吉斯](species/5e-2014/gith/gith.md) | [吉斯洋基人](species/5e-2014/gith/gith-githyanki.md)、[吉斯泽莱人](species/5e-2014/gith/gith-githzerai.md) | 已实现；商业摘要 |
