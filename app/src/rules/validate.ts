@@ -1,5 +1,6 @@
 ﻿import { getRulesRepository } from '@/rules/repositories'
 import { deriveAbilities } from '@/rules/derive'
+import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
 import {
   collectFeatSkillSelections,
@@ -25,7 +26,7 @@ import type { AbilityKey, CharacterDraft, ValidationIssue } from '@/types/charac
 
 export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[] {
   const repository = getRulesRepository(draft.ruleset)
-  const issues: ValidationIssue[] = []
+  const issues: ValidationIssue[] = [...getEquipmentWarnings(draft, repository)]
   const requireEnabled = (
     id: string,
     step: ValidationIssue['step'],

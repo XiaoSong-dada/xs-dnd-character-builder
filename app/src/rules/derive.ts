@@ -1,6 +1,7 @@
 import { ABILITY_LABELS, formatAbilityModifierLabel } from '@/rules/data/ability-labels'
 import { SKILL_IDS } from '@/rules/data/skill-ids'
 import { getRulesRepository } from '@/rules/repositories'
+import { canBenefitFromShield, getActiveEquippedEquipment } from '@/rules/equipment-state'
 import { applyAbilityImprovement, collectFeatSkillSelections, decodeAbilityImprovement, getFeatAbilityCap, isFeatGrantParentActive, isSelectionCheckpointActive, listActiveFeats } from '@/rules/feats'
 import { getBackgroundAbilityBonuses, getSpeciesHitPointBonus } from '@/rules/origins'
 import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
@@ -238,10 +239,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     + subclassEffects.hitPointBonus
     + featHitPointBonus
     + speciesHitPointBonus
-  const equippedItems = draft.inventory
-    .filter((entry) => entry.equippedQuantity > 0)
-    .map((entry) => repository.getEquipment(entry.itemId))
-    .filter((item) => Boolean(item && isSourceEnabled(item.sourceIds, draft.enabledSourceIds, repository)))
+  const equippedItems = getActiveEquippedEquipment(draft, repository)
   const equippedArmor = equippedItems
     .find((item) => item?.category === 'armor')
   const equippedShield = equippedItems
@@ -292,8 +290,9 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     const option = repository.getOption(id)
     return !option || isSourceEnabled(option.sourceIds, draft.enabledSourceIds, repository)
   }))
-  const shieldBonus = equippedShield?.armorClassBonus ?? 0
-  const armorInfusionBonus = infusionBonusFor(equippedArmor?.id) + infusionBonusFor(equippedShield?.id)
+  const shieldBenefitAllowed = canBenefitFromShield(draft, repository)
+  const shieldBonus = shieldBenefitAllowed ? equippedShield?.armorClassBonus ?? 0 : 0
+  const armorInfusionBonus = infusionBonusFor(equippedArmor?.id) + (shieldBenefitAllowed ? infusionBonusFor(equippedShield?.id) : 0)
   const armorClass = baseArmor + shieldBonus + armorInfusionBonus + (defenseStyle && Boolean(equippedArmor) ? 1 : 0) + subclassEffects.armorClassBonus
   const selectedClassSkillIds = (classRule?.checkpoints ?? [])
     .filter((checkpoint) => checkpoint.kind === 'skills')
@@ -424,7 +423,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
                 ? `${subclassEffects.armorClassBase} + 敏捷调整值`
                 : '10 + 敏捷调整值',
     },
-    ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: '已装备' }] : []),
+    ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: shieldBenefitAllowed ? '已手动装备' : '未受盾牌训练，不计入 AC' }] : []),
     ...(defenseStyle && equippedArmor ? [{ id: 'defense-style', label: '防御战斗风格', value: 1, detail: '穿着护甲时生效' }] : []),
     ...(armorInfusionBonus ? [{ id: 'artificer-enhanced-defense', label: '奇械师灌注', value: armorInfusionBonus, detail: '已绑定并装备的强化防御物品' }] : []),
     ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${repository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),

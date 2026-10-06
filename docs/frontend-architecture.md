@@ -708,6 +708,10 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 
 `components/InventoryEquipmentToggle.vue` 为角色卡与跑团助手共用的展示组件，仅依赖共享类型 `InventoryEntry` / `EquipmentRule`，按可装备性、拥有数量与装备数量显示按钮并发送条目 ID，不读取规则仓库、store 或存储。`CharacterSheetStep` 与 `SessionPanel` 调用框架无关的 `rules/starting-equipment.toggleInventoryEquipment`，分别通过既有 `changeInventory` 事件和 `useSessionPanel.updateInventory` 保存原始装备数量。规则函数在版本仓库中核对可装备性，再复用 `updateEquippedQuantity`；依赖方向保持 `views → components/types` 与 `views/hooks → stores/rules`，无反向依赖。
 
+### 装备状态与盾牌条件（C01-B）
+
+`rules/equipment-state.ts` 提供来源有效的已装备物品、两版持盾收益条件及装备警告。其下游仅为 `rules/{feats,repositories,source-books}` 与共享类型；`derive`、`validate` 以及 `EquipmentStep` / `CharacterSheetStep` / `SessionPanel` 复用该模块，不复制手部或受训判定。规则模块不改变草稿状态，不访问 Vue、存储、DOM 或网络；警告由页面用既有 `UiNotice` 展示。`starting-equipment` 重建仅向新条目推荐护甲/武器，保留旧装备数量。`collectArmorTrainings` 加入职业、选项和子职特性的来源检查，仍由规则层收集训练。
+
 ### 骰娘音效试听工具
 
 `app/scripts/render-dice-audio-previews.mjs` 经 Vite SSR 加载 `src/services/dice-audio/synthesis.ts`，使用与实时播放相同的 PCM 合成器导出 WAV；旧版通过原算法离线复现作为对照。输出在根目录已忽略的 `tmp/dice-audio-previews/`，不进入生产资源或 Git。运行时服务保持 services 内部单向依赖，不引用脚本或页面。

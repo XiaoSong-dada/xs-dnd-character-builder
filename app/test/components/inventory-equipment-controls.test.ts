@@ -43,7 +43,7 @@ describe('物品装备操作', () => {
         const modern = ruleset === '5e-2024'
         const shieldId = modern ? 'equipment-2024-shield' : 'shield'
         const armorId = modern ? 'equipment-2024-chain-mail' : 'chain-mail'
-        const weaponId = modern ? 'equipment-2024-longsword' : 'longsword'
+        const weaponId = modern ? 'equipment-2024-greatsword' : 'greatsword'
         const inventory: readonly InventoryEntry[] = [
           { id: 'shield-entry', itemId: shieldId, sourceKind: 'class', sourceId: created.classId, quantity: 2, equippedQuantity: 2 },
           { id: 'armor-entry', itemId: armorId, sourceKind: 'adventure', sourceId: 'adventure', quantity: 1, equippedQuantity: 1 },
@@ -63,17 +63,22 @@ describe('物品装备操作', () => {
         const wrapper = mount(Host)
         if (page === 'sheet') await wrapper.get('[role="tab"]:nth-child(5)').trigger('click')
         expect(deriveCharacter(store.activeDraft ?? created).armorClass.value).toBe(18)
+        expect(wrapper.text()).toContain('持盾时不能用这些武器进行双手攻击')
         await wrapper.get('[aria-label="卸下盾牌"]').trigger('click')
         await nextTick()
         expect(store.activeDraft?.inventory[0]).toEqual({ ...inventory[0], equippedQuantity: 0 })
         expect(deriveCharacter(store.activeDraft ?? created).armorClass.value).toBe(16)
+        expect(wrapper.text()).not.toContain('持盾时不能用这些武器进行双手攻击')
         expect(wrapper.find('[aria-label="卸下盾牌"]').exists()).toBe(false)
         await wrapper.get('[aria-label="装备盾牌"]').trigger('click')
         expect(store.activeDraft?.inventory[0]?.equippedQuantity).toBe(1)
         await wrapper.get('[aria-label="卸下链甲"]').trigger('click')
         await wrapper.get('[aria-label="装备链甲"]').trigger('click')
-        await wrapper.get('[aria-label="卸下长剑"]').trigger('click')
-        await wrapper.get('[aria-label="装备长剑"]').trigger('click')
+        await wrapper.get('[aria-label="卸下巨剑"]').trigger('click')
+        expect(wrapper.text()).not.toContain('持盾时不能用这些武器进行双手攻击')
+        expect(deriveCharacter(store.activeDraft ?? created).armorClass.value).toBe(18)
+        await wrapper.get('[aria-label="装备巨剑"]').trigger('click')
+        expect(wrapper.text()).toContain('持盾时不能用这些武器进行双手攻击')
         await wrapper.get('[aria-label="卸下盾牌"]').trigger('click')
         await flushPromises()
         const draft = store.activeDraft

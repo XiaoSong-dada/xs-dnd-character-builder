@@ -163,7 +163,8 @@ describe('2024 吟游诗人与 4 学院数据（B08-08）', () => {
       ...dance,
       inventory: [{ id: 'shield', itemId: 'equipment-2024-shield', quantity: 1, sourceKind: 'legacy' as const, sourceId: 'test', equippedQuantity: 1 }],
     }
-    expect(deriveCharacter(withShield).armorClass.value).toBe(14)
+    // 舞蹈学院不授予盾牌训练；持盾使无甲防御失效，但不能获得盾牌 AC。
+    expect(deriveCharacter(withShield).armorClass.value).toBe(12)
   })
 
   it('逸闻学院附赠熟练与魔法探秘候选', () => {

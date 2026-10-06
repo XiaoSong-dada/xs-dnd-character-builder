@@ -19,6 +19,7 @@ import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, formatFeatGrantSource, getCheckpointSelectionBounds, getFeatStructuredEffectLabels, manualFeatParentCheckpointId, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
@@ -50,6 +51,7 @@ const emit = defineEmits<{
 }>()
 /** 角色卡解析与名称一律使用草稿版本仓库（B09-02）。 */
 const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const equipmentWarnings = computed(() => getEquipmentWarnings(props.draft, repository.value))
 const showMediaEditor = ref(false)
 const showAddFeatModal = ref(false)
 const configuringManualFeat = ref<ManualFeatGrant>()
@@ -696,6 +698,9 @@ function handleExportPdf(): void {
       <CharacterMediaImage v-if="draft.media?.portrait" class="character-sheet__portrait" :media-id="draft.media.portrait.mediaId" decorative :focus-x="draft.media.portrait.focusX" :focus-y="draft.media.portrait.focusY" />
     </header>
     <UiTabs v-model="activeTab" :items="tabs" />
+    <UiNotice v-for="issue in equipmentWarnings" :key="issue.id" tone="warning" title="装备提示">
+      {{ issue.message }} {{ issue.resolution }}
+    </UiNotice>
     <div v-if="activeTab === 'overview'" class="character-sheet__stats">
       <EditableStatTile label="护甲等级" :value="derived.armorClass.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.armorClass.sources)" @commit="editing.commitDerived('armorClass', $event)" />
       <EditableStatTile label="最大生命值" :value="derived.hitPoints.value" :minimum="1" :edit-mode="editing.editMode.value" :note="sourceNote(derived.hitPoints.sources)" @commit="editing.commitDerived('hitPoints', $event)" />

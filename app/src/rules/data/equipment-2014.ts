@@ -53,7 +53,8 @@ function weapon(
     ['灵巧', 'finesse'], ['轻', 'light'], ['重', 'heavy'], ['触及', 'reach'], ['装填', 'loading'],
     ['弹药', 'ammunition'], ['投掷', 'thrown'], ['双手', 'two-handed'], ['多用', 'versatile'],
   ] as const
-  const weaponProperties = propertyMap.filter(([label]) => traits.includes(label)).map(([, property]) => property)
+  const traitParts = traits.split('、')
+  const weaponProperties = propertyMap.filter(([label]) => traitParts.some((trait) => trait.startsWith(label))).map(([, property]) => property)
   const versatileDamageDice = traits.match(/多用\s+(\d+d\d+)/)?.[1]
   const rangeMatch = traits.match(/(?:弹药|投掷)\s+(\d+)\/(\d+)\s*尺/)
   const range = rangeMatch

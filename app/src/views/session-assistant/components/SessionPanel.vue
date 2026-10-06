@@ -10,11 +10,13 @@ import ListShell from '@/components/ui/ListShell.vue'
 import StatTile from '@/components/ui/StatTile.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiModal from '@/components/ui/UiModal.vue'
+import UiNotice from '@/components/ui/UiNotice.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatGrantSource, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { getAvailableSlotLevels } from '@/rules/session-state'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
@@ -31,6 +33,7 @@ const props = defineProps<{ draft: CharacterDraft }>()
 
 /** 名称与条目解析按草稿版本（2024 草稿不得使用 2014 静态仓库）。 */
 const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const equipmentWarnings = computed(() => getEquipmentWarnings(props.draft, repository.value))
 
 const panel = useSessionPanel(computed(() => props.draft))
 
@@ -427,6 +430,9 @@ function openTranscribe(spellId?: string): void {
     </section>
 
     <UiTabs v-model="activeTab" wrap :items="tabs" />
+    <UiNotice v-for="issue in equipmentWarnings" :key="issue.id" tone="warning" title="装备提示">
+      {{ issue.message }} {{ issue.resolution }}
+    </UiNotice>
 
     <div v-if="activeTab === 'overview'" class="session-panel__tab">
       <section class="session-panel__section">

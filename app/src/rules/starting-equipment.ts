@@ -80,24 +80,20 @@ function buildEntries(
   })
 }
 
-function applyRecommendedEquipment(entries: readonly InventoryEntry[], repository: RulesRepository): readonly InventoryEntry[] {
+function applyRecommendedEquipment(entries: readonly InventoryEntry[], repository: RulesRepository, previous: readonly InventoryEntry[]): readonly InventoryEntry[] {
   const equippedIds = new Set(entries.filter((entry) => entry.equippedQuantity > 0).map((entry) => entry.itemId))
   const hasArmor = [...equippedIds].some((id) => repository.getEquipment(id)?.category === 'armor')
-  const hasShield = [...equippedIds].some((id) => repository.getEquipment(id)?.category === 'shield')
   const hasWeapon = [...equippedIds].some((id) => repository.getEquipment(id)?.category === 'weapon')
   let equippedArmor = hasArmor
-  let equippedShield = hasShield
   let equippedWeapon = hasWeapon
 
   return entries.map((entry) => {
     const item = repository.getEquipment(entry.itemId)
-    if (!item?.equippable || entry.equippedQuantity > 0) return entry
+    const existed = previous.some((old) => old.id === entry.id
+      || (old.sourceKind === entry.sourceKind && old.sourceId === entry.sourceId && old.itemId === entry.itemId))
+    if (!item?.equippable || entry.equippedQuantity > 0 || existed) return entry
     if (item.category === 'armor' && !equippedArmor) {
       equippedArmor = true
-      return { ...entry, equippedQuantity: 1 }
-    }
-    if (item.category === 'shield' && !equippedShield) {
-      equippedShield = true
       return { ...entry, equippedQuantity: 1 }
     }
     if (item.category === 'weapon' && !equippedWeapon) {
@@ -150,7 +146,7 @@ export function buildStartingEquipmentState(
   ]
 
   return {
-    inventory: autoEquip ? applyRecommendedEquipment(generated, repository) : generated,
+    inventory: autoEquip ? applyRecommendedEquipment(generated, repository, draft.inventory) : generated,
     currency,
   }
 }

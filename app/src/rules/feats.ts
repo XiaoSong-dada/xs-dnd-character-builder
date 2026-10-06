@@ -481,7 +481,9 @@ export function collectFeatSkillSelections(draft: CharacterDraft, repository: Ru
 export function collectArmorTrainings(draft: CharacterDraft, repository: RulesRepository): readonly ArmorTraining[] {
   const trainings = new Set<ArmorTraining>()
   const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
-  for (const training of classRule?.armorTraining ?? []) trainings.add(training)
+  if (classRule && isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds, repository)) {
+    for (const training of classRule.armorTraining ?? []) trainings.add(training)
+  }
   for (const feat of listActiveFeats(draft, repository)) {
     for (const training of feat.armorTraining ?? []) trainings.add(training)
   }
@@ -489,13 +491,18 @@ export function collectArmorTrainings(draft: CharacterDraft, repository: RulesRe
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
     for (const optionId of selection.optionIds) {
-      for (const training of repository.getOption(optionId)?.armorTraining ?? []) trainings.add(training)
+      const option = repository.getOption(optionId)
+      if (!option || !isSourceEnabled(option.sourceIds, draft.enabledSourceIds, repository)) continue
+      for (const training of option.armorTraining ?? []) trainings.add(training)
     }
   }
   // 子职特性可授予训练（如 2024 勇气学院·战争训练）。
   const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
   for (const feature of subclass?.features ?? []) {
     if (feature.level > draft.targetLevel) continue
+    if (!subclass || subclass.classId !== draft.classId
+      || !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)
+      || !isSourceEnabled(feature.sourceIds, draft.enabledSourceIds, repository)) continue
     for (const training of feature.armorTraining ?? []) trainings.add(training)
   }
   return [...trainings]
