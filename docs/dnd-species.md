@@ -23,6 +23,8 @@
 
 ## 文档字段约定
 
+S01-A：2014 扩展允许多种属性加值方案时，用 `RaceRule.flexibleBonusAlternatives` 登记方案 ID、名称及有序分组；草稿 `raceAbilityBonusOptionId` 保存明确选择，缺省采用首方案。原有固定/单一灵活规则不改变；不同规则集独立登记。切换方案保留原 `raceAbilityChoices`，数量不符或非法方案必须重新确认，不截断旧选择。两版 `sizeChoices` 均参与起源阻断和保存；有效体型作为「选定体型」进入共享导出特性，不自动迁移或猜测。
+
 每个物种或种族主文件至少记录：
 
 - 稳定 ID、中文名、英文名、`ruleset`、来源与版权边界。

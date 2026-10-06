@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, pointBuyCost, STANDARD_ARRAY } from '@/rules/abilities'
 import type { AbilityKey, AbilityMethod, AbilityScores, RulesetId } from '@/types/character'
+import type { RaceRule } from '@/types/rules'
 
 const props = defineProps<{
   scores: AbilityScores
@@ -11,10 +12,12 @@ const props = defineProps<{
   flexibleCount: number
   flexibleChoices: readonly AbilityKey[]
   flexibleGroups?: readonly { count: number; value: number }[]
+  flexibleAlternatives?: RaceRule['flexibleBonusAlternatives']
+  flexibleOptionId?: string
   excludedChoices?: readonly AbilityKey[]
   ruleset?: RulesetId
 }>()
-const emit = defineEmits<{ change: [scores: AbilityScores]; choices: [choices: readonly AbilityKey[]] }>()
+const emit = defineEmits<{ change: [scores: AbilityScores]; choices: [choices: readonly AbilityKey[]]; option: [id: string] }>()
 const labels: Record<AbilityKey, string> = { str: '力量', dex: '敏捷', con: '体质', int: '智力', wis: '感知', cha: '魅力' }
 const keys: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const pointCost = computed(() => pointBuyCost(props.scores, props.ruleset ?? '5e-2014'))
@@ -81,7 +84,15 @@ function toggleChoice(key: AbilityKey): void {
 function choiceDisabled(key: AbilityKey): boolean {
   if (props.excludedChoices?.includes(key)) return true
   if (props.flexibleChoices.includes(key)) return false
-  return props.scores[key] + (props.bonuses[key] ?? 0) + 1 > 20
+  const nextChoices = [...props.flexibleChoices, key].slice(-props.flexibleCount)
+  const bonusFor = (ability: AbilityKey, choices: readonly AbilityKey[]) => {
+    const index = choices.indexOf(ability)
+    if (index < 0) return 0
+    const values = props.flexibleGroups?.flatMap((group) => Array.from({ length: group.count }, () => group.value))
+    return values ? values[index] ?? 0 : index < props.flexibleCount ? 1 : 0
+  }
+  return keys.some((ability) => props.scores[ability] + (props.bonuses[ability] ?? 0)
+    - bonusFor(ability, props.flexibleChoices) + bonusFor(ability, nextChoices) > 20)
 }
 </script>
 
@@ -96,6 +107,13 @@ function choiceDisabled(key: AbilityKey): boolean {
       <span v-else-if="method === 'point-buy'">{{ ruleset === '5e-2024' ? '官方购点：基础值 8—15，每项 9—13 花费 1 点，14 与 15 各花费 2 点；预算 27 点。这里不计背景加值与后续属性提升。' : '基础值从8开始，每提高1点消耗1点；27点预算只计算本页基础值，不计种族加成和后续属性提升。所有加成后的最终值不能超过20。' }}</span>
       <span v-else>每项范围 3—20；自定义结果应由玩家与DM确认。</span>
     </aside>
+    <fieldset v-if="flexibleAlternatives?.length" class="abilities-step__choices">
+      <legend>种族属性加值</legend>
+      <label v-for="option in flexibleAlternatives" :key="option.id">
+        <input type="radio" name="race-ability-bonus-option" :value="option.id" :checked="(flexibleOptionId ?? flexibleAlternatives[0]?.id) === option.id" @change="$emit('option', option.id)">
+        {{ option.label }}
+      </label>
+    </fieldset>
     <div v-if="flexibleCount" class="abilities-step__choices">
       <strong v-if="flexibleGroups?.length">种族允许选择{{ flexibleGroups.map((g) => `${g.count}项不同属性 +${g.value}`).join('、') }}</strong>
       <strong v-else>种族允许选择{{ flexibleCount }}项不同属性 +1</strong>
@@ -187,6 +205,9 @@ function choiceDisabled(key: AbilityKey): boolean {
     background: var(--color-gold-soft);
 
     strong { width: 100%; font-size: 0.8rem; }
+    legend { font-size: 0.8rem; font-weight: 700; }
+    label { display: flex; align-items: center; min-height: 2.75rem; gap: 0.4rem; }
+    input { accent-color: var(--color-primary); }
     button { min-height: 2.75rem; padding: 0.4rem 0.65rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); }
     button[aria-pressed="true"] { border-color: var(--color-primary); color: var(--color-primary); font-weight: 700; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }

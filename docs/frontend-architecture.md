@@ -723,3 +723,7 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 ### 骰娘音效试听工具
 
 `app/scripts/render-dice-audio-previews.mjs` 经 Vite SSR 加载 `src/services/dice-audio/synthesis.ts`，使用与实时播放相同的 PCM 合成器导出 WAV；旧版通过原算法离线复现作为对照。输出在根目录已忽略的 `tmp/dice-audio-previews/`，不进入生产资源或 Git。运行时服务保持 services 内部单向依赖，不引用脚本或页面。
+
+### 种族属性方案与体型（S01-A）
+
+`types/rules.RaceRule.flexibleBonusAlternatives` 登记有序方案，`types/character.CharacterDraft.raceAbilityBonusOptionId` 保存原始选择。`rules/derive.getFlexibleBonusGroups` 是派生、校验与页面 hook 的共用解析入口；`useCharacterBuilderPage` 返回方案、有效分组及更新操作，`index.vue` 仅绑定 `AbilitiesStep` 的单选控件。切换保留属性选择，更换种族/子种族按既有重置流程清除方案；`services/draft-storage` 只做字段归一化。两版体型阻断共用 `rules/origins`，`features/character-export/build-export-data` 新增对该纯规则模块的依赖，仅导出有效种族链允许的体型。依赖方向保持 views/hooks/features → rules → types，无新增模块或反向依赖。

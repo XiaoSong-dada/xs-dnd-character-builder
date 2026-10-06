@@ -12,7 +12,7 @@ import {
   type FeatGrant,
 } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abilities'
-import { getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
+import { getFlexibleBonusGroups, getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellbookExtraAllowance, getSpellbookExtraCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
@@ -216,7 +216,11 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     issues.push({ id: 'subrace-mismatch', step: 'origin', severity: 'error', message: '所选子种族不属于当前种族。', resolution: '重新选择当前种族的子种族。' })
   }
   const flexibleRule = getFlexibleBonusRule(race, subrace)
-  const flexibleTotalCount = flexibleRule?.flexibleBonusGroups?.reduce((sum, group) => sum + group.count, 0)
+  if (flexibleRule?.flexibleBonusAlternatives?.length && draft.raceAbilityBonusOptionId !== undefined
+    && !flexibleRule.flexibleBonusAlternatives.some((option) => option.id === draft.raceAbilityBonusOptionId)) {
+    issues.push({ id: 'race-ability-option', step: 'abilities', severity: 'error', message: '种族属性加值方案不属于当前种族。', resolution: '重新选择当前种族允许的属性加值方案。' })
+  }
+  const flexibleTotalCount = getFlexibleBonusGroups(flexibleRule, draft.raceAbilityBonusOptionId)?.reduce((sum, group) => sum + group.count, 0)
     ?? flexibleRule?.flexibleBonusCount ?? 0
   if (
     flexibleTotalCount !== draft.raceAbilityChoices.length
@@ -273,15 +277,11 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         resolution: allocationIssue,
       })
     }
-    if (originBlockers.some((blocker) => blocker.id === 'species-size-required')) {
-      issues.push({
-        id: 'species-size-required',
-        step: 'origin',
-        severity: 'error',
-        message: '物种需要选择体型。',
-        resolution: '选择小型或中型。',
-      })
-    }
+  }
+
+  if (originBlockers.some((blocker) => blocker.id === 'species-size-required')) {
+    issues.push({ id: 'species-size-required', step: 'origin', severity: 'error',
+      message: draft.ruleset === '5e-2024' ? '物种需要选择体型。' : '种族需要选择体型。', resolution: '选择小型或中型。' })
   }
 
   if (draft.classId) {

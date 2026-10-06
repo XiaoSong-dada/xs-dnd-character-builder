@@ -23,6 +23,34 @@ function mountStep(
 }
 
 describe('AbilitiesStep', () => {
+  it('明确选择属性加值方案，切换不在组件中删除已选属性', async () => {
+    const wrapper = mount(AbilitiesStep, { props: { scores, method: 'standard-array', bonuses: { str: 2, dex: 1 }, flexibleCount: 2, flexibleChoices: ['str', 'dex'],
+      flexibleGroups: [{ count: 1, value: 2 }, { count: 1, value: 1 }],
+      flexibleAlternatives: [
+        { id: 'two-one', label: '+2 / +1', groups: [{ count: 1, value: 2 }, { count: 1, value: 1 }] },
+        { id: 'three-one', label: '三项 +1', groups: [{ count: 3, value: 1 }] },
+      ],
+    } })
+    expect((wrapper.get('input[value="two-one"]').element as HTMLInputElement).checked).toBe(true)
+    await wrapper.get('input[value="three-one"]').setValue(true)
+    expect(wrapper.emitted('option')).toEqual([['three-one']])
+    expect(wrapper.emitted('choices')).toBeUndefined()
+    await wrapper.setProps({ flexibleOptionId: 'three-one', flexibleCount: 3, flexibleGroups: [{ count: 3, value: 1 }], bonuses: { str: 1, dex: 1 } })
+    const con = wrapper.findAll('.abilities-step__choices button').find((button) => button.text() === '体质')
+    if (!con) throw new Error('missing constitution')
+    await con.trigger('click')
+    expect(wrapper.emitted('choices')?.[0]).toEqual([['str', 'dex', 'con']])
+    wrapper.unmount()
+  })
+
+  it('第一项 +2 不能选择基础19的属性，三项 +1 可以达到20', async () => {
+    const wrapper = mount(AbilitiesStep, { props: { scores: { ...scores, str: 19 }, method: 'custom', bonuses: {}, flexibleCount: 2, flexibleChoices: [], flexibleGroups: [{ count: 1, value: 2 }, { count: 1, value: 1 }] } })
+    const str = () => wrapper.findAll('.abilities-step__choices button').find((button) => button.text() === '力量')
+    expect(str()?.attributes('disabled')).toBeDefined()
+    await wrapper.setProps({ flexibleCount: 3, flexibleGroups: [{ count: 3, value: 1 }] })
+    expect(str()?.attributes('disabled')).toBeUndefined()
+    wrapper.unmount()
+  })
   it('assigns standard-array values by swapping the occupied ability', async () => {
     const wrapper = mountStep()
 

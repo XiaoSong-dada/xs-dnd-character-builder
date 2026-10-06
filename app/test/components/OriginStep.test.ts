@@ -141,6 +141,22 @@ describe('OriginStep 动态任务与候选目录', () => {
 })
 
 describe('OriginStep 动态附加选择', () => {
+  it('2014可选体型显示独立任务并发出原始选择，不借用2024种族数据', async () => {
+    const race = rulesRepository.races.find((item) => !item.parentRaceId && item.sizeChoices?.includes('small') && item.sizeChoices.includes('medium'))
+    if (!race) throw new Error('missing 2014 size-choice race')
+    const wrapper = mountOrigin({ ruleset: '5e-2014', raceId: race.id, enabledSourceIds: race.sourceIds,
+      blockers: [{ id: 'species-size-required', message: '种族需要选择体型。', resolution: '选择小型或中型。' }],
+    })
+    await openTask(wrapper, 'species-size')
+    const small = wrapper.findAll('.origin-step__choices button').find((button) => button.text() === '小型')
+    if (!small) throw new Error('missing small size')
+    await small.trigger('click')
+    expect(wrapper.emitted('size')).toEqual([['small']])
+    await wrapper.setProps({ sizeChoice: 'small', blockers: [] })
+    await openTask(wrapper, 'species-size')
+    expect(wrapper.get('.origin-step__choices button[aria-pressed="true"]').text()).toContain('小型')
+    wrapper.unmount()
+  })
   it('半精灵熟练任务展示全技能二选并发出选择', async () => {
     const wrapper = mountOrigin({ raceId: 'race-2014-half-elf' })
     await openTask(wrapper, 'race-proficiencies')

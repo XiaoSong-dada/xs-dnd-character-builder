@@ -2,7 +2,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 
-import { deriveCharacter, getFlexibleBonusRule, getRaceAbilityBonuses } from '@/rules/derive'
+import { deriveCharacter, getFlexibleBonusGroups, getFlexibleBonusRule, getRaceAbilityBonuses } from '@/rules/derive'
 import { getBackgroundAbilityBonuses, getOriginStepBlockers, isOriginStepComplete } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
@@ -84,7 +84,7 @@ export function useCharacterBuilderPage() {
     const race = draft.raceId ? repositoryFor(draft).getRace(draft.raceId) : undefined
     const subrace = draft.subraceId ? repositoryFor(draft).getRace(draft.subraceId) : undefined
     const flexibleRule = getFlexibleBonusRule(race, subrace)
-    return flexibleRule?.flexibleBonusGroups?.reduce((sum, group) => sum + group.count, 0)
+    return getFlexibleBonusGroups(flexibleRule, draft.raceAbilityBonusOptionId)?.reduce((sum, group) => sum + group.count, 0)
       ?? flexibleRule?.flexibleBonusCount ?? 0
   })
   const raceFlexibleGroups = computed(() => {
@@ -92,7 +92,14 @@ export function useCharacterBuilderPage() {
     if (!draft) return undefined
     const race = draft.raceId ? repositoryFor(draft).getRace(draft.raceId) : undefined
     const subrace = draft.subraceId ? repositoryFor(draft).getRace(draft.subraceId) : undefined
-    return getFlexibleBonusRule(race, subrace)?.flexibleBonusGroups
+    return getFlexibleBonusGroups(getFlexibleBonusRule(race, subrace), draft.raceAbilityBonusOptionId)
+  })
+  const raceFlexibleAlternatives = computed(() => {
+    const draft = activeDraft.value
+    if (!draft) return undefined
+    const race = draft.raceId ? repositoryFor(draft).getRace(draft.raceId) : undefined
+    const subrace = draft.subraceId ? repositoryFor(draft).getRace(draft.subraceId) : undefined
+    return getFlexibleBonusRule(race, subrace)?.flexibleBonusAlternatives
   })
   const excludedRaceAbilityChoices = computed(() => {
     const draft = activeDraft.value
@@ -506,7 +513,7 @@ export function useCharacterBuilderPage() {
     requestChange(change, '更换种族', () => {
       const impact = getDependencyImpact(draft, change)
       store.invalidateSelections(impact.invalidated, '更换种族后需要重新确认')
-      store.updateDraft({ raceId: id, subraceId: undefined, raceAbilityChoices: [], raceSkillChoices: [], raceToolChoice: undefined })
+      store.updateDraft({ raceId: id, subraceId: undefined, raceAbilityChoices: [], raceAbilityBonusOptionId: undefined, raceSkillChoices: [], raceToolChoice: undefined })
     })
   }
 
@@ -517,7 +524,7 @@ export function useCharacterBuilderPage() {
     requestChange(change, '更换子种族', () => {
       const impact = getDependencyImpact(draft, change)
       store.invalidateSelections(impact.invalidated, '更换子种族后需要重新确认')
-      store.updateDraft({ subraceId: id, raceAbilityChoices: [], raceSkillChoices: [], raceToolChoice: undefined })
+      store.updateDraft({ subraceId: id, raceAbilityChoices: [], raceAbilityBonusOptionId: undefined, raceSkillChoices: [], raceToolChoice: undefined })
     })
   }
 
@@ -645,6 +652,11 @@ export function useCharacterBuilderPage() {
     store.updateDraft({ raceAbilityChoices: value })
   }
 
+  function updateRaceAbilityBonusOption(id: string): void {
+    if (!raceFlexibleAlternatives.value?.some((option) => option.id === id)) return
+    store.updateDraft({ raceAbilityBonusOptionId: id })
+  }
+
   function exportDraft(): void {
     if (activeDraft.value) CharacterJsonService.downloadDraft(activeDraft.value)
   }
@@ -751,6 +763,7 @@ export function useCharacterBuilderPage() {
     raceAbilityBonuses,
     raceFlexibleCount,
     raceFlexibleGroups,
+    raceFlexibleAlternatives,
     excludedRaceAbilityChoices,
     derivedSummary,
     validationIssues,
@@ -799,6 +812,7 @@ export function useCharacterBuilderPage() {
     updateIdentity,
     updateAbilities,
     updateRaceAbilityChoices,
+    updateRaceAbilityBonusOption,
     exportDraft,
     exportPackage,
     exportPdf,

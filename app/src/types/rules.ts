@@ -555,6 +555,12 @@ export interface RaceRule {
   readonly weaponArmorProficiencies?: readonly string[]
   /** 灵活加值分组（如费兹本龙裔：第一项 +2、第二项 +1）；与 flexibleBonusCount/Value 二选一。 */
   readonly flexibleBonusGroups?: readonly { readonly count: number; readonly value: number }[]
+  /** 明确允许二选一等创建方案的种族；缺省选第一方案，旧固定加值不受影响。 */
+  readonly flexibleBonusAlternatives?: readonly {
+    readonly id: string
+    readonly label: string
+    readonly groups: readonly { readonly count: number; readonly value: number }[]
+  }[]
   readonly excludedFlexibleAbilityKeys?: readonly AbilityKey[]
   /** 2024 物种额外授予的起源专长选择（如人类 Versatile）；2014 与待接入数据省略。 */
   readonly originFeatChoices?: { readonly count: number; readonly categories: readonly FeatCategory[] }
@@ -562,9 +568,9 @@ export interface RaceRule {
   readonly spellcastingAbilityChoices?: readonly AbilityKey[]
   /** 2024 物种随时间授予的固定法术（如血统法术）；2014 与待接入数据省略。 */
   readonly spellGrants?: readonly SpeciesSpellGrant[]
-  /** 2024 固定体型；与 sizeChoices 二选一。 */
+  /** 该条目固定体型；与 sizeChoices 二选一。 */
   readonly size?: 'small' | 'medium'
-  /** 2024 创建时可选的体型（阿斯莫、人类、提夫林）。 */
+  /** 该条目创建时可选的体型，两规则集分别登记。 */
   readonly sizeChoices?: readonly ('small' | 'medium')[]
   /** 2024 黑暗视觉范围（尺）；无黑暗视觉省略。 */
   readonly darkvision?: number

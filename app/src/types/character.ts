@@ -190,6 +190,7 @@ export interface CharacterDraft {
   readonly backgroundId?: string
   readonly backgroundVariantId?: string
   readonly raceAbilityChoices: readonly AbilityKey[]
+  readonly raceAbilityBonusOptionId?: string
   /** 2024 背景三项候选属性的分配结果（+2/+1 或各 +1）；2014 草稿缺省。 */
   readonly backgroundAbilityAllocation?: Readonly<Partial<Record<AbilityKey, number>>>
   /** 2024 物种创建时选择的体型；固定体型的物种不需要。 */

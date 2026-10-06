@@ -2,6 +2,7 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { normalizeManualEdits } from '@/rules/manual-edits'
+import { getDraftSpeciesRules } from '@/rules/origins'
 import { listSessionResources } from '@/rules/session-resources'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpellcastingConfig, usesPreparedSelection } from '@/rules/spellcasting'
 import { isSourceEnabled } from '@/rules/source-books'
@@ -305,6 +306,9 @@ function buildFeatures(draft: CharacterDraft): ExportFeature[] {
     ...(subclass?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'subclass' as const, name: feature.name, summary: feature.summary, priority: 20 })),
     ...(classRule?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'class' as const, name: feature.name, summary: feature.summary, priority: 30 })),
     ...raceFeatures,
+    ...(draft.speciesSizeChoice && getDraftSpeciesRules(draft, repository).some((item) => item.sizeChoices?.includes(draft.speciesSizeChoice ?? 'medium'))
+      ? [{ id: `selected-size-${draft.ruleset}`, category: 'race' as const, name: '选定体型', summary: draft.speciesSizeChoice === 'small' ? '小型' : '中型', priority: 40 }]
+      : []),
     ...(background ? [{ id: background.id, category: 'background' as const, name: background.featureName || background.name, summary: allocationText ? `${background.summary}；${allocationText}` : background.summary, priority: 50 }] : []),
   ]
   const seen = new Set<string>()

@@ -34,6 +34,7 @@ const {
   raceAbilityBonuses,
   raceFlexibleCount,
   raceFlexibleGroups,
+  raceFlexibleAlternatives,
   excludedRaceAbilityChoices,
   derivedSummary,
   validationIssues,
@@ -81,6 +82,7 @@ const {
   updateIdentity,
   updateAbilities,
   updateRaceAbilityChoices,
+  updateRaceAbilityBonusOption,
   exportDraft,
   exportPackage,
   exportPdf,
@@ -227,9 +229,12 @@ function updateMethod(value: AbilityMethod): void {
       :flexible-count="raceFlexibleCount"
       :flexible-choices="activeDraft.raceAbilityChoices"
       :flexible-groups="raceFlexibleGroups"
+      :flexible-alternatives="raceFlexibleAlternatives"
+      :flexible-option-id="activeDraft.raceAbilityBonusOptionId"
       :excluded-choices="excludedRaceAbilityChoices"
       @change="updateAbilities"
       @choices="updateRaceAbilityChoices"
+      @option="updateRaceAbilityBonusOption"
     />
     <TimelineStep
       v-else-if="step === 'timeline' && activeDraft.classId"

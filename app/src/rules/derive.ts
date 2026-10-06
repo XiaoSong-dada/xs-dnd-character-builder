@@ -86,7 +86,14 @@ function addAbilities(base: AbilityScores, bonus: Partial<AbilityScores>): Abili
 export function getFlexibleBonusRule(race: RaceRule | undefined, subrace: RaceRule | undefined): RaceRule | undefined {
   if (subrace && (subrace.flexibleBonusCount ?? 0) > 0) return subrace
   if (subrace && (subrace.flexibleBonusGroups?.length ?? 0) > 0) return subrace
+  if (subrace && (subrace.flexibleBonusAlternatives?.length ?? 0) > 0) return subrace
   return race
+}
+
+export function getFlexibleBonusGroups(rule: RaceRule | undefined, optionId: string | undefined): RaceRule['flexibleBonusGroups'] {
+  if (!rule?.flexibleBonusAlternatives?.length) return rule?.flexibleBonusGroups
+  const option = optionId === undefined ? rule.flexibleBonusAlternatives[0] : rule.flexibleBonusAlternatives.find((item) => item.id === optionId)
+  return option?.groups ?? []
 }
 
 export function getRaceAbilityBonuses(draft: CharacterDraft): Partial<AbilityScores> {
@@ -99,9 +106,10 @@ export function getRaceAbilityBonuses(draft: CharacterDraft): Partial<AbilitySco
   const fixedBonuses: Partial<Record<AbilityKey, number>> = { ...baseBonuses, ...subrace?.fixedAbilityBonuses }
   const flexibleRule = getFlexibleBonusRule(race, subrace)
 
-  if (flexibleRule?.flexibleBonusGroups?.length) {
+  const flexibleGroups = getFlexibleBonusGroups(flexibleRule, draft.raceAbilityBonusOptionId)
+  if (flexibleGroups !== undefined) {
     let index = 0
-    for (const group of flexibleRule.flexibleBonusGroups) {
+    for (const group of flexibleGroups) {
       for (let i = 0; i < group.count; i++) {
         const key = draft.raceAbilityChoices[index++]
         if (key) fixedBonuses[key] = (fixedBonuses[key] ?? 0) + group.value

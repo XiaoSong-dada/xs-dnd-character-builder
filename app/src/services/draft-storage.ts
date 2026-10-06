@@ -153,6 +153,7 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     backgroundAbilityAllocation: normalizeBackgroundAbilityAllocation(draft.backgroundAbilityAllocation),
     speciesSizeChoice: draft.speciesSizeChoice === 'small' || draft.speciesSizeChoice === 'medium' ? draft.speciesSizeChoice : undefined,
     raceAbilityChoices: draft.raceAbilityChoices ?? [],
+    raceAbilityBonusOptionId: typeof draft.raceAbilityBonusOptionId === 'string' && draft.raceAbilityBonusOptionId.trim() ? draft.raceAbilityBonusOptionId.trim() : undefined,
     backgroundSkillIds: draft.backgroundSkillIds ?? [],
     backgroundToolIds: draft.backgroundToolIds ?? [],
     languages: draft.languages ?? [],
