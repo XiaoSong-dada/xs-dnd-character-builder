@@ -12,6 +12,8 @@
 
 ## 2. 总体依赖方向
 
+S02-A2：`rules/session-resources`复用`origins.getDraftSpeciesRules`与`source-books`读取有效种族资源，`derive`沿用origins依赖读取先攻熟练标志；资源UI、持久化、休息及共享导出继续调用原有纯函数出口，无新增store或页面私有资源状态。MotM数据模块增加兔人和影灵，2014源表登记巫光重印来源。
+
 S02-A1：新增纯数据模块`rules/data/races-motm-2014.ts`，由2014仓库登记种族、由`race-features-2014`合并特性；仅依赖共享类型。`rules/languages`新增依赖`source-books`解析有效种族语言声明，导出feature复用`languages`获取固定语言；沿用UI→rules→types方向，无反向或跨feature依赖。
 
 ```text

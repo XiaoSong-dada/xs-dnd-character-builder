@@ -215,7 +215,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     persist(undoHitDiceSpend(ensureState()))
   }
 
-  /** 可消耗资源（仅 2024 有登记；2014 为空列表）。 */
+  /** 已登记的职业、种族及免费施法资源，按草稿规则集解析。 */
   const sessionResources = computed(() => listSessionResources(draft.value, derived.value.modifiers))
 
   /** 资源已用/剩余视图。 */

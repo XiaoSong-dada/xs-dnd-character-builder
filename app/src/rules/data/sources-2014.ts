@@ -41,6 +41,7 @@ export const sources2014: readonly RuleSource[] = [
   source('scc-2021-index', 'SCC', '斯翠海文：混沌课程', 'supplement'),
   source('vrgtr-2021-index', 'VRGtR', '范·里希滕的鸦阁指南', 'supplement'),
   source('ftd-2021-index', 'FTD', '费兹班的巨龙宝库', 'supplement'),
+  source('twbtw-2021-index', 'WBtW', '巫光之外的狂野', 'supplement', { contentKind: 'official' }),
   source('dsotdq-2022-index', 'DSotDQ', '龙枪：龙后之影', 'supplement'),
   source('aag-2022-index', 'AAG', '星界冒险者指南', 'supplement'),
   source('motm-2022-index', 'MotM', '魔邓肯出品：多元宇宙的怪物', 'supplement', { contentKind: 'official' }),

@@ -3,7 +3,7 @@ import { SKILL_IDS } from '@/rules/data/skill-ids'
 import { getRulesRepository } from '@/rules/repositories'
 import { canBenefitFromShield, getActiveEquippedEquipment } from '@/rules/equipment-state'
 import { applyAbilityImprovement, collectFeatSkillSelections, decodeAbilityImprovement, getFeatAbilityCap, isFeatGrantParentActive, isSelectionCheckpointActive, listActiveFeats } from '@/rules/feats'
-import { getBackgroundAbilityBonuses, getSpeciesHitPointBonus } from '@/rules/origins'
+import { getBackgroundAbilityBonuses, getDraftSpeciesRules, getSpeciesHitPointBonus } from '@/rules/origins'
 import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
 import { isSourceEnabled } from '@/rules/source-books'
 import { artificerInfusions2014 } from '@/rules/data/artificer-2014'
@@ -429,7 +429,11 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     ...(armorInfusionBonus ? [{ id: 'artificer-enhanced-defense', label: '奇械师灌注', value: armorInfusionBonus, detail: '已绑定并装备的强化防御物品' }] : []),
     ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${repository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
   ]), manual.derivedAdjustments.armorClass, 'armor-class')
-  const initiativeValue = withManualAdjustment(derived(modifiers.dex, [{ id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` }]), manual.derivedAdjustments.initiative, 'initiative')
+  const initiativeRace = getDraftSpeciesRules(draft, repository).find((race) => race.initiativeProficiency)
+  const initiativeValue = withManualAdjustment(derived(modifiers.dex + (initiativeRace ? proficiency : 0), [
+    { id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` },
+    ...(initiativeRace ? [{ id: `${initiativeRace.id}-initiative`, label: '种族先攻熟练', value: proficiency, detail: initiativeRace.name }] : []),
+  ]), manual.derivedAdjustments.initiative, 'initiative')
   const referenceAttack = (ability: 'str' | 'dex', adjustment: number | undefined, sourceId: string) => withManualAdjustment(derived(proficiency + modifiers[ability], [
     { id: 'attack-proficiency', label: '熟练加值', value: proficiency, detail: '熟练武器参考，不含具体武器加值' },
     { id: `attack-${ability}`, label: formatAbilityModifierLabel(ability), value: modifiers[ability], detail: `属性 ${abilities[ability]}` },

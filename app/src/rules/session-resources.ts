@@ -1,15 +1,15 @@
 import { getRulesRepository } from '@/rules/repositories'
 import { getDicePoolCount, getDicePoolDie, getResourceMax, getResourceRecovery } from '@/rules/resources'
 import { getSpellFreeCastings } from '@/rules/spellcasting'
+import { getDraftSpeciesRules } from '@/rules/origins'
+import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
 import type { ClassFeature, ClassResource, RulesRepository, SubclassFeature } from '@/types/rules'
 import type { SessionState } from '@/types/session-state'
 
 /**
- * 跑团资源结算（B10-02，仅 2024 生效）。
- *
- * 枚举职业特性与已选子职特性中登记的资源／可消耗骰池；2014 数据没有这类登记，天然为空，
- * 因此 2014 行为保持不变（Q-B10-1）。
+ * 跑团资源结算：职业、子职、有效种族特性和免费施法沿用同一计数与休息管道。
+ * 未登记结构化资源的旧特性不从摘要推断次数。
  */
 
 export interface SessionResource {
@@ -55,7 +55,11 @@ export function listSessionResources(
   modifiers: Partial<Record<AbilityKey, number>> = {},
   repository: RulesRepository = getRulesRepository(draft.ruleset),
 ): readonly SessionResource[] {
-  const features = grantedFeatures(draft, repository)
+  const speciesFeatures = getDraftSpeciesRules(draft, repository)
+    .flatMap((race) => repository.getRaceFeatures(race.id))
+    .filter((feature) => feature.level <= draft.targetLevel && isSourceEnabled(feature.sourceIds, draft.enabledSourceIds, repository))
+    .map((feature) => ({ ...feature, dicePool: undefined }))
+  const features = [...grantedFeatures(draft, repository), ...speciesFeatures]
 
   const resources: SessionResource[] = []
   const seen = new Set<string>()

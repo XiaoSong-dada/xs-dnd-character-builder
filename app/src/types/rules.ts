@@ -421,7 +421,7 @@ export interface SpellbookExtraRule {
   readonly schools: readonly string[]
 }
 
-/** 种族特性（2014）。常驻或按等级自动获得，不建立时间线检查点。 */
+/** 种族／物种特性。各规则集独立登记，常驻或按等级自动获得。 */
 export interface RaceFeature {
   readonly id: string
   readonly raceId: string
@@ -432,6 +432,8 @@ export interface RaceFeature {
   /** 原创中文详细效果（展开区展示）。 */
   readonly description: string
   readonly kind: SubclassFeatureKind
+  /** 已核验的种族次数资源，复用职业资源上限和休息协议。 */
+  readonly resource?: ClassResource
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }
@@ -547,6 +549,8 @@ export interface RaceRule {
   /** 2014 种族额外自选语言数量，与背景数量相加。 */
   readonly languageChoices?: number
   readonly speed?: number
+  /** 将熟练加值加入先攻（如兔人）；同类来源不重复叠加。 */
+  readonly initiativeProficiency?: boolean
   readonly flexibleBonusCount?: number
   readonly flexibleBonusValue?: number
   /** 种族固定技能熟练（如精灵察觉）；沿 parentRaceId 链叠加。 */
@@ -568,15 +572,15 @@ export interface RaceRule {
   readonly excludedFlexibleAbilityKeys?: readonly AbilityKey[]
   /** 2024 物种额外授予的起源专长选择（如人类 Versatile）；2014 与待接入数据省略。 */
   readonly originFeatChoices?: { readonly count: number; readonly categories: readonly FeatCategory[] }
-  /** 2024 物种法术的施法属性候选（如精灵、侏儒、提夫林）；选择结果存于时间线检查点。 */
+  /** 种族／物种法术的施法属性候选，各规则集独立声明；结果存于时间线检查点。 */
   readonly spellcastingAbilityChoices?: readonly AbilityKey[]
-  /** 2024 物种随时间授予的固定法术（如血统法术）；2014 与待接入数据省略。 */
+  /** 按角色等级授予的种族／物种固定法术，未登记的旧条目不自动推断。 */
   readonly spellGrants?: readonly SpeciesSpellGrant[]
   /** 该条目固定体型；与 sizeChoices 二选一。 */
   readonly size?: 'small' | 'medium'
   /** 该条目创建时可选的体型，两规则集分别登记。 */
   readonly sizeChoices?: readonly ('small' | 'medium')[]
-  /** 2024 黑暗视觉范围（尺）；无黑暗视觉省略。 */
+  /** 黑暗视觉范围（尺），各规则集独立登记；无黑暗视觉省略。 */
   readonly darkvision?: number
   /** 攀爬速度（尺）；与步行速度相同时仍需显式登记（G3-I1 第三方种族）。展示级。 */
   readonly climbSpeed?: number

@@ -17,6 +17,8 @@
 
 ## 通用选择流程
 
+S02-A2已接入：[兔人](species/5e-2014/motm-harengon/motm-harengon.md)、[多元宇宙版影灵](species/5e-2014/motm-shadar-kai/motm-shadar-kai.md)。兔人在MotM与巫光之间核验为同规则重印，任一来源启用生效，不能叠加两份收益。`RaceRule.initiativeProficiency`为已核验先攻熟练标志；`RaceFeature.resource`用于明确次数/恢复，按有效来源与等级进入局内资源和导出。
+
 MotM首项已接入：[幻身灵（多元宇宙版）](species/5e-2014/motm-changeling/motm-changeling.md)，独立来源`motm-2022-index`。与旧艾伯伦版使用不同ID，搜索和显示可区分，不覆盖旧草稿。2014种族可选登记`fixedLanguages`和`languageChoices`；自选数量与背景相加，固定语言参与导出。未声明的旧条目不自动推断，2024语言基线不变。
 
 - 车卡第 4 步先选择主种族／物种，再根据所选条目动态生成子种族／血统、体型和技能／工具熟练任务；各任务可自由跳转，必选项未完成时给出数量与下一步入口。

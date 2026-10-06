@@ -51,7 +51,7 @@ describe('2014 种族特性注册表', () => {
     const radiant = raceFeatures2014.find((feature) => feature.id === 'race-2014-aasimar-protector-radiant-soul')
     expect(radiant).toBeDefined()
     expect(radiant?.level).toBe(3)
-    const leveled = raceFeatures2014.filter((feature) => feature.level > 1)
+    const leveled = raceFeatures2014.filter((feature) => feature.level > 1 && !feature.id.startsWith('race-2014-motm-'))
     expect(leveled.length).toBe(8)
   })
 })
