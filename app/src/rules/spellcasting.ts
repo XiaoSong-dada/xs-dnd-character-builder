@@ -471,6 +471,7 @@ export interface SpeciesSpellcastingProfile {
   readonly sourceName: string
   readonly ability: AbilityKey
   readonly spellIds: readonly string[]
+  readonly materialFreeSpellIds: readonly string[]
   readonly attackBonus: number
   readonly saveDc: number
 }
@@ -485,19 +486,20 @@ export function getSpeciesSpellcastingProfiles(
   const inheritedAbility = races.map((race) => getSpeciesSpellAbility(race, draft.selections))
     .find((ability): ability is AbilityKey => Boolean(ability))
   return races.flatMap((race) => {
-    const groups = new Map<AbilityKey, Set<string>>()
+    const groups = new Map<AbilityKey, { spellIds: Set<string>; materialFreeSpellIds: Set<string> }>()
     for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel)) {
       const ability = grant.ability ?? getSpeciesSpellAbility(race, draft.selections) ?? inheritedAbility
       if (!ability || !repository.getSpell(grant.spellId)) continue
-      const ids = groups.get(ability) ?? new Set<string>()
-      ids.add(grant.spellId)
-      groups.set(ability, ids)
+      const group = groups.get(ability) ?? { spellIds: new Set<string>(), materialFreeSpellIds: new Set<string>() }
+      group.spellIds.add(grant.spellId)
+      if (grant.waivesMaterialComponents) group.materialFreeSpellIds.add(grant.spellId)
+      groups.set(ability, group)
     }
-    return [...groups].map(([ability, ids]) => {
+    return [...groups].map(([ability, group]) => {
       const attackBonus = derived.proficiencyBonus.value + derived.modifiers[ability]
       return {
         id: `${race.id}-spellcasting-${ability}`, sourceId: race.id, sourceName: race.name,
-        ability, spellIds: [...ids], attackBonus, saveDc: 8 + attackBonus,
+        ability, spellIds: [...group.spellIds], materialFreeSpellIds: [...group.materialFreeSpellIds], attackBonus, saveDc: 8 + attackBonus,
       }
     })
   })

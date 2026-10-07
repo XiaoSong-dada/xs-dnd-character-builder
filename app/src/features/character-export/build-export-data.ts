@@ -310,7 +310,7 @@ function buildFeatures(draft: CharacterDraft, derived: DerivedCharacter): Export
     ...raceFeatures,
     ...getSpeciesSpellcastingProfiles(draft, derived).map((profile) => ({
       id: profile.id, category: 'race' as const, name: `${profile.sourceName}施法`, priority: 40,
-      summary: `${ABILITY_LABELS[profile.ability]}；法术攻击 ${signed(profile.attackBonus)}；法术豁免 DC ${profile.saveDc}；${profile.spellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、')}`,
+      summary: `${ABILITY_LABELS[profile.ability]}；法术攻击 ${signed(profile.attackBonus)}；法术豁免 DC ${profile.saveDc}；${profile.spellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、')}${profile.materialFreeSpellIds.length ? `；无需材料成分（种族施放）：${profile.materialFreeSpellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、')}` : ''}`,
     })),
     ...(draft.speciesSizeChoice && getDraftSpeciesRules(draft, repository).some((item) => item.sizeChoices?.includes(draft.speciesSizeChoice ?? 'medium'))
       ? [{ id: `selected-size-${draft.ruleset}`, category: 'race' as const, name: '选定体型', summary: draft.speciesSizeChoice === 'small' ? '小型' : '中型', priority: 40 }]

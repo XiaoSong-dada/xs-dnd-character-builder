@@ -17,6 +17,8 @@
 
 ## 通用选择流程
 
+S02-A4已接入：[气元素裔](species/5e-2014/motm-air-genasi/motm-air-genasi.md)、[土元素裔](species/5e-2014/motm-earth-genasi/motm-earth-genasi.md)、[火元素裔](species/5e-2014/motm-fire-genasi/motm-fire-genasi.md)、[水元素裔](species/5e-2014/motm-water-genasi/motm-water-genasi.md)。四个独立MotM主种族，创建体型与施法属性必选，不覆盖旧版/2024。逐法术免材料只作为对应种族施放说明；土裔附赠剑刃防护为单独熟练次数资源，不限制普通戏法。法术按等级授予，闭气/土行/两栖/抗性及游泳等情境只展示。
+
 S02-A3已接入：[仙灵](species/5e-2014/motm-fairy/motm-fairy.md)。MotM与巫光机械规则相同，使用同一2014独立条目和双来源，不重复授予。固定小型、三种施法属性必选；1/3/5级法术进入角色卡/跑团/导出，妖火与变巨/缩小各一次长休免费次数，也可消耗合适法术位，不免法术成分。飞行等于当前步行速度及中/重甲禁用只作情境展示，不构造移动引擎。
 
 S02-A2已接入：[兔人](species/5e-2014/motm-harengon/motm-harengon.md)、[多元宇宙版影灵](species/5e-2014/motm-shadar-kai/motm-shadar-kai.md)。兔人在MotM与巫光之间核验为同规则重印，任一来源启用生效，不能叠加两份收益。`RaceRule.initiativeProficiency`为已核验先攻熟练标志；`RaceFeature.resource`用于明确次数/恢复，按有效来源与等级进入局内资源和导出。
@@ -28,6 +30,8 @@ MotM首项已接入：[幻身灵（多元宇宙版）](species/5e-2014/motm-chan
 - 更换主种族／物种时不静默删除旧值；依赖项由既有非破坏语义保留并标记失效，界面转到新产生的首个必选任务。只有规则数据中已有的结构化字段才生成选项，纯文字分支仍按原书／与 DM 确认。
 
 ## 文档字段约定
+
+S01-B3：`SpeciesSpellGrant.waivesMaterialComponents`仅在已核验的单个种族法术授予中登记。种族施法分组出口新增`materialFreeSpellIds`，按有效来源、等级和属性过滤；两页及导出注明「无需材料成分（种族施放）」，不修改全局法术成分，也不宣称免语言/姿势或专注。未声明的授予不推断豁免，关闭来源后说明停用。
 
 S01-B2：种族授予法术在无职业施法配置时仍显示和导出。`getSpeciesSpellcastingProfiles`按有效种族链、等级及明确施法属性分组，固定属性优先，未选属性不猜测；每组攻击/DC只使用最终属性和熟练，不借用职业施法人工修正。角色卡与跑团显示来源/属性/数值，共享导出保留逐组特性摘要；有职业施法时不覆盖职业主字段。多来源法术按ID去重，免费次数继续按来源独立；未新增材料免除、法术位许可或种族条目。
 

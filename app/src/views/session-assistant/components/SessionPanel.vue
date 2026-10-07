@@ -665,6 +665,7 @@ function openTranscribe(spellId?: string): void {
         <h3>种族施法</h3>
         <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
           {{ profile.sourceName }} · {{ ABILITY_LABELS[profile.ability] }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }}
+          <template v-if="profile.materialFreeSpellIds.length"><br>无需材料成分（种族施放）：{{ profile.materialFreeSpellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、') }}</template>
         </p>
       </section>
       <div v-if="spellcastingConfig?.mode === 'spellbook'" class="session-panel__tab-header">

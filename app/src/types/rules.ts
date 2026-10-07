@@ -186,6 +186,8 @@ export interface FixedSpellGrant {
 /** 物种授予的固定法术：按获得等级生效；施法属性由物种选择（若声明）。 */
 export interface SpeciesSpellGrant extends FixedSpellGrant {
   readonly minimumLevel: number
+  /** 仅通过该种族特质施放本法术时免材料；不改写法术本身的成分。 */
+  readonly waivesMaterialComponents?: boolean
 }
 
 export interface FeatChoiceSpec {

@@ -5,6 +5,10 @@ const changelingId = 'race-2014-motm-changeling'
 const harengonId = 'race-2014-motm-harengon'
 const shadarKaiId = 'race-2014-motm-shadar-kai'
 const fairyId = 'race-2014-motm-fairy'
+const airGenasiId = 'race-2014-motm-air-genasi'
+const earthGenasiId = 'race-2014-motm-earth-genasi'
+const fireGenasiId = 'race-2014-motm-fire-genasi'
+const waterGenasiId = 'race-2014-motm-water-genasi'
 const harengonSources = ['motm-2022-index', 'twbtw-2021-index'] as const
 const abilityAlternatives = [
   { id: 'two-one', label: '一项 +2，另一项 +1', groups: [{ count: 1, value: 2 }, { count: 1, value: 1 }] },
@@ -51,9 +55,72 @@ export const motmRaces2014: readonly RaceRule[] = [{
   ],
   subraceIds: [], recommendedClassIds: ['class-2014-druid', 'class-2014-bard', 'class-2014-sorcerer'],
   status: 'implemented', sourceIds: harengonSources,
+}, {
+  id: airGenasiId, ruleset: '5e-2014', name: '气元素裔（多元宇宙）', englishName: 'Air Genasi', searchAliases: ['气元素裔'],
+  summary: '类人生物；中型或小型，步行35尺；60尺黑暗视觉、闪电抗性与融入清风。',
+  description: '选择中型或小型，步行35尺；两种属性分配方案，通用语及一门自选语言。60尺黑暗视觉，闪电抗性，未失能时可持续闭气。施法属性智力/感知/魅力选一：1级电爪，3级羽落术，5级浮空术；两个有环法术各一次/长休，也可用合适法术位，羽落术和浮空术免材料。',
+  fixedAbilityBonuses: {}, flexibleBonusAlternatives: abilityAlternatives, fixedLanguages: ['通用语'], languageChoices: 1,
+  sizeChoices: ['small', 'medium'], speed: 35, darkvision: 60, damageResistances: ['闪电'], spellcastingAbilityChoices: ['int', 'wis', 'cha'],
+  spellGrants: [
+    { spellId: 'spell-2014-shocking-grasp', minimumLevel: 1, alwaysPrepared: true },
+    { spellId: 'spell-2014-feather-fall', minimumLevel: 3, alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest', waivesMaterialComponents: true },
+    { spellId: 'spell-2014-levitate', minimumLevel: 5, alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest', waivesMaterialComponents: true },
+  ],
+  subraceIds: [], recommendedClassIds: ['class-2014-sorcerer', 'class-2014-wizard'], status: 'implemented', sourceIds,
+}, {
+  id: earthGenasiId, ruleset: '5e-2014', name: '土元素裔（多元宇宙）', englishName: 'Earth Genasi', searchAliases: ['土元素裔'],
+  summary: '类人生物；中型或小型，步行30尺；黑暗视觉、土行与附赠剑刃防护。',
+  description: '选择中型或小型，步行30尺；两种属性分配方案，通用语及一门自选语言，60尺黑暗视觉。在地面或地板上步行时忽略困难地形额外移动消耗。施法属性智力/感知/魅力选一：1级剑刃防护，可正常施放，另可附赠动作施放熟练次数/长休；5级行动无踪一次/长休，免材料且可用二环或更高法术位。',
+  fixedAbilityBonuses: {}, flexibleBonusAlternatives: abilityAlternatives, fixedLanguages: ['通用语'], languageChoices: 1,
+  sizeChoices: ['small', 'medium'], speed: 30, darkvision: 60, spellcastingAbilityChoices: ['int', 'wis', 'cha'],
+  spellGrants: [
+    { spellId: 'spell-2014-blade-ward', minimumLevel: 1, alwaysPrepared: true },
+    { spellId: 'spell-2014-pass-without-trace', minimumLevel: 5, alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest', waivesMaterialComponents: true },
+  ],
+  subraceIds: [], recommendedClassIds: ['class-2014-fighter', 'class-2014-rogue'], status: 'implemented', sourceIds,
+}, {
+  id: fireGenasiId, ruleset: '5e-2014', name: '火元素裔（多元宇宙）', englishName: 'Fire Genasi', searchAliases: ['火元素裔'],
+  summary: '类人生物；中型或小型，步行30尺；60尺黑暗视觉、火焰抗性与烈焰之触。',
+  description: '选择中型或小型，步行30尺；两种属性分配方案，通用语及一门自选语言，60尺黑暗视觉和火焰抗性。施法属性智力/感知/魅力选一：1级燃火术，3级燃烧之手，5级火焰刀；两个有环法术各一次/长休，也可用合适法术位，仅火焰刀免材料。',
+  fixedAbilityBonuses: {}, flexibleBonusAlternatives: abilityAlternatives, fixedLanguages: ['通用语'], languageChoices: 1,
+  sizeChoices: ['small', 'medium'], speed: 30, darkvision: 60, damageResistances: ['火焰'], spellcastingAbilityChoices: ['int', 'wis', 'cha'],
+  spellGrants: [
+    { spellId: 'spell-2014-produce-flame', minimumLevel: 1, alwaysPrepared: true },
+    { spellId: 'spell-2014-burning-hands', minimumLevel: 3, alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest' },
+    { spellId: 'spell-2014-flame-blade', minimumLevel: 5, alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest', waivesMaterialComponents: true },
+  ],
+  subraceIds: [], recommendedClassIds: ['class-2014-sorcerer', 'class-2014-druid'], status: 'implemented', sourceIds,
+}, {
+  id: waterGenasiId, ruleset: '5e-2014', name: '水元素裔（多元宇宙）', englishName: 'Water Genasi', searchAliases: ['水元素裔'],
+  summary: '类人生物；中型或小型，步行30尺；黑暗视觉、强酸抗性、两栖与呼唤波浪。',
+  description: '选择中型或小型，步行30尺；两种属性分配方案，通用语及一门自选语言，60尺黑暗视觉、强酸抗性，可在空气和水中呼吸。游泳速度等于当前步行速度。施法属性智力/感知/魅力选一：1级酸液飞溅，3级造水术/枯水术，5级水墙术；两个有环法术各一次/长休，也可用合适法术位，仅水墙术免材料。',
+  fixedAbilityBonuses: {}, flexibleBonusAlternatives: abilityAlternatives, fixedLanguages: ['通用语'], languageChoices: 1,
+  sizeChoices: ['small', 'medium'], speed: 30, swimSpeed: 30, darkvision: 60, damageResistances: ['强酸'], spellcastingAbilityChoices: ['int', 'wis', 'cha'],
+  spellGrants: [
+    { spellId: 'spell-2014-acid-splash', minimumLevel: 1, alwaysPrepared: true },
+    { spellId: 'spell-2014-create-or-destroy-water', minimumLevel: 3, alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest' },
+    { spellId: 'spell-2014-wall-of-water', minimumLevel: 5, alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest', waivesMaterialComponents: true },
+  ],
+  subraceIds: [], recommendedClassIds: ['class-2014-druid', 'class-2014-cleric'], status: 'implemented', sourceIds,
 }]
 
 export const motmRaceFeatures2014: readonly RaceFeature[] = [
+  ...[airGenasiId, earthGenasiId, fireGenasiId, waterGenasiId].flatMap((raceId): RaceFeature[] => [
+    { id: `${raceId}-creature-type`, raceId, name: '生物种类', englishName: 'Creature Type', level: 1, kind: 'passive', summary: '类人生物；创建体型选中型或小型', description: '类人生物；创建时选择中型或小型，相关目标条件由玩家判断。', status: 'implemented', sourceIds },
+    { id: `${raceId}-darkvision`, raceId, name: '黑暗视觉', englishName: 'Darkvision', level: 1, kind: 'passive', summary: '60尺黑暗视觉', description: '60尺黑暗视觉；黑暗中只能分辨灰度，光照条件由玩家判断。', status: 'implemented', sourceIds },
+  ]),
+  { id: `${airGenasiId}-unending-breath`, raceId: airGenasiId, name: '魔息', englishName: 'Unending Breath', level: 1, kind: 'passive', summary: '未失能时持续闭气', description: '只在未失能时可持续闭气；不等同于水下呼吸，失能时须按正常闭气规则处理。', status: 'implemented', sourceIds },
+  { id: `${airGenasiId}-lightning-resistance`, raceId: airGenasiId, name: '闪电抗性', englishName: 'Lightning Resistance', level: 1, kind: 'passive', summary: '闪电伤害抗性', description: '具有闪电伤害抗性。', status: 'implemented', sourceIds },
+  { id: `${airGenasiId}-mingle-with-the-wind`, raceId: airGenasiId, name: '融入清风', englishName: 'Mingle with the Wind', level: 1, kind: 'choice', summary: '1级电爪，3级羽落术，5级浮空术；智/感/魅选一', description: '施法属性智力、感知、魅力选一。1级知晓电爪；3级羽落术与5级浮空术各一次免费施放/长休，也可用合适法术位；这两个有环法术免材料，不免语言或姿势成分。', status: 'implemented', sourceIds },
+  { id: `${earthGenasiId}-earth-walk`, raceId: earthGenasiId, name: '土行', englishName: 'Earth Walk', level: 1, kind: 'passive', summary: '在地面或地板步行时忽略困难地形额外消耗', description: '仅在地面或地板上用步行速度移动时，困难地形不额外消耗移动力；其他减速或限制不因此取消。', status: 'implemented', sourceIds },
+  { id: `${earthGenasiId}-merge-with-stone`, raceId: earthGenasiId, name: '混入大地', englishName: 'Merge with Stone', level: 1, kind: 'choice', summary: '1级剑刃防护，5级行动无踪；智/感/魅选一', description: '施法属性智力、感知、魅力选一。剑刃防护可正常施放，另有附赠动作熟练次数/长休资源；5级行动无踪一次免费施放/长休，免材料，也可使用二环或更高法术位。', status: 'implemented', sourceIds },
+  { id: `${earthGenasiId}-bonus-blade-ward`, raceId: earthGenasiId, name: '附赠剑刃防护', englishName: 'Bonus Action Blade Ward', level: 1, kind: 'bonus-action', summary: '附赠动作施放剑刃防护；熟练次数/长休', description: '以附赠动作施放剑刃防护消耗本资源，次数等于熟练加值，长休恢复。正常动作施放戏法不消耗本资源，仍依照该戏法原有施法时间和效果。', resource: { maxByLevel: proficiencyUses, recovery: 'long-rest', unit: '次' }, status: 'implemented', sourceIds },
+  { id: `${fireGenasiId}-fire-resistance`, raceId: fireGenasiId, name: '火焰抗性', englishName: 'Fire Resistance', level: 1, kind: 'passive', summary: '火焰伤害抗性', description: '具有火焰伤害抗性。', status: 'implemented', sourceIds },
+  { id: `${fireGenasiId}-reach-to-the-blaze`, raceId: fireGenasiId, name: '烈焰之触', englishName: 'Reach to the Blaze', level: 1, kind: 'choice', summary: '1级燃火术，3级燃烧之手，5级火焰刀；智/感/魅选一', description: '施法属性智力、感知、魅力选一。1级知晓燃火术；3级燃烧之手与5级火焰刀各一次免费施放/长休，也可用合适法术位。仅火焰刀免材料，不免其他法术的成分。', status: 'implemented', sourceIds },
+  { id: `${waterGenasiId}-acid-resistance`, raceId: waterGenasiId, name: '强酸抗性', englishName: 'Acid Resistance', level: 1, kind: 'passive', summary: '强酸伤害抗性', description: '具有强酸伤害抗性。', status: 'implemented', sourceIds },
+  { id: `${waterGenasiId}-amphibious`, raceId: waterGenasiId, name: '水陆两栖', englishName: 'Amphibious', level: 1, kind: 'passive', summary: '可在空气及水中呼吸', description: '可在空气和水中呼吸；呼吸及局内环境限制由玩家判断。', status: 'implemented', sourceIds },
+  { id: `${waterGenasiId}-swim`, raceId: waterGenasiId, name: '游泳', englishName: 'Swim', level: 1, kind: 'passive', summary: '游泳速度等于当前步行速度', description: '游泳速度等于当前步行速度，基础为30尺。', status: 'implemented', sourceIds },
+  { id: `${waterGenasiId}-call-to-the-wave`, raceId: waterGenasiId, name: '呼唤波浪', englishName: 'Call to the Wave', level: 1, kind: 'choice', summary: '1级酸液飞溅，3级造水/枯水，5级水墙术；智/感/魅选一', description: '施法属性智力、感知、魅力选一。1级知晓酸液飞溅；3级造水术/枯水术与5级水墙术各一次免费施放/长休，也可用合适法术位。仅水墙术免材料。', status: 'implemented', sourceIds },
   { id: `${fairyId}-creature-type`, raceId: fairyId, name: '生物种类', englishName: 'Creature Type', level: 1, kind: 'passive', summary: '小型妖精', description: '生物种类为妖精，体型为小型而非微型；相关目标条件由玩家判断。', status: 'implemented', sourceIds: harengonSources },
   { id: `${fairyId}-fairy-magic`, raceId: fairyId, name: '仙灵魔法', englishName: 'Fairy Magic', level: 1, kind: 'choice', summary: '德鲁伊伎俩；施法属性智力/感知/魅力选一', description: '1级知晓德鲁伊伎俩，3级获得妖火，5级获得变巨术/缩小术；选择智力、感知或魅力作为这些法术的施法属性。每个有环法术各一次免费施放，长休恢复，也可使用合适法术位。法术成分不免除。', status: 'implemented', sourceIds: harengonSources },
   { id: `${fairyId}-faerie-fire`, raceId: fairyId, name: '仙灵魔法：妖火', englishName: 'Fairy Magic: Faerie Fire', level: 3, kind: 'action', summary: '妖火，每长休免费施放一次，也可用合适法术位', description: '3级起获得妖火，使用选定种族施法属性；每长休一次免费施放，也可消耗合适法术位。次数与变巨术/缩小术独立，不占职业法术选择名额。', status: 'implemented', sourceIds: harengonSources },

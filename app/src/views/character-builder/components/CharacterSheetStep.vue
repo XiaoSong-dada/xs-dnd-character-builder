@@ -908,6 +908,7 @@ function handleExportPdf(): void {
         <h4>种族施法</h4>
         <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
           {{ profile.sourceName }} · {{ abilityLabel(profile.ability) }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }}
+          <template v-if="profile.materialFreeSpellIds.length"><br>无需材料成分（种族施放）：{{ profile.materialFreeSpellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、') }}</template>
         </p>
       </section>
       <section v-if="editing.editMode.value" class="character-sheet__spell-section">
