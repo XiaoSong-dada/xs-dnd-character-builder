@@ -4,6 +4,7 @@ const sourceIds = ['motm-2022-index'] as const
 const changelingId = 'race-2014-motm-changeling'
 const harengonId = 'race-2014-motm-harengon'
 const shadarKaiId = 'race-2014-motm-shadar-kai'
+const fairyId = 'race-2014-motm-fairy'
 const harengonSources = ['motm-2022-index', 'twbtw-2021-index'] as const
 const abilityAlternatives = [
   { id: 'two-one', label: '一项 +2，另一项 +1', groups: [{ count: 1, value: 2 }, { count: 1, value: 1 }] },
@@ -11,7 +12,7 @@ const abilityAlternatives = [
 ] as const
 const proficiencyUses = [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6] as const
 
-/** 本地CHM 1771总则及1755；只登记核验元数据与原创摘要，不覆盖旧版。 */
+/** 本地CHM 1771及各玩家种族正文；只登记核验元数据与原创摘要，不覆盖旧版。 */
 export const motmRaces2014: readonly RaceRule[] = [{
   id: changelingId, ruleset: '5e-2014', name: '幻身灵（多元宇宙）', englishName: 'Changeling',
   searchAliases: ['幻身灵', '变形怪', 'MotM Changeling'],
@@ -37,9 +38,27 @@ export const motmRaces2014: readonly RaceRule[] = [{
   fixedAbilityBonuses: {}, flexibleBonusAlternatives: abilityAlternatives, fixedLanguages: ['通用语'], languageChoices: 1,
   size: 'medium', speed: 30, darkvision: 60, damageResistances: ['暗蚀'], skillProficiencies: ['skill-perception'],
   subraceIds: [], recommendedClassIds: ['class-2014-rogue', 'class-2014-fighter'], status: 'implemented', sourceIds,
+}, {
+  id: fairyId, ruleset: '5e-2014', name: '仙灵', englishName: 'Fairy',
+  summary: '小型妖精；步行30尺，仙灵魔法按等级授予；未穿中甲或重甲时可飞行。',
+  description: '小型妖精，步行30尺；选择两种属性分配方案之一，通用语及一门自选语言。仙灵魔法的施法属性从智力、感知、魅力选择一项：1级德鲁伊伎俩，3级妖火，5级变巨术/缩小术；两个有环法术各可免费施放一次，长休恢复，也可使用合适法术位。不免除法术原有成分。飞行速度等于当前步行速度，但穿戴中甲或重甲时不能使用。',
+  fixedAbilityBonuses: {}, flexibleBonusAlternatives: abilityAlternatives, fixedLanguages: ['通用语'], languageChoices: 1,
+  size: 'small', speed: 30, flySpeed: 30, spellcastingAbilityChoices: ['int', 'wis', 'cha'],
+  spellGrants: [
+    { spellId: 'spell-2014-druidcraft', minimumLevel: 1, alwaysPrepared: true },
+    { spellId: 'spell-2014-faerie-fire', minimumLevel: 3, alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest' },
+    { spellId: 'spell-2014-enlarge-reduce', minimumLevel: 5, alwaysPrepared: true, freeCastings: 1, recovery: 'long-rest' },
+  ],
+  subraceIds: [], recommendedClassIds: ['class-2014-druid', 'class-2014-bard', 'class-2014-sorcerer'],
+  status: 'implemented', sourceIds: harengonSources,
 }]
 
 export const motmRaceFeatures2014: readonly RaceFeature[] = [
+  { id: `${fairyId}-creature-type`, raceId: fairyId, name: '生物种类', englishName: 'Creature Type', level: 1, kind: 'passive', summary: '小型妖精', description: '生物种类为妖精，体型为小型而非微型；相关目标条件由玩家判断。', status: 'implemented', sourceIds: harengonSources },
+  { id: `${fairyId}-fairy-magic`, raceId: fairyId, name: '仙灵魔法', englishName: 'Fairy Magic', level: 1, kind: 'choice', summary: '德鲁伊伎俩；施法属性智力/感知/魅力选一', description: '1级知晓德鲁伊伎俩，3级获得妖火，5级获得变巨术/缩小术；选择智力、感知或魅力作为这些法术的施法属性。每个有环法术各一次免费施放，长休恢复，也可使用合适法术位。法术成分不免除。', status: 'implemented', sourceIds: harengonSources },
+  { id: `${fairyId}-faerie-fire`, raceId: fairyId, name: '仙灵魔法：妖火', englishName: 'Fairy Magic: Faerie Fire', level: 3, kind: 'action', summary: '妖火，每长休免费施放一次，也可用合适法术位', description: '3级起获得妖火，使用选定种族施法属性；每长休一次免费施放，也可消耗合适法术位。次数与变巨术/缩小术独立，不占职业法术选择名额。', status: 'implemented', sourceIds: harengonSources },
+  { id: `${fairyId}-enlarge-reduce`, raceId: fairyId, name: '仙灵魔法：变巨术/缩小术', englishName: 'Fairy Magic: Enlarge/Reduce', level: 5, kind: 'action', summary: '变巨术/缩小术，每长休免费施放一次，也可用合适法术位', description: '5级起获得变巨术/缩小术，使用选定种族施法属性；每长休一次免费施放，也可消耗合适法术位，次数与妖火独立。按原有法术成分施放；局内体型变化不自动改写创建体型。', status: 'implemented', sourceIds: harengonSources },
+  { id: `${fairyId}-flight`, raceId: fairyId, name: '飞行', englishName: 'Flight', level: 1, kind: 'passive', summary: '飞行速度等于当前步行速度；穿中甲或重甲时不可使用', description: '飞行速度等于当前步行速度；穿中甲或重甲时不可使用。该条件只作情境提示，不自动执行移动、不改写步行速度。', status: 'implemented', sourceIds: harengonSources },
   { id: `${harengonId}-hare-trigger`, raceId: harengonId, name: '狡兔敏锐', englishName: 'Hare-Trigger', level: 1, kind: 'passive', summary: '先攻加入熟练加值', description: '以敏捷调整值和熟练加值计算先攻，人工修正另外叠加一次。', status: 'implemented', sourceIds: harengonSources },
   { id: `${harengonId}-leporine-senses`, raceId: harengonId, name: '小兔感官', englishName: 'Leporine Senses', level: 1, kind: 'passive', summary: '察觉技能熟练', description: '与同类熟练不重复叠加。', status: 'implemented', sourceIds: harengonSources },
   { id: `${harengonId}-lucky-footwork`, raceId: harengonId, name: '幸运步伐', englishName: 'Lucky Footwork', level: 1, kind: 'reaction', summary: '敏捷豁免失败时反应加d4；速度0或倒地时不可用', description: '情境修正由玩家按当前状态处理，不常驻加到敏捷豁免，也不创建次数资源。', status: 'implemented', sourceIds: harengonSources },
