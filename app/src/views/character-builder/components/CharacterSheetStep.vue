@@ -22,7 +22,7 @@ import { getRulesRepository } from '@/rules/repositories'
 import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
-import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSpellCandidates, getSpeciesSpellcastingProfiles, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
 import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, ChoiceSelection, DerivedCharacter, InventoryEntry, ManualAddedSpell, ManualFeatGrant, SpellSelections } from '@/types/character'
@@ -125,6 +125,7 @@ const identityLine = computed(() => {
   return `${draft.targetLevel}级 · ${names.join(' · ')}`
 })
 const spellcastingConfig = computed(() => getSpellcastingConfig(props.draft))
+const speciesSpellcastingProfiles = computed(() => getSpeciesSpellcastingProfiles(props.draft, props.derived))
 const spellSlots = computed(() => getEffectiveSpellSlots(props.draft))
 const editableSpellSlots = computed(() => Array.from({ length: 9 }, (_, index) => ({
   level: index + 1,
@@ -139,18 +140,15 @@ const spellSlotsLabel = computed(() => {
   return spellSlots.value.map((slot) => `${slot.level}环×${slot.count}`).join(' · ')
 })
 const manualSpellIds = computed(() => new Set(editing.manual.value.addedSpells.map((item) => item.spellId)))
-const cantripSpells = computed(() => props.draft.spellSelections.cantripIds
+const cantripSpells = computed(() => getEffectiveSelectedSpellIds(props.draft)
   .filter((id) => !manualSpellIds.value.has(id))
   .map((id) => repository.value.getSpell(id))
-  .filter((spell): spell is SpellRule => Boolean(spell)))
+  .filter((spell): spell is SpellRule => Boolean(spell) && spell?.level === 0))
 const preparedOrKnownSpells = computed(() => {
-  const config = spellcastingConfig.value
-  if (!config) return []
-  // 已准备 / 已掌握法术以规则层 getSelectedSpellIds 为唯一事实源（覆盖 spellbook/prepared/known/pact 四种模式）。
-  return getSelectedSpellIds(props.draft, config)
+  return getEffectiveSelectedSpellIds(props.draft)
     .filter((id) => !manualSpellIds.value.has(id))
     .map((id) => repository.value.getSpell(id))
-    .filter((spell): spell is SpellRule => Boolean(spell))
+    .filter((spell): spell is SpellRule => Boolean(spell) && (spell?.level ?? 0) > 0)
 })
 const manualAddedSpells = computed(() => editing.manual.value.addedSpells
   .map((entry) => ({ entry, spell: repository.value.getSpell(entry.spellId) }))
@@ -181,12 +179,7 @@ const normalSpellbookCount = computed(() => props.draft.spellSelections.spellboo
   .filter((id) => !props.draft.spellSelections.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
 /** 已准备 / 已掌握法术按环级分组（戏法由 cantripSpells 单独展示）。 */
 const spellGroups = computed(() => {
-  const config = spellcastingConfig.value
-  if (!config) return []
-  const maximumLevel = getMaximumSpellLevel(config, props.draft.targetLevel)
-  return Array.from({ length: maximumLevel }, (_, index) => index + 1)
-    .map((level) => ({ level, spells: preparedOrKnownSpells.value.filter((spell) => spell.level === level) }))
-    .filter((group) => group.spells.length)
+  return groupSpellsByLevel(preparedOrKnownSpells.value, props.draft.ruleset)
 })
 const preparedOrKnownLabel = computed(() => (spellcastingConfig.value?.mode === 'prepared' || spellcastingConfig.value?.mode === 'spellbook' ? '已准备' : '已掌握'))
 /** 候选池：prepared 职业可选未准备的法术（1 环起）。 */
@@ -911,6 +904,12 @@ function handleExportPdf(): void {
         <EditableStatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? 0" :minimum="0" :edit-mode="editing.editMode.value" :note="derived.spellSaveDc ? sourceNote(derived.spellSaveDc.sources) : '当前职业无施法能力'" @commit="editing.commitDerived('spellSaveDc', $event)" />
       </div>
       <p v-if="spellSlots.length && !editing.editMode.value" class="character-sheet__spell-slots">法术位：{{ spellSlotsLabel }}</p>
+      <section v-if="speciesSpellcastingProfiles.length" class="character-sheet__spell-section">
+        <h4>种族施法</h4>
+        <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
+          {{ profile.sourceName }} · {{ abilityLabel(profile.ability) }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }}
+        </p>
+      </section>
       <section v-if="editing.editMode.value" class="character-sheet__spell-section">
         <h4>法术位总量</h4>
         <div class="character-sheet__slot-editor">
@@ -935,7 +934,7 @@ function handleExportPdf(): void {
       </section>
       <template v-if="hasSpellContent">
         <section v-if="cantripSpells.length" class="character-sheet__spell-section">
-          <h4>戏法 · {{ draft.spellSelections.cantripIds.length }} / {{ requiredCantripCount }}</h4>
+          <h4>戏法 · {{ spellcastingConfig ? draft.spellSelections.cantripIds.length : cantripSpells.length }}<template v-if="spellcastingConfig"> / {{ requiredCantripCount }}</template></h4>
           <ListShell>
             <ExpandableOptionCard
               v-for="spell in cantripSpells"
@@ -949,7 +948,7 @@ function handleExportPdf(): void {
           </ListShell>
         </section>
         <section v-if="preparedOrKnownSpells.length" class="character-sheet__spell-section">
-          <h4>{{ preparedOrKnownLabel }} · {{ preparedOrKnownSpells.length }} / {{ requiredSpellCount }}</h4>
+          <h4>{{ preparedOrKnownLabel }} · {{ preparedOrKnownSpells.length }}<template v-if="spellcastingConfig"> / {{ requiredSpellCount }}</template></h4>
           <ListShell>
             <div v-for="group in spellGroups" :key="group.level" class="character-sheet__spell-level">
               <h5>{{ group.level }}环 · 已选 {{ group.spells.length }}</h5>

@@ -21,7 +21,7 @@ import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import { getAvailableSlotLevels } from '@/rules/session-state'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
-import { getEffectiveSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
+import { getEffectiveSelectedSpellIds, getSpeciesSpellcastingProfiles, getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
 import { useSessionAssistantStore } from '@/stores/session-assistant'
 import { DEBUFF_STATUSES, EXHAUSTION_DESCRIPTION } from '@/types/session-state'
@@ -37,6 +37,7 @@ const repository = computed(() => getRulesRepository(props.draft.ruleset))
 const equipmentWarnings = computed(() => getEquipmentWarnings(props.draft, repository.value))
 
 const panel = useSessionPanel(computed(() => props.draft))
+const speciesSpellcastingProfiles = computed(() => getSpeciesSpellcastingProfiles(props.draft, panel.derived.value))
 
 const tabs = [
   { id: 'overview', label: '总览' },
@@ -660,6 +661,12 @@ function openTranscribe(spellId?: string): void {
 
     <div v-else-if="activeTab === 'spells'" class="session-panel__tab">
       <p v-if="castNotice" class="session-panel__notice" role="status">{{ castNotice }}</p>
+      <section v-if="speciesSpellcastingProfiles.length" class="session-panel__section">
+        <h3>种族施法</h3>
+        <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
+          {{ profile.sourceName }} · {{ ABILITY_LABELS[profile.ability] }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }}
+        </p>
+      </section>
       <div v-if="spellcastingConfig?.mode === 'spellbook'" class="session-panel__tab-header">
         <button type="button" class="session-panel__transcribe" aria-label="抄录法术书" @click="openTranscribe()">抄录法术</button>
       </div>

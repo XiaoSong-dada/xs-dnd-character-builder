@@ -7,7 +7,7 @@ import { getWeaponMasteryCandidates } from '@/rules/weapon-mastery'
 import { isWeaponTrainingCovered } from '@/rules/weapon-training'
 import { abilityFromSpeciesSpellAbilityOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { AbilityKey, CharacterDraft, ChoiceSelection, RulesetId, SpellSelections } from '@/types/character'
+import type { AbilityKey, CharacterDraft, ChoiceSelection, DerivedCharacter, RulesetId, SpellSelections } from '@/types/character'
 import type { ChoiceCheckpoint, FixedSpellGrant, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant, SpellRule } from '@/types/rules'
 
 type SpellcraftDraft = Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds' | 'ruleset'>
@@ -55,7 +55,7 @@ export function getEffectiveSpellSlots(draft: CharacterDraft): readonly SpellSlo
   })
 }
 
-/** 页面、跑团与导出共用：正常已选法术与人工添加法术按 ID 去重。 */
+/** 页面、跑团与导出共用：职业、始终授予及人工法术按 ID 去重。 */
 export function getEffectiveSelectedSpellIds(draft: CharacterDraft): readonly string[] {
   const repository = getRulesRepository(draft.ruleset)
   const config = getSpellcastingConfig(draft)
@@ -70,7 +70,7 @@ export function getEffectiveSelectedSpellIds(draft: CharacterDraft): readonly st
         || item.destination === 'granted'
     })
     .map((item) => item.spellId)
-  return [...new Set([...draft.spellSelections.cantripIds, ...normal, ...manual])]
+  return [...new Set([...draft.spellSelections.cantripIds, ...normal, ...getAlwaysPreparedSpellIds(draft), ...manual])]
 }
 
 /** 人工加入准备列表/法术书、但尚未准备的有环法术。 */
@@ -465,6 +465,44 @@ export function getSpeciesSpellAbility(
   return ability && race.spellcastingAbilityChoices?.includes(ability) ? ability : undefined
 }
 
+export interface SpeciesSpellcastingProfile {
+  readonly id: string
+  readonly sourceId: string
+  readonly sourceName: string
+  readonly ability: AbilityKey
+  readonly spellIds: readonly string[]
+  readonly attackBonus: number
+  readonly saveDc: number
+}
+
+/** 种族施法不继承职业施法的人工修正；属性与熟练修正仍参与计算。 */
+export function getSpeciesSpellcastingProfiles(
+  draft: CharacterDraft,
+  derived: DerivedCharacter = deriveCharacter(draft),
+): readonly SpeciesSpellcastingProfile[] {
+  const repository = getRulesRepository(draft.ruleset)
+  const races = getDraftSpeciesRules(draft, repository)
+  const inheritedAbility = races.map((race) => getSpeciesSpellAbility(race, draft.selections))
+    .find((ability): ability is AbilityKey => Boolean(ability))
+  return races.flatMap((race) => {
+    const groups = new Map<AbilityKey, Set<string>>()
+    for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel)) {
+      const ability = grant.ability ?? getSpeciesSpellAbility(race, draft.selections) ?? inheritedAbility
+      if (!ability || !repository.getSpell(grant.spellId)) continue
+      const ids = groups.get(ability) ?? new Set<string>()
+      ids.add(grant.spellId)
+      groups.set(ability, ids)
+    }
+    return [...groups].map(([ability, ids]) => {
+      const attackBonus = derived.proficiencyBonus.value + derived.modifiers[ability]
+      return {
+        id: `${race.id}-spellcasting-${ability}`, sourceId: race.id, sourceName: race.name,
+        ability, spellIds: [...ids], attackBonus, saveDc: 8 + attackBonus,
+      }
+    })
+  })
+}
+
 /** 检查点或专长子选择声明的始终准备法术（法术精通、招牌法术、专长授予等）。 */
 function selectionAlwaysPreparedSpellIds(draft: CharacterDraft, repository: RulesRepository): readonly string[] {
   const ids: string[] = []
@@ -657,7 +695,7 @@ export function getSpellFreeCastings(
     .find((ability): ability is AbilityKey => Boolean(ability))
   for (const race of speciesRules) {
     for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel)) {
-      push(grant.spellId, race.id, race.name, countOf(grant), grant.recovery ?? 'long-rest', grant.ability ?? speciesAbility)
+      push(grant.spellId, race.id, race.name, countOf(grant), grant.recovery ?? 'long-rest', grant.ability ?? getSpeciesSpellAbility(race, draft.selections) ?? speciesAbility)
     }
   }
   return grants
