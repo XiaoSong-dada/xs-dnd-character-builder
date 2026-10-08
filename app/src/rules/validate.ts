@@ -653,7 +653,7 @@ function validateRaceSkillChoices(draft: CharacterDraft): readonly ValidationIss
   for (const blocker of getSpeciesProficiencyBlockers(draft, repository)) {
     issues.push({ id: blocker.id, step: 'origin', severity: 'error', message: blocker.message, resolution: blocker.resolution })
   }
-  if (race.toolProficiencyChoices && !isGithyanki && !draft.raceToolChoice) {
+  if (race.toolProficiencyChoices && !race.toolProficiencyChoices.required && !isGithyanki && !draft.raceToolChoice) {
     // 工具熟练不参与派生，未选仅提示（不阻塞角色完成）。
     issues.push({
       id: 'race-tool-choice-missing',

@@ -69,7 +69,7 @@ describe('仙灵选择、角色卡与跑团法术', () => {
     expect(SessionStateStorageService.load(draft.id)?.resourceUsage?.[`${id}:spell-2014-faerie-fire`]).toBe(1)
     expect(SessionStateStorageService.load(draft.id)?.resourceUsage?.[`${id}:spell-2014-enlarge-reduce`] ?? 0).toBe(0)
     await castButtons()[1].trigger('click')
-    const slot = wrapper.findAll('button').find((button) => button.text() === '消耗 2 环法术位')
+    const slot = wrapper.findAll('button').find((button) => button.text() === '仙灵：消耗 2 环法术位')
     if (!slot) throw new Error('仙灵变巨术缺少合适环位入口')
     await slot.trigger('click')
     expect(SessionStateStorageService.load(draft.id)?.usedSpellSlots[2]).toBe(1)

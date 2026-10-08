@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { canCastSpellWithNonSpeciesSlots, canCastSpellWithSlots, getSpeciesCastingMethods } from '@/rules/spellcasting'
+import { getEffectiveSpeciesFeatures } from '@/rules/origins'
 import { computed, ref } from 'vue'
 import { CharacterMediaImage } from '@/features/character-media'
 
@@ -187,7 +189,7 @@ const subclassFeatures = computed(() =>
 const raceName = computed(() => props.draft.raceId ? (repository.value.getRace(props.draft.raceId)?.name ?? '') : '')
 const raceFeatures = computed(() =>
   props.draft.raceId
-    ? getRulesRepository(props.draft.ruleset).getRaceFeatures(props.draft.raceId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? getEffectiveSpeciesFeatures(props.draft, repository.value, props.draft.raceId)
     : [],
 )
 const subraceName = computed(() =>
@@ -197,7 +199,7 @@ const subraceName = computed(() =>
 )
 const subraceFeatures = computed(() =>
   props.draft.subraceId && props.draft.subraceId !== props.draft.raceId
-    ? getRulesRepository(props.draft.ruleset).getRaceFeatures(props.draft.subraceId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? getEffectiveSpeciesFeatures(props.draft, repository.value, props.draft.subraceId)
     : [],
 )
 const backgroundName = computed(() => {
@@ -283,7 +285,7 @@ function slotCount(level: number): number {
 }
 function castableLevels(spell: SpellRule): readonly number[] {
   const state = panel.sessionState.value
-  if (!state) return []
+  if (!state || !canCastSpellWithSlots(props.draft, spell.id)) return []
   return getAvailableSlotLevels(state, spell.level, panel.spellSlots.value)
 }
 const castSpell = ref<SpellRule>()
@@ -300,12 +302,26 @@ function consumeFreeCast(resource: { id: string; name: string }): void {
   castNotice.value = `已免费施展：${resource.name}`
   castSpell.value = undefined
 }
+function atWillCastsForSpell(spell: SpellRule) {
+  return getSpeciesCastingMethods(props.draft, spell.id).filter((method) => method.atWill)
+}
+function confirmAtWill(name: string, note: string): void {
+  castNotice.value = `已施展：${name}；${note}`
+  castSpell.value = undefined
+}
 function confirmCast(level: number): void {
   if (!castSpell.value) return
   // 内部已用 +1 = 可用 −1（施法消耗）
   panel.changeSpellSlot(level, 1)
   castNotice.value = `已使用 ${level} 环法术位`
   castSpell.value = undefined
+}
+function speciesSlotCastsForSpell(spell: SpellRule) {
+  return getSpeciesCastingMethods(props.draft, spell.id).filter((method) => method.canCastWithSpellSlots !== false)
+}
+function confirmSpeciesSlotCast(level: number, sourceName: string, note: string): void {
+  confirmCast(level)
+  castNotice.value = `${sourceName}：已使用 ${level} 环法术位${note ? `；${note}` : ''}`
 }
 
 // ---- 抄录法术书（仅 spellbook 模式，与角色卡共享同一草稿数据）----
@@ -666,6 +682,7 @@ function openTranscribe(spellId?: string): void {
         <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
           {{ profile.sourceName }} · {{ ABILITY_LABELS[profile.ability] }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }}
           <template v-if="profile.materialFreeSpellIds.length"><br>无需材料成分（种族施放）：{{ profile.materialFreeSpellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、') }}</template>
+          <template v-if="profile.castingNotes.length"><br>{{ profile.castingNotes.join('；') }}</template>
         </p>
       </section>
       <div v-if="spellcastingConfig?.mode === 'spellbook'" class="session-panel__tab-header">
@@ -704,7 +721,7 @@ function openTranscribe(spellId?: string): void {
               <button
                 type="button"
                 class="session-panel__adjust"
-                :disabled="!castableLevels(spell).length && !freeCastsForSpell(spell).length"
+                :disabled="!castableLevels(spell).length && !freeCastsForSpell(spell).length && !atWillCastsForSpell(spell).length"
                 @click="openCastModal(spell)"
               >
                 施法
@@ -798,10 +815,12 @@ function openTranscribe(spellId?: string): void {
     </UiModal>
 
     <UiModal :open="Boolean(castSpell)" :title="castSpell ? `施放 ${castSpell.name}` : ''" @close="castSpell = undefined">
+      <p v-for="method in castSpell ? getSpeciesCastingMethods(draft, castSpell.id) : []" :key="method.sourceId">{{ method.sourceName }}：{{ method.note }}</p>
+      <button v-for="method in castSpell ? atWillCastsForSpell(castSpell) : []" :key="method.sourceId" type="button" @click="confirmAtWill(method.sourceName, method.note)">不耗法术位施放（{{ method.sourceName }}）</button>
       <p class="session-panel__cast-hint">选择消耗的法术位（支持升环施法）：</p>
       <div class="session-panel__cast-levels">
         <button
-          v-for="level in castSpell ? castableLevels(castSpell) : []"
+          v-for="level in castSpell && canCastSpellWithNonSpeciesSlots(draft, castSpell.id) ? castableLevels(castSpell) : []"
           :key="level"
           type="button"
           class="session-panel__cast-level"
@@ -809,8 +828,13 @@ function openTranscribe(spellId?: string): void {
         >
           消耗 {{ level }} 环法术位
         </button>
-        <p v-if="castSpell && !castableLevels(castSpell).length && !freeCastsForSpell(castSpell).length" class="session-panel__empty">没有可用的法术位。</p>
+        <p v-if="castSpell && !castableLevels(castSpell).length && !freeCastsForSpell(castSpell).length && !atWillCastsForSpell(castSpell).length" class="session-panel__empty">没有可用的施法资源。</p>
       </div>
+      <template v-for="method in castSpell ? speciesSlotCastsForSpell(castSpell) : []" :key="method.sourceId">
+        <div class="session-panel__cast-levels">
+          <button v-for="level in castSpell ? castableLevels(castSpell) : []" :key="level" type="button" class="session-panel__cast-level" @click="confirmSpeciesSlotCast(level, method.sourceName, method.note)">{{ method.sourceName }}：消耗 {{ level }} 环法术位</button>
+        </div>
+      </template>
       <template v-if="castSpell && freeCastsForSpell(castSpell).length">
         <p class="session-panel__cast-hint">也可以免费施放：</p>
         <div class="session-panel__cast-levels">
@@ -821,7 +845,7 @@ function openTranscribe(spellId?: string): void {
             class="session-panel__cast-level"
             @click="consumeFreeCast(free)"
           >
-            免费施放（剩余 {{ free.remaining }} 次）
+            {{ free.name }}：免费施放（剩余 {{ free.remaining }} 次）
           </button>
         </div>
       </template>

@@ -4,12 +4,12 @@ import { getFeatPool } from '@/rules/feats'
 import { getRequiredLanguageCount } from '@/rules/languages'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, AbilityScores, CharacterDraft } from '@/types/character'
-import type { RaceRule, RulesRepository } from '@/types/rules'
+import type { ChoiceCheckpoint, RaceFeature, RaceRule, RulesRepository } from '@/types/rules'
 
 export const ABILITY_KEYS_ORDER: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
 /** 角色物种链规则（子种族起沿 parentRaceId 叠加，来源关闭时跳过）；2014 与 2024 通用。 */
-export function getDraftSpeciesRules(draft: CharacterDraft, repository: RulesRepository): readonly RaceRule[] {
+export function getDraftSpeciesRules(draft: Pick<CharacterDraft, 'raceId' | 'subraceId'> & { readonly enabledSourceIds?: readonly string[] }, repository: RulesRepository): readonly RaceRule[] {
   const rules: RaceRule[] = []
   const visited = new Set<string>()
   const visit = (raceId: string | undefined): void => {
@@ -95,14 +95,17 @@ export function getSpeciesProficiencyBlockers(
   // 沿物种链（血统 → 父物种）取熟练规格：2024 血统把技能选择放在父物种上。
   const chain = getDraftSpeciesRules(draft, repository)
   const skillOwner = chain.find((item) => item.skillProficiencyChoices)
-  if (!chain.length || !skillOwner?.skillProficiencyChoices) return []
-  const displayName = chain[0]?.name ?? skillOwner.name
+  if (!chain.length) return []
+  const displayName = chain[0]?.name ?? ''
   const isGithyanki = chain.some((item) => item.id === 'race-2014-gith-githyanki')
   const chosen = draft.raceSkillChoices ?? []
   const toolChosen = Boolean(chain.some((item) => item.toolProficiencyChoices) && draft.raceToolChoice)
-  const spec = skillOwner.skillProficiencyChoices
+  const spec = skillOwner?.skillProficiencyChoices
   const blockers: OriginStepBlocker[] = []
-  if (!(isGithyanki && toolChosen) && chosen.length !== spec.count) {
+  const toolSpec = chain.find((item) => item.toolProficiencyChoices)?.toolProficiencyChoices
+  if (toolSpec?.required && !draft.raceToolChoice) blockers.push({ id: 'race-tool-choice-required', message: `${displayName}需要选择一项工具熟练。`, resolution: '请在种族熟练中选择具体工具。' })
+  if (toolSpec?.optionIds && draft.raceToolChoice && !toolSpec.optionIds.includes(draft.raceToolChoice)) blockers.push({ id: 'race-tool-choice-invalid', message: '所选工具不在种族候选范围内。', resolution: '请重新选择具体工具。' })
+  if (spec && !(isGithyanki && toolChosen) && chosen.length !== spec.count) {
     blockers.push({
       id: 'race-skill-choice-count',
       message: isGithyanki && chosen.length === 0
@@ -111,8 +114,9 @@ export function getSpeciesProficiencyBlockers(
       resolution: `已选 ${chosen.length} 项，请在本步补选或移除。`,
     })
   }
-  const allowed = spec.optionIds ?? SKILL_IDS
-  for (const skillId of chosen) {
+  const allowed = spec?.optionIds ?? SKILL_IDS
+  if (spec && new Set(chosen).size !== chosen.length) blockers.push({ id: 'race-skill-choice-invalid-duplicate', message: '种族技能不能重复选择。', resolution: '请选择不同技能。' })
+  for (const skillId of spec ? chosen : []) {
     if (!allowed.includes(skillId)) {
       blockers.push({
         id: `race-skill-choice-invalid-${skillId}`,
@@ -129,6 +133,68 @@ export function getSpeciesProficiencyBlockers(
     })
   }
   return blockers
+}
+
+export function getSpeciesToolProficiency(draft: CharacterDraft, repository: RulesRepository): { readonly id: string; readonly name: string; readonly sourceName: string } | undefined {
+  const owner = getDraftSpeciesRules(draft, repository).find((race) => race.toolProficiencyChoices)
+  const id = draft.raceToolChoice
+  if (!owner || !id || (owner.toolProficiencyChoices?.optionIds && !owner.toolProficiencyChoices.optionIds.includes(id))) return undefined
+  const equipment = repository.getEquipment(id)
+  const option = repository.getOption(id)
+  if (equipment && !isSourceEnabled(equipment.sourceIds, draft.enabledSourceIds, repository)) return undefined
+  const name = equipment?.name ?? option?.name
+  return name ? { id, name, sourceName: owner.name } : undefined
+}
+
+/** 页面与输出共用有效种族特性，具体熟练保留来源。 */
+export function getEffectiveSpeciesFeatures(draft: CharacterDraft, repository: RulesRepository, raceId?: string): readonly RaceFeature[] {
+  const chain = getDraftSpeciesRules(draft, repository)
+  const features = chain.filter((race) => !raceId || race.id === raceId).flatMap((race) => repository.getRaceFeatures(race.id)
+    .filter((feature) => feature.level <= draft.targetLevel && isSourceEnabled(feature.sourceIds, draft.enabledSourceIds, repository))
+    .filter((feature) => {
+      const requirement = feature.selectionRequirement
+      if (!requirement) return true
+      const selected = getValidSpeciesChoice(draft, repository, requirement.checkpointId)
+      return Boolean(selected?.some((id) => !requirement.optionId || requirement.optionId === id))
+        && (requirement.additionalCheckpointIds ?? []).every((id) => Boolean(getValidSpeciesChoice(draft, repository, id)))
+    }))
+  const tool = getSpeciesToolProficiency(draft, repository)
+  const owner = chain.find((race) => race.toolProficiencyChoices)
+  if (tool && owner && (!raceId || owner.id === raceId)) features.push({ id: `${owner.id}-selected-tool`, raceId: owner.id, name: '种族工具熟练', englishName: 'Selected Tool Proficiency', level: 1, kind: 'passive', summary: `${tool.sourceName}：${tool.name}`, description: `所选具体工具熟练：${tool.name}。`, status: 'implemented', sourceIds: owner.sourceIds })
+  for (const race of chain.filter((item) => !raceId || item.id === raceId)) for (const choice of race.choices ?? []) {
+    const selected = getValidSpeciesChoice(draft, repository, choice.id)
+    if (!selected) continue
+    const summary = selected.map((id) => repository.getOption(id)?.name ?? repository.getSpell(id)?.name ?? id).join('、')
+    features.push({ id: `${choice.id}-selected`, raceId: race.id, name: choice.title, englishName: 'Species Choice', level: choice.level, kind: 'choice', summary, description: `${choice.description} 已选：${summary}`, status: 'implemented', sourceIds: race.sourceIds })
+  }
+  return features
+}
+
+type SpeciesChoiceDraft = Pick<CharacterDraft, 'raceId' | 'subraceId' | 'targetLevel' | 'selections'> & { readonly enabledSourceIds?: readonly string[] }
+
+export function getSpeciesChoiceCheckpoints(draft: SpeciesChoiceDraft, repository: RulesRepository): readonly ChoiceCheckpoint[] {
+  return getDraftSpeciesRules(draft, repository).flatMap((race) => (race.choices ?? [])
+    .filter((choice) => choice.level <= draft.targetLevel)
+    .filter((choice) => !choice.parentCheckpointId || getValidSpeciesChoice(draft, repository, choice.parentCheckpointId)?.includes(choice.parentOptionId ?? ''))
+    .map((choice) => ({ ...choice, optionIds: speciesChoiceCandidates(choice, repository, draft.enabledSourceIds) })))
+}
+
+function speciesChoiceCandidates(choice: ChoiceCheckpoint, repository: RulesRepository, enabledSourceIds: readonly string[] | undefined): readonly string[] {
+  if (choice.candidateKind === 'spell-pool') return repository.spells.filter((spell) => spell.level === choice.spellPool?.level && (!choice.spellPool?.classIds || spell.classIds.some((id) => choice.spellPool?.classIds?.includes(id))) && isSourceEnabled(spell.sourceIds, enabledSourceIds, repository)).map((spell) => spell.id)
+  return choice.optionIds.filter((id) => { const option = repository.getOption(id); return !option || isSourceEnabled(option.sourceIds, enabledSourceIds, repository) })
+}
+
+export function getValidSpeciesChoice(draft: SpeciesChoiceDraft, repository: RulesRepository, checkpointId: string, visited = new Set<string>()): readonly string[] | undefined {
+  if (visited.has(checkpointId)) return undefined
+  visited.add(checkpointId)
+  const choice = getDraftSpeciesRules(draft, repository).flatMap((race) => race.choices ?? []).find((item) => item.id === checkpointId)
+  if (!choice || choice.level > draft.targetLevel) return undefined
+  if (choice.parentCheckpointId && !getValidSpeciesChoice(draft, repository, choice.parentCheckpointId, visited)?.includes(choice.parentOptionId ?? '')) return undefined
+  const records = draft.selections.filter((item) => item.checkpointId === checkpointId && !item.invalidatedAt)
+  if (records.length !== 1) return undefined
+  const ids = records[0]?.optionIds ?? []
+  const candidates = speciesChoiceCandidates(choice, repository, draft.enabledSourceIds)
+  return ids.length >= choice.minSelections && ids.length <= choice.maxSelections && new Set(ids).size === ids.length && ids.every((id) => candidates.includes(id)) ? ids : undefined
 }
 
 /**

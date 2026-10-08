@@ -21,7 +21,7 @@ import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
 import { humblewoodRaces2014, obojimaRaces2014 } from '@/rules/data/races-third-party-2014'
 import { ebonTidesRaces2014 } from '@/rules/data/races-ebon-tides-2014'
 import { raceFeatures2014 } from '@/rules/data/race-features-2014'
-import { motmRaces2014 } from '@/rules/data/races-motm-2014'
+import { motmChoiceOptions2014, motmRaces2014 } from '@/rules/data/races-motm-2014'
 import { backgroundFeatures2014 } from '@/rules/data/background-features-2014'
 import { backgroundStartingEquipment2014, classStartingEquipment2014 } from '@/rules/data/starting-equipment-2014'
 import { subclasses2014, subclassOptions2014 } from '@/rules/data/subclasses-2014'
@@ -51,6 +51,7 @@ export const rulesRepository2014: RulesRepository = {
   raceFeatures: raceFeatures2014,
   backgroundFeatures: backgroundFeatures2014,
   options: [
+    ...motmChoiceOptions2014,
     ...abilityImprovementOptions2014,
     ...featChoiceOptions2014,
     ...spellListOptions2014,

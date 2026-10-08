@@ -1,8 +1,7 @@
 import { getRulesRepository } from '@/rules/repositories'
 import { getDicePoolCount, getDicePoolDie, getResourceMax, getResourceRecovery } from '@/rules/resources'
 import { getSpellFreeCastings } from '@/rules/spellcasting'
-import { getDraftSpeciesRules } from '@/rules/origins'
-import { isSourceEnabled } from '@/rules/source-books'
+import { getEffectiveSpeciesFeatures } from '@/rules/origins'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
 import type { ClassFeature, ClassResource, RulesRepository, SubclassFeature } from '@/types/rules'
 import type { SessionState } from '@/types/session-state'
@@ -55,9 +54,7 @@ export function listSessionResources(
   modifiers: Partial<Record<AbilityKey, number>> = {},
   repository: RulesRepository = getRulesRepository(draft.ruleset),
 ): readonly SessionResource[] {
-  const speciesFeatures = getDraftSpeciesRules(draft, repository)
-    .flatMap((race) => repository.getRaceFeatures(race.id))
-    .filter((feature) => feature.level <= draft.targetLevel && isSourceEnabled(feature.sourceIds, draft.enabledSourceIds, repository))
+  const speciesFeatures = getEffectiveSpeciesFeatures(draft, repository)
     .map((feature) => ({ ...feature, dicePool: undefined }))
   const features = [...grantedFeatures(draft, repository), ...speciesFeatures]
 

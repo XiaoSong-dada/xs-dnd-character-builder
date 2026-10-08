@@ -188,6 +188,11 @@ export interface SpeciesSpellGrant extends FixedSpellGrant {
   readonly minimumLevel: number
   /** 仅通过该种族特质施放本法术时免材料；不改写法术本身的成分。 */
   readonly waivesMaterialComponents?: boolean
+  readonly waivedComponents?: readonly ('verbal' | 'somatic' | 'material')[]
+  readonly canCastWithSpellSlots?: boolean
+  readonly atWill?: boolean
+  readonly targetRestriction?: 'snakes-only' | 'self-only'
+  readonly castingNote?: string
 }
 
 export interface FeatChoiceSpec {
@@ -425,6 +430,7 @@ export interface SpellbookExtraRule {
 
 /** 种族／物种特性。各规则集独立登记，常驻或按等级自动获得。 */
 export interface RaceFeature {
+  readonly selectionRequirement?: { readonly checkpointId: string; readonly optionId?: string; readonly additionalCheckpointIds?: readonly string[] }
   readonly id: string
   readonly raceId: string
   readonly name: string
@@ -532,6 +538,9 @@ export interface ClassFeature {
 }
 
 export interface RaceRule {
+  readonly naturalArmor?: { readonly base: number; readonly addsDexterity: boolean; readonly forbidsArmor?: boolean }
+  readonly choices?: readonly (ChoiceCheckpoint & { readonly grantsSkillProficiency?: boolean })[]
+  readonly chosenCantripCheckpointId?: string
   readonly id: string
   readonly ruleset: RulesetId
   readonly name: string
@@ -560,7 +569,7 @@ export interface RaceRule {
   /** 种族自选技能熟练规格（如半精灵 2 项全技能、兽人 7 选 2）；optionIds 缺省为全部 18 项技能。 */
   readonly skillProficiencyChoices?: { readonly count: number; readonly optionIds?: readonly string[] }
   /** 种族自选工具熟练规格（如矮人 1 项工匠工具）；展示级，不参与派生。 */
-  readonly toolProficiencyChoices?: { readonly count: number }
+  readonly toolProficiencyChoices?: { readonly count: number; readonly optionIds?: readonly string[]; readonly required?: boolean }
   /** 种族武器/护甲熟练（如精灵武器训练）；展示级，不参与派生。 */
   readonly weaponArmorProficiencies?: readonly string[]
   /** 灵活加值分组（如费兹本龙裔：第一项 +2、第二项 +1）；与 flexibleBonusCount/Value 二选一。 */

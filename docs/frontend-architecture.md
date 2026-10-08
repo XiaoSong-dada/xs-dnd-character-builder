@@ -12,6 +12,15 @@
 
 ## 2. 总体依赖方向
 
+### MotM 共用契约实际拓扑（2026-10-08）
+
+- `rules/data/races-motm-2014` 只依赖共享类型，登记33个主项、158个特性和14个分支选项；2014 `repository` 新增分支选项装配，不进入2024仓库。
+- `rules/origins` 收束具体工具、有效分支检查点与有效特性解析；下游为版本仓库接口、来源过滤及共享类型。`timeline` 新增调用其检查点出口；`session-resources`、`derive`、`equipment-state`、角色卡/跑团与共享导出复用同一有效链，不在页面重复依赖判定。
+- `rules/spellcasting` 复用 `origins` 输出逐来源施法方法与属性，跑团面板调用这些纯规则出口并通过既有 `useSessionPanel` 消耗环位/次数；无限次路径只显示确认，不保存伪造资源。`features/character-export/build-export-data` 与两页面共用有效特性及施法分组。
+- `RaceRule.choices`、护甲协议、选择依赖及施法字段全部为只读数据。原选择沿用 `selections/raceToolChoice`，未新增 store、持久化版本或框架依赖；保持 views/features → rules → types，无 rules → UI/存储反向依赖。测试新增 fixture 与专项文件不属于运行时模块。
+
+
+
 S01-B2：既有`rules/spellcasting`新增纯种族施法分组出口，复用`origins`、版本仓库及`derive`依赖，不引入UI或持久化。角色卡、跑团面板与共享导出均直接调用该规则出口；跑团复用hook现有derived，角色卡/导出使用既有派生参数。无新store、共享组件或原始状态字段，保持UI/features → rules → types方向。
 
 S02-A2：`rules/session-resources`复用`origins.getDraftSpeciesRules`与`source-books`读取有效种族资源，`derive`沿用origins依赖读取先攻熟练标志；资源UI、持久化、休息及共享导出继续调用原有纯函数出口，无新增store或页面私有资源状态。MotM数据模块增加兔人和影灵，2014源表登记巫光重印来源。

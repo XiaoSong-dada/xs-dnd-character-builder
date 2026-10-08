@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getEffectiveSpeciesFeatures } from '@/rules/origins'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import AddItemModal from '@/components/AddItemModal.vue'
@@ -602,8 +603,7 @@ const raceInfo = computed(() => {
   if (!raceId) return undefined
   const race = repository.value.getRace(raceId)
   if (!race) return undefined
-  const features = getRulesRepository(props.draft.ruleset).getRaceFeatures(raceId)
-    .filter((feature) => feature.level <= props.draft.targetLevel)
+  const features = getEffectiveSpeciesFeatures(props.draft, repository.value, raceId)
   return { race, features }
 })
 /** 子种族特性（仅子种族自身条目，父项特性不重复展示）。 */
@@ -612,8 +612,7 @@ const subraceInfo = computed(() => {
   if (!subraceId || subraceId === props.draft.raceId) return undefined
   const race = repository.value.getRace(subraceId)
   if (!race) return undefined
-  const features = getRulesRepository(props.draft.ruleset).getRaceFeatures(subraceId)
-    .filter((feature) => feature.level <= props.draft.targetLevel)
+  const features = getEffectiveSpeciesFeatures(props.draft, repository.value, subraceId)
   return { race, features }
 })
 /** 背景特性（变体背景沿用父背景特性条目）。 */
@@ -909,6 +908,7 @@ function handleExportPdf(): void {
         <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
           {{ profile.sourceName }} · {{ abilityLabel(profile.ability) }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }}
           <template v-if="profile.materialFreeSpellIds.length"><br>无需材料成分（种族施放）：{{ profile.materialFreeSpellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、') }}</template>
+          <template v-if="profile.castingNotes.length"><br>{{ profile.castingNotes.join('；') }}</template>
         </p>
       </section>
       <section v-if="editing.editMode.value" class="character-sheet__spell-section">

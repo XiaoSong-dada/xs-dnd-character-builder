@@ -2,6 +2,7 @@ import { getRulesRepository } from '@/rules/repositories'
 import { FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
 import { buildManualFeatChoiceCheckpoints, getFeatPool } from '@/rules/feats'
 import { isSourceEnabled } from '@/rules/source-books'
+import { getSpeciesChoiceCheckpoints } from '@/rules/origins'
 import type { CheckpointKind, ChoiceCheckpoint, RulesRepository } from '@/types/rules'
 import type { ChoiceSelection, ManualFeatGrant, RulesetId } from '@/types/character'
 import { SKILL_IDS } from '@/rules/derive'
@@ -330,6 +331,7 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
     ...(context.raceId ? buildSpeciesFeatCheckpoints(context.raceId, repository, context.enabledSourceIds) : []),
     ...(context.backgroundId ? buildBackgroundFeatCheckpoints(context.backgroundId, repository, context.enabledSourceIds) : []),
     ...buildSpeciesAbilityCheckpoints([context.subraceId, context.raceId], repository, context.enabledSourceIds),
+    ...getSpeciesChoiceCheckpoints({ raceId: context.raceId, subraceId: context.subraceId, enabledSourceIds: context.enabledSourceIds, selections: context.selections ?? [], targetLevel }, repository),
     ...classCheckpoints,
     ...(context.subclassId ? buildSubclassFeatureCheckpoints(context.subclassId, repository, context.enabledSourceIds) : []),
   ]

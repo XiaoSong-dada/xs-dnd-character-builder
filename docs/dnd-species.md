@@ -17,6 +17,8 @@
 
 ## 通用选择流程
 
+MotM 共33项代码已接入，新增25项与原8项分批及联合回归见 [验收记录](需求文档/MotM完整接入验收记录.md)，历史设计见 [M00准备](需求文档/MotM完整接入实施准备.md)。地底侏儒及灰矮人感官证据未闭合，不标为整书已完成核验。逐项状态见 [逐书矩阵](需求文档/种族扩展逐书矩阵.md)。
+
 S02-A4已接入：[气元素裔](species/5e-2014/motm-air-genasi/motm-air-genasi.md)、[土元素裔](species/5e-2014/motm-earth-genasi/motm-earth-genasi.md)、[火元素裔](species/5e-2014/motm-fire-genasi/motm-fire-genasi.md)、[水元素裔](species/5e-2014/motm-water-genasi/motm-water-genasi.md)。四个独立MotM主种族，创建体型与施法属性必选，不覆盖旧版/2024。逐法术免材料只作为对应种族施放说明；土裔附赠剑刃防护为单独熟练次数资源，不限制普通戏法。法术按等级授予，闭气/土行/两栖/抗性及游泳等情境只展示。
 
 S02-A3已接入：[仙灵](species/5e-2014/motm-fairy/motm-fairy.md)。MotM与巫光机械规则相同，使用同一2014独立条目和双来源，不重复授予。固定小型、三种施法属性必选；1/3/5级法术进入角色卡/跑团/导出，妖火与变巨/缩小各一次长休免费次数，也可消耗合适法术位，不免法术成分。飞行等于当前步行速度及中/重甲禁用只作情境展示，不构造移动引擎。
@@ -59,6 +61,50 @@ race-2014-elf-drow
 
 > 实现状态（2026-09-02，v1.1.8）：2014 种族特性已落地为 `app/src/rules/data/race-features-2014.ts`
 > （240 条，与本文档资料一致），角色卡与跑团助手「能力」页签分组展示（种族/子种族），按等级过滤。
+
+## 2014 MotM 独立主种族
+
+全部使用 `race-2014-motm-*`，不叠加旧父种族收益；角色卡、跑团及导出共用有效特性解析。以下「待感官证据」不表示所有数值已确认。
+
+| 中文名 | 英文名 | 资料 | 状态 |
+| --- | --- | --- | --- |
+| 半羊人（多元宇宙） | Satyr | [详细资料](species/5e-2014/motm-satyr/motm-satyr.md) | 已接入及自动化回归 |
+| 幻身灵（多元宇宙） | Changeling | [详细资料](species/5e-2014/motm-changeling/motm-changeling.md) | 已接入及自动化回归 |
+| 兔人 | Harengon | [详细资料](species/5e-2014/motm-harengon/motm-harengon.md) | 已接入及自动化回归 |
+| 影灵（多元宇宙） | Shadar-kai | [详细资料](species/5e-2014/motm-shadar-kai/motm-shadar-kai.md) | 已接入及自动化回归 |
+| 仙灵 | Fairy | [详细资料](species/5e-2014/motm-fairy/motm-fairy.md) | 已接入及自动化回归 |
+| 气元素裔（多元宇宙） | Air Genasi | [详细资料](species/5e-2014/motm-air-genasi/motm-air-genasi.md) | 已接入及自动化回归 |
+| 土元素裔（多元宇宙） | Earth Genasi | [详细资料](species/5e-2014/motm-earth-genasi/motm-earth-genasi.md) | 已接入及自动化回归 |
+| 火元素裔（多元宇宙） | Fire Genasi | [详细资料](species/5e-2014/motm-fire-genasi/motm-fire-genasi.md) | 已接入及自动化回归 |
+| 水元素裔（多元宇宙） | Water Genasi | [详细资料](species/5e-2014/motm-water-genasi/motm-water-genasi.md) | 已接入及自动化回归 |
+| 人马（多元宇宙） | Centaur | [详细资料](species/5e-2014/motm-centaur/motm-centaur.md) | 已接入及自动化回归 |
+| 牛头人（多元宇宙） | Minotaur | [详细资料](species/5e-2014/motm-minotaur/motm-minotaur.md) | 已接入及自动化回归 |
+| 熊地精（多元宇宙） | Bugbear | [详细资料](species/5e-2014/motm-bugbear/motm-bugbear.md) | 已接入及自动化回归 |
+| 斑猫人（多元宇宙） | Tabaxi | [详细资料](species/5e-2014/motm-tabaxi/motm-tabaxi.md) | 已接入及自动化回归 |
+| 海精灵（多元宇宙） | Sea Elf | [详细资料](species/5e-2014/motm-sea-elf/motm-sea-elf.md) | 已接入及自动化回归 |
+| 兽人（多元宇宙） | Orc | [详细资料](species/5e-2014/motm-orc/motm-orc.md) | 已接入及自动化回归 |
+| 地精（多元宇宙） | Goblin | [详细资料](species/5e-2014/motm-goblin/motm-goblin.md) | 已接入及自动化回归 |
+| 大地精（多元宇宙） | Hobgoblin | [详细资料](species/5e-2014/motm-hobgoblin/motm-hobgoblin.md) | 已接入及自动化回归 |
+| 歌利亚（多元宇宙） | Goliath | [详细资料](species/5e-2014/motm-goliath/motm-goliath.md) | 已接入及自动化回归 |
+| 天狗（多元宇宙） | Kenku | [详细资料](species/5e-2014/motm-kenku/motm-kenku.md) | 已接入及自动化回归 |
+| 蛇人（多元宇宙） | Yuan-ti | [详细资料](species/5e-2014/motm-yuan-ti/motm-yuan-ti.md) | 已接入及自动化回归 |
+| 吉斯泽莱人（多元宇宙） | Githzerai | [详细资料](species/5e-2014/motm-githzerai/motm-githzerai.md) | 已接入及自动化回归 |
+| 吉斯洋基人（多元宇宙） | Githyanki | [详细资料](species/5e-2014/motm-githyanki/motm-githyanki.md) | 已接入及自动化回归 |
+| 地底侏儒（多元宇宙） | Deep Gnome | [详细资料](species/5e-2014/motm-deep-gnome/motm-deep-gnome.md) | 已接入，待感官证据 |
+| 灰矮人（多元宇宙） | Duergar | [详细资料](species/5e-2014/motm-duergar/motm-duergar.md) | 已接入，待感官证据 |
+| 费尔伯格人（多元宇宙） | Firbolg | [详细资料](species/5e-2014/motm-firbolg/motm-firbolg.md) | 已接入及自动化回归 |
+| 鸟羽人（多元宇宙） | Aarakocra | [详细资料](species/5e-2014/motm-aarakocra/motm-aarakocra.md) | 已接入及自动化回归 |
+| 梭螺鱼人（多元宇宙） | Triton | [详细资料](species/5e-2014/motm-triton/motm-triton.md) | 已接入及自动化回归 |
+| 化兽者（多元宇宙） | Shifter | [详细资料](species/5e-2014/motm-shifter/motm-shifter.md) | 已接入及自动化回归 |
+| 狗头人（多元宇宙） | Kobold | [详细资料](species/5e-2014/motm-kobold/motm-kobold.md) | 已接入及自动化回归 |
+| 阿斯莫（多元宇宙） | Aasimar | [详细资料](species/5e-2014/motm-aasimar/motm-aasimar.md) | 已接入及自动化回归 |
+| 雅灵（多元宇宙） | Eladrin | [详细资料](species/5e-2014/motm-eladrin/motm-eladrin.md) | 已接入及自动化回归 |
+| 蜥蜴人（多元宇宙） | Lizardfolk | [详细资料](species/5e-2014/motm-lizardfolk/motm-lizardfolk.md) | 已接入及自动化回归 |
+| 龟人（多元宇宙） | Tortle | [详细资料](species/5e-2014/motm-tortle/motm-tortle.md) | 已接入及自动化回归 |
+
+限定工具规格支持 `optionIds/required`，半羊人必须选具体乐器，旧种族缺选提示规则不变。`RaceRule.choices` 复用 `selections` 和时间线任务，依赖、来源、等级及重复记录统一过滤；非法原值保留但停用。`RaceFeature.selectionRequirement` 支持主检查点、选项及额外检查点依赖，雅灵必须具有有效季节和能力属性才授予妖精步/季节效果。`naturalArmor` 声明基础值、是否加敏捷及禁止穿甲；替代公式不叠加。
+
+逐法术契约增加 `waivedComponents`、`canCastWithSpellSlots`、`atWill` 与 `targetRestriction`，不改全局法术元数据或专注。吉斯免全部成分，蛇人仅蛇无限次施放不伪造次数资源，职业同名法术保持独立路径。
 
 ## 2024 核心物种
 

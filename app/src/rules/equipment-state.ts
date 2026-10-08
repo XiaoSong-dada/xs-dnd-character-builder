@@ -1,4 +1,5 @@
 import { collectArmorTrainings } from '@/rules/feats'
+import { getDraftSpeciesRules } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { CharacterDraft, ValidationIssue } from '@/types/character'
@@ -19,8 +20,9 @@ export function canBenefitFromShield(draft: CharacterDraft, repository: RulesRep
 export function getEquipmentWarnings(draft: CharacterDraft, repository: RulesRepository = getRulesRepository(draft.ruleset)): readonly ValidationIssue[] {
   const equipment = getActiveEquippedEquipment(draft, repository)
   const shield = equipment.find((item) => item.category === 'shield')
-  if (!shield) return []
   const issues: ValidationIssue[] = []
+  if (equipment.some((item) => item.category === 'armor') && getDraftSpeciesRules(draft, repository).some((race) => race.naturalArmor?.forbidsArmor)) issues.push({ id: 'species-armor-forbidden', step: 'equipment', severity: 'warning', message: '龟人的天生护甲不允许穿戴轻甲、中甲或重甲，当前护甲记录不提供AC收益。', resolution: '请手动卸下护甲；背包物品与原记录不会被删除。' })
+  if (!shield) return issues
   const twoHanded = equipment.filter((item) => item.category === 'weapon' && item.weaponProperties?.includes('two-handed'))
   if (twoHanded.length) {
     issues.push({
