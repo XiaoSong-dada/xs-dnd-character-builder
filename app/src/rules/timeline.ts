@@ -167,7 +167,7 @@ function buildSpeciesFeatCheckpoints(
   const race = repository.getRace(raceId)
   const choices = race?.originFeatChoices
   if (!race || !choices || choices.count <= 0) return []
-  const optionIds = getFeatPool(repository, choices.categories, { enabledSourceIds }).map((feat) => feat.id)
+  const optionIds = getFeatPool(repository, choices.categories, { level: 1, enabledSourceIds }).map((feat) => feat.id)
   if (optionIds.length === 0) return []
   return [{
     id: `${race.id}-origin-feat`,

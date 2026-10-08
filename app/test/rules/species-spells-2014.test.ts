@@ -126,8 +126,8 @@ describe('2014 种族法术接入契约', () => {
     installRace()
     const missing = { ...draftFor(), selections: [] }
     expect(getSpeciesSpellcastingProfiles(missing)).toEqual([])
-    expect(getEffectiveSelectedSpellIds(missing)).toHaveLength(3)
-    expect(buildCharacterExportModel(missing, deriveCharacter(missing)).spellcasting?.abilityLabel).toBe('待确认')
+    expect(getEffectiveSelectedSpellIds(missing)).toEqual([])
+    expect(buildCharacterExportModel(missing, deriveCharacter(missing)).spellcasting).toBeUndefined()
     const fixedRace = { ...race, spellGrants: race.spellGrants?.map((grant, index) => ({ ...grant, ability: index === 0 ? 'int' as const : 'cha' as const })) }
     vi.mocked(rulesRepository.getRace).mockImplementation((id) => id === race.id ? fixedRace : undefined)
     expect(getSpeciesSpellcastingProfiles(missing).map((profile) => profile.ability)).toEqual(['int', 'cha'])

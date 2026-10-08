@@ -16,10 +16,10 @@
 | 感官 | 60 尺黑暗视觉 |
 | 语言 | 通用语、原初语 |
 | 种族属性提升 | 力量 +1、体质 +1、魅力 +1 |
-| 来源 | Elemental Evil Player's Companion（VGM 重印，数值相同） |
+| 来源 | Volo's Guide to Monsters（官方勘误后）与Mythic Odysseys of Theros相同重印；任一来源启用一次生效 |
 | 版权边界 | 商业规则内容，只记录元数据与原创摘要 |
 
-官方来源：[Elemental Evil Player's Companion](https://media.wizards.com/2015/downloads/dnd/EE_PlayersCompanion.pdf) · [Volo's Guide to Monsters](https://www.dndbeyond.com/sources/vgtm/race-of-the-week-tritons)
+官方依据：[VGM官方勘误](https://www.dndbeyond.com/sources/dnd/sae/volos-guide-to-monsters)。本地玩家正文CHM1407；原EEPC来源登记错误，本阶段已移除，不借用MotM。
 
 ## 玩法定位与创建选择
 
@@ -44,6 +44,7 @@
 - 动作或触发：按对应法术施放。
 - 资源与恢复：云雾术 1 级起、狂风术 3 级起、水墙术 5 级起，各长休一次。
 - 效果：以魅力为施法属性施放上述法术。
+- 法术位/成分：不额外授予法术位路径，无成分豁免；各法术独立一次长休（据VGM勘误），不是共用一次池。
 - 实现与校验：2014 原版 5 级法术为水墙术（wall of water），不是 MPMM 版的水面行走。
 
 ## 兼容边界

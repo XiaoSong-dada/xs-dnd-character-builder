@@ -185,6 +185,7 @@ export interface FixedSpellGrant {
 
 /** 物种授予的固定法术：按获得等级生效；施法属性由物种选择（若声明）。 */
 export interface SpeciesSpellGrant extends FixedSpellGrant {
+  readonly castingLevel?: number
   readonly minimumLevel: number
   /** 仅通过该种族特质施放本法术时免材料；不改写法术本身的成分。 */
   readonly waivesMaterialComponents?: boolean
@@ -430,6 +431,8 @@ export interface SpellbookExtraRule {
 
 /** 种族／物种特性。各规则集独立登记，常驻或按等级自动获得。 */
 export interface RaceFeature {
+  readonly saveDc?: { readonly ability?: AbilityKey; readonly abilityCheckpointId?: string }
+  readonly naturalAttack?: { readonly ability: AbilityKey; readonly damageDice: string }
   readonly selectionRequirement?: { readonly checkpointId: string; readonly optionId?: string; readonly additionalCheckpointIds?: readonly string[] }
   readonly id: string
   readonly raceId: string
@@ -538,7 +541,11 @@ export interface ClassFeature {
 }
 
 export interface RaceRule {
-  readonly naturalArmor?: { readonly base: number; readonly addsDexterity: boolean; readonly forbidsArmor?: boolean }
+  readonly countsAsRaceIds?: readonly string[]
+  readonly ancestralMovement?: readonly { readonly kind: 'climb' | 'fly' | 'swim'; readonly speed: number; readonly usesWalkingSpeed?: boolean; readonly condition: string }[]
+  readonly lineage?: boolean
+  readonly sizeByLevel?: readonly { readonly level: number; readonly size: 'small' | 'medium' }[]
+  readonly naturalArmor?: { readonly base: number; readonly addsDexterity: boolean; readonly forbidsArmor?: boolean; readonly requiresUnarmored?: boolean }
   readonly choices?: readonly (ChoiceCheckpoint & { readonly grantsSkillProficiency?: boolean })[]
   readonly chosenCantripCheckpointId?: string
   readonly id: string

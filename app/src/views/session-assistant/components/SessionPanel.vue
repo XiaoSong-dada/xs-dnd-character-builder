@@ -189,7 +189,7 @@ const subclassFeatures = computed(() =>
 const raceName = computed(() => props.draft.raceId ? (repository.value.getRace(props.draft.raceId)?.name ?? '') : '')
 const raceFeatures = computed(() =>
   props.draft.raceId
-    ? getEffectiveSpeciesFeatures(props.draft, repository.value, props.draft.raceId)
+    ? getEffectiveSpeciesFeatures(props.draft, repository.value, props.draft.raceId, panel.derived.value)
     : [],
 )
 const subraceName = computed(() =>
@@ -199,7 +199,7 @@ const subraceName = computed(() =>
 )
 const subraceFeatures = computed(() =>
   props.draft.subraceId && props.draft.subraceId !== props.draft.raceId
-    ? getEffectiveSpeciesFeatures(props.draft, repository.value, props.draft.subraceId)
+    ? getEffectiveSpeciesFeatures(props.draft, repository.value, props.draft.subraceId, panel.derived.value)
     : [],
 )
 const backgroundName = computed(() => {
@@ -297,9 +297,9 @@ function openCastModal(spell: SpellRule): void {
 function freeCastsForSpell(spell: SpellRule) {
   return panel.resourceViews.value.filter((resource) => resource.spellId === spell.id && resource.remaining > 0)
 }
-function consumeFreeCast(resource: { id: string; name: string }): void {
+function consumeFreeCast(resource: { id: string; name: string; castingLevel?: number }): void {
   panel.changeResource(resource.id, 1)
-  castNotice.value = `已免费施展：${resource.name}`
+  castNotice.value = `已免费施展：${resource.name}${resource.castingLevel ? `（${resource.castingLevel}环）` : ''}`
   castSpell.value = undefined
 }
 function atWillCastsForSpell(spell: SpellRule) {
@@ -845,7 +845,7 @@ function openTranscribe(spellId?: string): void {
             class="session-panel__cast-level"
             @click="consumeFreeCast(free)"
           >
-            {{ free.name }}：免费施放（剩余 {{ free.remaining }} 次）
+            {{ free.name }}：免费施放{{ free.castingLevel ? `（${free.castingLevel}环）` : '' }}（剩余 {{ free.remaining }} 次）
           </button>
         </div>
       </template>

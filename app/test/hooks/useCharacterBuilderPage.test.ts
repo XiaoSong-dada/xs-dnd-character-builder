@@ -147,7 +147,7 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     expect(store.activeDraft?.raceAbilityBonusOptionId).toBe('three-one')
     expect(store.activeDraft?.raceAbilityChoices).toEqual(['str', 'dex'])
     expect(page.raceFlexibleCount.value).toBe(3)
-    expect(page.raceAbilityBonuses.value).toMatchObject({ str: 1, dex: 1 })
+    expect(page.raceAbilityBonuses.value).toEqual({})
     page.updateRaceAbilityChoices(['str', 'dex', 'con'])
     page.updateRaceAbilityBonusOption('unknown')
     expect(store.activeDraft?.raceAbilityBonusOptionId).toBe('three-one')

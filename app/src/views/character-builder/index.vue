@@ -14,6 +14,7 @@ import ClassStep from '@/views/character-builder/components/ClassStep.vue'
 import EquipmentStep from '@/views/character-builder/components/EquipmentStep.vue'
 import IdentityStep from '@/views/character-builder/components/IdentityStep.vue'
 import LevelAdjustModal from '@/views/character-builder/components/LevelAdjustModal.vue'
+import LineageTransformationModal from '@/views/character-builder/components/LineageTransformationModal.vue'
 import OriginStep from '@/views/character-builder/components/OriginStep.vue'
 import SourcesStep from '@/views/character-builder/components/SourcesStep.vue'
 import SetupStep from '@/views/character-builder/components/SetupStep.vue'
@@ -28,6 +29,7 @@ import type { AbilityMethod, DraftStep } from '@/types/character'
 
 const {
   drafts,
+  lineageTransformation,
   legacyDrafts,
   activeDraft,
   derived,
@@ -203,7 +205,9 @@ function updateMethod(value: AbilityMethod): void {
       :enabled-source-ids="activeDraft.enabledSourceIds"
       :languages="activeDraft.languages"
       :race-skill-choices="activeDraft.raceSkillChoices ?? []"
+      :lineage-history="activeDraft.lineageHistory"
       :race-tool-choice="activeDraft.raceToolChoice"
+      :race-tool-choices="activeDraft.raceToolChoices"
       :background-tool-ids="activeDraft.backgroundToolIds"
       :size-choice="activeDraft.speciesSizeChoice"
       :background-abilities="activeDraft.backgroundAbilityAllocation ?? {}"
@@ -215,6 +219,7 @@ function updateMethod(value: AbilityMethod): void {
       @languages="updateDraft({ languages: $event })"
       @race-skills="updateDraft({ raceSkillChoices: $event })"
       @race-tool="updateDraft({ raceToolChoice: $event })"
+      @race-tools="updateDraft({ raceToolChoices: $event, raceToolChoice: undefined })"
       @background-tools="updateDraft({ backgroundToolIds: $event })"
       @size="updateDraft({ speciesSizeChoice: $event })"
       @background-abilities="updateDraft({ backgroundAbilityAllocation: $event })"
@@ -262,7 +267,7 @@ function updateMethod(value: AbilityMethod): void {
     />
     <IdentityStep v-else-if="step === 'identity'" :draft="activeDraft" :name="activeDraft.name" :alignment="activeDraft.alignment" :notes="activeDraft.notes" @change="updateIdentity" @change-media="updateDraft({ media: $event })" />
     <ValidationStep v-else-if="step === 'validation'" :issues="validationIssues" :ruleset="activeDraft.ruleset" @go="setStep($event as DraftStep)" />
-    <CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" :exporting-format="exportingFormat" :export-notice="exportNotice" @export="exportDraft" @export-package="exportPackage" @export-pdf="exportPdf" @export-xlsx="exportXlsx" @adjust-level="openLevelModal" @reedit="startReedit" @change-spell-selections="updateSpells" @change-inventory="updateInventory" @change-adventure-gold="updateAdventureGold" @change-manual-edits="updateManualEdits" @change-selections="updateDraft({ selections: $event })" @change-media="updateDraft({ media: $event })" />
+<CharacterSheetStep v-else-if="step === 'sheet' && derived" :draft="activeDraft" :derived="derived" :exporting-format="exportingFormat" :export-notice="exportNotice" @export="exportDraft" @export-package="exportPackage" @export-pdf="exportPdf" @export-xlsx="exportXlsx" @adjust-level="openLevelModal" @transform-lineage="lineageTransformation.start" @reedit="startReedit" @change-spell-selections="updateSpells" @change-inventory="updateInventory" @change-adventure-gold="updateAdventureGold" @change-manual-edits="updateManualEdits" @change-selections="updateDraft({ selections: $event })" @change-media="updateDraft({ media: $event })" />
 
     <template v-if="step !== 'sheet' && derivedSummary" #drawer>
       <CharacterDrawer :summary="derivedSummary" :completion="completion" />
@@ -363,6 +368,7 @@ function updateMethod(value: AbilityMethod): void {
     @close="closeLevelModal"
     @confirm="confirmLevelAdjust"
   />
+  <LineageTransformationModal :open="lineageTransformation.open.value" :target="lineageTransformation.target.value" :targets="lineageTransformation.targets.value" :retained="lineageTransformation.retained.value" :candidates="lineageTransformation.candidates.value" :preview="lineageTransformation.result.value.preview" :error="lineageTransformation.result.value.error" @close="lineageTransformation.close" @confirm="lineageTransformation.confirm" @target="lineageTransformation.target.value = $event" @toggle="lineageTransformation.toggle" />
 </template>
 
 <style scoped lang="scss">

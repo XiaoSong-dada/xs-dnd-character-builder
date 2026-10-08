@@ -12,6 +12,15 @@
 
 ## 2. 总体依赖方向
 
+### S03—S07 实际拓扑（2026-10-08）
+
+- 新增纯数据模块 `rules/data/races-official-expansions-2014`，依赖现有PHB装备目录、技能ID和共享类型；由2014仓库装配，不进入2024仓库。
+- 新增叶子规则模块 `rules/species-legacy`，只依赖技能ID、来源规则及共享类型；`derive`、`origins`、`languages`、`validate`复用其有效遗产解析，避免沿父种族链叠加原种族收益。
+- 新增 `rules/lineage-transformation`，依赖派生、语言、起源、遗产及校验纯函数生成不可变预览草稿；不读写存储或UI，不与遗产叶子形成循环依赖。
+- 新增页面私有 `useLineageTransformation` 编排目标/遗产选择、预览与确认，通过既有store更新原始草稿；`LineageTransformationModal`只收集输入与展示影响。页面入口仅组装绑定，未新增公共store或跨feature依赖。
+- `CharacterDraft.raceToolChoices/lineageHistory`为可选可序列化原始字段，旧v9草稿兼容；storage/JSON/ZIP沿既有边界规范化。角色卡、跑团及共享导出继续复用有效特性、工具、体型、语言和施法出口。
+- 已复核前端依赖拓扑，已更新；保持UI → hooks/store/services/rules → types方向，无rules → UI/存储反向依赖。
+
 ### MotM 共用契约实际拓扑（2026-10-08）
 
 - `rules/data/races-motm-2014` 只依赖共享类型，登记33个主项、158个特性和14个分支选项；2014 `repository` 新增分支选项装配，不进入2024仓库。

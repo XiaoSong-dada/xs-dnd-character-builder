@@ -3,10 +3,18 @@ import { SKILL_IDS } from '@/rules/data/skill-ids'
 import { getFeatPool } from '@/rules/feats'
 import { getRequiredLanguageCount } from '@/rules/languages'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { AbilityKey, AbilityScores, CharacterDraft } from '@/types/character'
+import { getActiveLineageRecord, getSpeciesLegacyBenefits } from '@/rules/species-legacy'
+import type { AbilityKey, AbilityScores, CharacterDraft, DerivedCharacter } from '@/types/character'
 import type { ChoiceCheckpoint, RaceFeature, RaceRule, RulesRepository } from '@/types/rules'
 
 export const ABILITY_KEYS_ORDER: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
+
+export function getEffectiveSpeciesSize(draft: CharacterDraft, repository: RulesRepository): 'small' | 'medium' | undefined {
+  const chain = getDraftSpeciesRules(draft, repository)
+  const owner = [...chain].reverse().find((race) => race.sizeByLevel?.length || race.size || race.sizeChoices?.length)
+  const levelSize = owner?.sizeByLevel?.filter((item) => item.level <= draft.targetLevel).sort((a, b) => b.level - a.level)[0]?.size
+  return levelSize ?? owner?.size ?? (owner?.sizeChoices?.includes(draft.speciesSizeChoice ?? 'medium') ? draft.speciesSizeChoice : undefined)
+}
 
 /** 角色物种链规则（子种族起沿 parentRaceId 叠加，来源关闭时跳过）；2014 与 2024 通用。 */
 export function getDraftSpeciesRules(draft: Pick<CharacterDraft, 'raceId' | 'subraceId'> & { readonly enabledSourceIds?: readonly string[] }, repository: RulesRepository): readonly RaceRule[] {
@@ -99,12 +107,13 @@ export function getSpeciesProficiencyBlockers(
   const displayName = chain[0]?.name ?? ''
   const isGithyanki = chain.some((item) => item.id === 'race-2014-gith-githyanki')
   const chosen = draft.raceSkillChoices ?? []
-  const toolChosen = Boolean(chain.some((item) => item.toolProficiencyChoices) && draft.raceToolChoice)
-  const spec = skillOwner?.skillProficiencyChoices
+  const toolChosen = Boolean(chain.some((item) => item.toolProficiencyChoices) && getRawSpeciesToolChoices(draft).length)
+  const spec = skillOwner?.lineage && getSpeciesLegacyBenefits(draft, repository).length ? undefined : skillOwner?.skillProficiencyChoices
   const blockers: OriginStepBlocker[] = []
   const toolSpec = chain.find((item) => item.toolProficiencyChoices)?.toolProficiencyChoices
-  if (toolSpec?.required && !draft.raceToolChoice) blockers.push({ id: 'race-tool-choice-required', message: `${displayName}需要选择一项工具熟练。`, resolution: '请在种族熟练中选择具体工具。' })
-  if (toolSpec?.optionIds && draft.raceToolChoice && !toolSpec.optionIds.includes(draft.raceToolChoice)) blockers.push({ id: 'race-tool-choice-invalid', message: '所选工具不在种族候选范围内。', resolution: '请重新选择具体工具。' })
+  const tools = getRawSpeciesToolChoices(draft)
+  if (toolSpec?.required && tools.length !== toolSpec.count) blockers.push({ id: 'race-tool-choice-required', message: `${displayName}需要选择${toolSpec.count}项工具熟练。`, resolution: '请在种族熟练中选择具体工具。' })
+  if (toolSpec && (new Set(tools).size !== tools.length || tools.length > toolSpec.count || tools.some((id) => toolSpec.optionIds && !toolSpec.optionIds.includes(id)))) blockers.push({ id: 'race-tool-choice-invalid', message: '种族工具不能重复或超量，且必须属于候选范围。', resolution: '请重新选择具体工具。' })
   if (spec && !(isGithyanki && toolChosen) && chosen.length !== spec.count) {
     blockers.push({
       id: 'race-skill-choice-count',
@@ -135,19 +144,30 @@ export function getSpeciesProficiencyBlockers(
   return blockers
 }
 
-export function getSpeciesToolProficiency(draft: CharacterDraft, repository: RulesRepository): { readonly id: string; readonly name: string; readonly sourceName: string } | undefined {
+export function getRawSpeciesToolChoices(draft: Pick<CharacterDraft, 'raceToolChoice' | 'raceToolChoices'>): readonly string[] {
+  return draft.raceToolChoices ?? (draft.raceToolChoice ? [draft.raceToolChoice] : [])
+}
+
+export function getSpeciesToolProficiencies(draft: CharacterDraft, repository: RulesRepository): readonly { readonly id: string; readonly name: string; readonly sourceName: string }[] {
   const owner = getDraftSpeciesRules(draft, repository).find((race) => race.toolProficiencyChoices)
-  const id = draft.raceToolChoice
-  if (!owner || !id || (owner.toolProficiencyChoices?.optionIds && !owner.toolProficiencyChoices.optionIds.includes(id))) return undefined
-  const equipment = repository.getEquipment(id)
-  const option = repository.getOption(id)
-  if (equipment && !isSourceEnabled(equipment.sourceIds, draft.enabledSourceIds, repository)) return undefined
-  const name = equipment?.name ?? option?.name
-  return name ? { id, name, sourceName: owner.name } : undefined
+  const ids = getRawSpeciesToolChoices(draft)
+  const spec = owner?.toolProficiencyChoices
+  if (!owner || !spec || ids.length > spec.count || (spec.required && ids.length !== spec.count) || new Set(ids).size !== ids.length || ids.some((id) => spec.optionIds && !spec.optionIds.includes(id))) return []
+  return ids.flatMap((id) => {
+    const equipment = repository.getEquipment(id)
+    const option = repository.getOption(id)
+    if (equipment && !isSourceEnabled(equipment.sourceIds, draft.enabledSourceIds, repository)) return []
+    const name = equipment?.name ?? option?.name
+    return name ? [{ id, name, sourceName: owner.name }] : []
+  })
+}
+
+export function getSpeciesToolProficiency(draft: CharacterDraft, repository: RulesRepository): { readonly id: string; readonly name: string; readonly sourceName: string } | undefined {
+  return getSpeciesToolProficiencies(draft, repository)[0]
 }
 
 /** 页面与输出共用有效种族特性，具体熟练保留来源。 */
-export function getEffectiveSpeciesFeatures(draft: CharacterDraft, repository: RulesRepository, raceId?: string): readonly RaceFeature[] {
+export function getEffectiveSpeciesFeatures(draft: CharacterDraft, repository: RulesRepository, raceId?: string, derived?: DerivedCharacter): readonly RaceFeature[] {
   const chain = getDraftSpeciesRules(draft, repository)
   const features = chain.filter((race) => !raceId || race.id === raceId).flatMap((race) => repository.getRaceFeatures(race.id)
     .filter((feature) => feature.level <= draft.targetLevel && isSourceEnabled(feature.sourceIds, draft.enabledSourceIds, repository))
@@ -158,16 +178,33 @@ export function getEffectiveSpeciesFeatures(draft: CharacterDraft, repository: R
       return Boolean(selected?.some((id) => !requirement.optionId || requirement.optionId === id))
         && (requirement.additionalCheckpointIds ?? []).every((id) => Boolean(getValidSpeciesChoice(draft, repository, id)))
     }))
-  const tool = getSpeciesToolProficiency(draft, repository)
+  const legacy = getSpeciesLegacyBenefits(draft, repository)
+  const lineage = chain.find((race) => race.lineage)
+  const lineageRecord = getActiveLineageRecord(draft, repository)
+  if (lineage && lineageRecord && (!raceId || lineage.id === raceId)) features.push({ id: `${lineage.id}-transformation-record`, raceId: lineage.id, name: '血统转化记录', englishName: 'Lineage Transformation Record', level: 1, kind: 'passive', summary: `原种族${repository.getRace(lineageRecord.origin.subraceId ?? lineageRecord.origin.raceId)?.name ?? lineageRecord.origin.raceId}（仅追溯，旧收益不生效）；保留语言：${lineageRecord.origin.languages.join('、') || '无已登记语言'}`, description: '原属性、技能、工具和检查点选择保存在转化历史；只有有效先祖遗产参与派生，不提供一键还原。', status: 'implemented', sourceIds: lineage.sourceIds })
+  if (legacy.length && lineage && (!raceId || lineage.id === raceId)) features.push({ id: `${lineage.id}-retained-legacy`, raceId: lineage.id, name: '保留先祖遗产', englishName: 'Retained Ancestral Legacy', level: 1, kind: 'passive', summary: legacy.map((item) => item.name).join('；'), description: legacy.map((item) => item.name).join('；'), status: 'implemented', sourceIds: lineage.sourceIds })
+  const tools = getSpeciesToolProficiencies(draft, repository)
   const owner = chain.find((race) => race.toolProficiencyChoices)
-  if (tool && owner && (!raceId || owner.id === raceId)) features.push({ id: `${owner.id}-selected-tool`, raceId: owner.id, name: '种族工具熟练', englishName: 'Selected Tool Proficiency', level: 1, kind: 'passive', summary: `${tool.sourceName}：${tool.name}`, description: `所选具体工具熟练：${tool.name}。`, status: 'implemented', sourceIds: owner.sourceIds })
+  if (tools.length && owner && (!raceId || owner.id === raceId)) features.push({ id: `${owner.id}-selected-tool`, raceId: owner.id, name: '种族工具熟练', englishName: 'Selected Tool Proficiency', level: 1, kind: 'passive', summary: `${owner.name}：${tools.map((tool) => tool.name).join('、')}`, description: `所选具体工具熟练：${tools.map((tool) => tool.name).join('、')}。`, status: 'implemented', sourceIds: owner.sourceIds })
+  const sized = chain.find((race) => race.sizeByLevel?.length)
+  if (sized && (!raceId || sized.id === raceId)) features.push({ id: `${sized.id}-effective-size`, raceId: sized.id, name: '当前体型', englishName: 'Current Size', level: 1, kind: 'passive', summary: getEffectiveSpeciesSize(draft, repository) === 'small' ? '小型' : '中型', description: `按当前${draft.targetLevel}级派生体型。`, status: 'implemented', sourceIds: sized.sourceIds })
   for (const race of chain.filter((item) => !raceId || item.id === raceId)) for (const choice of race.choices ?? []) {
     const selected = getValidSpeciesChoice(draft, repository, choice.id)
     if (!selected) continue
     const summary = selected.map((id) => repository.getOption(id)?.name ?? repository.getSpell(id)?.name ?? id).join('、')
     features.push({ id: `${choice.id}-selected`, raceId: race.id, name: choice.title, englishName: 'Species Choice', level: choice.level, kind: 'choice', summary, description: `${choice.description} 已选：${summary}`, status: 'implemented', sourceIds: race.sourceIds })
   }
-  return features
+  return features.map((feature) => {
+    if (!derived) return feature
+    const abilityOption = feature.saveDc?.abilityCheckpointId ? getValidSpeciesChoice(draft, repository, feature.saveDc.abilityCheckpointId)?.[0] : undefined
+    const ability = feature.saveDc?.ability ?? (abilityOption?.startsWith('spell-ability-') ? abilityOption.slice(14) as AbilityKey : undefined)
+    const dc = ability && ABILITY_KEYS_ORDER.includes(ability) ? `当前DC ${8 + derived.proficiencyBonus.value + derived.modifiers[ability]}（${ABILITY_LABELS[ability]}）` : ''
+    const attack = feature.naturalAttack
+    const bonus = attack ? derived.modifiers[attack.ability] : 0
+    const attackText = attack ? `当前命中${derived.proficiencyBonus.value + bonus >= 0 ? '+' : ''}${derived.proficiencyBonus.value + bonus}；伤害${attack.damageDice}${bonus >= 0 ? '+' : ''}${bonus}（${ABILITY_LABELS[attack.ability]}）` : ''
+    const text = [dc, attackText].filter(Boolean).join('；')
+    return text ? { ...feature, summary: `${feature.summary} ${text}`, description: `${feature.description} ${text}` } : feature
+  })
 }
 
 type SpeciesChoiceDraft = Pick<CharacterDraft, 'raceId' | 'subraceId' | 'targetLevel' | 'selections'> & { readonly enabledSourceIds?: readonly string[] }

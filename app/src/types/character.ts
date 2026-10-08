@@ -174,6 +174,7 @@ export interface CharacterMedia {
 }
 
 export interface CharacterDraft {
+  readonly lineageHistory?: readonly LineageHistoryEntry[]
   readonly schemaVersion: 9
   readonly id: string
   readonly ruleset: RulesetId
@@ -199,6 +200,7 @@ export interface CharacterDraft {
   readonly raceSkillChoices?: readonly string[]
   /** 种族自选工具熟练结果（矮人/战俑/维达肯/吉斯洋基）；展示级，不参与派生。 */
   readonly raceToolChoice?: string
+  readonly raceToolChoices?: readonly string[]
   readonly backgroundSkillIds: readonly string[]
   readonly backgroundToolIds: readonly string[]
   readonly languages: readonly string[]
@@ -222,6 +224,27 @@ export interface CharacterDraft {
   /** 可选角色形象；二进制保存在 IndexedDB，草稿仅保存媒体引用。 */
   readonly media?: CharacterMedia
   readonly currentStep: DraftStep
+}
+
+/** 转化前的起源只用于追溯及证明可保留遗产，不是可恢复的角色快照。 */
+export interface LineageHistoryEntry {
+  readonly targetRaceId: string
+  readonly transformedAt: string
+  readonly level: number
+  readonly retainedKeys: readonly string[]
+  readonly origin: {
+    readonly raceId: string
+    readonly subraceId?: string
+    readonly sourceIds: readonly string[]
+    readonly raceAbilityChoices: readonly AbilityKey[]
+    readonly raceAbilityBonusOptionId?: string
+    readonly raceSkillChoices: readonly string[]
+    readonly raceToolChoice?: string
+    readonly raceToolChoices?: readonly string[]
+    readonly speciesSizeChoice?: 'small' | 'medium'
+    readonly selections: readonly ChoiceSelection[]
+    readonly languages: readonly string[]
+  }
 }
 
 export interface LegacyDraftRecord {

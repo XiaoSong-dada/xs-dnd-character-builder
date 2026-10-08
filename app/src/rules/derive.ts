@@ -8,6 +8,7 @@ import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
 import { isSourceEnabled } from '@/rules/source-books'
 import { artificerInfusions2014 } from '@/rules/data/artificer-2014'
 import { getSpellcastingConfig } from '@/rules/spellcasting'
+import { getSpeciesLegacyBenefits } from '@/rules/species-legacy'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import type { RaceRule } from '@/types/rules'
 import type {
@@ -31,9 +32,10 @@ export function proficiencyBonus(level: number): number {
 /**
  * 收集种族固定技能熟练与自选结果（沿 parentRaceId 链叠加，子种族不替换父种族）。
  */
-export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subraceId' | 'raceSkillChoices' | 'enabledSourceIds'> & Partial<Pick<CharacterDraft, 'ruleset' | 'selections' | 'targetLevel'>>): readonly string[] {
+export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subraceId' | 'raceSkillChoices' | 'enabledSourceIds'> & Partial<Pick<CharacterDraft, 'ruleset' | 'selections' | 'targetLevel' | 'lineageHistory'>>): readonly string[] {
   const repository = getRulesRepository(draft.ruleset ?? '5e-2014')
-  const ids: string[] = []
+  const legacy = getSpeciesLegacyBenefits({ ...draft, ruleset: draft.ruleset ?? '5e-2014' }, repository)
+  const ids: string[] = legacy.flatMap((item) => item.skillId ? [item.skillId] : [])
   const visited = new Set<string>()
   const visit = (raceId: string | undefined): void => {
     if (!raceId || visited.has(raceId)) return
@@ -42,13 +44,13 @@ export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subr
     if (!race || !isSourceEnabled(race.sourceIds, draft.enabledSourceIds, repository)) return
     if (race.parentRaceId) visit(race.parentRaceId)
     ids.push(...(race.skillProficiencies ?? []))
-    const spec = race.skillProficiencyChoices
+    const spec = race.lineage && legacy.length ? undefined : race.skillProficiencyChoices
     const selected = draft.raceSkillChoices ?? []
     if (spec && selected.length === spec.count && new Set(selected).size === selected.length && selected.every((id) => (spec.optionIds ?? SKILL_IDS).includes(id))) ids.push(...selected)
     for (const choice of race.choices ?? []) if (choice.grantsSkillProficiency) ids.push(...(getValidSpeciesChoice({ ...draft, selections: draft.selections ?? [], targetLevel: draft.targetLevel ?? 1 }, repository, choice.id) ?? []))
   }
   visit(draft.subraceId ?? draft.raceId)
-  return ids
+  return [...new Set(ids)]
 }
 
 /** 解析专长授予的豁免熟练：feat-child 子选择中带豁免授予语义的属性（如强健身心）。返回 属性 → 专长名。 */
@@ -56,7 +58,7 @@ function collectFeatSavingThrowAbilities(draft: CharacterDraft): Readonly<Partia
   const repository = getRulesRepository(draft.ruleset)
   const result: Partial<Record<AbilityKey, string>> = {}
   for (const selection of draft.selections) {
-    if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:')) continue
+    if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:') || !isSelectionCheckpointActive(draft, selection.checkpointId)) continue
     const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
     const feat = featId ? repository.getFeat(featId) : undefined
     if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
@@ -111,6 +113,9 @@ export function getRaceAbilityBonuses(draft: CharacterDraft): Partial<AbilitySco
   const flexibleRule = getFlexibleBonusRule(race, subrace)
 
   const flexibleGroups = getFlexibleBonusGroups(flexibleRule, draft.raceAbilityBonusOptionId)
+  const count = flexibleGroups?.reduce((sum, group) => sum + group.count, 0) ?? flexibleRule?.flexibleBonusCount ?? 0
+  const allowedKeys: readonly string[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
+  if (draft.raceAbilityChoices.length !== count || new Set(draft.raceAbilityChoices).size !== count || draft.raceAbilityChoices.some((key) => !allowedKeys.includes(key) || flexibleRule?.excludedFlexibleAbilityKeys?.includes(key))) return fixedBonuses
   if (flexibleGroups !== undefined) {
     let index = 0
     for (const group of flexibleGroups) {
@@ -154,7 +159,7 @@ function applyAbilityImprovements(
   let improved = { ...abilities }
 
   for (const selection of draft.selections) {
-    if (selection.invalidatedAt || selection.checkpointId === ignoredCheckpointId) continue
+    if (selection.invalidatedAt || selection.checkpointId === ignoredCheckpointId || !isSelectionCheckpointActive(draft, selection.checkpointId)) continue
     if (scope.belowLevel !== undefined) {
       const level = selectionLevel(selection.checkpointId, scope)
       if (level !== undefined && level >= scope.belowLevel) continue
@@ -308,7 +313,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const armorOnlyInfusion = infusionBonusFor(equippedArmor?.id)
   const naturalArmorMagicBonus = naturalArmor && equippedArmor ? equippedArmor.magicBonus ?? 0 : 0
   const defenseStyleBonus = defenseStyle && Boolean(equippedArmor) ? 1 : 0
-  const naturalArmorValue = naturalArmor ? naturalArmor.base + (naturalArmor.addsDexterity ? modifiers.dex : 0) : undefined
+  const naturalArmorValue = naturalArmor && !(naturalArmor.requiresUnarmored && equippedArmor) ? naturalArmor.base + (naturalArmor.addsDexterity ? modifiers.dex : 0) : undefined
   const usesNaturalArmor = naturalArmorValue !== undefined && naturalArmorValue >= baseArmor
   if (usesNaturalArmor && naturalArmorValue !== undefined) {
     baseArmor = naturalArmorValue

@@ -36,7 +36,8 @@ export function getFeatEligibilityContext(
       backgroundId: draft.backgroundId,
     })
     : []
-  const abilities = repository.ruleset === '5e-2024' && checkpointLevel !== undefined
+  const isCustomLineage = checkpointId === 'race-2014-custom-lineage-origin-feat'
+  const abilities = (repository.ruleset === '5e-2024' || isCustomLineage) && checkpointLevel !== undefined
     ? deriveAbilities(draft, checkpointId, {
       belowLevel: checkpointLevel,
       checkpointLevels: new Map(timeline.map((item) => [item.id, item.level])),
@@ -56,7 +57,9 @@ export function getFeatEligibilityContext(
       raceId: draft.raceId,
       subraceId: draft.subraceId,
       acquiredFeatIds,
+      raceAliasIds: draft.raceId ? repository.getRace(draft.raceId)?.countsAsRaceIds : [],
       acquiredFeatTags,
+      ...(isCustomLineage ? { level: 1 } : {}),
     }
   }
   return {

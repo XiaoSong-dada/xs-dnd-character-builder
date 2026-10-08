@@ -20,6 +20,8 @@ import { getBackgroundAllocationIssue, getOriginStepBlockers, getSpeciesProficie
 import { validateWeaponMasterySelection } from '@/rules/weapon-mastery'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { isSourceEnabled } from '@/rules/source-books'
+import { getActiveLineageRecord, getSpeciesLegacyBenefits } from '@/rules/species-legacy'
+import { isSelectionCheckpointActive, manualFeatParentCheckpointId } from '@/rules/feats'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
 import { artificerReplicatePlans2024, getArtificerReplicatedItemLimit2024 } from '@/rules/data/ua-artificer-2024'
 import type { AbilityKey, CharacterDraft, ValidationIssue } from '@/types/character'
@@ -27,6 +29,11 @@ import type { AbilityKey, CharacterDraft, ValidationIssue } from '@/types/charac
 export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[] {
   const repository = getRulesRepository(draft.ruleset)
   const issues: ValidationIssue[] = [...getEquipmentWarnings(draft, repository)]
+  const lineageRecord = getActiveLineageRecord(draft, repository)
+  if (lineageRecord && getSpeciesLegacyBenefits(draft, repository).length !== lineageRecord.retainedKeys.length) issues.push({ id: 'lineage-legacy-inactive', step: 'origin', severity: 'warning', message: '部分先祖遗产缺少有效资料或来源已停用，原选择保留但不生效。', resolution: '启用原种族来源；没有有效遗产时请补选两项技能。' })
+  if (lineageRecord) {
+    for (const grant of draft.manualEdits?.addedFeats ?? []) if (!isSelectionCheckpointActive(draft, manualFeatParentCheckpointId(grant.instanceId))) issues.push({ id: `lineage-feat-inactive-${grant.instanceId}`, step: 'timeline', severity: 'warning', message: `专长「${repository.getFeat(grant.featId)?.name ?? grant.featId}」不满足转化后的种族前置，记录保留但不生效。`, resolution: '复查专长前置条件。' })
+  }
   const requireEnabled = (
     id: string,
     step: ValidationIssue['step'],

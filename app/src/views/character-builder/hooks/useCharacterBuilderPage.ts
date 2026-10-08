@@ -19,6 +19,7 @@ import {
 } from '@/rules/spell-selection-reconciliation'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
+import { useLineageTransformation } from '@/views/character-builder/hooks/useLineageTransformation'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { CharacterPackageService } from '@/services/character-package'
 import { RulesetPreferenceService, resolveInitialRuleset } from '@/services/ruleset-preference'
@@ -51,6 +52,7 @@ export function useCharacterBuilderPage() {
   const router = useRouter()
   const store = useCharacterDraftsStore()
   const { drafts, legacyDrafts, activeDraft, derivedSummary, validationIssues, completion } = storeToRefs(store)
+  const lineageTransformation = useLineageTransformation(activeDraft, store.updateDraft)
   const importError = ref('')
   /** 新建默认版本（按本设备偏好解析，B00-02）；起点页 hero 与第一页共用。 */
   const defaultRuleset = ref<RulesetId>(resolveInitialRuleset().ruleset)
@@ -513,7 +515,7 @@ export function useCharacterBuilderPage() {
     requestChange(change, '更换种族', () => {
       const impact = getDependencyImpact(draft, change)
       store.invalidateSelections(impact.invalidated, '更换种族后需要重新确认')
-      store.updateDraft({ raceId: id, subraceId: undefined, raceAbilityChoices: [], raceAbilityBonusOptionId: undefined, raceSkillChoices: [], raceToolChoice: undefined })
+      store.updateDraft({ raceId: id, subraceId: undefined, raceAbilityChoices: [], raceAbilityBonusOptionId: undefined, raceSkillChoices: [], raceToolChoice: undefined, raceToolChoices: undefined })
     })
   }
 
@@ -524,7 +526,7 @@ export function useCharacterBuilderPage() {
     requestChange(change, '更换子种族', () => {
       const impact = getDependencyImpact(draft, change)
       store.invalidateSelections(impact.invalidated, '更换子种族后需要重新确认')
-      store.updateDraft({ subraceId: id, raceAbilityChoices: [], raceAbilityBonusOptionId: undefined, raceSkillChoices: [], raceToolChoice: undefined })
+      store.updateDraft({ subraceId: id, raceAbilityChoices: [], raceAbilityBonusOptionId: undefined, raceSkillChoices: [], raceToolChoice: undefined, raceToolChoices: undefined })
     })
   }
 
@@ -756,6 +758,7 @@ export function useCharacterBuilderPage() {
 
   return {
     title: '辅助车卡',
+    lineageTransformation,
     drafts,
     legacyDrafts,
     activeDraft,

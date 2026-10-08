@@ -62,6 +62,39 @@ race-2014-elf-drow
 > 实现状态（2026-09-02，v1.1.8）：2014 种族特性已落地为 `app/src/rules/data/race-features-2014.ts`
 > （240 条，与本文档资料一致），角色卡与跑团助手「能力」页签分组展示（种族/子种族），按等级过滤。
 
+## 2014 其他官方扩展 S03—S07
+
+22个新增记录（含元素裔父项与分支），三项相同重印沿用旧ID。资料、英文证据待办及实际验收分别记录，不以登记数量代替规则核验。
+
+| 名称 | ID | 资料 |
+| --- | --- | --- |
+| 枭人 | `race-2014-owlin` | [详细资料](species/5e-2014/owlin/owlin.md) |
+| 佛丹人 | `race-2014-verdan` | [详细资料](species/5e-2014/verdan/verdan.md) |
+| 坎德人 | `race-2014-kender` | [详细资料](species/5e-2014/kender/kender.md) |
+| 洛卡鱼人 | `race-2014-locathah` | [详细资料](species/5e-2014/locathah/locathah.md) |
+| 星界精灵 | `race-2014-astral-elf` | [详细资料](species/5e-2014/astral-elf/astral-elf.md) |
+| 自动侏儒 | `race-2014-autognome` | [详细资料](species/5e-2014/autognome/autognome.md) |
+| 诘弗人 | `race-2014-giff` | [详细资料](species/5e-2014/giff/giff.md) |
+| 鼯猴人 | `race-2014-hadozee` | [详细资料](species/5e-2014/hadozee/hadozee.md) |
+| 流浆体 | `race-2014-plasmoid` | [详细资料](species/5e-2014/plasmoid/plasmoid.md) |
+| 螳螂人 | `race-2014-thri-kreen` | [详细资料](species/5e-2014/thri-kreen/thri-kreen.md) |
+| 狮族 | `race-2014-leonin` | [详细资料](species/5e-2014/leonin/leonin.md) |
+| 半羊人（旧版） | `race-2014-satyr` | [详细资料](species/5e-2014/satyr/satyr.md) |
+| 元素裔（旧版） | `race-2014-genasi` | [详细资料](species/5e-2014/genasi/genasi.md) |
+| 气元素裔（旧版） | `race-2014-genasi-air` | [详细资料](species/5e-2014/genasi/genasi-air.md) |
+| 土元素裔（旧版） | `race-2014-genasi-earth` | [详细资料](species/5e-2014/genasi/genasi-earth.md) |
+| 火元素裔（旧版） | `race-2014-genasi-fire` | [详细资料](species/5e-2014/genasi/genasi-fire.md) |
+| 水元素裔（旧版） | `race-2014-genasi-water` | [详细资料](species/5e-2014/genasi/genasi-water.md) |
+| 影灵（旧版） | `race-2014-elf-shadar-kai` | [详细资料](species/5e-2014/elf/elf-shadar-kai.md) |
+| 定制血统 | `race-2014-custom-lineage` | [详细资料](species/5e-2014/custom-lineage/custom-lineage.md) |
+| 半血裔 | `race-2014-dhampir` | [详细资料](species/5e-2014/dhampir/dhampir.md) |
+| 巫咒之子 | `race-2014-hexblood` | [详细资料](species/5e-2014/hexblood/hexblood.md) |
+| 复生者 | `race-2014-reborn` | [详细资料](species/5e-2014/reborn/reborn.md) |
+
+相同重印：[人马](species/5e-2014/centaur/centaur.md)、[牛头人](species/5e-2014/minotaur/minotaur.md)、[梭螺鱼人](species/5e-2014/triton/triton.md)使用原ID登记双来源，任一启用只授予一次。狮族候选译名疑点按用户确认先沿用本地，不标英文已核验。
+
+`sizeByLevel`用于佛丹人体型升降级；`naturalArmor.requiresUnarmored`约束自动侏儒及螳螂人；`raceToolChoices`保存多项具体工具并兼容旧单项。`lineageHistory`保存转化追溯，`ancestralMovement`是允许保留移动的显式依据，不能从摘要或任意数值输入推断。见 [实施记录](需求文档/其他官方扩展S03-S07实施记录.md)。
+
 ## 2014 MotM 独立主种族
 
 全部使用 `race-2014-motm-*`，不叠加旧父种族收益；角色卡、跑团及导出共用有效特性解析。以下「待感官证据」不表示所有数值已确认。

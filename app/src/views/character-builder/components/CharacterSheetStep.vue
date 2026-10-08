@@ -43,6 +43,7 @@ const emit = defineEmits<{
   exportXlsx: []
   adjustLevel: []
   reedit: []
+  transformLineage: []
   changeSpellSelections: [value: SpellSelections]
   changeInventory: [inventory: readonly InventoryEntry[]]
   changeAdventureGold: [adventureGold: number]
@@ -603,7 +604,7 @@ const raceInfo = computed(() => {
   if (!raceId) return undefined
   const race = repository.value.getRace(raceId)
   if (!race) return undefined
-  const features = getEffectiveSpeciesFeatures(props.draft, repository.value, raceId)
+  const features = getEffectiveSpeciesFeatures(props.draft, repository.value, raceId, props.derived)
   return { race, features }
 })
 /** 子种族特性（仅子种族自身条目，父项特性不重复展示）。 */
@@ -612,7 +613,7 @@ const subraceInfo = computed(() => {
   if (!subraceId || subraceId === props.draft.raceId) return undefined
   const race = repository.value.getRace(subraceId)
   if (!race) return undefined
-  const features = getEffectiveSpeciesFeatures(props.draft, repository.value, subraceId)
+  const features = getEffectiveSpeciesFeatures(props.draft, repository.value, subraceId, props.derived)
   return { race, features }
 })
 /** 背景特性（变体背景沿用父背景特性条目）。 */
@@ -669,6 +670,7 @@ function handleExportPdf(): void {
           <div v-if="draft.classId" class="character-sheet__header-actions">
             <UiBadge v-if="needsReview" tone="warning">待补全</UiBadge>
             <button type="button" class="character-sheet__level-button" @click="$emit('adjustLevel')">调整等级</button>
+            <button v-if="draft.ruleset === '5e-2014'" type="button" class="character-sheet__level-button" @click="$emit('transformLineage')">血统转化</button>
             <button type="button" class="character-sheet__level-button" @click="editing.editMode.value = !editing.editMode.value">{{ editing.editMode.value ? '完成编辑' : '编辑角色卡' }}</button>
             <template v-if="editing.editMode.value">
               <button

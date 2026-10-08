@@ -18,6 +18,7 @@ import { fullCasterClasses2014 } from '@/rules/data/full-casters-2014'
 import { metamagicOptions2014 } from '@/rules/data/metamagic-2014'
 import { subclassChoiceOptions2014 } from '@/rules/data/subclass-choice-options-2014'
 import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
+import { officialExpansionFeatures2014, officialExpansionOptions2014, officialExpansionRaces2014, withOfficialFeatureReprint, withOfficialReprint } from '@/rules/data/races-official-expansions-2014'
 import { humblewoodRaces2014, obojimaRaces2014 } from '@/rules/data/races-third-party-2014'
 import { ebonTidesRaces2014 } from '@/rules/data/races-ebon-tides-2014'
 import { raceFeatures2014 } from '@/rules/data/race-features-2014'
@@ -46,11 +47,12 @@ export const rulesRepository2014: RulesRepository = {
     return { ...item, ...classRule, features: getClassFeatures2014(item.id) }
   }),
   subclasses: subclasses2014,
-  races: [...races2014, ...motmRaces2014, ...obojimaRaces2014, ...humblewoodRaces2014, ...ebonTidesRaces2014],
+  races: [...races2014.map(withOfficialReprint), ...motmRaces2014.map(withOfficialReprint), ...officialExpansionRaces2014, ...obojimaRaces2014, ...humblewoodRaces2014, ...ebonTidesRaces2014],
   backgrounds: backgrounds2014,
-  raceFeatures: raceFeatures2014,
+  raceFeatures: [...raceFeatures2014.map(withOfficialFeatureReprint), ...officialExpansionFeatures2014],
   backgroundFeatures: backgroundFeatures2014,
   options: [
+    ...officialExpansionOptions2014,
     ...motmChoiceOptions2014,
     ...abilityImprovementOptions2014,
     ...featChoiceOptions2014,

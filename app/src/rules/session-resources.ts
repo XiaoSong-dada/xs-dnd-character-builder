@@ -25,6 +25,7 @@ export interface SessionResource {
   readonly shortRestRecovery?: number
   /** 免费施法条目对应的法术 id（用于施法弹窗绑定免费施放按钮）。 */
   readonly spellId?: string
+  readonly castingLevel?: number
 }
 
 function abilityModifierOf(modifiers: Partial<Record<AbilityKey, number>>, ability: AbilityKey): number {
@@ -103,6 +104,7 @@ export function listSessionResources(
       unit: '次',
       dice: false,
       spellId: grant.spellId,
+      ...(grant.castingLevel === undefined ? {} : { castingLevel: grant.castingLevel }),
     })
   }
   return resources

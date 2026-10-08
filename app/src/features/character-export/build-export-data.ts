@@ -2,7 +2,7 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { normalizeManualEdits } from '@/rules/manual-edits'
-import { getDraftSpeciesRules, getEffectiveSpeciesFeatures } from '@/rules/origins'
+import { getEffectiveSpeciesFeatures, getEffectiveSpeciesSize } from '@/rules/origins'
 import { listSessionResources } from '@/rules/session-resources'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpeciesSpellcastingProfiles, getSpellcastingConfig, usesPreparedSelection } from '@/rules/spellcasting'
 import { getFixedSpeciesLanguages } from '@/rules/languages'
@@ -298,7 +298,7 @@ function buildFeatures(draft: CharacterDraft, derived: DerivedCharacter): Export
   const raceFeatures = [race, subrace]
     .filter((item): item is NonNullable<typeof item> => Boolean(item))
     .filter((item) => isSourceEnabled(item.sourceIds, draft.enabledSourceIds, repository))
-    .flatMap((item) => getEffectiveSpeciesFeatures(draft, repository, item.id)
+    .flatMap((item) => getEffectiveSpeciesFeatures(draft, repository, item.id, derived)
       .map((feature) => ({ id: feature.id, category: 'race' as const, name: feature.name, summary: feature.summary, priority: 40 })))
   const entries: ExportFeature[] = [
     ...resolveSelectedFeatures(draft),
@@ -311,8 +311,8 @@ function buildFeatures(draft: CharacterDraft, derived: DerivedCharacter): Export
       id: profile.id, category: 'race' as const, name: `${profile.sourceName}施法`, priority: 40,
       summary: `${ABILITY_LABELS[profile.ability]}；法术攻击 ${signed(profile.attackBonus)}；法术豁免 DC ${profile.saveDc}；${profile.spellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、')}${profile.materialFreeSpellIds.length ? `；无需材料成分（种族施放）：${profile.materialFreeSpellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、')}` : ''}${profile.castingNotes.length ? `；${profile.castingNotes.join('；')}` : ''}`,
     })),
-    ...(draft.speciesSizeChoice && getDraftSpeciesRules(draft, repository).some((item) => item.sizeChoices?.includes(draft.speciesSizeChoice ?? 'medium'))
-      ? [{ id: `selected-size-${draft.ruleset}`, category: 'race' as const, name: '选定体型', summary: draft.speciesSizeChoice === 'small' ? '小型' : '中型', priority: 40 }]
+    ...(getEffectiveSpeciesSize(draft, repository)
+      ? [{ id: `selected-size-${draft.ruleset}`, category: 'race' as const, name: '选定体型', summary: getEffectiveSpeciesSize(draft, repository) === 'small' ? '小型' : '中型', priority: 40 }]
       : []),
     ...(background ? [{ id: background.id, category: 'background' as const, name: background.featureName || background.name, summary: allocationText ? `${background.summary}；${allocationText}` : background.summary, priority: 50 }] : []),
   ]

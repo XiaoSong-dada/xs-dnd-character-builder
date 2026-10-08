@@ -12,7 +12,8 @@ import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
 import { getBackgroundRecommendationReason, getRaceRecommendationReason, sortByClassRecommendation } from '@/rules/recommend'
 import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { AbilityKey, ChoiceSelection, RulesetId } from '@/types/character'
+import { getSpeciesLegacyBenefits } from '@/rules/species-legacy'
+import type { AbilityKey, ChoiceSelection, LineageHistoryEntry, RulesetId } from '@/types/character'
 import type { BackgroundRule, FeatRule } from '@/types/rules'
 import SelectionTaskNavigator from '@/views/character-builder/components/SelectionTaskNavigator.vue'
 import { useSelectionTaskFlow } from '@/views/character-builder/hooks/useSelectionTaskFlow'
@@ -28,6 +29,8 @@ const props = withDefaults(defineProps<{
   languages: readonly string[]
   raceSkillChoices?: readonly string[]
   raceToolChoice?: string
+  raceToolChoices?: readonly string[]
+  lineageHistory?: readonly LineageHistoryEntry[]
   backgroundToolIds?: readonly string[]
   enabledSourceIds?: readonly string[]
   sizeChoice?: 'small' | 'medium'
@@ -46,6 +49,7 @@ const emit = defineEmits<{
   languages: [ids: readonly string[]]
   raceSkills: [ids: readonly string[]]
   raceTool: [id: string | undefined]
+  raceTools: [ids: readonly string[]]
   backgroundTools: [ids: readonly string[]]
   size: [size: 'small' | 'medium']
   backgroundAbilities: [allocation: Readonly<Partial<Record<AbilityKey, number>>>]
@@ -99,7 +103,7 @@ const visibleBackgrounds = computed(() => {
 })
 const variants = computed(() => props.backgroundId ? repository.value.backgrounds.filter((item) => item.parentBackgroundId === props.backgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)) : [])
 const effectiveBackground = computed<BackgroundRule | undefined>(() => props.backgroundVariantId ? repository.value.getBackground(props.backgroundVariantId) : selectedBackground.value)
-const languageChoiceCount = computed(() => getRequiredLanguageCount({ ruleset: props.ruleset, classId: props.classId, raceId: props.raceId, subraceId: props.subraceId, enabledSourceIds: props.enabledSourceIds, backgroundId: props.backgroundId, backgroundVariantId: props.backgroundVariantId }, repository.value))
+const languageChoiceCount = computed(() => getRequiredLanguageCount({ ruleset: props.ruleset, classId: props.classId, raceId: props.raceId, subraceId: props.subraceId, enabledSourceIds: props.enabledSourceIds, backgroundId: props.backgroundId, backgroundVariantId: props.backgroundVariantId, lineageHistory: props.lineageHistory }, repository.value))
 const languageOptions = computed(() => getLanguageOptions(props.ruleset))
 
 const currentRace = computed(() => props.subraceId ? repository.value.getRace(props.subraceId) : selectedRace.value)
@@ -113,8 +117,9 @@ function findProficiencySpec(key: 'skillProficiencyChoices' | 'toolProficiencyCh
   }
   return visit(currentRace.value?.id)
 }
-const raceSkillSpec = computed(() => findProficiencySpec('skillProficiencyChoices'))
+const raceSkillSpec = computed(() => getSpeciesLegacyBenefits({ ...props, enabledSourceIds: props.enabledSourceIds ?? [] }, repository.value).length ? undefined : findProficiencySpec('skillProficiencyChoices'))
 const raceToolSpec = computed(() => findProficiencySpec('toolProficiencyChoices'))
+const selectedRaceTools = computed(() => props.raceToolChoices ?? (props.raceToolChoice ? [props.raceToolChoice] : []))
 const isGithyanki = computed(() => currentRace.value?.id === 'race-2014-gith-githyanki')
 const raceSkillOptions = computed(() => (raceSkillSpec.value?.optionIds ?? SKILL_IDS).map((id) => ({ id, name: repository.value.getOption(id)?.name ?? id })))
 const raceToolOptions = computed(() => raceToolSpec.value?.optionIds
@@ -164,7 +169,7 @@ const tasks = computed<readonly SelectionTask[]>(() => {
   const result: SelectionTask[] = [{ id: 'race', label: props.ruleset === '5e-2024' ? '选择物种' : '选择种族', group: '种族', required: true, status: props.raceId ? 'complete' : 'pending', summary: selectedRace.value?.name ?? '尚未选择' }]
   if (subraces.value.length) result.push({ id: 'subrace', label: props.ruleset === '5e-2024' ? '血统／传承' : '子种族', group: '种族', required: Boolean(selectedRace.value?.requiresSubrace), status: hasBlocker('subrace-mismatch') ? 'invalid' : props.subraceId ? 'complete' : selectedRace.value?.requiresSubrace ? 'pending' : 'optional', summary: props.subraceId ? repository.value.getRace(props.subraceId)?.name ?? props.subraceId : selectedRace.value?.requiresSubrace ? '尚未选择' : '可选' })
   if (speciesSizeChoices.value?.length) result.push({ id: 'species-size', label: '选择体型', group: '种族', required: true, status: hasBlocker('species-size') ? 'pending' : 'complete', summary: props.sizeChoice ? sizeLabel(props.sizeChoice) : '尚未选择' })
-  if (raceSkillSpec.value || raceToolSpec.value) result.push({ id: 'race-proficiencies', label: '种族熟练', group: '种族', required: Boolean(raceSkillSpec.value || raceToolSpec.value?.required), status: hasInvalidBlocker('race-skill') || hasInvalidBlocker('race-tool') || hasInvalidBlocker('githyanki') ? 'invalid' : hasBlocker('race-skill') || hasBlocker('race-tool') || hasBlocker('githyanki') ? 'pending' : (props.raceSkillChoices.length || props.raceToolChoice) ? 'complete' : 'optional', summary: props.raceSkillChoices.length || props.raceToolChoice ? `已选 ${props.raceSkillChoices.length + Number(Boolean(props.raceToolChoice))} 项` : '尚未选择' })
+  if (raceSkillSpec.value || raceToolSpec.value) result.push({ id: 'race-proficiencies', label: '种族熟练', group: '种族', required: Boolean(raceSkillSpec.value || raceToolSpec.value?.required), status: hasInvalidBlocker('race-skill') || hasInvalidBlocker('race-tool') || hasInvalidBlocker('githyanki') ? 'invalid' : hasBlocker('race-skill') || hasBlocker('race-tool') || hasBlocker('githyanki') ? 'pending' : (props.raceSkillChoices.length || selectedRaceTools.value.length) ? 'complete' : 'optional', summary: props.raceSkillChoices.length || selectedRaceTools.value.length ? `已选 ${props.raceSkillChoices.length + selectedRaceTools.value.length} 项` : '尚未选择' })
   result.push({ id: 'background', label: '选择背景', group: '背景', required: true, status: props.backgroundId ? 'complete' : 'pending', summary: selectedBackground.value?.name ?? '尚未选择' })
   if (variants.value.length) result.push({ id: 'background-variant', label: '背景变体', group: '背景', required: false, status: props.backgroundVariantId ? 'complete' : 'optional', summary: props.backgroundVariantId ? repository.value.getBackground(props.backgroundVariantId)?.name ?? props.backgroundVariantId : '可选' })
   if (languageChoiceCount.value > 0) result.push({ id: 'background-languages', label: '额外语言', group: '背景', required: true, status: hasBlocker('background-languages') ? 'pending' : 'complete', summary: props.languages.join('、') || '尚未选择', progress: `${props.languages.length}/${languageChoiceCount.value}` })
@@ -191,9 +196,16 @@ function toggleBackgroundAbility(key: AbilityKey): void {
 function toggleRaceSkill(id: string): void {
   const spec = raceSkillSpec.value; if (!spec) return
   const next = props.raceSkillChoices.includes(id) ? props.raceSkillChoices.filter((item) => item !== id) : [...props.raceSkillChoices, id].slice(0, spec.count)
-  emit('raceSkills', next); if (isGithyanki.value && next.length) emit('raceTool', undefined)
+  emit('raceSkills', next)
+  if (isGithyanki.value && next.length) { emit('raceTool', undefined); if (props.raceToolChoices !== undefined) emit('raceTools', []) }
 }
-function toggleRaceTool(id: string): void { const next = props.raceToolChoice === id ? undefined : id; emit('raceTool', next); if (isGithyanki.value && next) emit('raceSkills', []) }
+function toggleRaceTool(id: string): void {
+  if ((raceToolSpec.value?.count ?? 1) > 1 || props.raceToolChoices !== undefined) {
+    const next = selectedRaceTools.value.includes(id) ? selectedRaceTools.value.filter((item) => item !== id) : [...selectedRaceTools.value, id].slice(-Math.max(1, raceToolSpec.value?.count ?? 1))
+    emit('raceTools', next)
+    if (isGithyanki.value && next.length) emit('raceSkills', [])
+  } else { const next = props.raceToolChoice === id ? undefined : id; emit('raceTool', next); if (isGithyanki.value && next) emit('raceSkills', []) }
+}
 function toggleLanguage(id: string): void { emit('languages', props.languages.includes(id) ? props.languages.filter((item) => item !== id) : [...props.languages, id].slice(-languageChoiceCount.value)) }
 function toggleBackgroundTool(id: string): void {
   const spec = backgroundToolSpec.value; if (!spec) return
@@ -244,7 +256,7 @@ function selectBackgroundFeat(featId: string): void { const checkpointId = backg
 
       <div v-else-if="flow.activeTaskId.value === 'race-proficiencies'" class="origin-step__race-choices">
         <template v-if="raceSkillSpec"><p>{{ isGithyanki ? '选择一项技能熟练' : `选择${raceSkillSpec.count}项技能熟练` }}</p><div class="origin-step__choices"><button v-for="option in raceSkillOptions" :key="option.id" type="button" :aria-pressed="raceSkillChoices.includes(option.id)" @click="toggleRaceSkill(option.id)">{{ raceSkillChoices.includes(option.id) ? '✓ ' : '' }}{{ option.name }}</button></div></template>
-        <template v-if="raceToolSpec"><p>{{ isGithyanki ? '或选择一项工具熟练（与技能二选一）' : '选择一项工具熟练' }}</p><div class="origin-step__choices"><button v-for="option in raceToolOptions" :key="option.id" type="button" :aria-pressed="raceToolChoice === option.id" @click="toggleRaceTool(option.id)">{{ raceToolChoice === option.id ? '✓ ' : '' }}{{ option.name }}</button></div></template>
+        <template v-if="raceToolSpec"><p>{{ isGithyanki ? '或选择一项工具熟练（与技能二选一）' : `选择${raceToolSpec.count}项工具熟练` }}</p><div class="origin-step__choices"><button v-for="option in raceToolOptions" :key="option.id" type="button" :aria-pressed="selectedRaceTools.includes(option.id)" @click="toggleRaceTool(option.id)">{{ selectedRaceTools.includes(option.id) ? '✓ ' : '' }}{{ option.name }}</button></div></template>
       </div>
 
       <template v-else-if="flow.activeTaskId.value === 'background'">

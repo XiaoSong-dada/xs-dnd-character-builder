@@ -6,6 +6,7 @@ import type {
   InactiveSpellReason,
   InactiveSpellSelection,
   LegacyDraftRecord,
+  LineageHistoryEntry,
   SpellSelections,
 } from '@/types/character'
 import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
@@ -152,6 +153,8 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     enabledSourceIds: normalizeDraftSourceIds(draft),
     backgroundAbilityAllocation: normalizeBackgroundAbilityAllocation(draft.backgroundAbilityAllocation),
     speciesSizeChoice: draft.speciesSizeChoice === 'small' || draft.speciesSizeChoice === 'medium' ? draft.speciesSizeChoice : undefined,
+    raceToolChoices: Array.isArray(draft.raceToolChoices) ? draft.raceToolChoices.filter((id): id is string => typeof id === 'string') : undefined,
+    lineageHistory: normalizeLineageHistory(draft.lineageHistory),
     raceAbilityChoices: draft.raceAbilityChoices ?? [],
     raceAbilityBonusOptionId: typeof draft.raceAbilityBonusOptionId === 'string' && draft.raceAbilityBonusOptionId.trim() ? draft.raceAbilityBonusOptionId.trim() : undefined,
     backgroundSkillIds: draft.backgroundSkillIds ?? [],
@@ -169,6 +172,20 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     manualEdits: normalizeManualEdits(draft.manualEdits),
     media: normalizeMedia(draft.media),
   }
+}
+
+function normalizeLineageHistory(value: unknown): readonly LineageHistoryEntry[] | undefined {
+  if (value === undefined) return undefined
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const record = item as Partial<LineageHistoryEntry>
+    const origin = record.origin
+    if (typeof record.targetRaceId !== 'string' || typeof record.transformedAt !== 'string' || typeof record.level !== 'number' || !origin || typeof origin.raceId !== 'string') return []
+    const strings = (ids: unknown): readonly string[] => Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : []
+    const selections = Array.isArray(origin.selections) ? origin.selections.filter((selection) => selection && typeof selection.checkpointId === 'string' && Array.isArray(selection.optionIds) && selection.optionIds.every((id: unknown) => typeof id === 'string')) : []
+    return [{ targetRaceId: record.targetRaceId, transformedAt: record.transformedAt, level: record.level, retainedKeys: strings(record.retainedKeys), origin: { ...origin, sourceIds: strings(origin.sourceIds), raceAbilityChoices: Array.isArray(origin.raceAbilityChoices) ? origin.raceAbilityChoices : [], raceSkillChoices: strings(origin.raceSkillChoices), selections, languages: strings(origin.languages), raceToolChoices: origin.raceToolChoices === undefined ? undefined : strings(origin.raceToolChoices) } }]
+  })
 }
 
 /** v2—v8 统一迁移入口；v2—v7 仅支持 2014，v8 支持两版。 */
