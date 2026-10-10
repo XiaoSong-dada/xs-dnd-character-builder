@@ -21,6 +21,8 @@ import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
 import { officialExpansionFeatures2014, officialExpansionOptions2014, officialExpansionRaces2014, withOfficialFeatureReprint, withOfficialReprint } from '@/rules/data/races-official-expansions-2014'
 import { humblewoodRaces2014, obojimaRaces2014 } from '@/rules/data/races-third-party-2014'
 import { ebonTidesRaces2014 } from '@/rules/data/races-ebon-tides-2014'
+import { planeshiftRaces2014 } from '@/rules/data/races-planshift-2014'
+import { grimHollowPlayerPackRaces2014 } from '@/rules/data/races-grim-hollow-2014'
 import { raceFeatures2014 } from '@/rules/data/race-features-2014'
 import { motmChoiceOptions2014, motmRaces2014 } from '@/rules/data/races-motm-2014'
 import { backgroundFeatures2014 } from '@/rules/data/background-features-2014'
@@ -47,7 +49,7 @@ export const rulesRepository2014: RulesRepository = {
     return { ...item, ...classRule, features: getClassFeatures2014(item.id) }
   }),
   subclasses: subclasses2014,
-  races: [...races2014.map(withOfficialReprint), ...motmRaces2014.map(withOfficialReprint), ...officialExpansionRaces2014, ...obojimaRaces2014, ...humblewoodRaces2014, ...ebonTidesRaces2014],
+  races: [...races2014.map(withOfficialReprint), ...motmRaces2014.map(withOfficialReprint), ...officialExpansionRaces2014, ...obojimaRaces2014, ...humblewoodRaces2014, ...ebonTidesRaces2014, ...planeshiftRaces2014, ...grimHollowPlayerPackRaces2014],
   backgrounds: backgrounds2014,
   raceFeatures: [...raceFeatures2014.map(withOfficialFeatureReprint), ...officialExpansionFeatures2014],
   backgroundFeatures: backgroundFeatures2014,

@@ -12,6 +12,24 @@
 
 ## 2. 总体依赖方向
 
+### X 批次合作与 UA 种族实际拓扑（2026-10-10）
+
+新增五个纯数据模块，均只依赖共享类型 `@/types/rules`（2014 侧另有既有装备／技能目录）：
+
+- `rules/data/races-planshift-2014`（X01，2014 第三方）
+- `rules/data/races-grim-hollow-2014`（X03，2014 第三方）
+- `rules/data/races-exploring-eberron-2024`（X02，2024 第三方）
+- `rules/data/species-beyond-drops-2024`（X04，2024）
+- `rules/data/species-ua-underdark-2024`（X05，2024 playtest）
+
+装配点：2014 侧 `rules/repository.ts` 的 `races` 行；2024 侧 `rules/repositories.ts` 的 `races` 行。**新模块必须显式加进这两行**——`createRulesRepository()` 只做数组平铺与线性 `getRace()` 查找，没有去重、优先级或父链校验，漏加即「数据在但不可达」。来源登记分别在 `rules/data/sources-2014.ts` 与 `rules/data/sources-2024.ts`，且**必须落在条目所属规则集的注册表内**，否则来源永久不可启用。
+
+本次没有新增 store、服务、组件或依赖方向：条目复用既有的声明式字段（`fixedAbilityBonuses`／`sizeChoices`／`darkvision`／`damageResistances`／`skillProficiencyChoices`／`spellGrants`／`countsAsRaceIds`／`replacesParentBonuses`／`originFeatChoices` 等），页面、派生、校验、导出与跑团全部走既有接口。`RaceRule` **未新增任何类型字段**；无法结构化表达的机制写入 `description` 作为展示级说明。
+
+同批另有两处**非新增模块**的数据订正：`rules/data/sources-2024.ts` 就地修订 `source-2024-tp-beyond-drops` 的分类（第三方→官方数字专栏），以及 `rules/data/origins-2024.ts`／`rules/data/third-party-feats-2024.ts` 把幻身灵旅者、马伦蒂及其起源专长改挂 `source-2024-tp-exploring-eberron`。两者都不改变依赖方向。
+
+已复核前端依赖拓扑，已更新（新增 5 个 `rules/data/*` 模块并接入两个仓库装配点）。
+
 ### S08—S10 实际拓扑（2026-10-10）
 
 - 新增 `rules/data/species-official-expansions-2024`，只依赖2024装备、技能ID及共享类型；2024仓库装配19项与选项／特性，纯映射追加精灵血系。2014仓库未引入该模块，不跨版本导入数据。

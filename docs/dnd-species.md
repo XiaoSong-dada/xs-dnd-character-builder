@@ -1,5 +1,21 @@
 # D&D 5e 物种与种族资料索引
 
+## X 批次合作与 UA 种族（2026-10-10）
+
+按[《合作与 UA 种族 X01—X05 与 V01 更新计划》](需求文档/合作与UA种族X01-X05更新计划.md)接入五批来源共 **48 条**：X01 Plane Shift 五世界 31 条、X02 探秘艾伯伦 9 条、X03 鬼魅幽谷玩家包 2 条、X04 Beyond Drops 暮精 1 条、X05 幽暗地域二期 UA 5 条。**第三方与 UA 条目按项目既有约定不建 `docs/species/` 逐条资料文件**，只在本索引与各数据模块头注释登记；来源默认关闭、需 DM 同意。
+
+| 批次 | 书 | 规则集 | 来源 ID | 条目 |
+| --- | --- | --- | --- | --- |
+| X01 | 异界传送 Plane Shift（依夏兰／依尼翠／卡拉德许／赞迪卡／阿芒凯） | 2014 | `tp-planshift-index` | 31 条，见下节 2014 表 |
+| X02 | 探秘艾伯伦 Exploring Eberron | 2024 | `source-2024-tp-exploring-eberron` | 9 条，见下节 2024 表 |
+| X03 | 鬼魅幽谷：玩家包 Grim Hollow: Player Pack | 2014 | `tp-grim-hollow-index` | 无形之灵 The Disembodied、枉替之子 Wechselkind |
+| X04 | Beyond Drops 26.9 | 2024 | `source-2024-tp-beyond-drops` | 暮精 Duskling |
+| X05 | 破解奥秘 UA：幽暗地域二期 Underdark Options 2 | 2024 | `source-2024-ua-underdark` | 地渊伊玛斯卡人 Deep Imaskari、寇涛 Kuo-toa、灵吸裔 Illithidkin、蕈人 Myconid（**植物**）、蛛化卓尔 Drider（**怪兽**） |
+
+**本轮五项用户裁定**（详见更新计划 §6.0）：赞迪卡鬼怪「坚毅」抗性以正文条目为准取火焰与心灵；主项与分支属性加值**叠加**（父项写加值、亚种写差值）；《鬼魅幽谷：玩家指南》族裔系统**不纳入本期**；Beyond Drops 来源分类**就地修订**为官方数字专栏；依夏兰 Orc 中文名用「半兽人」、英文名记 Orc。
+
+**待核验未闭合**：暮精本地正文仅 582 字、UA 392／394／395 未见语言条目、393 的第二形态清单未展开，均为**疑似节选**，已保留待核验标注，不据本地页补齐。
+
 ## S08—S10官方2024物种（2026-10-10）
 
 新增独立19项：17主项、2精灵血系；来源、接口与逐项验证见[阶段记录](需求文档/其他官方扩展S08-S10实施记录.md)。不覆盖MotM／2014血统，不导入祖先遗产。默认戏法、工具与抗性复用有效选择，详细边界见规则文档。
@@ -240,15 +256,26 @@ G3-I1（2026-09-21）补录第三方合作书中的种族／物种 **63 条**（
 | 《胧忆岛》 | 达良人 Dara、鸣玉族 Nakudama | — | `tp-obojima-index` |
 | 《谦卑林》 | 浣熊族 Mapach、狡狐族 Vulpin、猬族 Hedge、跳鼠族 Jerbeen、鹿族 Cervan、隼族 Raptor、雉族 Gallus、鸦族 Corvum、鸮族 Strig、鸽族 Luma | 林地鹿／叉角鹿；海隼族／风隼族；靓雉族／野雉族；昏鸦族／煽鸦族；敦实鸮／迅疾鸮；黑鸽族／艳鸽族（12 条） | `tp-humblewood-index` |
 | 《黯潮之书》 | 熊民 Bearfolk、达拉库食尸鬼 Darakhul、幽影地精 Shadow Goblin、影蚀人类 Umbral Human、疾步族 Quickstep、猬族（灵魂渡者）Spiritfarer Erina、树鼠族 Ratatosk、萨塔雷（无缚者）Unbound Satarre、鸦族（崇高）Sublime Ravenfolk、幽影（冥河）Stygian Shade | 影裔熊民；达拉库食尸鬼（熊民／人类遗承）；影蚀人类（嬗变者／天赋者）；艾科尔／特拉德瓦克特树鼠族；影妖精／暗精灵／月精灵（父种族＝核心精灵）；玄命侏儒（父种族＝核心侏儒）（11 条） | `tp-ebon-tides-index` |
+| 《鬼魅幽谷：玩家包》（X03） | 无形之灵 The Disembodied、枉替之子 Wechselkind（2 条，无亚种） | — | `tp-grim-hollow-index` |
+| 《异界传送 Plane Shift》（X01） | 依夏兰：人类、人鱼（绿／蓝 2 亚种）、吸血鬼、半兽人、地精、塞连；依尼翠：依尼翠人类（4 行省亚种）；卡拉德许：人类、乙太种、精灵、矮人、维多肯；赞迪卡：人类、人鱼、吸血鬼、精灵、寇族、鬼怪；阿芒凯：人类、牛头人、胡狼人、艾文（鹭首／鹰首 2 亚种）、那伽（31 条） | 人鱼绿／蓝；依尼翠加渥尼／凯锡革／涅非利亚／史顿襄；艾文鹭首／鹰首（共 8 亚种） | `tp-planshift-index` |
 
-### 2024 写法（18 条，进 `5e-2024` 仓库）
+**X01 已核验要点**：全分支为 2014 写法；人类与半兽人直接引用《玩家手册》模板（`countsAsRaceIds`，不重复授予）；依尼翠人类为**替换式方案**（`replacesParentBonuses`，原文要求不再使用 PHB 人类变体）；属性加值按用户裁定**叠加**——主项写父项、亚种只写差值（例：艾文父项敏捷 +2 ＋ 鹰首感知 +2）。赞迪卡鬼怪「坚毅」抗性以正文条目为准取**火焰与心灵**（依夏兰章末概述作强酸与火焰，已在 description 保留差异说明）。
+
+### 2024 写法（进 `5e-2024` 仓库）
 
 | 书 | 主族 | 亚种 | 来源 ID |
 | --- | --- | --- | --- |
 | 《歪曲之月》 | 丝虫种 Silkborn、丰收种 Harvestborn、咒狼种 Curseborn、沼泽种 Bogborn、深潜种 Deepborn、灰烬种 Ashborn、疫鼠种 Plagueborn、石像种 Stoneborn、线偶种 Threadborn、绘骨种 Relicborn、苍羽种 Azureborn、诡木种 Gnarlborn、霜墓种 Graveborn（13 条，无亚种） | — | `source-2024-tp-crooked-moon` |
 | 《瓦尔达的秘密尖塔》玩家包Ⅰ | 匠偶 Geppettin、曼德拉 Mandrake | 素瓷／枢木／毛绒匠偶（3 条） | `source-2024-tp-valdas-spire` |
+| 《探秘艾伯伦》（X02） | 卡拉默陆行者（人鱼）Kalamer Landwalker、厄兆者 Ruinbound、约衮塔珥（半兽人）Jhorgun'taal、达坎伽珥达（大地精）Dhakaani Ghaal'dar、达坎古珥达（熊地精）Dhakaani Guul'dar、达坎哥林达（地精）Dhakaani Golin'dar、鬣狗人 Gnoll、鲨华鱼人 Sahuagin（8 条）＋阿斯莫变体（艾伯伦）1 条 | — | `source-2024-tp-exploring-eberron` |
+| 《Beyond Drops》26.9（X04） | 暮精 Duskling（1 条） | — | `source-2024-tp-beyond-drops` |
+| 破解奥秘 UA：幽暗地域二期 Underdark Options 2（X05） | 地渊伊玛斯卡人 Deep Imaskari、寇涛 Kuo-toa、灵吸裔 Illithidkin、蕈人 Myconid（**植物**）、蛛化卓尔 Drider（**怪兽**）（5 条） | — | `source-2024-ua-underdark` |
 
-**2024 物种不给属性加值**（属性来自背景），故这 18 条的 `fixedAbilityBonuses` 一律为空；2014 写法条目按 2014 口径使用 `属性值提升` 与固定／自选加值。
+**X02 已核验要点**：原书 2020 年出版，但本地中文版正文版式已整体 2024 化（八条种族全部含「生物类型」且不含「属性值提升」），故登记在 2024 仓库。**4927／4929 的 CHM 标题与文件名对调**，已按正文英文名登记为「达坎伽珥达（大地精）」与「达坎哥林达（地精）」；4916 幻身灵旅者与 4933 马伦蒂是**背景**（不计入种族），且已修正其来源归属为 `source-2024-tp-exploring-eberron`。阿斯莫变体只挂 `countsAsRaceIds`、不挂 `parentRaceId`，以免自动授予基础条目中被替换的「光明使者」。
+
+**X05 已核验要点**：五项**全部是玩家种族**，但蛛化卓尔／蕈人／寇涛另有同名的官方怪物条目，必须独立登记、不合并。蕈人为**植物**、蛛化卓尔为**怪兽**（2024 术语），按约定写在 `description` 并明示「不属类人生物」；`RaceRule` 无 creaturesType 字段，若日后要让依赖「类人生物」的效果自动判定须另立字段或 `RaceFeature`。
+
+**2024 物种不给属性加值**（属性来自背景），故 2024 条目的 `fixedAbilityBonuses` 一律为空；2014 写法条目按 2014 口径使用 `属性值提升` 与固定／自选加值。
 
 **未登记（留档）**：胧忆岛的「人类」「精灵」两页只有风味文字、无种族特质段（规则数据已在核心种族中登记）；谦卑林的「鸟族」「地族」是分类总览页而非可玩种族；《花卉龙博考》的「花卉龙裔」与斯坦哈德的「灾孽者」分别因未识别为独立种族段／资料缺特质段而暂未登记。
 

@@ -81,8 +81,12 @@ describe('四种MotM元素裔及逐法术免材料', () => {
     const fairy = { ...draftFor('air'), raceId: 'race-2014-motm-fairy', selections: [selection('race-2014-motm-fairy-spellcasting-ability', ['spell-ability-wis'])] }
     expect(getSpeciesSpellcastingProfiles(fairy)[0]?.materialFreeSpellIds).toEqual([])
     expect(rulesRepository.getSpell('spell-2014-levitate')).toEqual(before)
-    expect(rulesRepository2024.races.filter((race) => race.id !== 'species-2024-lfl-flamekin').flatMap((race) => race.spellGrants ?? []).some((grant) => grant.waivesMaterialComponents)).toBe(false)
+    // X 批次新增两条明确声明免材料的种族施放：奇械锻炉炎身（火焰刀）与 UA 寇涛（寻获魔宠，种族施放免材料）。
+    // 除这两条外，2024 仓库不得出现其他免材料声明。
+    const declaredMaterialFree = ['species-2024-lfl-flamekin', 'species-2024-ua-underdark-kuo-toa']
+    expect(rulesRepository2024.races.filter((race) => !declaredMaterialFree.includes(race.id)).flatMap((race) => race.spellGrants ?? []).some((grant) => grant.waivesMaterialComponents)).toBe(false)
     expect(rulesRepository2024.getRace('species-2024-lfl-flamekin')?.spellGrants?.filter((grant) => grant.waivesMaterialComponents).map((grant) => grant.spellId)).toEqual(['spell-2024-flame-blade'])
+    expect(rulesRepository2024.getRace('species-2024-ua-underdark-kuo-toa')?.spellGrants?.filter((grant) => grant.waivesMaterialComponents).map((grant) => grant.spellId)).toEqual(['spell-2024-find-familiar'])
     const disabled = { ...draftFor('air'), enabledSourceIds: [] }
     expect(getSpeciesSpellcastingProfiles(disabled)).toEqual([])
   })

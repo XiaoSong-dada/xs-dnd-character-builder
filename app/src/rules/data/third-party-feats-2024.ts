@@ -15,7 +15,7 @@ import type { FeatRule } from '@/types/rules'
  *   与 PHB／UA 专长 ID 完全隔离。
  */
 const crookedMoon = ['source-2024-tp-crooked-moon'] as const
-const drakkenheim = ['source-2024-tp-drakkenheim'] as const
+const exploringEberron = ['source-2024-tp-exploring-eberron'] as const
 
 const thirdPartyFeat = (
   slug: string,
@@ -63,9 +63,11 @@ export const thirdPartyOriginFeats2024: readonly FeatRule[] = [
   thirdPartyFeat('dread-whisper', '恐惧秘言', 'Dread Whisper',
     '研读亵渎铭文与禁忌典籍使你掌握令人胆寒的秘言，可用于威吓与施压。具体效果见《歪曲之月》第五章；本项按第三方原书处理。', crookedMoon),
 
-  // ===== 德拉肯海姆（Dungeons of Drakkenheim）=====
+  // ===== 探秘艾伯伦（Exploring Eberron，X02 来源修正）=====
+  // 注：专注面具与水生适性由《探秘艾伯伦》第六章的两个背景（幻身灵旅者／马伦蒂）授予。
+  // 2026-10-10 按 X02 修正：此二者此前误挂德拉肯海姆，现改挂 `source-2024-tp-exploring-eberron`。
   thirdPartyFeat('focused-mask', '专注面具', 'Focused Mask',
-    '漂泊城市间学会用一副面具稳定心神与他人的观感：你更善于在压力下维持伪装与专注。具体效果见《德拉肯海姆》相关章节；本项按第三方原书处理。', drakkenheim),
+    '漂泊城市之间学会用一副面具稳定心神与他人的观感：你更善于在压力下维持伪装与专注。具体效果见《探秘艾伯伦》相关章节；本项按第三方原书处理。', exploringEberron),
   thirdPartyFeat('aquatic-adaptation', '水生适性', 'Aquatic Adaptation',
-    '马伦蒂的血脉使你在水中行动自如，游泳与呼吸不再受限制。具体效果见《德拉肯海姆》相关章节；本项按第三方原书处理。', drakkenheim),
+    '马伦蒂的血脉使你在水中行动自如，游泳与呼吸不再受限制。具体效果见《探秘艾伯伦》相关章节；本项按第三方原书处理。', exploringEberron),
 ]

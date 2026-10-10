@@ -203,14 +203,16 @@ export const backgrounds2024: readonly BackgroundRule[] = [
   background('tp-changeling-traveler', '幻身灵旅者', 'Changeling Traveler', ['dex', 'wis', 'cha'], 'feat-2024-tp-focused-mask', ['skill-deception', 'skill-sleight-of-hand'], { id: 'equipment-2024-thieves-tools' },
     ['2 把匕首', '盗贼工具', '铺盖', '2 个小包', '易纺服装'],
     '漂泊城市之间：以伪装与机敏自保。',
-    '属性候选：敏捷、感知、魅力。起源专长：专注面具。技能：欺瞒、巧手。工具：盗贼工具。装备：A 为 2 匕首、盗贼工具、铺盖、2 小包、旅行者服装与 10 GP；B 为 50 GP。（G3-E2 勘误，2026-09-21：此前漏登 A 方案的 10 GP。）', 'selectable', ['source-2024-tp-drakkenheim', 'source-2024-tp-steinhardt']),
+    '属性候选：敏捷、感知、魅力。起源专长：专注面具。技能：欺瞒、巧手。工具：盗贼工具。装备：A 为 2 匕首、盗贼工具、铺盖、2 小包、旅行者服装与 10 GP；B 为 50 GP。（G3-E2 勘误，2026-09-21：此前漏登 A 方案的 10 GP。X02 来源修正，2026-10-10：本条实际出自《探秘艾伯伦》第六章，此前误挂德拉肯海姆与斯坦哈德，已改挂 `source-2024-tp-exploring-eberron`。）', 'selectable', ['source-2024-tp-exploring-eberron']),
   background('tp-malenti', '马伦蒂', 'Malenti', ['dex', 'int', 'cha'], 'feat-2024-tp-aquatic-adaptation', ['skill-deception', 'skill-insight'], { choices: true },
     ['旅行服装'],
     '生于永恒辖领：吞噬他人以替代其身份。',
-    '属性候选：敏捷、智力、魅力。起源专长：水生适性。技能：欺瞒、洞悉。工具：盗贼工具／制毒工具／文书伪造工具自选其一。装备：A 为「所吞噬之人相关背景的装备」（按原书；本项目按旅行服装登记，具体由 DM 裁定）；B 为 50 GP。', 'selectable', ['source-2024-tp-drakkenheim', 'source-2024-tp-steinhardt']),
+    '属性候选：敏捷、智力、魅力。起源专长：水生适性。技能：欺瞒、洞悉。工具：盗贼工具／制毒工具／文书伪造工具自选其一。装备：A 为「所吞噬之人相关背景的装备」（按原书；本项目按旅行服装登记，具体由 DM 裁定）；B 为 50 GP。（X02 来源修正，2026-10-10：本条实际出自《探秘艾伯伦》第六章，此前误挂德拉肯海姆与斯坦哈德，已改挂 `source-2024-tp-exploring-eberron`。）', 'selectable', ['source-2024-tp-exploring-eberron']),
   // 注（G2-E Q1-A）：以下 4 条 CHM 中实际位于《斯坦哈德的诡怖猎杀指南：玩家包》书目段
   // （书锚点 `4954`，背景位于 `4936`—`4938`），故来源同时登记德拉肯海姆与斯坦哈德；
   // 以 `source-2024-tp-steinhardt` 表达真实书目归属。
+  // 对照：其上的幻身灵旅者与马伦蒂位于《探秘艾伯伦》第六章目录（CHM 4916／4933），
+  // 与本 4 条分处不同书目录，2026-10-10 已按 X02 修正为 `source-2024-tp-exploring-eberron`。
   background('tp-inquisitor', '异端裁判官', 'Inquisitor', ['str', 'wis', 'cha'], 'feat-2024-tp-faithful', ['skill-religion', 'skill-intimidation'], { id: 'equipment-2024-tp-sh-torture-tools' },
     ['书（祈祷书）', '圣徽', '镣铐', '旅行者服装', '酷刑工具'],
     '教会的律法执行者：审问与调查。',

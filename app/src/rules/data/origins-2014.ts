@@ -180,7 +180,8 @@ export const backgrounds2014: readonly BackgroundRule[] = [
 
   // ===== 德拉肯海姆（DoD，G 批次 G-E，第三方·默认关闭）=====
   // 注：本来源另有 4 条 2024 写法背景（幻身灵旅者／马伦蒂／异端裁判官／猎兽人），
-  // 按 Q8-B 归入 2024 仓库，不在本文件登记。
+  // 按 Q8-B 归入 2024 仓库，不在本文件登记。其中幻身灵旅者与马伦蒂经 X02 复核实际出自
+  // 《探秘艾伯伦》第六章（CHM 4916／4933），与德拉肯海姆／斯坦哈德无关，来源已一并修正。
   { id: 'background-2014-continental-nobility', ruleset: '5e-2014', name: '大陆贵族', englishName: 'Continental Nobility', summary: '游说等自选技能与家族声望。', description: '技能熟练：从游说、运动、历史、威吓中选择两项（受模型限制，本项按固定技能登记，自选部分请按原书处理）；自选两门额外语言；背景特性贵族自信：短休期间可用话语激励等于熟练加值数目的盟友（具体增益按原书）；装备含玺戒或家族纹章胸针、家族颜色的披风、一套高档服装与装有 20 GP 的小包。', variantIds: [], skillIds: ['skill-persuasion'], toolIds: [], languageChoices: 2, featureName: '贵族自信', recommendedClassIds: ['class-2014-paladin', 'class-2014-bard'], status: 'selectable', sourceIds: ['tp-drakkenheim-index'] },
   { id: 'background-2014-treasure-seeker', ruleset: '5e-2014', name: '寻宝者', englishName: 'Treasure Seeker', summary: '调查、开锁与废墟探索。', description: '技能熟练：调查，外加隐匿／洞悉／察觉自选其一（受模型限制，本项按固定技能登记）；工具熟练：盗贼工具、制图工具；背景特性注重细节：为探索德拉肯海姆废墟而进行的属性检定中熟练加值翻倍；另附 1d8 寻宝者秘宝表（神秘地图、双正面硬币、放大镜等）确定随身小物件；装备含盗贼工具、带兜帽与面部遮挡的黑色衣物、伪造贵族玺戒、伪造身份证明、灌铅骰子与一副扑克牌。', variantIds: [], skillIds: ['skill-investigation'], toolIds: ['tool-thieves-tools'], languageChoices: 0, featureName: '注重细节', recommendedClassIds: ['class-2014-rogue', 'class-2014-ranger'], status: 'selectable', sourceIds: ['tp-drakkenheim-index'] },
   { id: 'background-2014-survivor', ruleset: '5e-2014', name: '幸存者', englishName: 'Survivor', summary: '废墟求生与净化口粮。', description: '技能熟练：从察觉、生存、隐匿、运动中选择两项（受模型限制，本项按固定技能登记）；工具熟练：厨师工具与另一种自选工匠工具；背景特性临时餐点：懂得净化废墟中发现的食物与口粮，短休时可为等于熟练加值数目的同伴提供净化后的餐食（具体效果按原书）；装备含厨师用具、攀爬工具、铲子、厚手套与带兜帽的斗篷。', variantIds: [], skillIds: ['skill-survival'], toolIds: ['tool-cooks-utensils'], languageChoices: 0, featureName: '临时餐点', recommendedClassIds: ['class-2014-ranger', 'class-2014-fighter'], status: 'selectable', sourceIds: ['tp-drakkenheim-index'] },
