@@ -6,6 +6,7 @@ import {
   clampDestinyCount,
   DESTINY_MAX_COUNT,
   DESTINY_MIN_COUNT,
+  destinyRollTotal,
   isAbilityDestinySet,
   normalizeAbilityDestiny,
   pointBuyCost,
@@ -143,6 +144,19 @@ describe('第 5 步自定义属性的天命掷骰', () => {
     expect(isAbilityDestinySet([15, 14, 13, 10, 18, 9, 8])).toBe(false)
     expect(isAbilityDestinySet([15, 14, 13, 10, 18, '9'])).toBe(false)
     expect(isAbilityDestinySet(undefined)).toBe(false)
+  })
+
+  it('合计数等于六项之和，范围 18—108，且不需要存进草稿', () => {
+    expect(destinyRollTotal([9, 12, 12, 15, 7, 13])).toBe(68)
+    expect(destinyRollTotal([15, 14, 13, 10, 18, 9])).toBe(79)
+    expect(destinyRollTotal([3, 3, 3, 3, 3, 3])).toBe(18)
+    expect(destinyRollTotal([18, 18, 18, 18, 18, 18])).toBe(108)
+    expect(destinyRollTotal([])).toBe(0)
+    // 合计可由原始数组重算，属展示用派生值：归一化只保留数组，不新增合计字段
+    const normalized = normalizeAbilityDestiny({ count: 1, rolls: [[9, 12, 12, 15, 7, 13]] })
+    expect(normalized).toEqual({ count: 1, rolls: [[9, 12, 12, 15, 7, 13]] })
+    expect(Object.keys(normalized ?? {})).toEqual(['count', 'rolls'])
+    expect(destinyRollTotal(normalized?.rolls?.[0] ?? [])).toBe(68)
   })
 
   it('掷出的数组本身就是合法的自定义属性输入（3—20 范围内）', () => {

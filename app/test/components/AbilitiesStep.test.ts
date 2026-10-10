@@ -154,7 +154,17 @@ describe('AbilitiesStep 天命随机点数（第 5 步自定义属性）', () =>
     expect(wrapper.text()).toContain('天命')
     expect(wrapper.text()).toContain('天命随机点数:')
     const rows = wrapper.findAll('.abilities-step__destiny-list li').map((node) => node.text())
-    expect(rows).toEqual(['[15 ,14 ,13 ,10 ,18 ,9]', '[4 ,10 ,18 ,3 ,18 ,18]'])
+    expect(rows).toEqual(['[15 ,14 ,13 ,10 ,18 ,9] = 79', '[4 ,10 ,18 ,3 ,18 ,18] = 71'])
+    wrapper.unmount()
+  })
+
+  it('每行附带六项之和，便于比较各组的强弱', () => {
+    const wrapper = mountCustom({
+      destinyRolls: [[9, 12, 12, 15, 7, 13], [18, 18, 18, 18, 18, 18]],
+    })
+    const rows = wrapper.findAll('.abilities-step__destiny-list li').map((node) => node.text())
+    expect(rows[0]).toBe('[9 ,12 ,12 ,15 ,7 ,13] = 68')
+    expect(rows[1]).toBe('[18 ,18 ,18 ,18 ,18 ,18] = 108')
     wrapper.unmount()
   })
 

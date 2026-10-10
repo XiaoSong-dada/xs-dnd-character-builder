@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
-import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, DESTINY_MAX_COUNT, DESTINY_MIN_COUNT, pointBuyCost, STANDARD_ARRAY } from '@/rules/abilities'
+import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, DESTINY_MAX_COUNT, DESTINY_MIN_COUNT, destinyRollTotal, pointBuyCost, STANDARD_ARRAY } from '@/rules/abilities'
 import type { AbilityKey, AbilityMethod, AbilityScores, RulesetId } from '@/types/character'
 import type { RaceRule } from '@/types/rules'
 
@@ -131,7 +131,7 @@ function commitDestinyCount(): void {
 }
 
 function formatDestinyRoll(roll: readonly number[]): string {
-  return `[${roll.join(' ,')}]`
+  return `[${roll.join(' ,')}] = ${destinyRollTotal(roll)}`
 }
 </script>
 

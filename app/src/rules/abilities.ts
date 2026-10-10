@@ -84,6 +84,16 @@ export function normalizeAbilityDestiny(value: unknown): AbilityDestinyRolls | u
   return rolls.length > 0 ? { count, rolls } : { count }
 }
 
+/**
+ * 一组天命掷骰的合计。
+ *
+ * 合计数只是这六项之和的**展示用派生值**，随时可从原始数组重算，
+ * 故不写入草稿；它也不是规则上的属性值，不参与任何派生计算。
+ */
+export function destinyRollTotal(roll: readonly number[]): number {
+  return roll.reduce((total, score) => total + score, 0)
+}
+
 interface AbilityRules {
   readonly pointBuyMinimum: number
   readonly pointBuyMaximum: number
