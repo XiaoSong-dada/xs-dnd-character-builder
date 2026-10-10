@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import AddItemModal from '@/components/AddItemModal.vue'
 import { useSessionAssistantStore } from '@/stores/session-assistant'
 import SessionPanel from '@/views/session-assistant/components/SessionPanel.vue'
+import { SessionStateStorageService } from '@/services/session-state-storage'
 
 import { draft2024, emptySpellSelections } from '../../fixtures/draft-2024'
 
@@ -17,6 +18,22 @@ describe('SessionPanel 按草稿版本解析显示数据', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+  })
+
+  it('2014兔人资源可消耗并持久化，来源关闭隐藏、恢复后保留已用次数', async () => {
+    const draft = draft2024({ id: 'session-rabbit', ruleset: '5e-2014', classId: 'class-2014-fighter', raceId: 'race-2014-motm-harengon', targetLevel: 5,
+      enabledSourceIds: ['motm-2022-index'], raceAbilityChoices: ['str', 'con'] })
+    const wrapper = mount(SessionPanel, { props: { draft } })
+    expect(wrapper.text()).toContain('兔子跳')
+    expect(wrapper.text()).toContain('剩余 3 / 3')
+    await wrapper.get('button[aria-label="消耗兔子跳"]').trigger('click')
+    expect(wrapper.text()).toContain('剩余 2 / 3')
+    expect(SessionStateStorageService.load(draft.id)?.resourceUsage?.['race-2014-motm-harengon-rabbit-hop']).toBe(1)
+    await wrapper.setProps({ draft: { ...draft, enabledSourceIds: [] } })
+    expect(wrapper.find('button[aria-label="消耗兔子跳"]').exists()).toBe(false)
+    await wrapper.setProps({ draft })
+    expect(wrapper.text()).toContain('剩余 2 / 3')
+    wrapper.unmount()
   })
 
   it('2024 草稿显示职业/子职特性、法术与物品中文名（不显示英文 ID）', async () => {

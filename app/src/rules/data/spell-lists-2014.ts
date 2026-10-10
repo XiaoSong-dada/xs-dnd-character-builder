@@ -1,5 +1,11 @@
 import type { RuleOption } from '@/types/rules'
 
+export const speciesSpellAbilityOptions2014: readonly RuleOption[] = [
+  { id: 'spell-ability-int', name: '智力', description: '种族法术以智力为施法属性。', status: 'implemented', sourceIds: ['phb-2014-index'] },
+  { id: 'spell-ability-wis', name: '感知', description: '种族法术以感知为施法属性。', status: 'implemented', sourceIds: ['phb-2014-index'] },
+  { id: 'spell-ability-cha', name: '魅力', description: '种族法术以魅力为施法属性。', status: 'implemented', sourceIds: ['phb-2014-index'] },
+]
+
 export const SPELL_LIST_OPTION_IDS_2014 = [
   'spell-list-bard',
   'spell-list-cleric',

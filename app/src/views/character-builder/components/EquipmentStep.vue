@@ -6,6 +6,7 @@ import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import { getRulesRepository } from '@/rules/repositories'
+import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
 import {
   buildStartingEquipmentState,
@@ -23,6 +24,7 @@ import type {
 
 const props = defineProps<{ draft: CharacterDraft }>()
 const rulesRepository = computed(() => getRulesRepository(props.draft.ruleset))
+const equipmentWarnings = computed(() => getEquipmentWarnings(props.draft, rulesRepository.value))
 const emit = defineEmits<{
   change: [
     selections: readonly StartingEquipmentSelection[],
@@ -123,6 +125,9 @@ function sourceLabel(entry: InventoryEntry): string {
 
 <template>
   <section class="equipment-step">
+    <UiNotice v-for="issue in equipmentWarnings" :key="issue.id" tone="warning" title="装备提示">
+      {{ issue.message }} {{ issue.resolution }}
+    </UiNotice>
     <UiNotice
       v-if="draft.equipmentNeedsReview"
       tone="warning"
@@ -302,9 +307,10 @@ function sourceLabel(entry: InventoryEntry): string {
             type="button"
             :class="{ 'equipment-step__equip--active': entry.equippedQuantity > 0 }"
             :aria-pressed="entry.equippedQuantity > 0"
+            :aria-label="`${entry.equippedQuantity > 0 ? '卸下' : '装备'}${rulesRepository.getEquipment(entry.itemId)?.name ?? entry.itemId}`"
             @click="toggleEquipped(entry)"
           >
-            {{ entry.equippedQuantity > 0 ? '✓ 已装备' : '装备' }}
+            {{ entry.equippedQuantity > 0 ? '卸下' : '装备' }}
           </button>
         </li>
       </ul>

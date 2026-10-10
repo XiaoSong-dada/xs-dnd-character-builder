@@ -31,9 +31,9 @@ describe('source-books 规则集化来源解析（E01）', () => {
 
   it('2024 可切换来源包含 UA 游玩测试、旧扩展与第三方，且默认全关', () => {
     const selectable = getSelectableSources('5e-2024')
-    // 来源数量随批次增长（G 批次新增第三方来源），按「至少覆盖既有 17 条 + 三类内容」断言。
+    // 来源数量随批次增长（G 批次新增第三方来源，X05 批次新增 UA 幽暗地域二期），按下界断言，不锁死总数。
     expect(selectable.length).toBeGreaterThanOrEqual(17)
-    expect(selectable.filter((source) => source.contentKind === 'playtest')).toHaveLength(7)
+    expect(selectable.filter((source) => source.contentKind === 'playtest').length).toBeGreaterThanOrEqual(7)
     expect(selectable.filter((source) => source.contentKind === 'legacy')).toHaveLength(10)
     expect(selectable.filter((source) => source.contentKind === 'third-party').length).toBeGreaterThanOrEqual(3)
     expect(selectable.every((source) => source.selectable && source.ruleset === '5e-2024' && source.category === 'supplement')).toBe(true)

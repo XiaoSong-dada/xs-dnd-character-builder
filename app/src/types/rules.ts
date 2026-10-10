@@ -185,7 +185,15 @@ export interface FixedSpellGrant {
 
 /** 物种授予的固定法术：按获得等级生效；施法属性由物种选择（若声明）。 */
 export interface SpeciesSpellGrant extends FixedSpellGrant {
+  readonly castingLevel?: number
   readonly minimumLevel: number
+  /** 仅通过该种族特质施放本法术时免材料；不改写法术本身的成分。 */
+  readonly waivesMaterialComponents?: boolean
+  readonly waivedComponents?: readonly ('verbal' | 'somatic' | 'material')[]
+  readonly canCastWithSpellSlots?: boolean
+  readonly atWill?: boolean
+  readonly targetRestriction?: 'snakes-only' | 'self-only'
+  readonly castingNote?: string
 }
 
 export interface FeatChoiceSpec {
@@ -421,8 +429,11 @@ export interface SpellbookExtraRule {
   readonly schools: readonly string[]
 }
 
-/** 种族特性（2014）。常驻或按等级自动获得，不建立时间线检查点。 */
+/** 种族／物种特性。各规则集独立登记，常驻或按等级自动获得。 */
 export interface RaceFeature {
+  readonly saveDc?: { readonly ability?: AbilityKey; readonly abilityCheckpointId?: string }
+  readonly naturalAttack?: { readonly ability: AbilityKey; readonly damageDice: string }
+  readonly selectionRequirement?: { readonly checkpointId: string; readonly optionId?: string; readonly additionalCheckpointIds?: readonly string[] }
   readonly id: string
   readonly raceId: string
   readonly name: string
@@ -432,6 +443,8 @@ export interface RaceFeature {
   /** 原创中文详细效果（展开区展示）。 */
   readonly description: string
   readonly kind: SubclassFeatureKind
+  /** 已核验的种族次数资源，复用职业资源上限和休息协议。 */
+  readonly resource?: ClassResource
   readonly status: CompatibilityStatus
   readonly sourceIds: readonly string[]
 }
@@ -528,10 +541,19 @@ export interface ClassFeature {
 }
 
 export interface RaceRule {
+  readonly armorClassBonus?: number
+  readonly countsAsRaceIds?: readonly string[]
+  readonly ancestralMovement?: readonly { readonly kind: 'climb' | 'fly' | 'swim'; readonly speed: number; readonly usesWalkingSpeed?: boolean; readonly condition: string }[]
+  readonly lineage?: boolean
+  readonly sizeByLevel?: readonly { readonly level: number; readonly size: 'small' | 'medium' }[]
+  readonly naturalArmor?: { readonly base: number; readonly addsDexterity: boolean; readonly forbidsArmor?: boolean; readonly requiresUnarmored?: boolean }
+  readonly choices?: readonly (ChoiceCheckpoint & { readonly grantsSkillProficiency?: boolean; readonly grantsToolProficiency?: boolean; readonly defaultOptionIds?: readonly string[]; readonly grantsDamageResistance?: Readonly<Record<string, string>> })[]
+  readonly chosenCantripCheckpointId?: string
   readonly id: string
   readonly ruleset: RulesetId
   readonly name: string
   readonly englishName: string
+  readonly searchAliases?: readonly string[]
   /** 一行概括（卡片摘要行）。 */
   readonly summary: string
   /** 原创中文详细介绍（体型/速度/感官/语言/特性要点）；展开区展示。 */
@@ -541,7 +563,13 @@ export interface RaceRule {
   readonly requiresSubrace?: boolean
   readonly replacesParentBonuses?: boolean
   readonly fixedAbilityBonuses: Readonly<Partial<Record<AbilityKey, number>>>
+  /** 2014 种族明确登记的固定语言；旧条目未声明时不推断。 */
+  readonly fixedLanguages?: readonly string[]
+  /** 2014 种族额外自选语言数量，与背景数量相加。 */
+  readonly languageChoices?: number
   readonly speed?: number
+  /** 将熟练加值加入先攻（如兔人）；同类来源不重复叠加。 */
+  readonly initiativeProficiency?: boolean
   readonly flexibleBonusCount?: number
   readonly flexibleBonusValue?: number
   /** 种族固定技能熟练（如精灵察觉）；沿 parentRaceId 链叠加。 */
@@ -549,23 +577,29 @@ export interface RaceRule {
   /** 种族自选技能熟练规格（如半精灵 2 项全技能、兽人 7 选 2）；optionIds 缺省为全部 18 项技能。 */
   readonly skillProficiencyChoices?: { readonly count: number; readonly optionIds?: readonly string[] }
   /** 种族自选工具熟练规格（如矮人 1 项工匠工具）；展示级，不参与派生。 */
-  readonly toolProficiencyChoices?: { readonly count: number }
+  readonly toolProficiencyChoices?: { readonly count: number; readonly optionIds?: readonly string[]; readonly required?: boolean }
   /** 种族武器/护甲熟练（如精灵武器训练）；展示级，不参与派生。 */
   readonly weaponArmorProficiencies?: readonly string[]
   /** 灵活加值分组（如费兹本龙裔：第一项 +2、第二项 +1）；与 flexibleBonusCount/Value 二选一。 */
   readonly flexibleBonusGroups?: readonly { readonly count: number; readonly value: number }[]
+  /** 明确允许二选一等创建方案的种族；缺省选第一方案，旧固定加值不受影响。 */
+  readonly flexibleBonusAlternatives?: readonly {
+    readonly id: string
+    readonly label: string
+    readonly groups: readonly { readonly count: number; readonly value: number }[]
+  }[]
   readonly excludedFlexibleAbilityKeys?: readonly AbilityKey[]
   /** 2024 物种额外授予的起源专长选择（如人类 Versatile）；2014 与待接入数据省略。 */
   readonly originFeatChoices?: { readonly count: number; readonly categories: readonly FeatCategory[] }
-  /** 2024 物种法术的施法属性候选（如精灵、侏儒、提夫林）；选择结果存于时间线检查点。 */
+  /** 种族／物种法术的施法属性候选，各规则集独立声明；结果存于时间线检查点。 */
   readonly spellcastingAbilityChoices?: readonly AbilityKey[]
-  /** 2024 物种随时间授予的固定法术（如血统法术）；2014 与待接入数据省略。 */
+  /** 按角色等级授予的种族／物种固定法术，未登记的旧条目不自动推断。 */
   readonly spellGrants?: readonly SpeciesSpellGrant[]
-  /** 2024 固定体型；与 sizeChoices 二选一。 */
+  /** 该条目固定体型；与 sizeChoices 二选一。 */
   readonly size?: 'small' | 'medium'
-  /** 2024 创建时可选的体型（阿斯莫、人类、提夫林）。 */
+  /** 该条目创建时可选的体型，两规则集分别登记。 */
   readonly sizeChoices?: readonly ('small' | 'medium')[]
-  /** 2024 黑暗视觉范围（尺）；无黑暗视觉省略。 */
+  /** 黑暗视觉范围（尺），各规则集独立登记；无黑暗视觉省略。 */
   readonly darkvision?: number
   /** 攀爬速度（尺）；与步行速度相同时仍需显式登记（G3-I1 第三方种族）。展示级。 */
   readonly climbSpeed?: number

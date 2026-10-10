@@ -18,9 +18,13 @@ import { fullCasterClasses2014 } from '@/rules/data/full-casters-2014'
 import { metamagicOptions2014 } from '@/rules/data/metamagic-2014'
 import { subclassChoiceOptions2014 } from '@/rules/data/subclass-choice-options-2014'
 import { backgrounds2014, races2014 } from '@/rules/data/origins-2014'
+import { officialExpansionFeatures2014, officialExpansionOptions2014, officialExpansionRaces2014, withOfficialFeatureReprint, withOfficialReprint } from '@/rules/data/races-official-expansions-2014'
 import { humblewoodRaces2014, obojimaRaces2014 } from '@/rules/data/races-third-party-2014'
 import { ebonTidesRaces2014 } from '@/rules/data/races-ebon-tides-2014'
+import { planeshiftRaces2014 } from '@/rules/data/races-planshift-2014'
+import { grimHollowPlayerPackRaces2014 } from '@/rules/data/races-grim-hollow-2014'
 import { raceFeatures2014 } from '@/rules/data/race-features-2014'
+import { motmChoiceOptions2014, motmRaces2014 } from '@/rules/data/races-motm-2014'
 import { backgroundFeatures2014 } from '@/rules/data/background-features-2014'
 import { backgroundStartingEquipment2014, classStartingEquipment2014 } from '@/rules/data/starting-equipment-2014'
 import { subclasses2014, subclassOptions2014 } from '@/rules/data/subclasses-2014'
@@ -28,7 +32,7 @@ import { thirdPartyItems2014 } from '@/rules/data/third-party-items-2014'
 import { spells2014 } from '@/rules/data/spells-2014'
 import { sources2014 } from '@/rules/data/sources-2014'
 import { artificerClass2014, artificerInfusions2014 } from '@/rules/data/artificer-2014'
-import { spellListOptions2014 } from '@/rules/data/spell-lists-2014'
+import { speciesSpellAbilityOptions2014, spellListOptions2014 } from '@/rules/data/spell-lists-2014'
 import type { RulesRepository } from '@/types/rules'
 import type { CharacterDraft } from '@/types/character'
 
@@ -45,14 +49,17 @@ export const rulesRepository2014: RulesRepository = {
     return { ...item, ...classRule, features: getClassFeatures2014(item.id) }
   }),
   subclasses: subclasses2014,
-  races: [...races2014, ...obojimaRaces2014, ...humblewoodRaces2014, ...ebonTidesRaces2014],
+  races: [...races2014.map(withOfficialReprint), ...motmRaces2014.map(withOfficialReprint), ...officialExpansionRaces2014, ...obojimaRaces2014, ...humblewoodRaces2014, ...ebonTidesRaces2014, ...planeshiftRaces2014, ...grimHollowPlayerPackRaces2014],
   backgrounds: backgrounds2014,
-  raceFeatures: raceFeatures2014,
+  raceFeatures: [...raceFeatures2014.map(withOfficialFeatureReprint), ...officialExpansionFeatures2014],
   backgroundFeatures: backgroundFeatures2014,
   options: [
+    ...officialExpansionOptions2014,
+    ...motmChoiceOptions2014,
     ...abilityImprovementOptions2014,
     ...featChoiceOptions2014,
     ...spellListOptions2014,
+    ...speciesSpellAbilityOptions2014,
     ...feats2014,
     ...subclassOptions2014,
     ...withoutLegacySubclassOptions(fighterOptions),

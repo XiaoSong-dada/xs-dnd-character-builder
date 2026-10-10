@@ -2,6 +2,7 @@ import { getRulesRepository } from '@/rules/repositories'
 import { FEAT_OPTION_IDS } from '@/rules/data/feats-2014'
 import { buildManualFeatChoiceCheckpoints, getFeatPool } from '@/rules/feats'
 import { isSourceEnabled } from '@/rules/source-books'
+import { getSpeciesChoiceCheckpoints } from '@/rules/origins'
 import type { CheckpointKind, ChoiceCheckpoint, RulesRepository } from '@/types/rules'
 import type { ChoiceSelection, ManualFeatGrant, RulesetId } from '@/types/character'
 import { SKILL_IDS } from '@/rules/derive'
@@ -166,7 +167,7 @@ function buildSpeciesFeatCheckpoints(
   const race = repository.getRace(raceId)
   const choices = race?.originFeatChoices
   if (!race || !choices || choices.count <= 0) return []
-  const optionIds = getFeatPool(repository, choices.categories, { enabledSourceIds }).map((feat) => feat.id)
+  const optionIds = getFeatPool(repository, choices.categories, { level: 1, enabledSourceIds }).map((feat) => feat.id)
   if (optionIds.length === 0) return []
   return [{
     id: `${race.id}-origin-feat`,
@@ -182,10 +183,11 @@ function buildSpeciesFeatCheckpoints(
   }]
 }
 
-/** 物种法术施法属性检查点（2024 精灵、侏儒、提夫林等选择 INT／WIS／CHA）。 */
+/** 种族／物种法术施法属性检查点，按独立规则集与有效来源生成。 */
 function buildSpeciesAbilityCheckpoints(
   raceIds: readonly (string | undefined)[],
   repository: RulesRepository,
+  enabledSourceIds: readonly string[] | undefined,
 ): readonly ChoiceCheckpoint[] {
   const checkpoints: ChoiceCheckpoint[] = []
   const seen = new Set<string>()
@@ -194,6 +196,7 @@ function buildSpeciesAbilityCheckpoints(
     seen.add(raceId)
     const race = repository.getRace(raceId)
     if (!race?.spellcastingAbilityChoices?.length) continue
+    if (enabledSourceIds !== undefined && !isSourceEnabled(race.sourceIds, enabledSourceIds, repository)) continue
     checkpoints.push({
       id: `${race.id}-spellcasting-ability`,
       level: 1,
@@ -327,7 +330,8 @@ export function buildTimeline(classId: string, targetLevel: number, context: Tim
     ...(context.subraceId === 'race-2014-human-variant' ? [variantHumanCheckpoint] : []),
     ...(context.raceId ? buildSpeciesFeatCheckpoints(context.raceId, repository, context.enabledSourceIds) : []),
     ...(context.backgroundId ? buildBackgroundFeatCheckpoints(context.backgroundId, repository, context.enabledSourceIds) : []),
-    ...buildSpeciesAbilityCheckpoints([context.subraceId, context.raceId], repository),
+    ...buildSpeciesAbilityCheckpoints([context.subraceId, context.raceId], repository, context.enabledSourceIds),
+    ...getSpeciesChoiceCheckpoints({ raceId: context.raceId, subraceId: context.subraceId, enabledSourceIds: context.enabledSourceIds, selections: context.selections ?? [], targetLevel }, repository),
     ...classCheckpoints,
     ...(context.subclassId ? buildSubclassFeatureCheckpoints(context.subclassId, repository, context.enabledSourceIds) : []),
   ]

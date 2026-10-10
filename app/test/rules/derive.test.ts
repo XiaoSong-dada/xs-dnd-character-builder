@@ -121,8 +121,8 @@ describe('deriveCharacter', () => {
       ...unarmored,
       inventory: [{ id: 'shield', itemId: 'equipment-2024-shield', quantity: 1, sourceKind: 'legacy', sourceId: 'test', equippedQuantity: 1 }],
     }
-    // 持盾时无甲防御失效：10 + 敏捷 2 + 盾牌 2
-    expect(deriveCharacter(withShield).armorClass.value).toBe(14)
+    // 持盾使无甲防御失效，且未受盾牌训练：10 + 敏捷 2。
+    expect(deriveCharacter(withShield).armorClass.value).toBe(12)
 
     const withArmor: CharacterDraft = {
       ...unarmored,

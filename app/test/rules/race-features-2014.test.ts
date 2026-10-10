@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
 import { races2014, backgrounds2014 } from '@/rules/data/origins-2014'
+import { motmRaces2014 } from '@/rules/data/races-motm-2014'
 import { getRaceFeatures2014, raceFeatures2014 } from '@/rules/data/race-features-2014'
 import { getBackgroundFeatures2014, backgroundFeatures2014 } from '@/rules/data/background-features-2014'
 
 describe('2014 种族特性注册表', () => {
-  const raceIds = new Set(races2014.map((race) => race.id))
+  const raceIds = new Set([...races2014, ...motmRaces2014].map((race) => race.id))
 
-  it('覆盖 docs/species 特性规模（240 条）且 ID 唯一', () => {
-    expect(raceFeatures2014.length).toBe(240)
+  it('覆盖既有240条及MotM新增特性且ID唯一', () => {
+    expect(raceFeatures2014.length).toBe(240 + motmRaces2014.reduce((sum, race) => sum + getRaceFeatures2014(race.id).length, 0))
     const ids = raceFeatures2014.map((feature) => feature.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
@@ -50,7 +51,7 @@ describe('2014 种族特性注册表', () => {
     const radiant = raceFeatures2014.find((feature) => feature.id === 'race-2014-aasimar-protector-radiant-soul')
     expect(radiant).toBeDefined()
     expect(radiant?.level).toBe(3)
-    const leveled = raceFeatures2014.filter((feature) => feature.level > 1)
+    const leveled = raceFeatures2014.filter((feature) => feature.level > 1 && !feature.id.startsWith('race-2014-motm-'))
     expect(leveled.length).toBe(8)
   })
 })

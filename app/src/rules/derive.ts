@@ -1,12 +1,14 @@
 import { ABILITY_LABELS, formatAbilityModifierLabel } from '@/rules/data/ability-labels'
 import { SKILL_IDS } from '@/rules/data/skill-ids'
 import { getRulesRepository } from '@/rules/repositories'
+import { canBenefitFromShield, getActiveEquippedEquipment } from '@/rules/equipment-state'
 import { applyAbilityImprovement, collectFeatSkillSelections, decodeAbilityImprovement, getFeatAbilityCap, isFeatGrantParentActive, isSelectionCheckpointActive, listActiveFeats } from '@/rules/feats'
-import { getBackgroundAbilityBonuses, getSpeciesHitPointBonus } from '@/rules/origins'
+import { getBackgroundAbilityBonuses, getDraftSpeciesRules, getSpeciesHitPointBonus, getValidSpeciesChoice } from '@/rules/origins'
 import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
 import { isSourceEnabled } from '@/rules/source-books'
 import { artificerInfusions2014 } from '@/rules/data/artificer-2014'
 import { getSpellcastingConfig } from '@/rules/spellcasting'
+import { getSpeciesLegacyBenefits } from '@/rules/species-legacy'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import type { RaceRule } from '@/types/rules'
 import type {
@@ -30,9 +32,10 @@ export function proficiencyBonus(level: number): number {
 /**
  * 收集种族固定技能熟练与自选结果（沿 parentRaceId 链叠加，子种族不替换父种族）。
  */
-export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subraceId' | 'raceSkillChoices' | 'enabledSourceIds'> & { readonly ruleset?: CharacterDraft['ruleset'] }): readonly string[] {
+export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subraceId' | 'raceSkillChoices' | 'enabledSourceIds'> & Partial<Pick<CharacterDraft, 'ruleset' | 'selections' | 'targetLevel' | 'lineageHistory'>>): readonly string[] {
   const repository = getRulesRepository(draft.ruleset ?? '5e-2014')
-  const ids: string[] = [...(draft.raceSkillChoices ?? [])]
+  const legacy = getSpeciesLegacyBenefits({ ...draft, ruleset: draft.ruleset ?? '5e-2014' }, repository)
+  const ids: string[] = legacy.flatMap((item) => item.skillId ? [item.skillId] : [])
   const visited = new Set<string>()
   const visit = (raceId: string | undefined): void => {
     if (!raceId || visited.has(raceId)) return
@@ -41,9 +44,13 @@ export function collectRaceSkillIds(draft: Pick<CharacterDraft, 'raceId' | 'subr
     if (!race || !isSourceEnabled(race.sourceIds, draft.enabledSourceIds, repository)) return
     if (race.parentRaceId) visit(race.parentRaceId)
     ids.push(...(race.skillProficiencies ?? []))
+    const spec = race.lineage && legacy.length ? undefined : race.skillProficiencyChoices
+    const selected = draft.raceSkillChoices ?? []
+    if (spec && selected.length === spec.count && new Set(selected).size === selected.length && selected.every((id) => (spec.optionIds ?? SKILL_IDS).includes(id))) ids.push(...selected)
+    for (const choice of race.choices ?? []) if (choice.grantsSkillProficiency) ids.push(...(getValidSpeciesChoice({ ...draft, selections: draft.selections ?? [], targetLevel: draft.targetLevel ?? 1 }, repository, choice.id) ?? []))
   }
   visit(draft.subraceId ?? draft.raceId)
-  return ids
+  return [...new Set(ids)]
 }
 
 /** 解析专长授予的豁免熟练：feat-child 子选择中带豁免授予语义的属性（如强健身心）。返回 属性 → 专长名。 */
@@ -51,7 +58,7 @@ function collectFeatSavingThrowAbilities(draft: CharacterDraft): Readonly<Partia
   const repository = getRulesRepository(draft.ruleset)
   const result: Partial<Record<AbilityKey, string>> = {}
   for (const selection of draft.selections) {
-    if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:')) continue
+    if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:') || !isSelectionCheckpointActive(draft, selection.checkpointId)) continue
     const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
     const feat = featId ? repository.getFeat(featId) : undefined
     if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
@@ -85,7 +92,14 @@ function addAbilities(base: AbilityScores, bonus: Partial<AbilityScores>): Abili
 export function getFlexibleBonusRule(race: RaceRule | undefined, subrace: RaceRule | undefined): RaceRule | undefined {
   if (subrace && (subrace.flexibleBonusCount ?? 0) > 0) return subrace
   if (subrace && (subrace.flexibleBonusGroups?.length ?? 0) > 0) return subrace
+  if (subrace && (subrace.flexibleBonusAlternatives?.length ?? 0) > 0) return subrace
   return race
+}
+
+export function getFlexibleBonusGroups(rule: RaceRule | undefined, optionId: string | undefined): RaceRule['flexibleBonusGroups'] {
+  if (!rule?.flexibleBonusAlternatives?.length) return rule?.flexibleBonusGroups
+  const option = optionId === undefined ? rule.flexibleBonusAlternatives[0] : rule.flexibleBonusAlternatives.find((item) => item.id === optionId)
+  return option?.groups ?? []
 }
 
 export function getRaceAbilityBonuses(draft: CharacterDraft): Partial<AbilityScores> {
@@ -98,9 +112,13 @@ export function getRaceAbilityBonuses(draft: CharacterDraft): Partial<AbilitySco
   const fixedBonuses: Partial<Record<AbilityKey, number>> = { ...baseBonuses, ...subrace?.fixedAbilityBonuses }
   const flexibleRule = getFlexibleBonusRule(race, subrace)
 
-  if (flexibleRule?.flexibleBonusGroups?.length) {
+  const flexibleGroups = getFlexibleBonusGroups(flexibleRule, draft.raceAbilityBonusOptionId)
+  const count = flexibleGroups?.reduce((sum, group) => sum + group.count, 0) ?? flexibleRule?.flexibleBonusCount ?? 0
+  const allowedKeys: readonly string[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
+  if (draft.raceAbilityChoices.length !== count || new Set(draft.raceAbilityChoices).size !== count || draft.raceAbilityChoices.some((key) => !allowedKeys.includes(key) || flexibleRule?.excludedFlexibleAbilityKeys?.includes(key))) return fixedBonuses
+  if (flexibleGroups !== undefined) {
     let index = 0
-    for (const group of flexibleRule.flexibleBonusGroups) {
+    for (const group of flexibleGroups) {
       for (let i = 0; i < group.count; i++) {
         const key = draft.raceAbilityChoices[index++]
         if (key) fixedBonuses[key] = (fixedBonuses[key] ?? 0) + group.value
@@ -141,7 +159,7 @@ function applyAbilityImprovements(
   let improved = { ...abilities }
 
   for (const selection of draft.selections) {
-    if (selection.invalidatedAt || selection.checkpointId === ignoredCheckpointId) continue
+    if (selection.invalidatedAt || selection.checkpointId === ignoredCheckpointId || !isSelectionCheckpointActive(draft, selection.checkpointId)) continue
     if (scope.belowLevel !== undefined) {
       const level = selectionLevel(selection.checkpointId, scope)
       if (level !== undefined && level >= scope.belowLevel) continue
@@ -238,15 +256,13 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     + subclassEffects.hitPointBonus
     + featHitPointBonus
     + speciesHitPointBonus
-  const equippedItems = draft.inventory
-    .filter((entry) => entry.equippedQuantity > 0)
-    .map((entry) => repository.getEquipment(entry.itemId))
-    .filter((item) => Boolean(item && isSourceEnabled(item.sourceIds, draft.enabledSourceIds, repository)))
-  const equippedArmor = equippedItems
+  const equippedItems = getActiveEquippedEquipment(draft, repository)
+  const naturalArmorOwner = getDraftSpeciesRules(draft, repository).find((item) => item.naturalArmor)
+  const naturalArmor = naturalArmorOwner?.naturalArmor
+  const equippedArmor = (naturalArmor?.forbidsArmor ? [] : equippedItems)
     .find((item) => item?.category === 'armor')
   const equippedShield = equippedItems
     .find((item) => item?.category === 'shield')
-  const equippedWeapon = equippedItems.find((item) => item?.category === 'weapon')
   const activeInfusions = draft.classId === 'class-2014-artificer'
     ? (draft.infusionAssignments ?? []).flatMap((assignment) => {
       const entry = draft.inventory.find((item) => item.id === assignment.inventoryEntryId && item.equippedQuantity > 0)
@@ -274,7 +290,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const unarmoredDefenseSourceName = classRule?.unarmoredDefense ? classRule.name : subclassRule?.unarmoredDefense ? subclassRule.name : undefined
   const barbarianUnarmored = draft.classId === 'class-2014-barbarian' && !equippedArmor
   const monkUnarmored = draft.classId === 'class-2014-monk' && !equippedArmor && !hasShield
-  const baseArmor = equippedArmor
+  let baseArmor = equippedArmor
     ? (equippedArmor.armorBase ?? 10) + (equippedArmor.addsDexterityToArmor
       ? Math.min(modifiers.dex, equippedArmor.armorDexterityCap ?? Number.POSITIVE_INFINITY)
       : 0)
@@ -292,9 +308,19 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     const option = repository.getOption(id)
     return !option || isSourceEnabled(option.sourceIds, draft.enabledSourceIds, repository)
   }))
-  const shieldBonus = equippedShield?.armorClassBonus ?? 0
-  const armorInfusionBonus = infusionBonusFor(equippedArmor?.id) + infusionBonusFor(equippedShield?.id)
-  const armorClass = baseArmor + shieldBonus + armorInfusionBonus + (defenseStyle && Boolean(equippedArmor) ? 1 : 0) + subclassEffects.armorClassBonus
+  const shieldBenefitAllowed = canBenefitFromShield(draft, repository)
+  const shieldBonus = shieldBenefitAllowed ? equippedShield?.armorClassBonus ?? 0 : 0
+  const armorOnlyInfusion = infusionBonusFor(equippedArmor?.id)
+  const naturalArmorMagicBonus = naturalArmor && equippedArmor ? equippedArmor.magicBonus ?? 0 : 0
+  const defenseStyleBonus = defenseStyle && Boolean(equippedArmor) ? 1 : 0
+  const naturalArmorValue = naturalArmor && !(naturalArmor.requiresUnarmored && equippedArmor) ? naturalArmor.base + (naturalArmor.addsDexterity ? modifiers.dex : 0) : undefined
+  const usesNaturalArmor = naturalArmorValue !== undefined && naturalArmorValue >= baseArmor
+  if (usesNaturalArmor && naturalArmorValue !== undefined) {
+    baseArmor = naturalArmorValue
+  }
+  const armorInfusionBonus = armorOnlyInfusion + (shieldBenefitAllowed ? infusionBonusFor(equippedShield?.id) : 0)
+  const speciesArmorBonus = getDraftSpeciesRules(draft, repository).reduce((total, race) => total + (race.armorClassBonus ?? 0), 0)
+  const armorClass = baseArmor + shieldBonus + armorInfusionBonus + naturalArmorMagicBonus + defenseStyleBonus + subclassEffects.armorClassBonus + speciesArmorBonus
   const selectedClassSkillIds = (classRule?.checkpoints ?? [])
     .filter((checkpoint) => checkpoint.kind === 'skills')
     .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? [])
@@ -386,12 +412,6 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
       ? draft.targetLevel >= 18 ? 30 : draft.targetLevel >= 14 ? 25 : draft.targetLevel >= 10 ? 20 : draft.targetLevel >= 6 ? 15 : draft.targetLevel >= 2 ? 10 : 0
       : 0
   const speed = raceSpeed + classSpeedBonus + subclassEffects.speedBonus + featSpeedBonus
-  const battleSmithMagicWeapon = subclassId === 'subclass-2014-artificer-battle-smith'
-    && Boolean(equippedWeapon && ((equippedWeapon.magicBonus ?? 0) > 0 || infusionBonusFor(equippedWeapon.id) > 0))
-  const attackAbility: AbilityKey = battleSmithMagicWeapon
-    ? 'int'
-    : ['class-2014-rogue', 'class-2014-monk', 'class-2014-ranger'].includes(draft.classId ?? '') ? 'dex' : 'str'
-  const weaponMagicBonus = (equippedWeapon?.magicBonus ?? 0) + infusionBonusFor(equippedWeapon?.id)
   const spellcasting = getSpellcastingConfig(draft)
   const spellAbilityModifier = spellcasting ? modifiers[spellcasting.ability] : undefined
 
@@ -410,9 +430,9 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const armorClassValue = withManualAdjustment(derived(armorClass, [
     {
       id: 'armor-base',
-      label: equippedArmor?.name ?? (unarmoredDefense ? `${unarmoredDefenseSourceName ?? ''}无甲防御` : barbarianUnarmored ? '野蛮人无甲防御' : monkUnarmored ? '武僧无甲防御' : subclassEffects.armorClassBase ? '子职护甲公式' : '基础护甲'),
+      label: usesNaturalArmor ? `${naturalArmorOwner?.name}天生护甲` : equippedArmor?.name ?? (unarmoredDefense ? `${unarmoredDefenseSourceName ?? ''}无甲防御` : barbarianUnarmored ? '野蛮人无甲防御' : monkUnarmored ? '武僧无甲防御' : subclassEffects.armorClassBase ? '子职护甲公式' : '基础护甲'),
       value: baseArmor,
-      detail: equippedArmor
+      detail: usesNaturalArmor ? `${naturalArmor?.base}${naturalArmor?.addsDexterity ? ' + 敏捷调整值' : '（不加敏捷）'}` : equippedArmor
         ? equippedArmor.description
         : unarmoredDefense && !equippedArmor && (unarmoredDefense.allowsShield || !hasShield)
           ? `10 + 敏捷调整值 + ${formatAbilityModifierLabel(unarmoredDefense.ability)}`
@@ -424,24 +444,29 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
                 ? `${subclassEffects.armorClassBase} + 敏捷调整值`
                 : '10 + 敏捷调整值',
     },
-    ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: '已装备' }] : []),
-    ...(defenseStyle && equippedArmor ? [{ id: 'defense-style', label: '防御战斗风格', value: 1, detail: '穿着护甲时生效' }] : []),
+    ...(hasShield ? [{ id: 'shield', label: equippedShield?.name ?? '盾牌', value: shieldBonus, detail: shieldBenefitAllowed ? '已手动装备' : '未受盾牌训练，不计入 AC' }] : []),
+    ...(defenseStyleBonus ? [{ id: 'defense-style', label: '防御战斗风格', value: defenseStyleBonus, detail: '合法护甲公式的穿甲收益' }] : []),
     ...(armorInfusionBonus ? [{ id: 'artificer-enhanced-defense', label: '奇械师灌注', value: armorInfusionBonus, detail: '已绑定并装备的强化防御物品' }] : []),
+    ...(naturalArmorMagicBonus ? [{ id: 'natural-armor-magic-bonus', label: equippedArmor?.name ?? '魔法护甲', value: naturalArmorMagicBonus, detail: '合法穿戴护甲的魔法AC加值，仅加一次' }] : []),
     ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${repository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
+    ...(speciesArmorBonus !== 0 ? [{ id: 'species-armor-class', label: '物种护甲加成', value: speciesArmorBonus, detail: getDraftSpeciesRules(draft, repository).filter((race) => race.armorClassBonus).map((race) => race.name).join('、') }] : []),
   ]), manual.derivedAdjustments.armorClass, 'armor-class')
-  const initiativeValue = withManualAdjustment(derived(modifiers.dex, [{ id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` }]), manual.derivedAdjustments.initiative, 'initiative')
-  const attackValue = withManualAdjustment(derived(proficiency + modifiers[attackAbility] + weaponMagicBonus + subclassEffects.attackBonus, [
-    { id: 'attack-proficiency', label: '熟练加值', value: proficiency, detail: '熟练武器' },
-    { id: `attack-${attackAbility}`, label: formatAbilityModifierLabel(attackAbility), value: modifiers[attackAbility], detail: `属性 ${abilities[attackAbility]}` },
-    ...(weaponMagicBonus ? [{ id: 'magic-weapon-attack', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []),
-    ...(subclassEffects.attackBonus !== 0 ? [{ id: 'subclass-attack', label: '子职攻击加成', value: subclassEffects.attackBonus, detail: '来自子职特性' }] : []),
-  ]), manual.derivedAdjustments.attackBonus, 'attack')
-  const damageValue = withManualAdjustment(derived(modifiers[attackAbility] + weaponMagicBonus + subclassEffects.damageBonus, [{
-    id: `damage-${attackAbility}`,
-    label: formatAbilityModifierLabel(attackAbility),
-    value: modifiers[attackAbility],
-    detail: `属性 ${abilities[attackAbility]}`,
-  }, ...(weaponMagicBonus ? [{ id: 'magic-weapon-damage', label: '魔法武器加值', value: weaponMagicBonus, detail: equippedWeapon?.name ?? '已灌注武器' }] : []), ...(subclassEffects.damageBonus !== 0 ? [{ id: 'subclass-damage', label: '子职伤害加成', value: subclassEffects.damageBonus, detail: '来自子职特性' }] : [])]), manual.derivedAdjustments.attackDamageBonus, 'damage')
+  const initiativeRace = getDraftSpeciesRules(draft, repository).find((race) => race.initiativeProficiency)
+  const initiativeValue = withManualAdjustment(derived(modifiers.dex + (initiativeRace ? proficiency : 0), [
+    { id: 'dex-initiative', label: '敏捷调整值', value: modifiers.dex, detail: `敏捷 ${abilities.dex}` },
+    ...(initiativeRace ? [{ id: `${initiativeRace.id}-initiative`, label: '种族先攻熟练', value: proficiency, detail: initiativeRace.name }] : []),
+  ]), manual.derivedAdjustments.initiative, 'initiative')
+  const referenceAttack = (ability: 'str' | 'dex', adjustment: number | undefined, sourceId: string) => withManualAdjustment(derived(proficiency + modifiers[ability], [
+    { id: 'attack-proficiency', label: '熟练加值', value: proficiency, detail: '熟练武器参考，不含具体武器加值' },
+    { id: `attack-${ability}`, label: formatAbilityModifierLabel(ability), value: modifiers[ability], detail: `属性 ${abilities[ability]}` },
+  ]), adjustment, sourceId)
+  const referenceDamage = (ability: 'str' | 'dex', adjustment: number | undefined, sourceId: string) => withManualAdjustment(derived(modifiers[ability], [
+    { id: `damage-${ability}`, label: formatAbilityModifierLabel(ability), value: modifiers[ability], detail: `属性 ${abilities[ability]}` },
+  ]), adjustment, sourceId)
+  const attackValue = referenceAttack('str', manual.derivedAdjustments.attackBonus, 'attack')
+  const damageValue = referenceDamage('str', manual.derivedAdjustments.attackDamageBonus, 'damage')
+  const dexterityAttackValue = referenceAttack('dex', manual.derivedAdjustments.dexterityAttackBonus, 'dexterity-attack')
+  const dexterityDamageValue = referenceDamage('dex', manual.derivedAdjustments.dexterityAttackDamageBonus, 'dexterity-damage')
   const speedValue = withManualAdjustment(derived(speed, [{
     id: 'race-speed', label: '种族速度', value: raceSpeed, detail: subrace?.speed ? subrace.name : race?.name ?? '默认',
   }, ...(classSpeedBonus ? [{ id: 'class-speed', label: '职业移动加值', value: classSpeedBonus, detail: classRule?.name ?? '' }] : []), ...(subclassEffects.speedBonus !== 0 ? [{ id: 'subclass-speed', label: '子职移动加值', value: subclassEffects.speedBonus, detail: '来自子职特性' }] : []), ...(featSpeedBonus !== 0 ? [{ id: 'feat-speed', label: '专长移动加值', value: featSpeedBonus, detail: featSpeedNames.join('、') }] : [])]), manual.derivedAdjustments.speed, 'speed')
@@ -476,6 +501,8 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     initiative: initiativeValue,
     attackBonus: attackValue,
     attackDamageBonus: damageValue,
+    dexterityAttackBonus: dexterityAttackValue,
+    dexterityAttackDamageBonus: dexterityDamageValue,
     ...(baseSpellAttack ? { spellAttackBonus: withManualAdjustment(baseSpellAttack, manual.derivedAdjustments.spellAttackBonus, 'spell-attack') } : {}),
     ...(baseSpellDc ? { spellSaveDc: withManualAdjustment(baseSpellDc, manual.derivedAdjustments.spellSaveDc, 'spell-dc') } : {}),
     speed: speedValue,

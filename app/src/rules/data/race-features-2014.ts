@@ -1,4 +1,5 @@
 import type { RaceFeature } from '@/types/rules'
+import { motmRaceFeatures2014 } from '@/rules/data/races-motm-2014'
 
 /**
  * 2014 种族特性注册表（纵向切片）。
@@ -8,6 +9,7 @@ import type { RaceFeature } from '@/types/rules'
  * 常驻或按等级自动获得，不建立时间线检查点。规则集：`5e-2014`。
  */
 export const raceFeatures2014: readonly RaceFeature[] = [
+  ...motmRaceFeatures2014,
   { id: 'race-2014-aarakocra-ability-score-increase', raceId: 'race-2014-aarakocra', name: '属性提升', englishName: 'Ability Score Increase', level: 1, summary: '敏捷 +2、感知 +1', description: '敏捷 +2、感知 +1', kind: 'passive', status: 'implemented', sourceIds: ['vgm-2016-index', 'eepc-2015-index'] },
   { id: 'race-2014-aarakocra-flight', raceId: 'race-2014-aarakocra', name: '飞行', englishName: 'Flight', level: 1, summary: '50 尺飞行速度；穿中甲/重甲时不可用', description: '获得 50 尺飞行速度；穿戴中甲或重甲时不能使用。', kind: 'passive', status: 'implemented', sourceIds: ['vgm-2016-index', 'eepc-2015-index'] },
   { id: 'race-2014-aarakocra-talons', raceId: 'race-2014-aarakocra', name: '利爪', englishName: 'Talons', level: 1, summary: '徒手打击熟练；命中 1d4 挥砍伤害', description: '徒手打击熟练；命中 1d4 挥砍伤害', kind: 'passive', status: 'implemented', sourceIds: ['vgm-2016-index', 'eepc-2015-index'] },
@@ -34,8 +36,8 @@ export const raceFeatures2014: readonly RaceFeature[] = [
   { id: 'race-2014-centaur-hooves', raceId: 'race-2014-centaur', name: '蹄', englishName: 'Hooves', level: 1, summary: '天然武器，1d4 + 力量调整钝击', description: '天然武器，1d4 + 力量调整钝击', kind: 'passive', status: 'implemented', sourceIds: ['ggr-2018-index'] },
   { id: 'race-2014-centaur-survivor', raceId: 'race-2014-centaur', name: '幸存者', englishName: 'Survivor', level: 1, summary: '驯兽、医药、自然、求生四选一熟练', description: '驯兽、医药、自然、求生四选一熟练', kind: 'passive', status: 'implemented', sourceIds: ['ggr-2018-index'] },
   { id: 'race-2014-changeling-ability-score-increase', raceId: 'race-2014-changeling', name: '属性提升', englishName: 'Ability Score Increase', level: 1, summary: '魅力 +2 + 自选一项 +1', description: '魅力 +2 + 自选一项 +1', kind: 'passive', status: 'implemented', sourceIds: ['erftlw-2019-index'] },
-  { id: 'race-2014-changeling-instincts', raceId: 'race-2014-changeling', name: '变形怪直觉', englishName: 'Instincts', level: 1, summary: '自选 2 项技能熟练（欺瞒、洞悉、威吓、游说）', description: '自选 2 项技能熟练（欺瞒、洞悉、威吓、游说）', kind: 'passive', status: 'implemented', sourceIds: ['erftlw-2019-index'] },
-  { id: 'race-2014-changeling-shapechanger', raceId: 'race-2014-changeling', name: '变形者', englishName: 'Shapechanger', level: 1, summary: '动作改变外貌与声音；体型与游戏数据不变', description: '改变外貌与声音（发色、性别、身高体重可调，但体型不变），可扮作其他种族；游戏数据不变；不能复制未见过的个体；衣物装备不变形。', kind: 'passive', status: 'implemented', sourceIds: ['erftlw-2019-index'] },
+  { id: 'race-2014-changeling-instincts', raceId: 'race-2014-changeling', name: '幻身本能', englishName: 'Changeling Instincts', level: 1, summary: '自选 2 项技能熟练（欺瞒、洞悉、威吓、游说）', description: '自选 2 项技能熟练（欺瞒、洞悉、威吓、游说）', kind: 'passive', status: 'implemented', sourceIds: ['erftlw-2019-index'] },
+  { id: 'race-2014-changeling-shapechanger', raceId: 'race-2014-changeling', name: '变形生物', englishName: 'Shapechanger', level: 1, summary: '动作改变外貌与声音；体型与游戏数据不变', description: '改变外貌与声音（发色、性别、身高体重可调，但体型不变），可扮作其他种族；游戏数据不变；不能复制未见过的个体；衣物装备不变形。', kind: 'passive', status: 'implemented', sourceIds: ['erftlw-2019-index'] },
   { id: 'race-2014-dragonborn-ability-score-increase', raceId: 'race-2014-dragonborn', name: '属性提升', englishName: 'Ability Score Increase', level: 1, summary: '力量 +2、魅力 +1', description: '力量 +2、魅力 +1。', kind: 'passive', status: 'implemented', sourceIds: ['basic-rules-2014'] },
   { id: 'race-2014-dragonborn-breath-weapon', raceId: 'race-2014-dragonborn', name: '吐息武器', englishName: 'Breath Weapon', level: 1, summary: '动作喷吐，2d6起并随等级成长', description: '区域内生物进行祖先表指定豁免，DC 为 `8 + 体质调整值 + 熟练加值`；失败承受全额，成功一半。伤害为 2d6，角色 6、11、16 级变为 3d6、4d6、5d6。', kind: 'action', status: 'implemented', sourceIds: ['basic-rules-2014'] },
   { id: 'race-2014-dragonborn-damage-resistance', raceId: 'race-2014-dragonborn', name: '伤害抗性', englishName: 'Damage Resistance', level: 1, summary: '抵抗祖先对应伤害', description: '获得对应伤害抗性。', kind: 'passive', status: 'implemented', sourceIds: ['basic-rules-2014'] },

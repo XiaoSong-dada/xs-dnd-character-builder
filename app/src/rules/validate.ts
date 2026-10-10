@@ -1,5 +1,6 @@
 ﻿import { getRulesRepository } from '@/rules/repositories'
 import { deriveAbilities } from '@/rules/derive'
+import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
 import {
   collectFeatSkillSelections,
@@ -11,21 +12,28 @@ import {
   type FeatGrant,
 } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abilities'
-import { getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
+import { getFlexibleBonusGroups, getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellbookExtraAllowance, getSpellbookExtraCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
-import { getBackgroundAllocationIssue, getOriginStepBlockers, getSpeciesProficiencyBlockers } from '@/rules/origins'
+import { getBackgroundAllocationIssue, getOriginStepBlockers, getSpeciesProficiencyBlockers, getSpeciesChoiceCheckpoints, getValidSpeciesChoice } from '@/rules/origins'
 import { validateWeaponMasterySelection } from '@/rules/weapon-mastery'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { isSourceEnabled } from '@/rules/source-books'
+import { getActiveLineageRecord, getSpeciesLegacyBenefits } from '@/rules/species-legacy'
+import { isSelectionCheckpointActive, manualFeatParentCheckpointId } from '@/rules/feats'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
 import { artificerReplicatePlans2024, getArtificerReplicatedItemLimit2024 } from '@/rules/data/ua-artificer-2024'
 import type { AbilityKey, CharacterDraft, ValidationIssue } from '@/types/character'
 
 export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[] {
   const repository = getRulesRepository(draft.ruleset)
-  const issues: ValidationIssue[] = []
+  const issues: ValidationIssue[] = [...getEquipmentWarnings(draft, repository)]
+  const lineageRecord = getActiveLineageRecord(draft, repository)
+  if (lineageRecord && getSpeciesLegacyBenefits(draft, repository).length !== lineageRecord.retainedKeys.length) issues.push({ id: 'lineage-legacy-inactive', step: 'origin', severity: 'warning', message: '部分先祖遗产缺少有效资料或来源已停用，原选择保留但不生效。', resolution: '启用原种族来源；没有有效遗产时请补选两项技能。' })
+  if (lineageRecord) {
+    for (const grant of draft.manualEdits?.addedFeats ?? []) if (!isSelectionCheckpointActive(draft, manualFeatParentCheckpointId(grant.instanceId))) issues.push({ id: `lineage-feat-inactive-${grant.instanceId}`, step: 'timeline', severity: 'warning', message: `专长「${repository.getFeat(grant.featId)?.name ?? grant.featId}」不满足转化后的种族前置，记录保留但不生效。`, resolution: '复查专长前置条件。' })
+  }
   const requireEnabled = (
     id: string,
     step: ValidationIssue['step'],
@@ -215,7 +223,11 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     issues.push({ id: 'subrace-mismatch', step: 'origin', severity: 'error', message: '所选子种族不属于当前种族。', resolution: '重新选择当前种族的子种族。' })
   }
   const flexibleRule = getFlexibleBonusRule(race, subrace)
-  const flexibleTotalCount = flexibleRule?.flexibleBonusGroups?.reduce((sum, group) => sum + group.count, 0)
+  if (flexibleRule?.flexibleBonusAlternatives?.length && draft.raceAbilityBonusOptionId !== undefined
+    && !flexibleRule.flexibleBonusAlternatives.some((option) => option.id === draft.raceAbilityBonusOptionId)) {
+    issues.push({ id: 'race-ability-option', step: 'abilities', severity: 'error', message: '种族属性加值方案不属于当前种族。', resolution: '重新选择当前种族允许的属性加值方案。' })
+  }
+  const flexibleTotalCount = getFlexibleBonusGroups(flexibleRule, draft.raceAbilityBonusOptionId)?.reduce((sum, group) => sum + group.count, 0)
     ?? flexibleRule?.flexibleBonusCount ?? 0
   if (
     flexibleTotalCount !== draft.raceAbilityChoices.length
@@ -238,7 +250,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       id: 'background-languages',
       step: 'origin',
       severity: 'error',
-      message: draft.ruleset === '5e-2024' ? '语言选择尚未完成。' : '背景语言选择尚未完成。',
+      message: '语言选择尚未完成。',
       resolution: `请选择${requiredLanguages}种不同的额外语言。`,
     })
   }
@@ -272,15 +284,11 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         resolution: allocationIssue,
       })
     }
-    if (originBlockers.some((blocker) => blocker.id === 'species-size-required')) {
-      issues.push({
-        id: 'species-size-required',
-        step: 'origin',
-        severity: 'error',
-        message: '物种需要选择体型。',
-        resolution: '选择小型或中型。',
-      })
-    }
+  }
+
+  if (originBlockers.some((blocker) => blocker.id === 'species-size-required')) {
+    issues.push({ id: 'species-size-required', step: 'origin', severity: 'error',
+      message: draft.ruleset === '5e-2024' ? '物种需要选择体型。' : '种族需要选择体型。', resolution: '选择小型或中型。' })
   }
 
   if (draft.classId) {
@@ -379,6 +387,12 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         )
       ) {
         issues.push({ id: 'spellbook-transcription-invalid', step: 'spells', severity: 'error', message: '抄录记录包含不在法术书中或当前不可用的法术。', resolution: '返回角色卡法术页签检查抄录记录。' })
+      }
+    }
+    for (const checkpoint of getSpeciesChoiceCheckpoints(draft, repository)) {
+      const records = draft.selections.filter((item) => item.checkpointId === checkpoint.id)
+      if (records.length && !getValidSpeciesChoice(draft, repository, checkpoint.id)) {
+        issues.push({ id: `species-choice-invalid-${checkpoint.id}`, step: checkpoint.step, severity: 'error', message: `「${checkpoint.title}」包含失效、重复或不合法的选择。`, resolution: '从当前候选重新确认；原始记录保留，但不会授予收益。' })
       }
     }
     const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
@@ -652,7 +666,7 @@ function validateRaceSkillChoices(draft: CharacterDraft): readonly ValidationIss
   for (const blocker of getSpeciesProficiencyBlockers(draft, repository)) {
     issues.push({ id: blocker.id, step: 'origin', severity: 'error', message: blocker.message, resolution: blocker.resolution })
   }
-  if (race.toolProficiencyChoices && !isGithyanki && !draft.raceToolChoice) {
+  if (race.toolProficiencyChoices && !race.toolProficiencyChoices.required && !isGithyanki && !draft.raceToolChoice) {
     // 工具熟练不参与派生，未选仅提示（不阻塞角色完成）。
     issues.push({
       id: 'race-tool-choice-missing',

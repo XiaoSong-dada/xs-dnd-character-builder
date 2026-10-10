@@ -80,7 +80,7 @@ watch(() => props.editMode, (enabled) => {
       :inputmode="Number.isFinite(minimum) && minimum >= 0 ? 'numeric' : 'text'"
       :aria-label="label"
       @blur="commit"
-      @keydown.enter.prevent="commit"
+      @keydown.enter.stop.prevent="commit"
       @keydown.esc.prevent="cancel"
     >
     <strong v-else>{{ value }}{{ suffix }}</strong>

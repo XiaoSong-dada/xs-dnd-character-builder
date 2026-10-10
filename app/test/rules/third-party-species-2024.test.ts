@@ -95,8 +95,10 @@ const tp2014 = repository2014.races.filter((item) => item.id.startsWith('race-20
 
 describe('G3-I1 第三方 2014 种族', () => {
   it('24 条齐备（胧忆岛 2 + 谦卑林 22），主族 12 + 亚种 12', () => {
-    // tp2014 现含黯潮之书 21 条，故先按来源过滤本批
-    const batch = tp2014.filter((item) => !item.id.startsWith('race-2014-tp-ebt-'))
+    // tp2014 现含黯潮之书 21 条与 X 批次（鬼魅幽谷玩家包／Plane Shift），故按前缀排除其他批次后统计本批
+    const batch = tp2014.filter((item) => !item.id.startsWith('race-2014-tp-ebt-')
+      && !item.id.startsWith('race-2014-tp-gh-')
+      && !item.id.startsWith('race-2014-tp-ps-'))
     expect(batch.length).toBe(24)
     const obojima = batch.filter((item) => item.sourceIds.includes('tp-obojima-index'))
     const humblewood = batch.filter((item) => item.sourceIds.includes('tp-humblewood-index'))
@@ -114,7 +116,9 @@ describe('G3-I1 第三方 2014 种族', () => {
   })
 
   it('父子关系双向一致：父种族 subraceIds 与子种族 parentRaceId 对应', () => {
-    const batch = tp2014.filter((item) => !item.id.startsWith('race-2014-tp-ebt-'))
+    const batch = tp2014.filter((item) => !item.id.startsWith('race-2014-tp-ebt-')
+      && !item.id.startsWith('race-2014-tp-gh-')
+      && !item.id.startsWith('race-2014-tp-ps-'))
     const parents = batch.filter((item) => item.subraceIds.length > 0)
     expect(parents.length).toBe(6)
     for (const parent of parents) {
@@ -128,7 +132,11 @@ describe('G3-I1 第三方 2014 种族', () => {
   })
 
   it('属性加值齐备：固定加值或自选加值至少其一', () => {
-    const batch = tp2014.filter((item) => !item.id.startsWith('race-2014-tp-ebt-'))
+    // 本批 24 条均声明加值；X 批次另含引用 PHB 模板（依尼翠人类为替换式方案，父项无加值）等例外，
+    // 故仅对本批断言。
+    const batch = tp2014.filter((item) => !item.id.startsWith('race-2014-tp-ebt-')
+      && !item.id.startsWith('race-2014-tp-gh-')
+      && !item.id.startsWith('race-2014-tp-ps-'))
     for (const race of batch) {
       const fixed = Object.keys(race.fixedAbilityBonuses).length
       const flexible = (race.flexibleBonusGroups?.length ?? 0) > 0

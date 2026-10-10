@@ -1,13 +1,13 @@
 import { abilityModifier, deriveAbilities, deriveCharacter, proficiencyBonus } from '@/rules/derive'
 import { getFeatChosenAbility, isFeatGrantParentActive, isSelectionCheckpointActive, listActiveFeats, listFeatGrants } from '@/rules/feats'
 import { normalizeManualEdits } from '@/rules/manual-edits'
-import { getDraftSpeciesRules } from '@/rules/origins'
+import { getDraftSpeciesRules, getValidSpeciesChoice } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
 import { getWeaponMasteryCandidates } from '@/rules/weapon-mastery'
 import { isWeaponTrainingCovered } from '@/rules/weapon-training'
 import { abilityFromSpeciesSpellAbilityOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { AbilityKey, CharacterDraft, ChoiceSelection, RulesetId, SpellSelections } from '@/types/character'
+import type { AbilityKey, CharacterDraft, ChoiceSelection, DerivedCharacter, RulesetId, SpellSelections } from '@/types/character'
 import type { ChoiceCheckpoint, FixedSpellGrant, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant, SpellRule } from '@/types/rules'
 
 type SpellcraftDraft = Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds' | 'ruleset'>
@@ -55,7 +55,7 @@ export function getEffectiveSpellSlots(draft: CharacterDraft): readonly SpellSlo
   })
 }
 
-/** 页面、跑团与导出共用：正常已选法术与人工添加法术按 ID 去重。 */
+/** 页面、跑团与导出共用：职业、始终授予及人工法术按 ID 去重。 */
 export function getEffectiveSelectedSpellIds(draft: CharacterDraft): readonly string[] {
   const repository = getRulesRepository(draft.ruleset)
   const config = getSpellcastingConfig(draft)
@@ -70,7 +70,7 @@ export function getEffectiveSelectedSpellIds(draft: CharacterDraft): readonly st
         || item.destination === 'granted'
     })
     .map((item) => item.spellId)
-  return [...new Set([...draft.spellSelections.cantripIds, ...normal, ...manual])]
+  return [...new Set([...draft.spellSelections.cantripIds, ...normal, ...getAlwaysPreparedSpellIds(draft), ...manual])]
 }
 
 /** 人工加入准备列表/法术书、但尚未准备的有环法术。 */
@@ -110,7 +110,7 @@ export function getRequiredCantripCount(draft: CharacterDraft, config: Spellcast
   const repository = getRulesRepository(draft.ruleset)
   let bonus = 0
   for (const selection of draft.selections) {
-    if (selection.invalidatedAt) continue
+    if (selection.invalidatedAt || !isSelectionCheckpointActive(draft, selection.checkpointId)) continue
     for (const optionId of selection.optionIds) bonus += repository.getOption(optionId)?.cantripBonus ?? 0
   }
   return base + bonus
@@ -450,17 +450,102 @@ function resolveSpellListClassId(
 export function collectSpeciesSpellGrants(
   race: RaceRule | undefined,
   targetLevel: number,
+  draft?: CharacterDraft,
 ): readonly SpeciesSpellGrant[] {
-  return (race?.spellGrants ?? []).filter((grant) => grant.minimumLevel <= targetLevel)
+  const parent = draft ? getDraftSpeciesRules(draft, getRulesRepository(draft.ruleset)).find((item) => item.id === race?.parentRaceId) : undefined
+  const ability = draft && race ? getSpeciesSpellAbility(race, draft.selections, draft) ?? (parent ? getSpeciesSpellAbility(parent, draft.selections, draft) : undefined) : undefined
+  const abilitySelected = !(race?.spellcastingAbilityChoices?.length || parent?.spellcastingAbilityChoices?.length) || !draft || Boolean(ability)
+  const fixed = (race?.spellGrants ?? []).filter((grant) => grant.minimumLevel <= targetLevel && (grant.ability || abilitySelected))
+  if (!race?.chosenCantripCheckpointId || !draft) return fixed
+  const selected = getValidSpeciesChoice(draft, getRulesRepository(draft.ruleset), race.chosenCantripCheckpointId)
+  return ability && selected ? [...fixed, ...selected.map((spellId) => ({ spellId, minimumLevel: 1, alwaysPrepared: true, ability, canCastWithSpellSlots: false }))] : fixed
 }
 
 /** 物种法术施法属性：从 `spell-ability-*` 时间线选择解析。 */
 export function getSpeciesSpellAbility(
   race: RaceRule,
   selections: readonly ChoiceSelection[],
+  draft?: CharacterDraft,
 ): AbilityKey | undefined {
-  const selection = selections.find((item) => !item.invalidatedAt && item.checkpointId === `${race.id}-spellcasting-ability`)
-  return abilityFromSpeciesSpellAbilityOption(selection?.optionIds[0])
+  const records = selections.filter((item) => !item.invalidatedAt && item.checkpointId === `${race.id}-spellcasting-ability`)
+  if (records.length !== 1) return undefined
+  const selection = records[0]
+  if (selection?.optionIds.length !== 1) return undefined
+  const ability = abilityFromSpeciesSpellAbilityOption(selection.optionIds[0])
+  const choice = race.choices?.find((item) => item.id === `${race.id}-spellcasting-ability`)
+  if (choice && draft && !getValidSpeciesChoice(draft, getRulesRepository(draft.ruleset), choice.id)) return undefined
+  return ability && (race.spellcastingAbilityChoices?.includes(ability) || choice?.optionIds.includes(selection.optionIds[0] ?? '')) ? ability : undefined
+}
+
+export interface SpeciesSpellcastingProfile {
+  readonly id: string
+  readonly sourceId: string
+  readonly sourceName: string
+  readonly ability: AbilityKey
+  readonly spellIds: readonly string[]
+  readonly materialFreeSpellIds: readonly string[]
+  readonly castingNotes: readonly string[]
+  readonly attackBonus: number
+  readonly saveDc: number
+}
+
+/** 种族施法不继承职业施法的人工修正；属性与熟练修正仍参与计算。 */
+export function getSpeciesSpellcastingProfiles(
+  draft: CharacterDraft,
+  derived: DerivedCharacter = deriveCharacter(draft),
+): readonly SpeciesSpellcastingProfile[] {
+  const repository = getRulesRepository(draft.ruleset)
+  const races = getDraftSpeciesRules(draft, repository)
+  const inheritedAbility = races.map((race) => getSpeciesSpellAbility(race, draft.selections, draft))
+    .find((ability): ability is AbilityKey => Boolean(ability))
+  return races.flatMap((race) => {
+    const groups = new Map<AbilityKey, { spellIds: Set<string>; materialFreeSpellIds: Set<string>; castingNotes: string[] }>()
+    for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel, draft)) {
+      const ability = grant.ability ?? getSpeciesSpellAbility(race, draft.selections, draft) ?? inheritedAbility
+      if (!ability || !repository.getSpell(grant.spellId)) continue
+      const group = groups.get(ability) ?? { spellIds: new Set<string>(), materialFreeSpellIds: new Set<string>(), castingNotes: [] }
+      group.spellIds.add(grant.spellId)
+      if (grant.waivesMaterialComponents || grant.waivedComponents?.includes('material')) group.materialFreeSpellIds.add(grant.spellId)
+      const note = speciesCastingNote(grant)
+      if (note) group.castingNotes.push(`${repository.getSpell(grant.spellId)?.name}：${note}`)
+      groups.set(ability, group)
+    }
+    return [...groups].map(([ability, group]) => {
+      const attackBonus = derived.proficiencyBonus.value + derived.modifiers[ability]
+      return {
+        id: `${race.id}-spellcasting-${ability}`, sourceId: race.id, sourceName: race.name,
+        ability, spellIds: [...group.spellIds], materialFreeSpellIds: [...group.materialFreeSpellIds], castingNotes: group.castingNotes, attackBonus, saveDc: 8 + attackBonus,
+      }
+    })
+  })
+}
+
+function speciesCastingNote(grant: SpeciesSpellGrant): string {
+  const components = grant.waivedComponents ?? (grant.waivesMaterialComponents ? ['material'] : [])
+  const componentNames = components.map((component) => component === 'verbal' ? '语言' : component === 'somatic' ? '姿势' : '材料')
+  const componentNote = components.length === 3 ? '无需语言、姿势及材料成分（不免专注）' : componentNames.length ? `无需${componentNames.join('、')}成分（种族施放；不免专注）` : ''
+  return [componentNote, grant.targetRestriction === 'snakes-only' ? '仅限蛇' : grant.targetRestriction === 'self-only' ? '仅限自身' : '', grant.atWill ? '不限次数，不耗法术位' : '', grant.castingLevel ? `种族免费施放为${grant.castingLevel}环` : '', grant.canCastWithSpellSlots === false ? '此授予不许可法术位施放' : '', grant.castingNote ?? ''].filter(Boolean).join('；')
+}
+
+export function getSpeciesCastingMethods(draft: CharacterDraft, spellId: string): readonly (SpeciesSpellGrant & { readonly sourceId: string; readonly sourceName: string; readonly ability: AbilityKey; readonly note: string })[] {
+  const repository = getRulesRepository(draft.ruleset)
+  const races = getDraftSpeciesRules(draft, repository)
+  const inheritedAbility = races.map((race) => getSpeciesSpellAbility(race, draft.selections, draft)).find((ability): ability is AbilityKey => Boolean(ability))
+  return races.flatMap((race) => collectSpeciesSpellGrants(race, draft.targetLevel, draft).flatMap((grant) => {
+    const ability = grant.ability ?? getSpeciesSpellAbility(race, draft.selections, draft) ?? inheritedAbility
+    return grant.spellId === spellId && ability ? [{ ...grant, sourceId: race.id, sourceName: race.name, ability, note: speciesCastingNote(grant) }] : []
+  }))
+}
+
+/** 同名职业/手动法术不继承种族的目标限制或成分豁免。 */
+export function canCastSpellWithSlots(draft: CharacterDraft, spellId: string): boolean {
+  const methods = getSpeciesCastingMethods(draft, spellId)
+  return methods.some((method) => method.canCastWithSpellSlots !== false) || canCastSpellWithNonSpeciesSlots(draft, spellId)
+}
+
+export function canCastSpellWithNonSpeciesSlots(draft: CharacterDraft, spellId: string): boolean {
+  const withoutSpecies = { ...draft, raceId: undefined, subraceId: undefined }
+  return getEffectiveSelectedSpellIds(withoutSpecies).includes(spellId)
 }
 
 /** 检查点或专长子选择声明的始终准备法术（法术精通、招牌法术、专长授予等）。 */
@@ -468,7 +553,7 @@ function selectionAlwaysPreparedSpellIds(draft: CharacterDraft, repository: Rule
   const ids: string[] = []
   const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
   for (const selection of draft.selections) {
-    if (selection.invalidatedAt) continue
+    if (selection.invalidatedAt || !isSelectionCheckpointActive(draft, selection.checkpointId)) continue
     if (selection.checkpointId.startsWith('feat-child:')) {
       const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
       if (!parentCheckpointId || !featId || !isFeatGrantParentActive(draft, parentCheckpointId, featId)) continue
@@ -529,7 +614,7 @@ export function getAlwaysPreparedSpellIds(draft: CharacterDraft): readonly strin
   }
   // 物种授予（血统法术等，按获得等级生效）。
   for (const race of getDraftSpeciesRules(draft, repository)) {
-    for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel)) {
+    for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel, draft)) {
       if (grant.alwaysPrepared !== false) ids.add(grant.spellId)
     }
   }
@@ -542,6 +627,7 @@ export function getAlwaysPreparedSpellIds(draft: CharacterDraft): readonly strin
 
 /** 免费施法资源（每休息次数）：来自专长／物种／职业与子职特性／选项声明；跑团结算见 `session-resources`。 */
 export interface FreeCastingGrant {
+  readonly castingLevel?: number
   readonly spellId: string
   /** 稳定来源标识（特性 id、专长／检查点组合键、物种 id 或选项 id）。 */
   readonly sourceId: string
@@ -574,12 +660,13 @@ export function getSpellFreeCastings(
     count: number,
     recovery: 'long-rest' | 'short-rest',
     ability?: AbilityKey,
+    castingLevel?: number,
   ): void => {
     const key = `${sourceId}:${spellId}`
     if (seen.has(key) || count <= 0) return
     if (!repository.getSpell(spellId)) return
     seen.add(key)
-    grants.push({ spellId, sourceId, sourceName, count, recovery, ability })
+    grants.push({ spellId, sourceId, sourceName, count, recovery, ability, ...(castingLevel === undefined ? {} : { castingLevel }) })
   }
   // 专长固定授予
   for (const featGrant of listFeatGrants(draft, repository)) {
@@ -598,7 +685,7 @@ export function getSpellFreeCastings(
   }
   // 专长子选择授予（所选法术）
   for (const selection of draft.selections) {
-    if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:')) continue
+    if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:') || !isSelectionCheckpointActive(draft, selection.checkpointId)) continue
     const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
     // 孤立选择（换背景／物种后残留的旧起源专长检查点）不再授予免费施法。
     if (parentCheckpointId && !isSelectionCheckpointActive(draft, parentCheckpointId)) continue
@@ -651,11 +738,11 @@ export function getSpellFreeCastings(
   // 物种授予（血统法术的免费次数）；施法属性从物种链上的属性选择解析。
   const speciesRules = getDraftSpeciesRules(draft, repository)
   const speciesAbility = speciesRules
-    .map((race) => getSpeciesSpellAbility(race, draft.selections))
+    .map((race) => getSpeciesSpellAbility(race, draft.selections, draft))
     .find((ability): ability is AbilityKey => Boolean(ability))
   for (const race of speciesRules) {
-    for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel)) {
-      push(grant.spellId, race.id, race.name, countOf(grant), grant.recovery ?? 'long-rest', grant.ability ?? speciesAbility)
+    for (const grant of collectSpeciesSpellGrants(race, draft.targetLevel, draft)) {
+      push(grant.spellId, race.id, race.name, countOf(grant), grant.recovery ?? 'long-rest', grant.ability ?? getSpeciesSpellAbility(race, draft.selections, draft) ?? speciesAbility, grant.castingLevel)
     }
   }
   return grants

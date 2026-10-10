@@ -23,6 +23,7 @@ export interface FeatEligibilityContext {
   readonly canCastSpells: boolean
   readonly raceId?: string
   readonly subraceId?: string
+  readonly raceAliasIds?: readonly string[]
   /** 获得节点等级；2024 条目在缺少等级时视为不满足等级前置。 */
   readonly level?: number
   /** 是否拥有战斗风格特性（职业或子职授予）。 */
@@ -61,6 +62,7 @@ export function manualFeatParentCheckpointId(instanceId: string): string {
 
 /** 系统／手动授予共用的父实例存活判断，避免已移除手动专长的孤立子选择继续派生。 */
 export function isFeatGrantParentActive(draft: CharacterDraft, parentCheckpointId: string, featId: string): boolean {
+  if (!isSelectionCheckpointActive(draft, parentCheckpointId)) return false
   if (parentCheckpointId.startsWith('manual-feat-')) {
     return (draft.manualEdits?.addedFeats ?? []).some((grant) =>
       manualFeatParentCheckpointId(grant.instanceId) === parentCheckpointId && grant.featId === featId)
@@ -240,7 +242,7 @@ export function getFeatEligibility(
   }
   const requiredCapability = selectedFeat.prerequisite?.requiredCapability
   const requiredRaces = selectedFeat.prerequisite?.requiredRaceIds
-  if (requiredRaces && !requiredRaces.includes(context.raceId ?? '')) reasons.push('种族前置不满足')
+  if (requiredRaces && !requiredRaces.some((id) => id === context.raceId || context.raceAliasIds?.includes(id))) reasons.push('种族前置不满足')
   const requiredSubraces = selectedFeat.prerequisite?.requiredSubraceIds
   if (requiredSubraces && !requiredSubraces.includes(context.subraceId ?? '')) reasons.push('子种族前置不满足')
   const requiredFeatIds = selectedFeat.prerequisite?.requiredFeatIds
@@ -281,7 +283,8 @@ export function getFeatPool(
   options: { readonly level?: number; readonly enabledSourceIds?: readonly string[] } = {},
 ): readonly FeatRule[] {
   return repository.feats.filter((feat) => {
-    if (!feat.category || !categories.includes(feat.category)) return false
+    const category = feat.category ?? (repository.ruleset === '5e-2014' ? 'general' : undefined)
+    if (!category || !categories.includes(category)) return false
     if (feat.status === 'unavailable') return false
     const minimumLevel = feat.prerequisite?.minimumLevel ?? 0
     if (options.level !== undefined && minimumLevel > options.level) return false
@@ -311,15 +314,46 @@ export function originFeatOwnerId(checkpointId: string): string | undefined {
  * 专长子选择（`feat-child:<父检查点>:...`）随父检查点一并判定；其它检查点不受影响。
  */
 export function isSelectionCheckpointActive(draft: CharacterDraft, checkpointId: string): boolean {
+  const repository = getRulesRepository(draft.ruleset)
+  const currentRace = draft.raceId ? repository.getRace(draft.raceId) : undefined
+  if (currentRace?.lineage && draft.lineageHistory?.length) {
+    const feats = checkpointId.startsWith('manual-feat-')
+      ? (draft.manualEdits?.addedFeats ?? []).filter((grant) => manualFeatParentCheckpointId(grant.instanceId) === checkpointId).map((grant) => repository.getFeat(grant.featId))
+      : draft.selections.filter((item) => item.checkpointId === checkpointId && !item.invalidatedAt).flatMap((item) => item.optionIds.map((id) => repository.getFeat(id)))
+    if (feats.some((feat) => (feat?.prerequisite?.requiredRaceIds && !feat.prerequisite.requiredRaceIds.includes(currentRace.id)) || (feat?.prerequisite?.requiredSubraceIds && !feat.prerequisite.requiredSubraceIds.includes(draft.subraceId ?? '')))) return false
+  }
   if (checkpointId.startsWith('manual-feat-')) {
     return (draft.manualEdits?.addedFeats ?? []).some((grant) => manualFeatParentCheckpointId(grant.instanceId) === checkpointId)
   }
   const ownerId = originFeatOwnerId(checkpointId)
   if (ownerId) {
-    return ownerId === draft.backgroundId || ownerId === draft.raceId || ownerId === draft.subraceId
+    if (ownerId !== draft.backgroundId && ownerId !== draft.raceId && ownerId !== draft.subraceId) return false
+    const repository = getRulesRepository(draft.ruleset)
+    const owner = repository.getRace(ownerId) ?? repository.getBackground(ownerId)
+    if (!owner || !isSourceEnabled(owner.sourceIds, draft.enabledSourceIds, repository)) return false
+    if (ownerId === 'race-2014-custom-lineage') {
+      const records = draft.selections.filter((item) => item.checkpointId === checkpointId && !item.invalidatedAt)
+      const feat = records.length === 1 && records[0]?.optionIds.length === 1 ? repository.getFeat(records[0].optionIds[0] ?? '') : undefined
+      if (!feat || (feat.category ?? 'general') !== 'general' || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) return false
+      const key = draft.raceAbilityChoices.length === 1 ? draft.raceAbilityChoices[0] : undefined
+      const abilities = { ...draft.baseAbilities }
+      if (key && ABILITY_KEYS.includes(key) && abilities[key] + 2 <= 20) abilities[key] += 2
+      const config = repository.getSpellcastingConfig(draft)
+      return getFeatEligibility(feat, { abilities, classId: draft.classId ?? '', canCastSpells: Boolean(config && config.startsAtLevel <= 1), raceId: draft.raceId, level: 1, acquiredFeatIds: [], acquiredFeatTags: [] }).available
+    }
+    return true
   }
   if (checkpointId.startsWith('feat-child:')) {
     const parentCheckpointId = checkpointId.split(':')[1]
+    if (parentCheckpointId === 'race-2014-custom-lineage-origin-feat') {
+      const [, , featId, choiceId] = checkpointId.split(':')
+      const choice = featId ? repository.getFeat(featId)?.choices?.find((item) => item.id === choiceId) : undefined
+      const records = draft.selections.filter((item) => item.checkpointId === checkpointId && !item.invalidatedAt)
+      const ids = records.length === 1 ? records[0]?.optionIds ?? [] : []
+      if (!choice || ids.length < choice.minSelections || ids.length > choice.maxSelections || new Set(ids).size !== ids.length) return false
+      if (choice.optionIds.length && ids.some((id) => !choice.optionIds.includes(id))) return false
+      if ((choice.candidateKind === 'all-skills' || choice.candidateKind === 'proficient-skills') && ids.some((id) => !SKILL_IDS.includes(id))) return false
+    }
     return parentCheckpointId ? isSelectionCheckpointActive(draft, parentCheckpointId) : true
   }
   return true
@@ -376,6 +410,7 @@ export function listFeatGrants(draft: CharacterDraft, repository: RulesRepositor
     }
   }
   for (const manualGrant of draft.manualEdits?.addedFeats ?? []) {
+    if (!isSelectionCheckpointActive(draft, manualFeatParentCheckpointId(manualGrant.instanceId))) continue
     const feat = repository.getFeat(manualGrant.featId)
     if (!feat || !isSourceEnabled(feat.sourceIds, draft.enabledSourceIds, repository)) continue
     grants.push({
@@ -454,7 +489,7 @@ export function collectFeatSkillSelections(draft: CharacterDraft, repository: Ru
   const conditional: string[] = []
   const allSkills = listActiveFeats(draft, repository).some((feat) => feat.grantsAllSkillProficiencies === true)
   for (const selection of draft.selections) {
-    if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:')) continue
+    if (selection.invalidatedAt || !selection.checkpointId.startsWith('feat-child:') || !isSelectionCheckpointActive(draft, selection.checkpointId)) continue
     const [, parentCheckpointId, featId, choiceId] = selection.checkpointId.split(':')
     const feat = featId ? repository.getFeat(featId) : undefined
     if (!feat) continue
@@ -481,7 +516,9 @@ export function collectFeatSkillSelections(draft: CharacterDraft, repository: Ru
 export function collectArmorTrainings(draft: CharacterDraft, repository: RulesRepository): readonly ArmorTraining[] {
   const trainings = new Set<ArmorTraining>()
   const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
-  for (const training of classRule?.armorTraining ?? []) trainings.add(training)
+  if (classRule && isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds, repository)) {
+    for (const training of classRule.armorTraining ?? []) trainings.add(training)
+  }
   for (const feat of listActiveFeats(draft, repository)) {
     for (const training of feat.armorTraining ?? []) trainings.add(training)
   }
@@ -489,13 +526,18 @@ export function collectArmorTrainings(draft: CharacterDraft, repository: RulesRe
   for (const selection of draft.selections) {
     if (selection.invalidatedAt) continue
     for (const optionId of selection.optionIds) {
-      for (const training of repository.getOption(optionId)?.armorTraining ?? []) trainings.add(training)
+      const option = repository.getOption(optionId)
+      if (!option || !isSourceEnabled(option.sourceIds, draft.enabledSourceIds, repository)) continue
+      for (const training of option.armorTraining ?? []) trainings.add(training)
     }
   }
   // 子职特性可授予训练（如 2024 勇气学院·战争训练）。
   const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
   for (const feature of subclass?.features ?? []) {
     if (feature.level > draft.targetLevel) continue
+    if (!subclass || subclass.classId !== draft.classId
+      || !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)
+      || !isSourceEnabled(feature.sourceIds, draft.enabledSourceIds, repository)) continue
     for (const training of feature.armorTraining ?? []) trainings.add(training)
   }
   return [...trainings]
@@ -555,6 +597,7 @@ export function getFeatChosenAbility(
   if (!parentCheckpointId) return undefined
   const selection = draft.selections.find((item) =>
     item.checkpointId === `feat-child:${parentCheckpointId}:${featId}:ability` && !item.invalidatedAt)
+  if (selection && !isSelectionCheckpointActive(draft, selection.checkpointId)) return undefined
   for (const optionId of selection?.optionIds ?? []) {
     const decoded = decodeFeatBonusOption(optionId)
     if (decoded) return decoded.ability

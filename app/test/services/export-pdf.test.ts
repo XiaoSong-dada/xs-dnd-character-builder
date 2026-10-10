@@ -55,6 +55,24 @@ const REQUIRED_FIRST_PAGE_FIELDS = [
 const REQUIRED_PROFILE_FIELDS = ['CharacterName 2', 'Backstory', 'Feat+Traits', 'Treasure'] as const
 
 describe('export-pdf v7 国内 5E 术语版表单适配器', () => {
+  it('2014仙灵非施法职业的等级法术、种族数值与飞行限制可写入真实模板', async () => {
+    const draft = draft2024({ ruleset: '5e-2014', classId: 'class-2014-fighter', targetLevel: 5,
+      raceId: 'race-2014-motm-fairy', enabledSourceIds: ['motm-2022-index'], raceAbilityChoices: ['str', 'dex'],
+      selections: [selection('race-2014-motm-fairy-spellcasting-ability', ['spell-ability-wis'])],
+    })
+    const model = buildCharacterExportModel(draft, deriveCharacter(draft))
+    expect(model.spellcasting).toMatchObject({ className: '仙灵', abilityLabel: '感知', attackBonus: 4, saveDc: 12, slots: [] })
+    expect(model.spellcasting?.spells.map((spell) => spell.level)).toEqual([0, 1, 2])
+    expect(model.features).toContainEqual(expect.objectContaining({ id: 'race-2014-motm-fairy-flight', summary: expect.stringContaining('穿中甲或重甲时不可使用') }))
+    const result = await fillPdfTemplate(template(), font(), model)
+    expect(result.diagnostics.filter((item) => item.severity === 'error' || item.field.startsWith('spells.'))).toEqual([])
+    const { PDFDocument } = await import('pdf-lib')
+    const document = await PDFDocument.load(result.bytes)
+    expect(document.getPageCount()).toBe(3)
+    expect(document.getForm().getFields()).toHaveLength(0)
+    expect(await inspectGeneratedPdfFont(result.bytes)).toEqual({ embeddedRegularFontCount: 1, hasNeedAppearances: false, widgetCount: 0 })
+  }, 30_000)
+
   it('运行时瘦身模板完整保留源模板页面、字段和 Widget 结构', async () => {
     expect(await templateStructure(template())).toEqual(await templateStructure(baselineTemplate()))
     expect(template().byteLength).toBeLessThanOrEqual(5 * 1024 * 1024)

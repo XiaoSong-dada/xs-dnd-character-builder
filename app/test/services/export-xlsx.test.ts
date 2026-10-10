@@ -20,6 +20,29 @@ async function loadTemplate(): Promise<Workbook> {
 }
 
 describe('export-xlsx v4 模板契约', () => {
+  it('2014仙灵种族施法与法术字段写入并序列化保持，飞行限制进入特性', async () => {
+    const draft = draft2024({ ruleset: '5e-2014', classId: 'class-2014-fighter', targetLevel: 5,
+      raceId: 'race-2014-motm-fairy', enabledSourceIds: ['twbtw-2021-index'], raceAbilityChoices: ['str', 'dex'],
+      selections: [selection('race-2014-motm-fairy-spellcasting-ability', ['spell-ability-wis'])],
+    })
+    const model = buildCharacterExportModel(draft, deriveCharacter(draft))
+    const { values } = buildXlsxFieldValues(model)
+    expect(values).toMatchObject({ spellcasting_ability: '感知', spell_save_dc: 12, spell_attack_bonus: 4 })
+    expect(`${values.features_traits}\n${values.additional_features}`).toContain('穿中甲或重甲时不可使用')
+    const workbook = await loadTemplate()
+    expect(fillTemplate(workbook, model).diagnostics.filter((item) => item.severity === 'error')).toEqual([])
+    const ExcelJS = await import('exceljs')
+    const reloaded = new ExcelJS.Workbook()
+    await reloaded.xlsx.load(await workbook.xlsx.writeBuffer())
+    const mapping = readFieldMapping(reloaded)
+    for (const [key, value] of Object.entries(values).filter(([key]) => /^spell_\d+_\d+_name$/.test(key))) {
+      const target = mapping.get(key)
+      expect(target).toBeDefined()
+      expect(reloaded.getWorksheet(target?.sheet ?? '')?.getCell(target?.address ?? 'A1').value).toBe(value)
+    }
+    expect(Object.values(values)).toContain(model.spellcasting?.spells[2]?.name)
+  }, 30_000)
+
   it('包含版本、字段类型、必需级别和 196 个法术字段', async () => {
     const workbook = await loadTemplate()
     const mapping = readFieldMapping(workbook)

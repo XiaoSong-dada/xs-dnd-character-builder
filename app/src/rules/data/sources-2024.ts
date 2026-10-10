@@ -176,6 +176,7 @@ export const sources2024: readonly RuleSource[] = [
     contentKind: 'legacy',
   },
   // ===== G2 批次：官方 2024 扩展（合作内容区）=====
+  { id: 'source-2024-lfl', title: '洛温：初光', shortTitle: '洛温初光', ruleset: '5e-2024', category: 'supplement', selectable: true, contentKind: 'official' },
   {
     id: 'source-2024-efa',
     title: '艾伯伦：奇械锻炉',
@@ -294,12 +295,37 @@ export const sources2024: readonly RuleSource[] = [
   },
   {
     id: 'source-2024-tp-beyond-drops',
-    title: 'Beyond Drops（第三方·试行内容）',
+    // R4（2026-10-10 用户裁定）：经核验，Beyond Drops 是 WotC 通过 D&D Beyond 免费发布的官方数字专栏
+    // （非合作、非自制），故就地修订分类与标题口径；条目 ID 不变，仍默认关闭、需 DM 同意。
+    title: 'Beyond Drops（官方数字专栏，需 DM 同意）',
     shortTitle: 'Beyond Drops',
+    ruleset: '5e-2024',
+    category: 'supplement',
+    selectable: true,
+    contentKind: 'official',
+    defaultEnabled: false,
+  },
+  // ===== X02：第三方 2024 写法来源 =====
+  {
+    id: 'source-2024-tp-exploring-eberron',
+    // 经 WotC 授权的 DMs Guild 合作内容（非官方产品）；原书 2020 年出版另有 5.5e 版本线，
+    // 规则集按本地正文版式判定为 2024 写法，故登记在 2024 注册表。
+    title: '探秘艾伯伦（第三方合作）',
+    shortTitle: '探秘艾伯伦',
     ruleset: '5e-2024',
     category: 'supplement',
     selectable: true,
     contentKind: 'third-party',
     defaultEnabled: false,
+  },
+  // ===== X05：破解奥秘（UA）游玩测试来源 =====
+  {
+    id: 'source-2024-ua-underdark',
+    title: '破解奥秘：幽暗地域二期',
+    shortTitle: 'UA 幽暗地域二期',
+    ruleset: '5e-2024',
+    category: 'supplement',
+    selectable: true,
+    contentKind: 'playtest',
   },
 ]

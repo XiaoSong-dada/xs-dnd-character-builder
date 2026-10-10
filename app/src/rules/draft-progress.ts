@@ -18,6 +18,7 @@ export function hasBuildChoices(draft: Pick<CharacterDraft,
   | 'infusionAssignments'
   | 'raceSkillChoices'
   | 'raceToolChoice'
+  | 'raceToolChoices'
   | 'backgroundSkillIds'
   | 'backgroundToolIds'
   | 'languages'
@@ -34,7 +35,7 @@ export function hasBuildChoices(draft: Pick<CharacterDraft,
   ) return true
   if ((draft.startingEquipmentSelections?.length ?? 0) > 0 || (draft.inventory?.length ?? 0) > 0) return true
   if ((draft.infusionAssignments?.length ?? 0) > 0) return true
-  if ((draft.raceSkillChoices?.length ?? 0) > 0 || draft.raceToolChoice) return true
+  if ((draft.raceSkillChoices?.length ?? 0) > 0 || draft.raceToolChoice || draft.raceToolChoices?.length) return true
   if ((draft.backgroundSkillIds?.length ?? 0) > 0 || (draft.backgroundToolIds?.length ?? 0) > 0) return true
   if ((draft.languages?.length ?? 0) > 0) return true
   return false

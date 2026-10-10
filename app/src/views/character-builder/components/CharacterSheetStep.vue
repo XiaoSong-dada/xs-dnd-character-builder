@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { getEffectiveSpeciesFeatures } from '@/rules/origins'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import AddItemModal from '@/components/AddItemModal.vue'
 import AdjustItemModal from '@/components/AdjustItemModal.vue'
+import InventoryEquipmentToggle from '@/components/InventoryEquipmentToggle.vue'
 import AddManualSpellModal from '@/views/character-builder/components/AddManualSpellModal.vue'
 import AddManualFeatModal from '@/views/character-builder/components/AddManualFeatModal.vue'
 import ManualFeatConfigModal from '@/views/character-builder/components/ManualFeatConfigModal.vue'
@@ -18,9 +20,10 @@ import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, formatFeatGrantSource, getCheckpointSelectionBounds, getFeatStructuredEffectLabels, manualFeatParentCheckpointId, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { isSourceEnabled } from '@/rules/source-books'
-import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
-import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellCandidates, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
+import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSpellCandidates, getSpeciesSpellcastingProfiles, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
 import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, ChoiceSelection, DerivedCharacter, InventoryEntry, ManualAddedSpell, ManualFeatGrant, SpellSelections } from '@/types/character'
@@ -40,6 +43,7 @@ const emit = defineEmits<{
   exportXlsx: []
   adjustLevel: []
   reedit: []
+  transformLineage: []
   changeSpellSelections: [value: SpellSelections]
   changeInventory: [inventory: readonly InventoryEntry[]]
   changeAdventureGold: [adventureGold: number]
@@ -49,6 +53,7 @@ const emit = defineEmits<{
 }>()
 /** 角色卡解析与名称一律使用草稿版本仓库（B09-02）。 */
 const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const equipmentWarnings = computed(() => getEquipmentWarnings(props.draft, repository.value))
 const showMediaEditor = ref(false)
 const showAddFeatModal = ref(false)
 const configuringManualFeat = ref<ManualFeatGrant>()
@@ -122,6 +127,7 @@ const identityLine = computed(() => {
   return `${draft.targetLevel}级 · ${names.join(' · ')}`
 })
 const spellcastingConfig = computed(() => getSpellcastingConfig(props.draft))
+const speciesSpellcastingProfiles = computed(() => getSpeciesSpellcastingProfiles(props.draft, props.derived))
 const spellSlots = computed(() => getEffectiveSpellSlots(props.draft))
 const editableSpellSlots = computed(() => Array.from({ length: 9 }, (_, index) => ({
   level: index + 1,
@@ -136,18 +142,15 @@ const spellSlotsLabel = computed(() => {
   return spellSlots.value.map((slot) => `${slot.level}环×${slot.count}`).join(' · ')
 })
 const manualSpellIds = computed(() => new Set(editing.manual.value.addedSpells.map((item) => item.spellId)))
-const cantripSpells = computed(() => props.draft.spellSelections.cantripIds
+const cantripSpells = computed(() => getEffectiveSelectedSpellIds(props.draft)
   .filter((id) => !manualSpellIds.value.has(id))
   .map((id) => repository.value.getSpell(id))
-  .filter((spell): spell is SpellRule => Boolean(spell)))
+  .filter((spell): spell is SpellRule => Boolean(spell) && spell?.level === 0))
 const preparedOrKnownSpells = computed(() => {
-  const config = spellcastingConfig.value
-  if (!config) return []
-  // 已准备 / 已掌握法术以规则层 getSelectedSpellIds 为唯一事实源（覆盖 spellbook/prepared/known/pact 四种模式）。
-  return getSelectedSpellIds(props.draft, config)
+  return getEffectiveSelectedSpellIds(props.draft)
     .filter((id) => !manualSpellIds.value.has(id))
     .map((id) => repository.value.getSpell(id))
-    .filter((spell): spell is SpellRule => Boolean(spell))
+    .filter((spell): spell is SpellRule => Boolean(spell) && (spell?.level ?? 0) > 0)
 })
 const manualAddedSpells = computed(() => editing.manual.value.addedSpells
   .map((entry) => ({ entry, spell: repository.value.getSpell(entry.spellId) }))
@@ -178,12 +181,7 @@ const normalSpellbookCount = computed(() => props.draft.spellSelections.spellboo
   .filter((id) => !props.draft.spellSelections.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
 /** 已准备 / 已掌握法术按环级分组（戏法由 cantripSpells 单独展示）。 */
 const spellGroups = computed(() => {
-  const config = spellcastingConfig.value
-  if (!config) return []
-  const maximumLevel = getMaximumSpellLevel(config, props.draft.targetLevel)
-  return Array.from({ length: maximumLevel }, (_, index) => index + 1)
-    .map((level) => ({ level, spells: preparedOrKnownSpells.value.filter((spell) => spell.level === level) }))
-    .filter((group) => group.spells.length)
+  return groupSpellsByLevel(preparedOrKnownSpells.value, props.draft.ruleset)
 })
 const preparedOrKnownLabel = computed(() => (spellcastingConfig.value?.mode === 'prepared' || spellcastingConfig.value?.mode === 'spellbook' ? '已准备' : '已掌握'))
 /** 候选池：prepared 职业可选未准备的法术（1 环起）。 */
@@ -378,6 +376,9 @@ function isPreparedSpell(id: string): boolean {
 }
 /** 物品页签：已装备（equippedQuantity > 0）与全部物品栏条目。 */
 const equippedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity > 0))
+function toggleEquipment(entryId: string): void {
+  emit('changeInventory', toggleInventoryEquipment(props.draft.inventory, entryId, repository.value))
+}
 function equipmentName(itemId: string): string {
   return repository.value.getEquipment(itemId)?.name ?? itemId
 }
@@ -603,8 +604,7 @@ const raceInfo = computed(() => {
   if (!raceId) return undefined
   const race = repository.value.getRace(raceId)
   if (!race) return undefined
-  const features = getRulesRepository(props.draft.ruleset).getRaceFeatures(raceId)
-    .filter((feature) => feature.level <= props.draft.targetLevel)
+  const features = getEffectiveSpeciesFeatures(props.draft, repository.value, raceId, props.derived)
   return { race, features }
 })
 /** 子种族特性（仅子种族自身条目，父项特性不重复展示）。 */
@@ -613,8 +613,7 @@ const subraceInfo = computed(() => {
   if (!subraceId || subraceId === props.draft.raceId) return undefined
   const race = repository.value.getRace(subraceId)
   if (!race) return undefined
-  const features = getRulesRepository(props.draft.ruleset).getRaceFeatures(subraceId)
-    .filter((feature) => feature.level <= props.draft.targetLevel)
+  const features = getEffectiveSpeciesFeatures(props.draft, repository.value, subraceId, props.derived)
   return { race, features }
 })
 /** 背景特性（变体背景沿用父背景特性条目）。 */
@@ -683,6 +682,7 @@ function handleExportPdf(): void {
               >更多{{ showMoreActions ? ' ▴' : ' ▾' }}</button>
               <div v-if="showMoreActions" id="character-sheet-more-actions" ref="morePanelRef" class="character-sheet__more-panel">
                 <button type="button" class="character-sheet__more-action" @click="showMediaEditor = true; showMoreActions = false">编辑角色形象</button>
+                <button v-if="draft.ruleset === '5e-2014'" type="button" class="character-sheet__more-action" @click="$emit('transformLineage'); showMoreActions = false">血统转化</button>
                 <button v-if="editing.hasEdits.value" type="button" class="character-sheet__more-action character-sheet__more-action--danger" @click="editing.showResetConfirm.value = true; showMoreActions = false">恢复系统默认</button>
               </div>
             </template>
@@ -692,6 +692,9 @@ function handleExportPdf(): void {
       <CharacterMediaImage v-if="draft.media?.portrait" class="character-sheet__portrait" :media-id="draft.media.portrait.mediaId" decorative :focus-x="draft.media.portrait.focusX" :focus-y="draft.media.portrait.focusY" />
     </header>
     <UiTabs v-model="activeTab" :items="tabs" />
+    <UiNotice v-for="issue in equipmentWarnings" :key="issue.id" tone="warning" title="装备提示">
+      {{ issue.message }} {{ issue.resolution }}
+    </UiNotice>
     <div v-if="activeTab === 'overview'" class="character-sheet__stats">
       <EditableStatTile label="护甲等级" :value="derived.armorClass.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.armorClass.sources)" @commit="editing.commitDerived('armorClass', $event)" />
       <EditableStatTile label="最大生命值" :value="derived.hitPoints.value" :minimum="1" :edit-mode="editing.editMode.value" :note="sourceNote(derived.hitPoints.sources)" @commit="editing.commitDerived('hitPoints', $event)" />
@@ -705,6 +708,11 @@ function handleExportPdf(): void {
       <div class="character-sheet__combat-stats">
         <EditableStatTile label="武器命中加值" :value="derived.attackBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.attackBonus.sources)" @commit="editing.commitDerived('attackBonus', $event)" />
         <EditableStatTile label="武器伤害加值" :value="derived.attackDamageBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.attackDamageBonus.sources)" @commit="editing.commitDerived('attackDamageBonus', $event)" />
+      </div>
+      <h3>使用灵巧武器</h3>
+      <div class="character-sheet__combat-stats">
+        <EditableStatTile label="武器命中加值" :value="derived.dexterityAttackBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.dexterityAttackBonus.sources)" @commit="editing.commitDerived('dexterityAttackBonus', $event)" />
+        <EditableStatTile label="武器伤害加值" :value="derived.dexterityAttackDamageBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.dexterityAttackDamageBonus.sources)" @commit="editing.commitDerived('dexterityAttackDamageBonus', $event)" />
       </div>
     </div>
     <div v-else-if="activeTab === 'features'" class="character-sheet__derived">
@@ -897,6 +905,14 @@ function handleExportPdf(): void {
         <EditableStatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? 0" :minimum="0" :edit-mode="editing.editMode.value" :note="derived.spellSaveDc ? sourceNote(derived.spellSaveDc.sources) : '当前职业无施法能力'" @commit="editing.commitDerived('spellSaveDc', $event)" />
       </div>
       <p v-if="spellSlots.length && !editing.editMode.value" class="character-sheet__spell-slots">法术位：{{ spellSlotsLabel }}</p>
+      <section v-if="speciesSpellcastingProfiles.length" class="character-sheet__spell-section">
+        <h4>种族施法</h4>
+        <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
+          {{ profile.sourceName }} · {{ abilityLabel(profile.ability) }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }}
+          <template v-if="profile.materialFreeSpellIds.length"><br>无需材料成分（种族施放）：{{ profile.materialFreeSpellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、') }}</template>
+          <template v-if="profile.castingNotes.length"><br>{{ profile.castingNotes.join('；') }}</template>
+        </p>
+      </section>
       <section v-if="editing.editMode.value" class="character-sheet__spell-section">
         <h4>法术位总量</h4>
         <div class="character-sheet__slot-editor">
@@ -921,7 +937,7 @@ function handleExportPdf(): void {
       </section>
       <template v-if="hasSpellContent">
         <section v-if="cantripSpells.length" class="character-sheet__spell-section">
-          <h4>戏法 · {{ draft.spellSelections.cantripIds.length }} / {{ requiredCantripCount }}</h4>
+          <h4>戏法 · {{ spellcastingConfig ? draft.spellSelections.cantripIds.length : cantripSpells.length }}<template v-if="spellcastingConfig"> / {{ requiredCantripCount }}</template></h4>
           <ListShell>
             <ExpandableOptionCard
               v-for="spell in cantripSpells"
@@ -935,7 +951,7 @@ function handleExportPdf(): void {
           </ListShell>
         </section>
         <section v-if="preparedOrKnownSpells.length" class="character-sheet__spell-section">
-          <h4>{{ preparedOrKnownLabel }} · {{ preparedOrKnownSpells.length }} / {{ requiredSpellCount }}</h4>
+          <h4>{{ preparedOrKnownLabel }} · {{ preparedOrKnownSpells.length }}<template v-if="spellcastingConfig"> / {{ requiredSpellCount }}</template></h4>
           <ListShell>
             <div v-for="group in spellGroups" :key="group.level" class="character-sheet__spell-level">
               <h5>{{ group.level }}环 · 已选 {{ group.spells.length }}</h5>
@@ -1104,6 +1120,7 @@ function handleExportPdf(): void {
           >
             <template #suffix>
               <span class="character-sheet__item-qty">×{{ entry.equippedQuantity }}</span>
+              <InventoryEquipmentToggle :entry="entry" :equipment="repository.getEquipment(entry.itemId)" @toggle="toggleEquipment" />
               <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
               <em v-if="isFromClosedSource(entry.itemId)" class="character-sheet__item-source character-sheet__item-source--closed">来源已关闭</em>
               <button v-if="entry.sourceKind === 'adventure'" type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>
@@ -1125,6 +1142,7 @@ function handleExportPdf(): void {
           >
             <template #suffix>
               <span class="character-sheet__item-qty">×{{ entry.quantity }}</span>
+              <InventoryEquipmentToggle :entry="entry" :equipment="repository.getEquipment(entry.itemId)" @toggle="toggleEquipment" />
               <em v-if="entry.sourceKind !== 'adventure'" class="character-sheet__item-source">{{ inventorySourceLabel(entry) }}</em>
               <em v-if="isFromClosedSource(entry.itemId)" class="character-sheet__item-source character-sheet__item-source--closed">来源已关闭</em>
               <button v-if="entry.sourceKind === 'adventure'" type="button" class="character-sheet__spell-action" @click="openAdjustItem(entry)">调整</button>

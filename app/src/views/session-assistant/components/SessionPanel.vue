@@ -1,23 +1,29 @@
 <script setup lang="ts">
+import { canCastSpellWithNonSpeciesSlots, canCastSpellWithSlots, getSpeciesCastingMethods } from '@/rules/spellcasting'
+import { getEffectiveSpeciesFeatures } from '@/rules/origins'
 import { computed, ref } from 'vue'
 import { CharacterMediaImage } from '@/features/character-media'
 
 import AddItemModal from '@/components/AddItemModal.vue'
 import AdjustItemModal from '@/components/AdjustItemModal.vue'
+import InventoryEquipmentToggle from '@/components/InventoryEquipmentToggle.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import StatTile from '@/components/ui/StatTile.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiModal from '@/components/ui/UiModal.vue'
+import UiNotice from '@/components/ui/UiNotice.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatGrantSource, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { getEquipmentWarnings } from '@/rules/equipment-state'
+import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import { getAvailableSlotLevels } from '@/rules/session-state'
 import { isSourceEnabled } from '@/rules/source-books'
-import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem } from '@/rules/starting-equipment'
-import { getEffectiveSelectedSpellIds, getSpellcastingConfig } from '@/rules/spellcasting'
+import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
+import { getEffectiveSelectedSpellIds, getSpeciesSpellcastingProfiles, getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
 import { useSessionAssistantStore } from '@/stores/session-assistant'
 import { DEBUFF_STATUSES, EXHAUSTION_DESCRIPTION } from '@/types/session-state'
@@ -30,8 +36,10 @@ const props = defineProps<{ draft: CharacterDraft }>()
 
 /** 名称与条目解析按草稿版本（2024 草稿不得使用 2014 静态仓库）。 */
 const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const equipmentWarnings = computed(() => getEquipmentWarnings(props.draft, repository.value))
 
 const panel = useSessionPanel(computed(() => props.draft))
+const speciesSpellcastingProfiles = computed(() => getSpeciesSpellcastingProfiles(props.draft, panel.derived.value))
 
 const tabs = [
   { id: 'overview', label: '总览' },
@@ -118,6 +126,9 @@ function handleAdjustItem(payload: { action: 'decrease' | 'increase' | 'remove';
 function updateInventory(inventory: readonly InventoryEntry[]): void {
   void panel.updateInventory(inventory)
 }
+function toggleEquipment(entryId: string): void {
+  updateInventory(toggleInventoryEquipment(props.draft.inventory, entryId, repository.value))
+}
 
 function equipmentName(itemId: string): string {
   return repository.value.getEquipment(itemId)?.name ?? itemId
@@ -136,7 +147,10 @@ function equipmentSummary(itemId: string): string {
 function weaponBonusLabel(entry: InventoryEntry): string {
   const equipment = repository.value.getEquipment(entry.itemId)
   if (equipment?.category !== 'weapon') return ''
-  return `命中 +${panel.derived.value.attackBonus.value} · 伤害 +${panel.derived.value.attackDamageBonus.value}`
+  const attack = deriveWeaponAttack(props.draft, panel.derived.value, equipment)
+  if (!attack) return ''
+  const signed = (value: number) => value >= 0 ? `+${value}` : String(value)
+  return `命中 ${signed(attack.attackBonus)} · 伤害 ${signed(attack.damageBonus)}`
 }
 function inventorySourceLabel(entry: InventoryEntry): string {
   return entry.sourceKind === 'class' || entry.sourceKind === 'background' ? '起始装备' : '冒险获得'
@@ -175,7 +189,7 @@ const subclassFeatures = computed(() =>
 const raceName = computed(() => props.draft.raceId ? (repository.value.getRace(props.draft.raceId)?.name ?? '') : '')
 const raceFeatures = computed(() =>
   props.draft.raceId
-    ? getRulesRepository(props.draft.ruleset).getRaceFeatures(props.draft.raceId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? getEffectiveSpeciesFeatures(props.draft, repository.value, props.draft.raceId, panel.derived.value)
     : [],
 )
 const subraceName = computed(() =>
@@ -185,7 +199,7 @@ const subraceName = computed(() =>
 )
 const subraceFeatures = computed(() =>
   props.draft.subraceId && props.draft.subraceId !== props.draft.raceId
-    ? getRulesRepository(props.draft.ruleset).getRaceFeatures(props.draft.subraceId).filter((feature) => feature.level <= props.draft.targetLevel)
+    ? getEffectiveSpeciesFeatures(props.draft, repository.value, props.draft.subraceId, panel.derived.value)
     : [],
 )
 const backgroundName = computed(() => {
@@ -271,7 +285,7 @@ function slotCount(level: number): number {
 }
 function castableLevels(spell: SpellRule): readonly number[] {
   const state = panel.sessionState.value
-  if (!state) return []
+  if (!state || !canCastSpellWithSlots(props.draft, spell.id)) return []
   return getAvailableSlotLevels(state, spell.level, panel.spellSlots.value)
 }
 const castSpell = ref<SpellRule>()
@@ -283,9 +297,16 @@ function openCastModal(spell: SpellRule): void {
 function freeCastsForSpell(spell: SpellRule) {
   return panel.resourceViews.value.filter((resource) => resource.spellId === spell.id && resource.remaining > 0)
 }
-function consumeFreeCast(resource: { id: string; name: string }): void {
+function consumeFreeCast(resource: { id: string; name: string; castingLevel?: number }): void {
   panel.changeResource(resource.id, 1)
-  castNotice.value = `已免费施展：${resource.name}`
+  castNotice.value = `已免费施展：${resource.name}${resource.castingLevel ? `（${resource.castingLevel}环）` : ''}`
+  castSpell.value = undefined
+}
+function atWillCastsForSpell(spell: SpellRule) {
+  return getSpeciesCastingMethods(props.draft, spell.id).filter((method) => method.atWill)
+}
+function confirmAtWill(name: string, note: string): void {
+  castNotice.value = `已施展：${name}；${note}`
   castSpell.value = undefined
 }
 function confirmCast(level: number): void {
@@ -294,6 +315,13 @@ function confirmCast(level: number): void {
   panel.changeSpellSlot(level, 1)
   castNotice.value = `已使用 ${level} 环法术位`
   castSpell.value = undefined
+}
+function speciesSlotCastsForSpell(spell: SpellRule) {
+  return getSpeciesCastingMethods(props.draft, spell.id).filter((method) => method.canCastWithSpellSlots !== false)
+}
+function confirmSpeciesSlotCast(level: number, sourceName: string, note: string): void {
+  confirmCast(level)
+  castNotice.value = `${sourceName}：已使用 ${level} 环法术位${note ? `；${note}` : ''}`
 }
 
 // ---- 抄录法术书（仅 spellbook 模式，与角色卡共享同一草稿数据）----
@@ -423,6 +451,9 @@ function openTranscribe(spellId?: string): void {
     </section>
 
     <UiTabs v-model="activeTab" wrap :items="tabs" />
+    <UiNotice v-for="issue in equipmentWarnings" :key="issue.id" tone="warning" title="装备提示">
+      {{ issue.message }} {{ issue.resolution }}
+    </UiNotice>
 
     <div v-if="activeTab === 'overview'" class="session-panel__tab">
       <section class="session-panel__section">
@@ -646,6 +677,14 @@ function openTranscribe(spellId?: string): void {
 
     <div v-else-if="activeTab === 'spells'" class="session-panel__tab">
       <p v-if="castNotice" class="session-panel__notice" role="status">{{ castNotice }}</p>
+      <section v-if="speciesSpellcastingProfiles.length" class="session-panel__section">
+        <h3>种族施法</h3>
+        <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
+          {{ profile.sourceName }} · {{ ABILITY_LABELS[profile.ability] }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }}
+          <template v-if="profile.materialFreeSpellIds.length"><br>无需材料成分（种族施放）：{{ profile.materialFreeSpellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、') }}</template>
+          <template v-if="profile.castingNotes.length"><br>{{ profile.castingNotes.join('；') }}</template>
+        </p>
+      </section>
       <div v-if="spellcastingConfig?.mode === 'spellbook'" class="session-panel__tab-header">
         <button type="button" class="session-panel__transcribe" aria-label="抄录法术书" @click="openTranscribe()">抄录法术</button>
       </div>
@@ -682,7 +721,7 @@ function openTranscribe(spellId?: string): void {
               <button
                 type="button"
                 class="session-panel__adjust"
-                :disabled="!castableLevels(spell).length && !freeCastsForSpell(spell).length"
+                :disabled="!castableLevels(spell).length && !freeCastsForSpell(spell).length && !atWillCastsForSpell(spell).length"
                 @click="openCastModal(spell)"
               >
                 施法
@@ -734,9 +773,10 @@ function openTranscribe(spellId?: string): void {
             expanded-label="装备详情"
           >
             <template #suffix>
-              <span class="session-panel__qty">×{{ entry.quantity }}</span>
+              <span class="session-panel__qty">×{{ entry.equippedQuantity }}</span>
               <UiBadge v-if="entry.sourceKind !== 'adventure'">{{ inventorySourceLabel(entry) }}</UiBadge>
               <UiBadge v-if="isFromClosedSource(entry.itemId)" tone="warning">来源已关闭</UiBadge>
+              <InventoryEquipmentToggle :entry="entry" :equipment="repository.getEquipment(entry.itemId)" @toggle="toggleEquipment" />
               <button v-if="entry.sourceKind === 'adventure'" type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
             </template>
             <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>
@@ -759,6 +799,7 @@ function openTranscribe(spellId?: string): void {
               <span class="session-panel__qty">×{{ entry.quantity }}</span>
               <UiBadge v-if="entry.sourceKind !== 'adventure'">{{ inventorySourceLabel(entry) }}</UiBadge>
               <UiBadge v-if="isFromClosedSource(entry.itemId)" tone="warning">来源已关闭</UiBadge>
+              <InventoryEquipmentToggle :entry="entry" :equipment="repository.getEquipment(entry.itemId)" @toggle="toggleEquipment" />
               <button v-if="entry.sourceKind === 'adventure'" type="button" class="session-panel__adjust" @click="openAdjustItem(entry)">调整</button>
             </template>
             <template #expanded>{{ equipmentDescription(entry.itemId) }}</template>
@@ -774,10 +815,12 @@ function openTranscribe(spellId?: string): void {
     </UiModal>
 
     <UiModal :open="Boolean(castSpell)" :title="castSpell ? `施放 ${castSpell.name}` : ''" @close="castSpell = undefined">
+      <p v-for="method in castSpell ? getSpeciesCastingMethods(draft, castSpell.id) : []" :key="method.sourceId">{{ method.sourceName }}：{{ method.note }}</p>
+      <button v-for="method in castSpell ? atWillCastsForSpell(castSpell) : []" :key="method.sourceId" type="button" @click="confirmAtWill(method.sourceName, method.note)">不耗法术位施放（{{ method.sourceName }}）</button>
       <p class="session-panel__cast-hint">选择消耗的法术位（支持升环施法）：</p>
       <div class="session-panel__cast-levels">
         <button
-          v-for="level in castSpell ? castableLevels(castSpell) : []"
+          v-for="level in castSpell && canCastSpellWithNonSpeciesSlots(draft, castSpell.id) ? castableLevels(castSpell) : []"
           :key="level"
           type="button"
           class="session-panel__cast-level"
@@ -785,8 +828,13 @@ function openTranscribe(spellId?: string): void {
         >
           消耗 {{ level }} 环法术位
         </button>
-        <p v-if="castSpell && !castableLevels(castSpell).length && !freeCastsForSpell(castSpell).length" class="session-panel__empty">没有可用的法术位。</p>
+        <p v-if="castSpell && !castableLevels(castSpell).length && !freeCastsForSpell(castSpell).length && !atWillCastsForSpell(castSpell).length" class="session-panel__empty">没有可用的施法资源。</p>
       </div>
+      <template v-for="method in castSpell ? speciesSlotCastsForSpell(castSpell) : []" :key="method.sourceId">
+        <div class="session-panel__cast-levels">
+          <button v-for="level in castSpell ? castableLevels(castSpell) : []" :key="level" type="button" class="session-panel__cast-level" @click="confirmSpeciesSlotCast(level, method.sourceName, method.note)">{{ method.sourceName }}：消耗 {{ level }} 环法术位</button>
+        </div>
+      </template>
       <template v-if="castSpell && freeCastsForSpell(castSpell).length">
         <p class="session-panel__cast-hint">也可以免费施放：</p>
         <div class="session-panel__cast-levels">
@@ -797,7 +845,7 @@ function openTranscribe(spellId?: string): void {
             class="session-panel__cast-level"
             @click="consumeFreeCast(free)"
           >
-            免费施放（剩余 {{ free.remaining }} 次）
+            {{ free.name }}：免费施放{{ free.castingLevel ? `（${free.castingLevel}环）` : '' }}（剩余 {{ free.remaining }} 次）
           </button>
         </div>
       </template>

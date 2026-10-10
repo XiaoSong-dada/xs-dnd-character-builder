@@ -12,6 +12,56 @@
 
 ## 2. 总体依赖方向
 
+### X 批次合作与 UA 种族实际拓扑（2026-10-10）
+
+新增五个纯数据模块，均只依赖共享类型 `@/types/rules`（2014 侧另有既有装备／技能目录）：
+
+- `rules/data/races-planshift-2014`（X01，2014 第三方）
+- `rules/data/races-grim-hollow-2014`（X03，2014 第三方）
+- `rules/data/races-exploring-eberron-2024`（X02，2024 第三方）
+- `rules/data/species-beyond-drops-2024`（X04，2024）
+- `rules/data/species-ua-underdark-2024`（X05，2024 playtest）
+
+装配点：2014 侧 `rules/repository.ts` 的 `races` 行；2024 侧 `rules/repositories.ts` 的 `races` 行。**新模块必须显式加进这两行**——`createRulesRepository()` 只做数组平铺与线性 `getRace()` 查找，没有去重、优先级或父链校验，漏加即「数据在但不可达」。来源登记分别在 `rules/data/sources-2014.ts` 与 `rules/data/sources-2024.ts`，且**必须落在条目所属规则集的注册表内**，否则来源永久不可启用。
+
+本次没有新增 store、服务、组件或依赖方向：条目复用既有的声明式字段（`fixedAbilityBonuses`／`sizeChoices`／`darkvision`／`damageResistances`／`skillProficiencyChoices`／`spellGrants`／`countsAsRaceIds`／`replacesParentBonuses`／`originFeatChoices` 等），页面、派生、校验、导出与跑团全部走既有接口。`RaceRule` **未新增任何类型字段**；无法结构化表达的机制写入 `description` 作为展示级说明。
+
+同批另有两处**非新增模块**的数据订正：`rules/data/sources-2024.ts` 就地修订 `source-2024-tp-beyond-drops` 的分类（第三方→官方数字专栏），以及 `rules/data/origins-2024.ts`／`rules/data/third-party-feats-2024.ts` 把幻身灵旅者、马伦蒂及其起源专长改挂 `source-2024-tp-exploring-eberron`。两者都不改变依赖方向。
+
+v1.12.0 追加「天命掷骰」（第 5 步自定义属性）：纯函数 `rules/abilities` 的 `rollAbilityScoreSets`／`normalizeAbilityDestiny` 只依赖共享类型，随机源以参数注入；`useCharacterBuilderPage` 持有天命次数与掷骰编排并从 `services/dice-random` 注入 `secureUint32`，`AbilitiesStep.vue` 只收集输入与展示数组；`services/draft-storage` 复用 `normalizeAbilityDestiny` 做读入归一化。依赖方向保持 `views → hooks → services/rules → types`，无 `rules → services` 反向依赖，`CharacterDraft` 只新增可选原始字段、schema 仍为 v9。
+
+已复核前端依赖拓扑，已更新（新增 5 个 `rules/data/*` 模块并接入两个仓库装配点；天命掷骰未新增模块）。
+
+### S08—S10 实际拓扑（2026-10-10）
+
+- 新增 `rules/data/species-official-expansions-2024`，只依赖2024装备、技能ID及共享类型；2024仓库装配19项与选项／特性，纯映射追加精灵血系。2014仓库未引入该模块，不跨版本导入数据。
+- `origins`统一解析默认戏法、动态候选、具体工具、依赖及抗性选择；`timeline`与`validate`复用检查点和有效选择，`derive`解析有效来源的常驻AC加值，`spellcasting`解析有效戏法和父项施法属性。
+- 时间线组件只调用纯规则和仓库名称查找，不编码物种ID或收益；角色卡、跑团、保存和导出复用既有接口，无新store、迁移版本或rules反向UI依赖。新增19项资料及专项／实际导出测试，保持 views/features → rules/services → types 方向。
+
+### S03—S07 实际拓扑（2026-10-08）
+
+- 新增纯数据模块 `rules/data/races-official-expansions-2014`，依赖现有PHB装备目录、技能ID和共享类型；由2014仓库装配，不进入2024仓库。
+- 新增叶子规则模块 `rules/species-legacy`，只依赖技能ID、来源规则及共享类型；`derive`、`origins`、`languages`、`validate`复用其有效遗产解析，避免沿父种族链叠加原种族收益。
+- 新增 `rules/lineage-transformation`，依赖派生、语言、起源、遗产及校验纯函数生成不可变预览草稿；不读写存储或UI，不与遗产叶子形成循环依赖。
+- 新增页面私有 `useLineageTransformation` 编排目标/遗产选择、预览与确认，通过既有store更新原始草稿；`LineageTransformationModal`只收集输入与展示影响。页面入口仅组装绑定，未新增公共store或跨feature依赖。
+- `CharacterDraft.raceToolChoices/lineageHistory`为可选可序列化原始字段，旧v9草稿兼容；storage/JSON/ZIP沿既有边界规范化。角色卡、跑团及共享导出继续复用有效特性、工具、体型、语言和施法出口。
+- 已复核前端依赖拓扑，已更新；保持UI → hooks/store/services/rules → types方向，无rules → UI/存储反向依赖。
+
+### MotM 共用契约实际拓扑（2026-10-08）
+
+- `rules/data/races-motm-2014` 只依赖共享类型，登记33个主项、158个特性和14个分支选项；2014 `repository` 新增分支选项装配，不进入2024仓库。
+- `rules/origins` 收束具体工具、有效分支检查点与有效特性解析；下游为版本仓库接口、来源过滤及共享类型。`timeline` 新增调用其检查点出口；`session-resources`、`derive`、`equipment-state`、角色卡/跑团与共享导出复用同一有效链，不在页面重复依赖判定。
+- `rules/spellcasting` 复用 `origins` 输出逐来源施法方法与属性，跑团面板调用这些纯规则出口并通过既有 `useSessionPanel` 消耗环位/次数；无限次路径只显示确认，不保存伪造资源。`features/character-export/build-export-data` 与两页面共用有效特性及施法分组。
+- `RaceRule.choices`、护甲协议、选择依赖及施法字段全部为只读数据。原选择沿用 `selections/raceToolChoice`，未新增 store、持久化版本或框架依赖；保持 views/features → rules → types，无 rules → UI/存储反向依赖。测试新增 fixture 与专项文件不属于运行时模块。
+
+
+
+S01-B2：既有`rules/spellcasting`新增纯种族施法分组出口，复用`origins`、版本仓库及`derive`依赖，不引入UI或持久化。角色卡、跑团面板与共享导出均直接调用该规则出口；跑团复用hook现有derived，角色卡/导出使用既有派生参数。无新store、共享组件或原始状态字段，保持UI/features → rules → types方向。
+
+S02-A2：`rules/session-resources`复用`origins.getDraftSpeciesRules`与`source-books`读取有效种族资源，`derive`沿用origins依赖读取先攻熟练标志；资源UI、持久化、休息及共享导出继续调用原有纯函数出口，无新增store或页面私有资源状态。MotM数据模块增加兔人和影灵，2014源表登记巫光重印来源。
+
+S02-A1：新增纯数据模块`rules/data/races-motm-2014.ts`，由2014仓库登记种族、由`race-features-2014`合并特性；仅依赖共享类型。`rules/languages`新增依赖`source-books`解析有效种族语言声明，导出feature复用`languages`获取固定语言；沿用UI→rules→types方向，无反向或跨feature依赖。
+
 ```text
 main
   -> router
@@ -704,6 +754,26 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 `src/config/site.ts` 是站点与统计配置模块，为项目内**唯一**读取 `import.meta.env` 的入口（站点信息及 `VITE_UMAMI_SCRIPT_URL`/`VITE_UMAMI_WEBSITE_ID`/`VITE_UMAMI_DOMAINS`，空串归一化为 `undefined`，统计域名解析为列表），导出 `siteConfig`；`StartPanel` 消费站点信息渲染署名行，`main.ts` 在应用挂载后调用 `services/umami.ts`，由该服务校验当前域名并幂等加载 Umami 脚本。Umami 自行监听 History API，不额外注册 Router 页面访问钩子。其余业务模块一律不直接读取 `import.meta.env`。
 
 
+### 物品装备与卸下操作（C01-A）
+
+`components/InventoryEquipmentToggle.vue` 为角色卡与跑团助手共用的展示组件，仅依赖共享类型 `InventoryEntry` / `EquipmentRule`，按可装备性、拥有数量与装备数量显示按钮并发送条目 ID，不读取规则仓库、store 或存储。`CharacterSheetStep` 与 `SessionPanel` 调用框架无关的 `rules/starting-equipment.toggleInventoryEquipment`，分别通过既有 `changeInventory` 事件和 `useSessionPanel.updateInventory` 保存原始装备数量。规则函数在版本仓库中核对可装备性，再复用 `updateEquippedQuantity`；依赖方向保持 `views → components/types` 与 `views/hooks → stores/rules`，无反向依赖。
+
+### 装备状态与盾牌条件（C01-B）
+
+`rules/equipment-state.ts` 提供来源有效的已装备物品、两版持盾收益条件及装备警告。其下游仅为 `rules/{feats,repositories,source-books}` 与共享类型；`derive`、`validate` 以及 `EquipmentStep` / `CharacterSheetStep` / `SessionPanel` 复用该模块，不复制手部或受训判定。规则模块不改变草稿状态，不访问 Vue、存储、DOM 或网络；警告由页面用既有 `UiNotice` 展示。`starting-equipment` 重建仅向新条目推荐护甲/武器，保留旧装备数量。`collectArmorTrainings` 加入职业、选项和子职特性的来源检查，仍由规则层收集训练。
+
+### 种族译名与搜索别名（S00）
+
+`RaceRule.searchAliases` 是可选只读元数据，由 `rules/data/origins-2014` 登记，`OriginStep` 在既有目录搜索中读取；不新增模块或存储字段，不改来源筛选链，依赖仍为页面 → rules/types。规则特性及导出通过稳定 ID 解析当前显示名，旧草稿无需迁移。
+
+### 双攻击参考与逐武器计算（C02）
+
+`rules/derive` 提供力量/敏捷两组带来源的固定参考值；共享 `ManualDerivedField` 与 `rules/manual-edits` 承载独立人工修正，角色卡既有 `useCharacterSheetEditing` 通用处理四格提交，不增加存储结构。`rules/weapon-attacks` 不再从参考值来源倒推实际武器加值，改为依赖 `rules/{equipment-state,source-books,manual-edits,subclass-effects}` 与既有灌注数据，选定实际属性后匹配对应修正。`SessionPanel` 与 `features/character-export/build-export-data` 共用该纯函数。方向仍为页面/features → rules → rules/types，无框架或存储反向依赖。`EditableStatTile` 阻止输入提交的 Enter 冒泡，避免提交后重新开始编辑。
+
 ### 骰娘音效试听工具
 
 `app/scripts/render-dice-audio-previews.mjs` 经 Vite SSR 加载 `src/services/dice-audio/synthesis.ts`，使用与实时播放相同的 PCM 合成器导出 WAV；旧版通过原算法离线复现作为对照。输出在根目录已忽略的 `tmp/dice-audio-previews/`，不进入生产资源或 Git。运行时服务保持 services 内部单向依赖，不引用脚本或页面。
+
+### 种族属性方案与体型（S01-A）
+
+`types/rules.RaceRule.flexibleBonusAlternatives` 登记有序方案，`types/character.CharacterDraft.raceAbilityBonusOptionId` 保存原始选择。`rules/derive.getFlexibleBonusGroups` 是派生、校验与页面 hook 的共用解析入口；`useCharacterBuilderPage` 返回方案、有效分组及更新操作，`index.vue` 仅绑定 `AbilitiesStep` 的单选控件。切换保留属性选择，更换种族/子种族按既有重置流程清除方案；`services/draft-storage` 只做字段归一化。两版体型阻断共用 `rules/origins`，`features/character-export/build-export-data` 新增对该纯规则模块的依赖，仅导出有效种族链允许的体型。依赖方向保持 views/hooks/features → rules → types，无新增模块或反向依赖。

@@ -1,15 +1,14 @@
 import { getRulesRepository } from '@/rules/repositories'
 import { getDicePoolCount, getDicePoolDie, getResourceMax, getResourceRecovery } from '@/rules/resources'
 import { getSpellFreeCastings } from '@/rules/spellcasting'
+import { getEffectiveSpeciesFeatures } from '@/rules/origins'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
 import type { ClassFeature, ClassResource, RulesRepository, SubclassFeature } from '@/types/rules'
 import type { SessionState } from '@/types/session-state'
 
 /**
- * 跑团资源结算（B10-02，仅 2024 生效）。
- *
- * 枚举职业特性与已选子职特性中登记的资源／可消耗骰池；2014 数据没有这类登记，天然为空，
- * 因此 2014 行为保持不变（Q-B10-1）。
+ * 跑团资源结算：职业、子职、有效种族特性和免费施法沿用同一计数与休息管道。
+ * 未登记结构化资源的旧特性不从摘要推断次数。
  */
 
 export interface SessionResource {
@@ -26,6 +25,7 @@ export interface SessionResource {
   readonly shortRestRecovery?: number
   /** 免费施法条目对应的法术 id（用于施法弹窗绑定免费施放按钮）。 */
   readonly spellId?: string
+  readonly castingLevel?: number
 }
 
 function abilityModifierOf(modifiers: Partial<Record<AbilityKey, number>>, ability: AbilityKey): number {
@@ -55,7 +55,9 @@ export function listSessionResources(
   modifiers: Partial<Record<AbilityKey, number>> = {},
   repository: RulesRepository = getRulesRepository(draft.ruleset),
 ): readonly SessionResource[] {
-  const features = grantedFeatures(draft, repository)
+  const speciesFeatures = getEffectiveSpeciesFeatures(draft, repository)
+    .map((feature) => ({ ...feature, dicePool: undefined }))
+  const features = [...grantedFeatures(draft, repository), ...speciesFeatures]
 
   const resources: SessionResource[] = []
   const seen = new Set<string>()
@@ -102,6 +104,7 @@ export function listSessionResources(
       unit: '次',
       dice: false,
       spellId: grant.spellId,
+      ...(grant.castingLevel === undefined ? {} : { castingLevel: grant.castingLevel }),
     })
   }
   return resources

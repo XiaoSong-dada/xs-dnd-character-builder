@@ -1,5 +1,46 @@
 # D&D 5e 物种与种族资料索引
 
+## X 批次合作与 UA 种族（2026-10-10）
+
+按[《合作与 UA 种族 X01—X05 与 V01 更新计划》](需求文档/合作与UA种族X01-X05更新计划.md)接入五批来源共 **48 条**：X01 Plane Shift 五世界 31 条、X02 探秘艾伯伦 9 条、X03 鬼魅幽谷玩家包 2 条、X04 Beyond Drops 暮精 1 条、X05 幽暗地域二期 UA 5 条。**第三方与 UA 条目按项目既有约定不建 `docs/species/` 逐条资料文件**，只在本索引与各数据模块头注释登记；来源默认关闭、需 DM 同意。
+
+| 批次 | 书 | 规则集 | 来源 ID | 条目 |
+| --- | --- | --- | --- | --- |
+| X01 | 异界传送 Plane Shift（依夏兰／依尼翠／卡拉德许／赞迪卡／阿芒凯） | 2014 | `tp-planshift-index` | 31 条，见下节 2014 表 |
+| X02 | 探秘艾伯伦 Exploring Eberron | 2024 | `source-2024-tp-exploring-eberron` | 9 条，见下节 2024 表 |
+| X03 | 鬼魅幽谷：玩家包 Grim Hollow: Player Pack | 2014 | `tp-grim-hollow-index` | 无形之灵 The Disembodied、枉替之子 Wechselkind |
+| X04 | Beyond Drops 26.9 | 2024 | `source-2024-tp-beyond-drops` | 暮精 Duskling |
+| X05 | 破解奥秘 UA：幽暗地域二期 Underdark Options 2 | 2024 | `source-2024-ua-underdark` | 地渊伊玛斯卡人 Deep Imaskari、寇涛 Kuo-toa、灵吸裔 Illithidkin、蕈人 Myconid（**植物**）、蛛化卓尔 Drider（**怪兽**） |
+
+**本轮五项用户裁定**（详见更新计划 §6.0）：赞迪卡鬼怪「坚毅」抗性以正文条目为准取火焰与心灵；主项与分支属性加值**叠加**（父项写加值、亚种写差值）；《鬼魅幽谷：玩家指南》族裔系统**不纳入本期**；Beyond Drops 来源分类**就地修订**为官方数字专栏；依夏兰 Orc 中文名用「半兽人」、英文名记 Orc。
+
+**待核验未闭合**：暮精本地正文仅 582 字、UA 392／394／395 未见语言条目、393 的第二形态清单未展开，均为**疑似节选**，已保留待核验标注，不据本地页补齐。
+
+## S08—S10官方2024物种（2026-10-10）
+
+新增独立19项：17主项、2精灵血系；来源、接口与逐项验证见[阶段记录](需求文档/其他官方扩展S08-S10实施记录.md)。不覆盖MotM／2014血统，不导入祖先遗产。默认戏法、工具与抗性复用有效选择，详细边界见规则文档。
+
+- [幻身灵（奇械锻炉）](species/5e-2024/efa-changeling/efa-changeling.md)：`species-2024-efa-changeling`。
+- [化兽者（奇械锻炉）](species/5e-2024/efa-shifter/efa-shifter.md)：`species-2024-efa-shifter`。
+- [战俑（奇械锻炉）](species/5e-2024/efa-warforged/efa-warforged.md)：`species-2024-efa-warforged`。
+- [离梦人](species/5e-2024/efa-kalashtar/efa-kalashtar.md)：`species-2024-efa-kalashtar`。
+- [科拉瓦](species/5e-2024/efa-khoravar/efa-khoravar.md)：`species-2024-efa-khoravar`。
+- [人狼裔](species/5e-2024/rthw-lupin/rthw-lupin.md)：`species-2024-rthw-lupin`。
+- [半血裔（魔障深藏）](species/5e-2024/rthw-dhampir/rthw-dhampir.md)：`species-2024-rthw-dhampir`。
+- [复生者（魔障深藏）](species/5e-2024/rthw-reborn/rthw-reborn.md)：`species-2024-rthw-reborn`。
+- [巫咒之子（魔障深藏）](species/5e-2024/rthw-hexblood/rthw-hexblood.md)：`species-2024-rthw-hexblood`。
+- [洛温幻身灵](species/5e-2024/lfl-changeling/lfl-changeling.md)：`species-2024-lfl-changeling`。
+- [霜身](species/5e-2024/lfl-rimekin/lfl-rimekin.md)：`species-2024-lfl-rimekin`。
+- [波尬](species/5e-2024/lfl-boggart/lfl-boggart.md)：`species-2024-lfl-boggart`。
+- [仙灵（洛温）](species/5e-2024/lfl-faerie/lfl-faerie.md)：`species-2024-lfl-faerie`。
+- [仙灵（影原）](species/5e-2024/lfl-shadowmoor-faerie/lfl-shadowmoor-faerie.md)：`species-2024-lfl-shadowmoor-faerie`。
+- [炎身](species/5e-2024/lfl-flamekin/lfl-flamekin.md)：`species-2024-lfl-flamekin`。
+- [洁英（洛温）](species/5e-2024/lfl-kithkin/lfl-kithkin.md)：`species-2024-lfl-kithkin`。
+- [洁英（影原）](species/5e-2024/lfl-shadowmoor-kithkin/lfl-shadowmoor-kithkin.md)：`species-2024-lfl-shadowmoor-kithkin`。
+- [洛温精灵血系](species/5e-2024/lfl-lorwyn-elf-lineage/lfl-lorwyn-elf-lineage.md)：`species-2024-lfl-lorwyn-elf-lineage`。
+- [影原精灵血系](species/5e-2024/lfl-shadowmoor-elf-lineage/lfl-shadowmoor-elf-lineage.md)：`species-2024-lfl-shadowmoor-elf-lineage`。
+
+
 > 本文档是物种、种族、血统与子种族的选择性加载入口，不属于每次开发任务的立即加载文档。
 > 精灵双版本样例已通过审阅；当前索引覆盖计划内全部 2024 核心物种、2014 核心种族与 2014 扩展种族。
 
@@ -11,16 +52,35 @@
 | `5e-2014` | 种族（Race） | 基础种族和部分子种族 | 子种族（Subrace） | 独立参考层，不自动进入 2024 车卡流程 |
 
 - 两套规则的物种、种族、分支和特性 ID 必须完全独立；同名能力也不得隐式复用数值。
+- `RaceRule.searchAliases` 仅服务目录检索，不创建条目或修改规则；2014 幻身灵保留旧译「变形怪」，英文 Changeling 与主译名均可搜索，已有草稿稳定 ID 不变。
 - 角色只能绑定一个明确的 `ruleset`。跨版本采用内容必须由 DM 明确许可，并建立显式映射，不能叠加两个版本的同名能力。
 - 2024 的语言由角色创建规则的其他步骤决定，不把 2014 种族语言直接移植到 2024 物种。
 
 ## 通用选择流程
+
+MotM 共33项代码已接入，新增25项与原8项分批及联合回归见 [验收记录](需求文档/MotM完整接入验收记录.md)，历史设计见 [M00准备](需求文档/MotM完整接入实施准备.md)。地底侏儒及灰矮人感官证据未闭合，不标为整书已完成核验。逐项状态见 [逐书矩阵](需求文档/种族扩展逐书矩阵.md)。
+
+S02-A4已接入：[气元素裔](species/5e-2014/motm-air-genasi/motm-air-genasi.md)、[土元素裔](species/5e-2014/motm-earth-genasi/motm-earth-genasi.md)、[火元素裔](species/5e-2014/motm-fire-genasi/motm-fire-genasi.md)、[水元素裔](species/5e-2014/motm-water-genasi/motm-water-genasi.md)。四个独立MotM主种族，创建体型与施法属性必选，不覆盖旧版/2024。逐法术免材料只作为对应种族施放说明；土裔附赠剑刃防护为单独熟练次数资源，不限制普通戏法。法术按等级授予，闭气/土行/两栖/抗性及游泳等情境只展示。
+
+S02-A3已接入：[仙灵](species/5e-2014/motm-fairy/motm-fairy.md)。MotM与巫光机械规则相同，使用同一2014独立条目和双来源，不重复授予。固定小型、三种施法属性必选；1/3/5级法术进入角色卡/跑团/导出，妖火与变巨/缩小各一次长休免费次数，也可消耗合适法术位，不免法术成分。飞行等于当前步行速度及中/重甲禁用只作情境展示，不构造移动引擎。
+
+S02-A2已接入：[兔人](species/5e-2014/motm-harengon/motm-harengon.md)、[多元宇宙版影灵](species/5e-2014/motm-shadar-kai/motm-shadar-kai.md)。兔人在MotM与巫光之间核验为同规则重印，任一来源启用生效，不能叠加两份收益。`RaceRule.initiativeProficiency`为已核验先攻熟练标志；`RaceFeature.resource`用于明确次数/恢复，按有效来源与等级进入局内资源和导出。
+
+MotM首项已接入：[幻身灵（多元宇宙版）](species/5e-2014/motm-changeling/motm-changeling.md)，独立来源`motm-2022-index`。与旧艾伯伦版使用不同ID，搜索和显示可区分，不覆盖旧草稿。2014种族可选登记`fixedLanguages`和`languageChoices`；自选数量与背景相加，固定语言参与导出。未声明的旧条目不自动推断，2024语言基线不变。
 
 - 车卡第 4 步先选择主种族／物种，再根据所选条目动态生成子种族／血统、体型和技能／工具熟练任务；各任务可自由跳转，必选项未完成时给出数量与下一步入口。
 - 主候选目录固定保留已选摘要，默认优先显示最多 6 个与职业匹配的推荐项；“查看全部”或输入中英文搜索词后查询完整候选池，并可按精确来源筛选。完整目录与筛选结果同样按「推荐优先、其余保持登记顺序」排序（v1.9.1）。
 - 更换主种族／物种时不静默删除旧值；依赖项由既有非破坏语义保留并标记失效，界面转到新产生的首个必选任务。只有规则数据中已有的结构化字段才生成选项，纯文字分支仍按原书／与 DM 确认。
 
 ## 文档字段约定
+
+S01-B3：`SpeciesSpellGrant.waivesMaterialComponents`仅在已核验的单个种族法术授予中登记。种族施法分组出口新增`materialFreeSpellIds`，按有效来源、等级和属性过滤；两页及导出注明「无需材料成分（种族施放）」，不修改全局法术成分，也不宣称免语言/姿势或专注。未声明的授予不推断豁免，关闭来源后说明停用。
+
+S01-B2：种族授予法术在无职业施法配置时仍显示和导出。`getSpeciesSpellcastingProfiles`按有效种族链、等级及明确施法属性分组，固定属性优先，未选属性不猜测；每组攻击/DC只使用最终属性和熟练，不借用职业施法人工修正。角色卡与跑团显示来源/属性/数值，共享导出保留逐组特性摘要；有职业施法时不覆盖职业主字段。多来源法术按ID去重，免费次数继续按来源独立；未新增材料免除、法术位许可或种族条目。
+
+S01-B1：`spellcastingAbilityChoices` 的2014选项独立注册，时间线按来源开关生成任务；属性解析只接受唯一、有效且在声明范围内的选择。`spellGrants` 按等级授予，免费次数复用既有跑团资源/休息管道。此契约验证不代表具体扩展种族已接入，也不推断材料免除或使用法术位的权限。
+
+S01-A：2014 扩展允许多种属性加值方案时，用 `RaceRule.flexibleBonusAlternatives` 登记方案 ID、名称及有序分组；草稿 `raceAbilityBonusOptionId` 保存明确选择，缺省采用首方案。原有固定/单一灵活规则不改变；不同规则集独立登记。切换方案保留原 `raceAbilityChoices`，数量不符或非法方案必须重新确认，不截断旧选择。两版 `sizeChoices` 均参与起源阻断和保存；有效体型作为「选定体型」进入共享导出特性，不自动迁移或猜测。
 
 每个物种或种族主文件至少记录：
 
@@ -42,6 +102,83 @@ race-2014-elf-drow
 
 > 实现状态（2026-09-02，v1.1.8）：2014 种族特性已落地为 `app/src/rules/data/race-features-2014.ts`
 > （240 条，与本文档资料一致），角色卡与跑团助手「能力」页签分组展示（种族/子种族），按等级过滤。
+
+## 2014 其他官方扩展 S03—S07
+
+22个新增记录（含元素裔父项与分支），三项相同重印沿用旧ID。资料、英文证据待办及实际验收分别记录，不以登记数量代替规则核验。
+
+| 名称 | ID | 资料 |
+| --- | --- | --- |
+| 枭人 | `race-2014-owlin` | [详细资料](species/5e-2014/owlin/owlin.md) |
+| 佛丹人 | `race-2014-verdan` | [详细资料](species/5e-2014/verdan/verdan.md) |
+| 坎德人 | `race-2014-kender` | [详细资料](species/5e-2014/kender/kender.md) |
+| 洛卡鱼人 | `race-2014-locathah` | [详细资料](species/5e-2014/locathah/locathah.md) |
+| 星界精灵 | `race-2014-astral-elf` | [详细资料](species/5e-2014/astral-elf/astral-elf.md) |
+| 自动侏儒 | `race-2014-autognome` | [详细资料](species/5e-2014/autognome/autognome.md) |
+| 诘弗人 | `race-2014-giff` | [详细资料](species/5e-2014/giff/giff.md) |
+| 鼯猴人 | `race-2014-hadozee` | [详细资料](species/5e-2014/hadozee/hadozee.md) |
+| 流浆体 | `race-2014-plasmoid` | [详细资料](species/5e-2014/plasmoid/plasmoid.md) |
+| 螳螂人 | `race-2014-thri-kreen` | [详细资料](species/5e-2014/thri-kreen/thri-kreen.md) |
+| 狮族 | `race-2014-leonin` | [详细资料](species/5e-2014/leonin/leonin.md) |
+| 半羊人（旧版） | `race-2014-satyr` | [详细资料](species/5e-2014/satyr/satyr.md) |
+| 元素裔（旧版） | `race-2014-genasi` | [详细资料](species/5e-2014/genasi/genasi.md) |
+| 气元素裔（旧版） | `race-2014-genasi-air` | [详细资料](species/5e-2014/genasi/genasi-air.md) |
+| 土元素裔（旧版） | `race-2014-genasi-earth` | [详细资料](species/5e-2014/genasi/genasi-earth.md) |
+| 火元素裔（旧版） | `race-2014-genasi-fire` | [详细资料](species/5e-2014/genasi/genasi-fire.md) |
+| 水元素裔（旧版） | `race-2014-genasi-water` | [详细资料](species/5e-2014/genasi/genasi-water.md) |
+| 影灵（旧版） | `race-2014-elf-shadar-kai` | [详细资料](species/5e-2014/elf/elf-shadar-kai.md) |
+| 定制血统 | `race-2014-custom-lineage` | [详细资料](species/5e-2014/custom-lineage/custom-lineage.md) |
+| 半血裔 | `race-2014-dhampir` | [详细资料](species/5e-2014/dhampir/dhampir.md) |
+| 巫咒之子 | `race-2014-hexblood` | [详细资料](species/5e-2014/hexblood/hexblood.md) |
+| 复生者 | `race-2014-reborn` | [详细资料](species/5e-2014/reborn/reborn.md) |
+
+相同重印：[人马](species/5e-2014/centaur/centaur.md)、[牛头人](species/5e-2014/minotaur/minotaur.md)、[梭螺鱼人](species/5e-2014/triton/triton.md)使用原ID登记双来源，任一启用只授予一次。狮族候选译名疑点按用户确认先沿用本地，不标英文已核验。
+
+`sizeByLevel`用于佛丹人体型升降级；`naturalArmor.requiresUnarmored`约束自动侏儒及螳螂人；`raceToolChoices`保存多项具体工具并兼容旧单项。`lineageHistory`保存转化追溯，`ancestralMovement`是允许保留移动的显式依据，不能从摘要或任意数值输入推断。见 [实施记录](需求文档/其他官方扩展S03-S07实施记录.md)。
+
+## 2014 MotM 独立主种族
+
+全部使用 `race-2014-motm-*`，不叠加旧父种族收益；角色卡、跑团及导出共用有效特性解析。以下「待感官证据」不表示所有数值已确认。
+
+| 中文名 | 英文名 | 资料 | 状态 |
+| --- | --- | --- | --- |
+| 半羊人（多元宇宙） | Satyr | [详细资料](species/5e-2014/motm-satyr/motm-satyr.md) | 已接入及自动化回归 |
+| 幻身灵（多元宇宙） | Changeling | [详细资料](species/5e-2014/motm-changeling/motm-changeling.md) | 已接入及自动化回归 |
+| 兔人 | Harengon | [详细资料](species/5e-2014/motm-harengon/motm-harengon.md) | 已接入及自动化回归 |
+| 影灵（多元宇宙） | Shadar-kai | [详细资料](species/5e-2014/motm-shadar-kai/motm-shadar-kai.md) | 已接入及自动化回归 |
+| 仙灵 | Fairy | [详细资料](species/5e-2014/motm-fairy/motm-fairy.md) | 已接入及自动化回归 |
+| 气元素裔（多元宇宙） | Air Genasi | [详细资料](species/5e-2014/motm-air-genasi/motm-air-genasi.md) | 已接入及自动化回归 |
+| 土元素裔（多元宇宙） | Earth Genasi | [详细资料](species/5e-2014/motm-earth-genasi/motm-earth-genasi.md) | 已接入及自动化回归 |
+| 火元素裔（多元宇宙） | Fire Genasi | [详细资料](species/5e-2014/motm-fire-genasi/motm-fire-genasi.md) | 已接入及自动化回归 |
+| 水元素裔（多元宇宙） | Water Genasi | [详细资料](species/5e-2014/motm-water-genasi/motm-water-genasi.md) | 已接入及自动化回归 |
+| 人马（多元宇宙） | Centaur | [详细资料](species/5e-2014/motm-centaur/motm-centaur.md) | 已接入及自动化回归 |
+| 牛头人（多元宇宙） | Minotaur | [详细资料](species/5e-2014/motm-minotaur/motm-minotaur.md) | 已接入及自动化回归 |
+| 熊地精（多元宇宙） | Bugbear | [详细资料](species/5e-2014/motm-bugbear/motm-bugbear.md) | 已接入及自动化回归 |
+| 斑猫人（多元宇宙） | Tabaxi | [详细资料](species/5e-2014/motm-tabaxi/motm-tabaxi.md) | 已接入及自动化回归 |
+| 海精灵（多元宇宙） | Sea Elf | [详细资料](species/5e-2014/motm-sea-elf/motm-sea-elf.md) | 已接入及自动化回归 |
+| 兽人（多元宇宙） | Orc | [详细资料](species/5e-2014/motm-orc/motm-orc.md) | 已接入及自动化回归 |
+| 地精（多元宇宙） | Goblin | [详细资料](species/5e-2014/motm-goblin/motm-goblin.md) | 已接入及自动化回归 |
+| 大地精（多元宇宙） | Hobgoblin | [详细资料](species/5e-2014/motm-hobgoblin/motm-hobgoblin.md) | 已接入及自动化回归 |
+| 歌利亚（多元宇宙） | Goliath | [详细资料](species/5e-2014/motm-goliath/motm-goliath.md) | 已接入及自动化回归 |
+| 天狗（多元宇宙） | Kenku | [详细资料](species/5e-2014/motm-kenku/motm-kenku.md) | 已接入及自动化回归 |
+| 蛇人（多元宇宙） | Yuan-ti | [详细资料](species/5e-2014/motm-yuan-ti/motm-yuan-ti.md) | 已接入及自动化回归 |
+| 吉斯泽莱人（多元宇宙） | Githzerai | [详细资料](species/5e-2014/motm-githzerai/motm-githzerai.md) | 已接入及自动化回归 |
+| 吉斯洋基人（多元宇宙） | Githyanki | [详细资料](species/5e-2014/motm-githyanki/motm-githyanki.md) | 已接入及自动化回归 |
+| 地底侏儒（多元宇宙） | Deep Gnome | [详细资料](species/5e-2014/motm-deep-gnome/motm-deep-gnome.md) | 已接入，待感官证据 |
+| 灰矮人（多元宇宙） | Duergar | [详细资料](species/5e-2014/motm-duergar/motm-duergar.md) | 已接入，待感官证据 |
+| 费尔伯格人（多元宇宙） | Firbolg | [详细资料](species/5e-2014/motm-firbolg/motm-firbolg.md) | 已接入及自动化回归 |
+| 鸟羽人（多元宇宙） | Aarakocra | [详细资料](species/5e-2014/motm-aarakocra/motm-aarakocra.md) | 已接入及自动化回归 |
+| 梭螺鱼人（多元宇宙） | Triton | [详细资料](species/5e-2014/motm-triton/motm-triton.md) | 已接入及自动化回归 |
+| 化兽者（多元宇宙） | Shifter | [详细资料](species/5e-2014/motm-shifter/motm-shifter.md) | 已接入及自动化回归 |
+| 狗头人（多元宇宙） | Kobold | [详细资料](species/5e-2014/motm-kobold/motm-kobold.md) | 已接入及自动化回归 |
+| 阿斯莫（多元宇宙） | Aasimar | [详细资料](species/5e-2014/motm-aasimar/motm-aasimar.md) | 已接入及自动化回归 |
+| 雅灵（多元宇宙） | Eladrin | [详细资料](species/5e-2014/motm-eladrin/motm-eladrin.md) | 已接入及自动化回归 |
+| 蜥蜴人（多元宇宙） | Lizardfolk | [详细资料](species/5e-2014/motm-lizardfolk/motm-lizardfolk.md) | 已接入及自动化回归 |
+| 龟人（多元宇宙） | Tortle | [详细资料](species/5e-2014/motm-tortle/motm-tortle.md) | 已接入及自动化回归 |
+
+限定工具规格支持 `optionIds/required`，半羊人必须选具体乐器，旧种族缺选提示规则不变。`RaceRule.choices` 复用 `selections` 和时间线任务，依赖、来源、等级及重复记录统一过滤；非法原值保留但停用。`RaceFeature.selectionRequirement` 支持主检查点、选项及额外检查点依赖，雅灵必须具有有效季节和能力属性才授予妖精步/季节效果。`naturalArmor` 声明基础值、是否加敏捷及禁止穿甲；替代公式不叠加。
+
+逐法术契约增加 `waivedComponents`、`canCastWithSpellSlots`、`atWill` 与 `targetRestriction`，不改全局法术元数据或专注。吉斯免全部成分，蛇人仅蛇无限次施放不伪造次数资源，职业同名法术保持独立路径。
 
 ## 2024 核心物种
 
@@ -96,7 +233,7 @@ race-2014-elf-drow
 | 蜥蜴人 | Lizardfolk | VGM | [2014 蜥蜴人](species/5e-2014/lizardfolk/lizardfolk.md) | 无 | 已实现；商业摘要 |
 | 蛇人 | Yuan-ti Pureblood | VGM | [2014 蛇人](species/5e-2014/yuan-ti/yuan-ti.md) | 无 | 已实现；商业摘要 |
 | 战俑 | Warforged | ERftLW | [2014 战俑](species/5e-2014/warforged/warforged.md) | 无 | 已实现；商业摘要 |
-| 变形怪 | Changeling | ERftLW | [2014 变形怪](species/5e-2014/changeling/changeling.md) | 无 | 已实现；商业摘要 |
+| 幻身灵 | Changeling | ERftLW | [2014 幻身灵](species/5e-2014/changeling/changeling.md) | 无 | 已实现；商业摘要；旧名「变形怪」可搜索 |
 | 卡拉司塔 | Kalashtar | ERftLW | [2014 卡拉司塔](species/5e-2014/kalashtar/kalashtar.md) | 无 | 已实现；商业摘要 |
 | 龟人 | Tortle | Tortle Package | [2014 龟人](species/5e-2014/tortle/tortle.md) | 无 | 已实现；商业摘要 |
 | 吉斯 | Gith | MToF | [2014 吉斯](species/5e-2014/gith/gith.md) | [吉斯洋基人](species/5e-2014/gith/gith-githyanki.md)、[吉斯泽莱人](species/5e-2014/gith/gith-githzerai.md) | 已实现；商业摘要 |
@@ -119,15 +256,26 @@ G3-I1（2026-09-21）补录第三方合作书中的种族／物种 **63 条**（
 | 《胧忆岛》 | 达良人 Dara、鸣玉族 Nakudama | — | `tp-obojima-index` |
 | 《谦卑林》 | 浣熊族 Mapach、狡狐族 Vulpin、猬族 Hedge、跳鼠族 Jerbeen、鹿族 Cervan、隼族 Raptor、雉族 Gallus、鸦族 Corvum、鸮族 Strig、鸽族 Luma | 林地鹿／叉角鹿；海隼族／风隼族；靓雉族／野雉族；昏鸦族／煽鸦族；敦实鸮／迅疾鸮；黑鸽族／艳鸽族（12 条） | `tp-humblewood-index` |
 | 《黯潮之书》 | 熊民 Bearfolk、达拉库食尸鬼 Darakhul、幽影地精 Shadow Goblin、影蚀人类 Umbral Human、疾步族 Quickstep、猬族（灵魂渡者）Spiritfarer Erina、树鼠族 Ratatosk、萨塔雷（无缚者）Unbound Satarre、鸦族（崇高）Sublime Ravenfolk、幽影（冥河）Stygian Shade | 影裔熊民；达拉库食尸鬼（熊民／人类遗承）；影蚀人类（嬗变者／天赋者）；艾科尔／特拉德瓦克特树鼠族；影妖精／暗精灵／月精灵（父种族＝核心精灵）；玄命侏儒（父种族＝核心侏儒）（11 条） | `tp-ebon-tides-index` |
+| 《鬼魅幽谷：玩家包》（X03） | 无形之灵 The Disembodied、枉替之子 Wechselkind（2 条，无亚种） | — | `tp-grim-hollow-index` |
+| 《异界传送 Plane Shift》（X01） | 依夏兰：人类、人鱼（绿／蓝 2 亚种）、吸血鬼、半兽人、地精、塞连；依尼翠：依尼翠人类（4 行省亚种）；卡拉德许：人类、乙太种、精灵、矮人、维多肯；赞迪卡：人类、人鱼、吸血鬼、精灵、寇族、鬼怪；阿芒凯：人类、牛头人、胡狼人、艾文（鹭首／鹰首 2 亚种）、那伽（31 条） | 人鱼绿／蓝；依尼翠加渥尼／凯锡革／涅非利亚／史顿襄；艾文鹭首／鹰首（共 8 亚种） | `tp-planshift-index` |
 
-### 2024 写法（18 条，进 `5e-2024` 仓库）
+**X01 已核验要点**：全分支为 2014 写法；人类与半兽人直接引用《玩家手册》模板（`countsAsRaceIds`，不重复授予）；依尼翠人类为**替换式方案**（`replacesParentBonuses`，原文要求不再使用 PHB 人类变体）；属性加值按用户裁定**叠加**——主项写父项、亚种只写差值（例：艾文父项敏捷 +2 ＋ 鹰首感知 +2）。赞迪卡鬼怪「坚毅」抗性以正文条目为准取**火焰与心灵**（依夏兰章末概述作强酸与火焰，已在 description 保留差异说明）。
+
+### 2024 写法（进 `5e-2024` 仓库）
 
 | 书 | 主族 | 亚种 | 来源 ID |
 | --- | --- | --- | --- |
 | 《歪曲之月》 | 丝虫种 Silkborn、丰收种 Harvestborn、咒狼种 Curseborn、沼泽种 Bogborn、深潜种 Deepborn、灰烬种 Ashborn、疫鼠种 Plagueborn、石像种 Stoneborn、线偶种 Threadborn、绘骨种 Relicborn、苍羽种 Azureborn、诡木种 Gnarlborn、霜墓种 Graveborn（13 条，无亚种） | — | `source-2024-tp-crooked-moon` |
 | 《瓦尔达的秘密尖塔》玩家包Ⅰ | 匠偶 Geppettin、曼德拉 Mandrake | 素瓷／枢木／毛绒匠偶（3 条） | `source-2024-tp-valdas-spire` |
+| 《探秘艾伯伦》（X02） | 卡拉默陆行者（人鱼）Kalamer Landwalker、厄兆者 Ruinbound、约衮塔珥（半兽人）Jhorgun'taal、达坎伽珥达（大地精）Dhakaani Ghaal'dar、达坎古珥达（熊地精）Dhakaani Guul'dar、达坎哥林达（地精）Dhakaani Golin'dar、鬣狗人 Gnoll、鲨华鱼人 Sahuagin（8 条）＋阿斯莫变体（艾伯伦）1 条 | — | `source-2024-tp-exploring-eberron` |
+| 《Beyond Drops》26.9（X04） | 暮精 Duskling（1 条） | — | `source-2024-tp-beyond-drops` |
+| 破解奥秘 UA：幽暗地域二期 Underdark Options 2（X05） | 地渊伊玛斯卡人 Deep Imaskari、寇涛 Kuo-toa、灵吸裔 Illithidkin、蕈人 Myconid（**植物**）、蛛化卓尔 Drider（**怪兽**）（5 条） | — | `source-2024-ua-underdark` |
 
-**2024 物种不给属性加值**（属性来自背景），故这 18 条的 `fixedAbilityBonuses` 一律为空；2014 写法条目按 2014 口径使用 `属性值提升` 与固定／自选加值。
+**X02 已核验要点**：原书 2020 年出版，但本地中文版正文版式已整体 2024 化（八条种族全部含「生物类型」且不含「属性值提升」），故登记在 2024 仓库。**4927／4929 的 CHM 标题与文件名对调**，已按正文英文名登记为「达坎伽珥达（大地精）」与「达坎哥林达（地精）」；4916 幻身灵旅者与 4933 马伦蒂是**背景**（不计入种族），且已修正其来源归属为 `source-2024-tp-exploring-eberron`。阿斯莫变体只挂 `countsAsRaceIds`、不挂 `parentRaceId`，以免自动授予基础条目中被替换的「光明使者」。
+
+**X05 已核验要点**：五项**全部是玩家种族**，但蛛化卓尔／蕈人／寇涛另有同名的官方怪物条目，必须独立登记、不合并。蕈人为**植物**、蛛化卓尔为**怪兽**（2024 术语），按约定写在 `description` 并明示「不属类人生物」；`RaceRule` 无 creaturesType 字段，若日后要让依赖「类人生物」的效果自动判定须另立字段或 `RaceFeature`。
+
+**2024 物种不给属性加值**（属性来自背景），故 2024 条目的 `fixedAbilityBonuses` 一律为空；2014 写法条目按 2014 口径使用 `属性值提升` 与固定／自选加值。
 
 **未登记（留档）**：胧忆岛的「人类」「精灵」两页只有风味文字、无种族特质段（规则数据已在核心种族中登记）；谦卑林的「鸟族」「地族」是分类总览页而非可玩种族；《花卉龙博考》的「花卉龙裔」与斯坦哈德的「灾孽者」分别因未识别为独立种族段／资料缺特质段而暂未登记。
 
@@ -158,6 +306,6 @@ G3-I1（2026-09-21）补录第三方合作书中的种族／物种 **63 条**（
 ## 核验记录
 
 - 全量核验日期：2026-07-27（原 38 个文件）；2026-08-11 扩展种族考察、勘误核验与程序登记。
-- 当前资料范围：18 个 `5e-2024` 物种/血统文件、19 个 `5e-2014` 核心种族/子种族文件，以及 42 个 `5e-2014` 扩展种族/分支文件（见[种族扩展需求](需求文档/种族扩展需求.md)）；程序已登记 72 条种族记录（19 核心 + 53 扩展）。
+- 初始资料基线：18个`5e-2024`物种/血统文件、19个`5e-2014`核心种族/子种族文件及42个扩展种族/分支文件（见[归档种族扩展需求](需求文档/归档需求/种族扩展需求.md)）；当时程序登记72条种族记录。本轮新增资料与接入状态见[逐书矩阵](需求文档/种族扩展逐书矩阵.md)，不把历史计数当作当前全部覆盖范围。
 - 当前程序已注册 `5e-2014` 核心种族与扩展种族共 72 条（2026-08-11 扩展种族登记完成）；2024 物种资料作为未来独立规则集保留。
 - 所有本地链接、稳定 ID、规则集字段、属性提升来源和版权边界应在规则资料变更后重新校验。

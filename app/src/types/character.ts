@@ -21,6 +21,8 @@ export type ManualDerivedField =
   | 'speed'
   | 'attackBonus'
   | 'attackDamageBonus'
+  | 'dexterityAttackBonus'
+  | 'dexterityAttackDamageBonus'
   | 'passivePerception'
   | 'spellAttackBonus'
   | 'spellSaveDc'
@@ -59,6 +61,17 @@ export interface AbilityScores {
   readonly int: number
   readonly wis: number
   readonly cha: number
+}
+
+/**
+ * 第 5 步「自定义属性」下的天命掷骰原始记录。
+ *
+ * `count` 是玩家请求的组数（1—10）；`rolls` 是实际掷出的组，每组六项、每项为 4d6 去最低之和（3—18）。
+ * 两者都是**原始选择**而非派生值，故随草稿保存、不随重算丢失；缺省表示尚未掷骰。
+ */
+export interface AbilityDestinyRolls {
+  readonly count: number
+  readonly rolls?: readonly (readonly number[])[]
 }
 
 export interface ChoiceSelection {
@@ -172,6 +185,7 @@ export interface CharacterMedia {
 }
 
 export interface CharacterDraft {
+  readonly lineageHistory?: readonly LineageHistoryEntry[]
   readonly schemaVersion: 9
   readonly id: string
   readonly ruleset: RulesetId
@@ -188,6 +202,7 @@ export interface CharacterDraft {
   readonly backgroundId?: string
   readonly backgroundVariantId?: string
   readonly raceAbilityChoices: readonly AbilityKey[]
+  readonly raceAbilityBonusOptionId?: string
   /** 2024 背景三项候选属性的分配结果（+2/+1 或各 +1）；2014 草稿缺省。 */
   readonly backgroundAbilityAllocation?: Readonly<Partial<Record<AbilityKey, number>>>
   /** 2024 物种创建时选择的体型；固定体型的物种不需要。 */
@@ -196,11 +211,14 @@ export interface CharacterDraft {
   readonly raceSkillChoices?: readonly string[]
   /** 种族自选工具熟练结果（矮人/战俑/维达肯/吉斯洋基）；展示级，不参与派生。 */
   readonly raceToolChoice?: string
+  readonly raceToolChoices?: readonly string[]
   readonly backgroundSkillIds: readonly string[]
   readonly backgroundToolIds: readonly string[]
   readonly languages: readonly string[]
   readonly proficiencyReplacements: readonly ProficiencyReplacement[]
   readonly baseAbilities: AbilityScores
+  /** 第 5 步自定义属性的天命掷骰记录；旧草稿缺省。 */
+  readonly abilityDestiny?: AbilityDestinyRolls
   readonly selections: readonly ChoiceSelection[]
   readonly startingEquipmentSelections: readonly StartingEquipmentSelection[]
   readonly inventory: readonly InventoryEntry[]
@@ -219,6 +237,27 @@ export interface CharacterDraft {
   /** 可选角色形象；二进制保存在 IndexedDB，草稿仅保存媒体引用。 */
   readonly media?: CharacterMedia
   readonly currentStep: DraftStep
+}
+
+/** 转化前的起源只用于追溯及证明可保留遗产，不是可恢复的角色快照。 */
+export interface LineageHistoryEntry {
+  readonly targetRaceId: string
+  readonly transformedAt: string
+  readonly level: number
+  readonly retainedKeys: readonly string[]
+  readonly origin: {
+    readonly raceId: string
+    readonly subraceId?: string
+    readonly sourceIds: readonly string[]
+    readonly raceAbilityChoices: readonly AbilityKey[]
+    readonly raceAbilityBonusOptionId?: string
+    readonly raceSkillChoices: readonly string[]
+    readonly raceToolChoice?: string
+    readonly raceToolChoices?: readonly string[]
+    readonly speciesSizeChoice?: 'small' | 'medium'
+    readonly selections: readonly ChoiceSelection[]
+    readonly languages: readonly string[]
+  }
 }
 
 export interface LegacyDraftRecord {
@@ -250,6 +289,8 @@ export interface DerivedCharacter {
   readonly initiative: DerivedValue<number>
   readonly attackBonus: DerivedValue<number>
   readonly attackDamageBonus: DerivedValue<number>
+  readonly dexterityAttackBonus: DerivedValue<number>
+  readonly dexterityAttackDamageBonus: DerivedValue<number>
   readonly spellAttackBonus?: DerivedValue<number>
   readonly spellSaveDc?: DerivedValue<number>
   readonly speed: DerivedValue<number>

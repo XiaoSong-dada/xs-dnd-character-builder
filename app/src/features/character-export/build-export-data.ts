@@ -2,8 +2,10 @@ import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { normalizeManualEdits } from '@/rules/manual-edits'
+import { getEffectiveSpeciesFeatures, getEffectiveSpeciesSize } from '@/rules/origins'
 import { listSessionResources } from '@/rules/session-resources'
-import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpellcastingConfig, usesPreparedSelection } from '@/rules/spellcasting'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpeciesSpellcastingProfiles, getSpellcastingConfig, usesPreparedSelection } from '@/rules/spellcasting'
+import { getFixedSpeciesLanguages } from '@/rules/languages'
 import { isSourceEnabled } from '@/rules/source-books'
 import { buildTimeline } from '@/rules/timeline'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
@@ -251,7 +253,7 @@ function resolveSelectedFeatures(draft: CharacterDraft): ExportFeature[] {
   return features
 }
 
-function buildFeatures(draft: CharacterDraft): ExportFeature[] {
+function buildFeatures(draft: CharacterDraft, derived: DerivedCharacter): ExportFeature[] {
   const repository = getRulesRepository(draft.ruleset)
   const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
   const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
@@ -295,8 +297,8 @@ function buildFeatures(draft: CharacterDraft): ExportFeature[] {
   // 2024 物种特性（含血统）逐条导出；种族名称已在身份区展示。
   const raceFeatures = [race, subrace]
     .filter((item): item is NonNullable<typeof item> => Boolean(item))
-    .flatMap((item) => repository.getRaceFeatures(item.id)
-      .filter((feature) => feature.level <= draft.targetLevel)
+    .filter((item) => isSourceEnabled(item.sourceIds, draft.enabledSourceIds, repository))
+    .flatMap((item) => getEffectiveSpeciesFeatures(draft, repository, item.id, derived)
       .map((feature) => ({ id: feature.id, category: 'race' as const, name: feature.name, summary: feature.summary, priority: 40 })))
   const entries: ExportFeature[] = [
     ...resolveSelectedFeatures(draft),
@@ -305,6 +307,13 @@ function buildFeatures(draft: CharacterDraft): ExportFeature[] {
     ...(subclass?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'subclass' as const, name: feature.name, summary: feature.summary, priority: 20 })),
     ...(classRule?.features ?? []).filter((feature) => feature.level <= draft.targetLevel).map((feature) => ({ id: feature.id, category: 'class' as const, name: feature.name, summary: feature.summary, priority: 30 })),
     ...raceFeatures,
+    ...getSpeciesSpellcastingProfiles(draft, derived).map((profile) => ({
+      id: profile.id, category: 'race' as const, name: `${profile.sourceName}施法`, priority: 40,
+      summary: `${ABILITY_LABELS[profile.ability]}；法术攻击 ${signed(profile.attackBonus)}；法术豁免 DC ${profile.saveDc}；${profile.spellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、')}${profile.materialFreeSpellIds.length ? `；无需材料成分（种族施放）：${profile.materialFreeSpellIds.map((id) => repository.getSpell(id)?.name ?? id).join('、')}` : ''}${profile.castingNotes.length ? `；${profile.castingNotes.join('；')}` : ''}`,
+    })),
+    ...(getEffectiveSpeciesSize(draft, repository)
+      ? [{ id: `selected-size-${draft.ruleset}`, category: 'race' as const, name: '选定体型', summary: getEffectiveSpeciesSize(draft, repository) === 'small' ? '小型' : '中型', priority: 40 }]
+      : []),
     ...(background ? [{ id: background.id, category: 'background' as const, name: background.featureName || background.name, summary: allocationText ? `${background.summary}；${allocationText}` : background.summary, priority: 50 }] : []),
   ]
   const seen = new Set<string>()
@@ -424,8 +433,11 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
     const labels = value.sources.map((source) => source.label)
     return { id, name: optionName(repository, id), value: value.value, proficiency: labels.includes('专精') ? 'expertise' as const : labels.includes('技能熟练') ? 'proficient' as const : 'none' as const }
   })
-  const languages = draft.languages.map((id) => optionName(repository, id))
+  const languages = [...new Set([...getFixedSpeciesLanguages(draft, repository), ...draft.languages.map((id) => optionName(repository, id))])]
   const spellcastingConfig = getSpellcastingConfig(draft)
+  const speciesProfiles = getSpeciesSpellcastingProfiles(draft, derived)
+  const primarySpeciesProfile = speciesProfiles.length === 1 ? speciesProfiles[0] : undefined
+  const grantedSpellIds = getAlwaysPreparedSpellIds(draft)
 
   return {
     identity: {
@@ -444,12 +456,15 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
     attacks,
     inventory,
     currency: { ...draft.currency, gp: draft.currency.gp + draft.adventureGold },
-    features: buildFeatures(draft),
+    features: buildFeatures(draft, derived),
     resources: buildResources(draft, derived),
-    ...(spellcastingConfig || normalizeManualEdits(draft.manualEdits).addedSpells.length > 0 || getEffectiveSpellSlots(draft).length > 0 ? {
+    ...(spellcastingConfig || grantedSpellIds.length > 0 || normalizeManualEdits(draft.manualEdits).addedSpells.length > 0 || getEffectiveSpellSlots(draft).length > 0 ? {
       spellcasting: {
-        className: classRule?.name ?? subclass?.name ?? '人工施法', abilityLabel: spellcastingConfig ? ABILITY_LABELS[spellcastingConfig.ability] : '人工', saveDc: derived.spellSaveDc?.value ?? 0,
-        attackBonus: derived.spellAttackBonus?.value ?? 0, slots: getEffectiveSpellSlots(draft).map((slot) => ({ ...slot, pact: Boolean(slot.pact) })),
+        className: spellcastingConfig ? classRule?.name ?? subclass?.name ?? '' : primarySpeciesProfile?.sourceName ?? (grantedSpellIds.length ? '授予法术' : classRule?.name ?? subclass?.name ?? '人工施法'),
+        abilityLabel: spellcastingConfig ? ABILITY_LABELS[spellcastingConfig.ability] : primarySpeciesProfile ? ABILITY_LABELS[primarySpeciesProfile.ability] : speciesProfiles.length > 1 ? '多来源，见特性' : grantedSpellIds.length ? '待确认' : '人工',
+        saveDc: spellcastingConfig ? derived.spellSaveDc?.value ?? 0 : primarySpeciesProfile?.saveDc ?? derived.spellSaveDc?.value ?? 0,
+        attackBonus: spellcastingConfig ? derived.spellAttackBonus?.value ?? 0 : primarySpeciesProfile?.attackBonus ?? derived.spellAttackBonus?.value ?? 0,
+        slots: getEffectiveSpellSlots(draft).map((slot) => ({ ...slot, pact: Boolean(slot.pact) })),
         spells: spellList(draft, diagnostics),
       },
     } : {}),

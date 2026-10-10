@@ -230,8 +230,8 @@ G 批次按《5e 不全书》CHM v2026.09.13 逐条核验补齐。以下条目�
 | 狂欢者 | Reveler | 歪曲之月 | [2024 狂欢者](backgrounds/5e-2024/tp-reveler/tp-reveler.md) | 同上 |
 | 猩红求道者 | Crimson Aspirant | 歪曲之月 | [2024 猩红求道者](backgrounds/5e-2024/tp-crimson-aspirant/tp-crimson-aspirant.md) | 同上 |
 | 禁忌学者 | Scholar of the Forbidden | 歪曲之月 | [2024 禁忌学者](backgrounds/5e-2024/tp-scholar-of-the-forbidden/tp-scholar-of-the-forbidden.md) | 同上 |
-| 幻身灵旅者 | Changeling Traveler | 德拉肯海姆 | [2024 幻身灵旅者](backgrounds/5e-2024/tp-changeling-traveler/tp-changeling-traveler.md) | 三项属性候选 |
-| 马伦蒂 | Malenti | 德拉肯海姆 | [2024 马伦蒂](backgrounds/5e-2024/tp-malenti/tp-malenti.md) | 装备随吞噬对象，按原书裁定 |
+| 幻身灵旅者 | Changeling Traveler | 探秘艾伯伦 | [2024 幻身灵旅者](backgrounds/5e-2024/tp-changeling-traveler/tp-changeling-traveler.md) | 三项属性候选（X02 来源修正） |
+| 马伦蒂 | Malenti | 探秘艾伯伦 | [2024 马伦蒂](backgrounds/5e-2024/tp-malenti/tp-malenti.md) | 装备随吞噬对象，按原书裁定（X02 来源修正） |
 | 异端裁判官 | Inquisitor | 德拉肯海姆 | [2024 异端裁判官](backgrounds/5e-2024/tp-inquisitor/tp-inquisitor.md) | 固定专长待核验 |
 | 猎兽人 | Beast Hunter | 德拉肯海姆 | [2024 猎兽人](backgrounds/5e-2024/tp-beast-hunter/tp-beast-hunter.md) | 同上 |
 | 终亡者 | Marked for Death | 斯坦哈德 | [2024 终亡者](backgrounds/5e-2024/tp-marked-for-death/tp-marked-for-death.md) | 霜鬓 `feat-2024-tp-grizzled`（G3 补录） |

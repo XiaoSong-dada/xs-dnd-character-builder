@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, type ComponentPublicInstance } from 'vue'
 
 const routerReplace = vi.fn()
@@ -121,10 +121,44 @@ async function setupPage(draft: CharacterDraft): Promise<{ page: Page; store: Re
 }
 
 describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
+  afterEach(() => vi.restoreAllMocks())
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
     routerReplace.mockClear()
+  })
+
+  it('属性方案切换保存原始选择并重算数量，非法方案不能写入草稿', async () => {
+    const human = rulesRepository.getRace('race-2014-human')
+    if (!human) throw new Error('missing human')
+    const original = rulesRepository.getRace.bind(rulesRepository)
+    vi.spyOn(rulesRepository, 'getRace').mockImplementation((id) => id === 'test-alternatives' ? {
+      ...human, id, fixedAbilityBonuses: {}, flexibleBonusAlternatives: [
+        { id: 'two-one', label: '+2 / +1', groups: [{ count: 1, value: 2 }, { count: 1, value: 1 }] },
+        { id: 'three-one', label: '三项 +1', groups: [{ count: 3, value: 1 }] },
+      ],
+    } : original(id))
+    const draft = makeFighterDraft({ raceId: 'test-alternatives', raceAbilityChoices: ['str', 'dex'], currentStep: 'abilities' })
+    const { page, store } = await setupPage(draft)
+    expect(page.raceFlexibleCount.value).toBe(2)
+    expect(page.raceAbilityBonuses.value).toMatchObject({ str: 2, dex: 1 })
+    page.updateRaceAbilityBonusOption('three-one')
+    await nextTick()
+    expect(store.activeDraft?.raceAbilityBonusOptionId).toBe('three-one')
+    expect(store.activeDraft?.raceAbilityChoices).toEqual(['str', 'dex'])
+    expect(page.raceFlexibleCount.value).toBe(3)
+    expect(page.raceAbilityBonuses.value).toEqual({})
+    page.updateRaceAbilityChoices(['str', 'dex', 'con'])
+    page.updateRaceAbilityBonusOption('unknown')
+    expect(store.activeDraft?.raceAbilityBonusOptionId).toBe('three-one')
+    page.updateRaceAbilityBonusOption('two-one')
+    await nextTick()
+    expect(store.activeDraft?.raceAbilityChoices).toEqual(['str', 'dex', 'con'])
+    expect(page.raceFlexibleCount.value).toBe(2)
+    setActivePinia(createPinia())
+    const restored = useCharacterDraftsStore().drafts.find((item) => item.id === draft.id)
+    expect(restored?.raceAbilityBonusOptionId).toBe('two-one')
+    expect(restored?.raceAbilityChoices).toEqual(['str', 'dex', 'con'])
   })
 
   it('时间线保存法术精通时同步法术书预留，首次构筑更换选择会释放旧预留', async () => {
