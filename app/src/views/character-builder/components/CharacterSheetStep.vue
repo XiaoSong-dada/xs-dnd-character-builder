@@ -670,7 +670,6 @@ function handleExportPdf(): void {
           <div v-if="draft.classId" class="character-sheet__header-actions">
             <UiBadge v-if="needsReview" tone="warning">待补全</UiBadge>
             <button type="button" class="character-sheet__level-button" @click="$emit('adjustLevel')">调整等级</button>
-            <button v-if="draft.ruleset === '5e-2014'" type="button" class="character-sheet__level-button" @click="$emit('transformLineage')">血统转化</button>
             <button type="button" class="character-sheet__level-button" @click="editing.editMode.value = !editing.editMode.value">{{ editing.editMode.value ? '完成编辑' : '编辑角色卡' }}</button>
             <template v-if="editing.editMode.value">
               <button
@@ -683,6 +682,7 @@ function handleExportPdf(): void {
               >更多{{ showMoreActions ? ' ▴' : ' ▾' }}</button>
               <div v-if="showMoreActions" id="character-sheet-more-actions" ref="morePanelRef" class="character-sheet__more-panel">
                 <button type="button" class="character-sheet__more-action" @click="showMediaEditor = true; showMoreActions = false">编辑角色形象</button>
+                <button v-if="draft.ruleset === '5e-2014'" type="button" class="character-sheet__more-action" @click="$emit('transformLineage'); showMoreActions = false">血统转化</button>
                 <button v-if="editing.hasEdits.value" type="button" class="character-sheet__more-action character-sheet__more-action--danger" @click="editing.showResetConfirm.value = true; showMoreActions = false">恢复系统默认</button>
               </div>
             </template>

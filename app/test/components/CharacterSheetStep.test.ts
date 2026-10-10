@@ -443,6 +443,41 @@ describe('CharacterSheetStep 头部按钮布局（编辑模式收纳）', () => 
     expect(wrapper.text()).not.toContain('恢复系统默认')
   })
 
+  it('血统转化收在编辑模式的「更多」面板里，平时不显示', async () => {
+    const findTransform = (wrapper: ReturnType<typeof mount<typeof CharacterSheetStep>>) =>
+      wrapper.findAll('.character-sheet__more-action, .character-sheet__level-button').find((button) => button.text() === '血统转化')
+
+    // 平时（未进入编辑模式）不显示，头部也不再有独立按钮
+    const wrapper = mount(CharacterSheetStep, { props: { draft, derived: deriveCharacter(draft) } })
+    expect(findTransform(wrapper)).toBeUndefined()
+    expect(wrapper.text()).not.toContain('血统转化')
+
+    // 进入编辑模式并展开「更多」后出现
+    await openEditMode(wrapper)
+    expect(findTransform(wrapper)).toBeUndefined()
+    await openMorePanel(wrapper)
+    const transform = findTransform(wrapper)
+    expect(transform).toBeDefined()
+    expect(transform!.element.classList.contains('character-sheet__more-action')).toBe(true)
+
+    // 点击后发出既有事件并收起面板
+    await transform!.trigger('click')
+    await nextTick()
+    expect(wrapper.emitted('transformLineage')).toHaveLength(1)
+    expect(wrapper.find('.character-sheet__more-panel').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('2024 草稿的「更多」面板不提供血统转化', async () => {
+    const modern = { ...draft, ruleset: '5e-2024', classId: 'class-2024-fighter' } as CharacterDraft
+    const wrapper = mount(CharacterSheetStep, { props: { draft: modern, derived: deriveCharacter(modern) } })
+    await openEditMode(wrapper)
+    await openMorePanel(wrapper)
+    expect(wrapper.find('.character-sheet__more-panel').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('血统转化')
+    wrapper.unmount()
+  })
+
   it('「更多」面板的编辑角色形象打开媒体编辑器弹窗并收起面板', async () => {
     const wrapper = mount(CharacterSheetStep, { props: { draft, derived: deriveCharacter(draft) } })
     await openEditMode(wrapper)
