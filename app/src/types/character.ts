@@ -63,6 +63,17 @@ export interface AbilityScores {
   readonly cha: number
 }
 
+/**
+ * 第 5 步「自定义属性」下的天命掷骰原始记录。
+ *
+ * `count` 是玩家请求的组数（1—10）；`rolls` 是实际掷出的组，每组六项、每项为 4d6 去最低之和（3—18）。
+ * 两者都是**原始选择**而非派生值，故随草稿保存、不随重算丢失；缺省表示尚未掷骰。
+ */
+export interface AbilityDestinyRolls {
+  readonly count: number
+  readonly rolls?: readonly (readonly number[])[]
+}
+
 export interface ChoiceSelection {
   readonly checkpointId: string
   readonly optionIds: readonly string[]
@@ -206,6 +217,8 @@ export interface CharacterDraft {
   readonly languages: readonly string[]
   readonly proficiencyReplacements: readonly ProficiencyReplacement[]
   readonly baseAbilities: AbilityScores
+  /** 第 5 步自定义属性的天命掷骰记录；旧草稿缺省。 */
+  readonly abilityDestiny?: AbilityDestinyRolls
   readonly selections: readonly ChoiceSelection[]
   readonly startingEquipmentSelections: readonly StartingEquipmentSelection[]
   readonly inventory: readonly InventoryEntry[]

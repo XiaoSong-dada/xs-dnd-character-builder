@@ -6,7 +6,7 @@ import { deriveCharacter, getFlexibleBonusGroups, getFlexibleBonusRule, getRaceA
 import { getBackgroundAbilityBonuses, getOriginStepBlockers, isOriginStepComplete } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
-import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
+import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, clampDestinyCount, rollAbilityScoreSets, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { hasBuildChoices } from '@/rules/draft-progress'
 import { isSourceEnabled, normalizeEnabledSourceIds } from '@/rules/source-books'
@@ -23,6 +23,7 @@ import { useLineageTransformation } from '@/views/character-builder/hooks/useLin
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { CharacterPackageService } from '@/services/character-package'
 import { RulesetPreferenceService, resolveInitialRuleset } from '@/services/ruleset-preference'
+import { randomIntegerInclusive, secureUint32 } from '@/services/dice-random'
 import { downloadXlsx, fillTemplate, loadCharacterSheetTemplate } from '@/services/export-xlsx'
 import { buildCharacterSheetPdf, downloadPdf } from '@/services/export-pdf'
 import { buildCharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
@@ -650,6 +651,49 @@ export function useCharacterBuilderPage() {
     store.updateDraft({ baseAbilities: value })
   }
 
+  /**
+   * 第 5 步「自定义属性」的天命掷骰。
+   *
+   * 随机源从 `services/dice-random` 注入，`rules/abilities` 保持框架无关；
+   * 「天命次数」与「掷出的数组」都作为原始选择写进草稿，刷新与 JSON／ZIP 往返后仍在。
+   */
+  const destinyCount = computed(() => activeDraft.value?.abilityDestiny?.count ?? 1)
+  const destinyRolls = computed<readonly (readonly number[])[]>(
+    () => activeDraft.value?.abilityDestiny?.rolls ?? [],
+  )
+  const destinyError = ref('')
+
+  function rollDestiny(count: number): readonly (readonly number[])[] | undefined {
+    try {
+      destinyError.value = ''
+      return rollAbilityScoreSets(count, (minimum, maximum) => randomIntegerInclusive(minimum, maximum, secureUint32))
+    } catch (error) {
+      destinyError.value = error instanceof Error
+        ? `${error.message}请刷新页面后重试；当前结果沿用上一次记录。`
+        : '生成天命随机点数失败，请刷新页面后重试。'
+      return undefined
+    }
+  }
+
+  function updateDestinyCount(value: number): void {
+    const count = clampDestinyCount(value)
+    const rolls = rollDestiny(count)
+    store.updateDraft({ abilityDestiny: { count, ...(rolls ? { rolls } : {}) } })
+  }
+
+  /** 次数不变时重掷：用于「重新掷骰」，也用于重新打开草稿时补齐缺失的掷骰结果。 */
+  function rerollDestiny(): void {
+    updateDestinyCount(destinyCount.value)
+  }
+
+  // 打开草稿或进入第 5 步时，若记录了天命次数但还没有掷骰结果（例如换设备后首次打开），补掷一次。
+  watch([step, destinyCount, destinyRolls], () => {
+    if (step.value !== 'abilities') return
+    if (activeDraft.value?.abilityMethod !== 'custom') return
+    if (destinyRolls.value.length > 0) return
+    rerollDestiny()
+  }, { immediate: true })
+
   function updateRaceAbilityChoices(value: readonly AbilityKey[]): void {
     store.updateDraft({ raceAbilityChoices: value })
   }
@@ -814,6 +858,11 @@ export function useCharacterBuilderPage() {
     updateManualEdits,
     updateIdentity,
     updateAbilities,
+    destinyCount,
+    destinyRolls,
+    destinyError,
+    updateDestinyCount,
+    rerollDestiny,
     updateRaceAbilityChoices,
     updateRaceAbilityBonusOption,
     exportDraft,

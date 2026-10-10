@@ -28,7 +28,9 @@
 
 同批另有两处**非新增模块**的数据订正：`rules/data/sources-2024.ts` 就地修订 `source-2024-tp-beyond-drops` 的分类（第三方→官方数字专栏），以及 `rules/data/origins-2024.ts`／`rules/data/third-party-feats-2024.ts` 把幻身灵旅者、马伦蒂及其起源专长改挂 `source-2024-tp-exploring-eberron`。两者都不改变依赖方向。
 
-已复核前端依赖拓扑，已更新（新增 5 个 `rules/data/*` 模块并接入两个仓库装配点）。
+v1.12.0 追加「天命掷骰」（第 5 步自定义属性）：纯函数 `rules/abilities` 的 `rollAbilityScoreSets`／`normalizeAbilityDestiny` 只依赖共享类型，随机源以参数注入；`useCharacterBuilderPage` 持有天命次数与掷骰编排并从 `services/dice-random` 注入 `secureUint32`，`AbilitiesStep.vue` 只收集输入与展示数组；`services/draft-storage` 复用 `normalizeAbilityDestiny` 做读入归一化。依赖方向保持 `views → hooks → services/rules → types`，无 `rules → services` 反向依赖，`CharacterDraft` 只新增可选原始字段、schema 仍为 v9。
+
+已复核前端依赖拓扑，已更新（新增 5 个 `rules/data/*` 模块并接入两个仓库装配点；天命掷骰未新增模块）。
 
 ### S08—S10 实际拓扑（2026-10-10）
 

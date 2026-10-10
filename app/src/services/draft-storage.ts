@@ -13,6 +13,7 @@ import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
 import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { rulesRepository } from '@/rules/repository'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
+import { normalizeAbilityDestiny } from '@/rules/abilities'
 import { isRulesetId } from '@/rules/repositories'
 
 const STORAGE_KEY = 'dnd-character-builder:drafts:v9'
@@ -154,6 +155,7 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     backgroundAbilityAllocation: normalizeBackgroundAbilityAllocation(draft.backgroundAbilityAllocation),
     speciesSizeChoice: draft.speciesSizeChoice === 'small' || draft.speciesSizeChoice === 'medium' ? draft.speciesSizeChoice : undefined,
     raceToolChoices: Array.isArray(draft.raceToolChoices) ? draft.raceToolChoices.filter((id): id is string => typeof id === 'string') : undefined,
+    abilityDestiny: normalizeAbilityDestiny(draft.abilityDestiny),
     lineageHistory: normalizeLineageHistory(draft.lineageHistory),
     raceAbilityChoices: draft.raceAbilityChoices ?? [],
     raceAbilityBonusOptionId: typeof draft.raceAbilityBonusOptionId === 'string' && draft.raceAbilityBonusOptionId.trim() ? draft.raceAbilityBonusOptionId.trim() : undefined,

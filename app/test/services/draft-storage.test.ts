@@ -209,4 +209,46 @@ describe('DraftStorageService', () => {
       instanceId: 'manual-1', featId: 'feat-2024-alert', addedAt: '2026-09-29T00:00:00.000Z',
     }])
   })
+
+  it('天命掷骰作为原始选择随草稿往返，非法组被丢弃且不阻塞旧草稿', () => {
+    setJson(V9_KEY, [{
+      schemaVersion: 9,
+      id: 'destiny-ok',
+      ruleset: '5e-2014',
+      name: '天命角色',
+      abilityMethod: 'custom',
+      abilityDestiny: { count: 2, rolls: [[15, 14, 13, 10, 18, 9], [4, 10, 18, 3, 18, 18]] },
+    }, {
+      schemaVersion: 9,
+      id: 'destiny-partial',
+      ruleset: '5e-2014',
+      name: '天命越界',
+      abilityDestiny: { count: 99, rolls: [[15, 14, 13, 10, 18, 9], [1, 2, 3], 'x'] },
+    }, {
+      schemaVersion: 9,
+      id: 'destiny-legacy',
+      ruleset: '5e-2014',
+      name: '旧草稿无天命字段',
+    }, {
+      schemaVersion: 9,
+      id: 'destiny-invalid',
+      ruleset: '5e-2014',
+      name: '非法天命记录',
+      abilityDestiny: '天命',
+    }])
+    const drafts = DraftStorageService.loadAll()
+    expect(drafts.find((draft) => draft.id === 'destiny-ok')?.abilityDestiny)
+      .toEqual({ count: 2, rolls: [[15, 14, 13, 10, 18, 9], [4, 10, 18, 3, 18, 18]] })
+    // 组数夹到 10，非法组被丢弃，合法组保留
+    expect(drafts.find((draft) => draft.id === 'destiny-partial')?.abilityDestiny)
+      .toEqual({ count: 10, rolls: [[15, 14, 13, 10, 18, 9]] })
+    // 旧草稿缺省为 undefined，不补默认值
+    expect(drafts.find((draft) => draft.id === 'destiny-legacy')?.abilityDestiny).toBeUndefined()
+    // 非对象记录整体丢弃
+    expect(drafts.find((draft) => draft.id === 'destiny-invalid')?.abilityDestiny).toBeUndefined()
+    // 写回后仍是同一份原始选择
+    DraftStorageService.saveAll(drafts)
+    expect(DraftStorageService.loadAll().find((draft) => draft.id === 'destiny-ok')?.abilityDestiny)
+      .toEqual({ count: 2, rolls: [[15, 14, 13, 10, 18, 9], [4, 10, 18, 3, 18, 18]] })
+  })
 })

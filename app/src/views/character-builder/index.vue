@@ -83,6 +83,11 @@ const {
   updateManualEdits,
   updateIdentity,
   updateAbilities,
+  destinyCount,
+  destinyRolls,
+  destinyError,
+  updateDestinyCount,
+  rerollDestiny,
   updateRaceAbilityChoices,
   updateRaceAbilityBonusOption,
   exportDraft,
@@ -237,9 +242,14 @@ function updateMethod(value: AbilityMethod): void {
       :flexible-alternatives="raceFlexibleAlternatives"
       :flexible-option-id="activeDraft.raceAbilityBonusOptionId"
       :excluded-choices="excludedRaceAbilityChoices"
+      :destiny-count="destinyCount"
+      :destiny-rolls="destinyRolls"
+      :destiny-error="destinyError"
       @change="updateAbilities"
       @choices="updateRaceAbilityChoices"
       @option="updateRaceAbilityBonusOption"
+      @destiny-count="updateDestinyCount"
+      @destiny-reroll="rerollDestiny"
     />
     <TimelineStep
       v-else-if="step === 'timeline' && activeDraft.classId"
