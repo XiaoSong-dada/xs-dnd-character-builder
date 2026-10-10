@@ -1,5 +1,30 @@
 # D&D 5e 物种与种族资料索引
 
+## S08—S10官方2024物种（2026-10-10）
+
+新增独立19项：17主项、2精灵血系；来源、接口与逐项验证见[阶段记录](需求文档/其他官方扩展S08-S10实施记录.md)。不覆盖MotM／2014血统，不导入祖先遗产。默认戏法、工具与抗性复用有效选择，详细边界见规则文档。
+
+- [幻身灵（奇械锻炉）](species/5e-2024/efa-changeling/efa-changeling.md)：`species-2024-efa-changeling`。
+- [化兽者（奇械锻炉）](species/5e-2024/efa-shifter/efa-shifter.md)：`species-2024-efa-shifter`。
+- [战俑（奇械锻炉）](species/5e-2024/efa-warforged/efa-warforged.md)：`species-2024-efa-warforged`。
+- [离梦人](species/5e-2024/efa-kalashtar/efa-kalashtar.md)：`species-2024-efa-kalashtar`。
+- [科拉瓦](species/5e-2024/efa-khoravar/efa-khoravar.md)：`species-2024-efa-khoravar`。
+- [人狼裔](species/5e-2024/rthw-lupin/rthw-lupin.md)：`species-2024-rthw-lupin`。
+- [半血裔（魔障深藏）](species/5e-2024/rthw-dhampir/rthw-dhampir.md)：`species-2024-rthw-dhampir`。
+- [复生者（魔障深藏）](species/5e-2024/rthw-reborn/rthw-reborn.md)：`species-2024-rthw-reborn`。
+- [巫咒之子（魔障深藏）](species/5e-2024/rthw-hexblood/rthw-hexblood.md)：`species-2024-rthw-hexblood`。
+- [洛温幻身灵](species/5e-2024/lfl-changeling/lfl-changeling.md)：`species-2024-lfl-changeling`。
+- [霜身](species/5e-2024/lfl-rimekin/lfl-rimekin.md)：`species-2024-lfl-rimekin`。
+- [波尬](species/5e-2024/lfl-boggart/lfl-boggart.md)：`species-2024-lfl-boggart`。
+- [仙灵（洛温）](species/5e-2024/lfl-faerie/lfl-faerie.md)：`species-2024-lfl-faerie`。
+- [仙灵（影原）](species/5e-2024/lfl-shadowmoor-faerie/lfl-shadowmoor-faerie.md)：`species-2024-lfl-shadowmoor-faerie`。
+- [炎身](species/5e-2024/lfl-flamekin/lfl-flamekin.md)：`species-2024-lfl-flamekin`。
+- [洁英（洛温）](species/5e-2024/lfl-kithkin/lfl-kithkin.md)：`species-2024-lfl-kithkin`。
+- [洁英（影原）](species/5e-2024/lfl-shadowmoor-kithkin/lfl-shadowmoor-kithkin.md)：`species-2024-lfl-shadowmoor-kithkin`。
+- [洛温精灵血系](species/5e-2024/lfl-lorwyn-elf-lineage/lfl-lorwyn-elf-lineage.md)：`species-2024-lfl-lorwyn-elf-lineage`。
+- [影原精灵血系](species/5e-2024/lfl-shadowmoor-elf-lineage/lfl-shadowmoor-elf-lineage.md)：`species-2024-lfl-shadowmoor-elf-lineage`。
+
+
 > 本文档是物种、种族、血统与子种族的选择性加载入口，不属于每次开发任务的立即加载文档。
 > 精灵双版本样例已通过审阅；当前索引覆盖计划内全部 2024 核心物种、2014 核心种族与 2014 扩展种族。
 

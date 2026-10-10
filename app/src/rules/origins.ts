@@ -149,17 +149,21 @@ export function getRawSpeciesToolChoices(draft: Pick<CharacterDraft, 'raceToolCh
 }
 
 export function getSpeciesToolProficiencies(draft: CharacterDraft, repository: RulesRepository): readonly { readonly id: string; readonly name: string; readonly sourceName: string }[] {
+  const choiceTools = getDraftSpeciesRules(draft, repository).flatMap((race) => (race.choices ?? []).filter((choice) => choice.grantsToolProficiency).flatMap((choice) => (getValidSpeciesChoice(draft, repository, choice.id) ?? []).flatMap((id) => {
+    const tool = repository.getEquipment(id)
+    return tool && isSourceEnabled(tool.sourceIds, draft.enabledSourceIds, repository) ? [{ id, name: tool.name, sourceName: race.name }] : []
+  })))
   const owner = getDraftSpeciesRules(draft, repository).find((race) => race.toolProficiencyChoices)
   const ids = getRawSpeciesToolChoices(draft)
   const spec = owner?.toolProficiencyChoices
-  if (!owner || !spec || ids.length > spec.count || (spec.required && ids.length !== spec.count) || new Set(ids).size !== ids.length || ids.some((id) => spec.optionIds && !spec.optionIds.includes(id))) return []
-  return ids.flatMap((id) => {
+  if (!owner || !spec || ids.length > spec.count || (spec.required && ids.length !== spec.count) || new Set(ids).size !== ids.length || ids.some((id) => spec.optionIds && !spec.optionIds.includes(id))) return choiceTools
+  return [...choiceTools, ...ids.flatMap((id) => {
     const equipment = repository.getEquipment(id)
     const option = repository.getOption(id)
     if (equipment && !isSourceEnabled(equipment.sourceIds, draft.enabledSourceIds, repository)) return []
     const name = equipment?.name ?? option?.name
     return name ? [{ id, name, sourceName: owner.name }] : []
-  })
+  })]
 }
 
 export function getSpeciesToolProficiency(draft: CharacterDraft, repository: RulesRepository): { readonly id: string; readonly name: string; readonly sourceName: string } | undefined {
@@ -191,8 +195,10 @@ export function getEffectiveSpeciesFeatures(draft: CharacterDraft, repository: R
   for (const race of chain.filter((item) => !raceId || item.id === raceId)) for (const choice of race.choices ?? []) {
     const selected = getValidSpeciesChoice(draft, repository, choice.id)
     if (!selected) continue
-    const summary = selected.map((id) => repository.getOption(id)?.name ?? repository.getSpell(id)?.name ?? id).join('、')
-    features.push({ id: `${choice.id}-selected`, raceId: race.id, name: choice.title, englishName: 'Species Choice', level: choice.level, kind: 'choice', summary, description: `${choice.description} 已选：${summary}`, status: 'implemented', sourceIds: race.sourceIds })
+    const summary = selected.map((id) => repository.getOption(id)?.name ?? repository.getSpell(id)?.name ?? repository.getEquipment(id)?.name ?? id).join('、')
+    const resistance = selected.flatMap((id) => choice.grantsDamageResistance?.[id] ? [choice.grantsDamageResistance[id]] : [])
+    const selectedText = resistance.length ? `${resistance.join('、')}伤害抗性` : summary
+    features.push({ id: `${choice.id}-selected`, raceId: race.id, name: choice.title, englishName: 'Species Choice', level: choice.level, kind: 'choice', summary: selectedText, description: `${choice.description} 已选：${selectedText}`, status: 'implemented', sourceIds: race.sourceIds })
   }
   return features.map((feature) => {
     if (!derived) return feature
@@ -218,7 +224,7 @@ export function getSpeciesChoiceCheckpoints(draft: SpeciesChoiceDraft, repositor
 
 function speciesChoiceCandidates(choice: ChoiceCheckpoint, repository: RulesRepository, enabledSourceIds: readonly string[] | undefined): readonly string[] {
   if (choice.candidateKind === 'spell-pool') return repository.spells.filter((spell) => spell.level === choice.spellPool?.level && (!choice.spellPool?.classIds || spell.classIds.some((id) => choice.spellPool?.classIds?.includes(id))) && isSourceEnabled(spell.sourceIds, enabledSourceIds, repository)).map((spell) => spell.id)
-  return choice.optionIds.filter((id) => { const option = repository.getOption(id); return !option || isSourceEnabled(option.sourceIds, enabledSourceIds, repository) })
+  return choice.optionIds.filter((id) => { const option = repository.getOption(id) ?? repository.getEquipment(id) ?? repository.getSpell(id); return !option || isSourceEnabled(option.sourceIds, enabledSourceIds, repository) })
 }
 
 export function getValidSpeciesChoice(draft: SpeciesChoiceDraft, repository: RulesRepository, checkpointId: string, visited = new Set<string>()): readonly string[] | undefined {
@@ -227,9 +233,10 @@ export function getValidSpeciesChoice(draft: SpeciesChoiceDraft, repository: Rul
   const choice = getDraftSpeciesRules(draft, repository).flatMap((race) => race.choices ?? []).find((item) => item.id === checkpointId)
   if (!choice || choice.level > draft.targetLevel) return undefined
   if (choice.parentCheckpointId && !getValidSpeciesChoice(draft, repository, choice.parentCheckpointId, visited)?.includes(choice.parentOptionId ?? '')) return undefined
-  const records = draft.selections.filter((item) => item.checkpointId === checkpointId && !item.invalidatedAt)
-  if (records.length !== 1) return undefined
-  const ids = records[0]?.optionIds ?? []
+  const allRecords = draft.selections.filter((item) => item.checkpointId === checkpointId)
+  const records = allRecords.filter((item) => !item.invalidatedAt)
+  if (records.length !== 1 && !(allRecords.length === 0 && choice.defaultOptionIds)) return undefined
+  const ids = records[0]?.optionIds ?? choice.defaultOptionIds ?? []
   const candidates = speciesChoiceCandidates(choice, repository, draft.enabledSourceIds)
   return ids.length >= choice.minSelections && ids.length <= choice.maxSelections && new Set(ids).size === ids.length && ids.every((id) => candidates.includes(id)) ? ids : undefined
 }

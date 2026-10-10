@@ -452,11 +452,12 @@ export function collectSpeciesSpellGrants(
   targetLevel: number,
   draft?: CharacterDraft,
 ): readonly SpeciesSpellGrant[] {
-  const abilitySelected = !race?.spellcastingAbilityChoices?.length || !draft || Boolean(getSpeciesSpellAbility(race, draft.selections, draft))
+  const parent = draft ? getDraftSpeciesRules(draft, getRulesRepository(draft.ruleset)).find((item) => item.id === race?.parentRaceId) : undefined
+  const ability = draft && race ? getSpeciesSpellAbility(race, draft.selections, draft) ?? (parent ? getSpeciesSpellAbility(parent, draft.selections, draft) : undefined) : undefined
+  const abilitySelected = !(race?.spellcastingAbilityChoices?.length || parent?.spellcastingAbilityChoices?.length) || !draft || Boolean(ability)
   const fixed = (race?.spellGrants ?? []).filter((grant) => grant.minimumLevel <= targetLevel && (grant.ability || abilitySelected))
   if (!race?.chosenCantripCheckpointId || !draft) return fixed
   const selected = getValidSpeciesChoice(draft, getRulesRepository(draft.ruleset), race.chosenCantripCheckpointId)
-  const ability = getSpeciesSpellAbility(race, draft.selections, draft)
   return ability && selected ? [...fixed, ...selected.map((spellId) => ({ spellId, minimumLevel: 1, alwaysPrepared: true, ability, canCastWithSpellSlots: false }))] : fixed
 }
 
@@ -528,8 +529,10 @@ function speciesCastingNote(grant: SpeciesSpellGrant): string {
 
 export function getSpeciesCastingMethods(draft: CharacterDraft, spellId: string): readonly (SpeciesSpellGrant & { readonly sourceId: string; readonly sourceName: string; readonly ability: AbilityKey; readonly note: string })[] {
   const repository = getRulesRepository(draft.ruleset)
-  return getDraftSpeciesRules(draft, repository).flatMap((race) => collectSpeciesSpellGrants(race, draft.targetLevel, draft).flatMap((grant) => {
-    const ability = grant.ability ?? getSpeciesSpellAbility(race, draft.selections, draft)
+  const races = getDraftSpeciesRules(draft, repository)
+  const inheritedAbility = races.map((race) => getSpeciesSpellAbility(race, draft.selections, draft)).find((ability): ability is AbilityKey => Boolean(ability))
+  return races.flatMap((race) => collectSpeciesSpellGrants(race, draft.targetLevel, draft).flatMap((grant) => {
+    const ability = grant.ability ?? getSpeciesSpellAbility(race, draft.selections, draft) ?? inheritedAbility
     return grant.spellId === spellId && ability ? [{ ...grant, sourceId: race.id, sourceName: race.name, ability, note: speciesCastingNote(grant) }] : []
   }))
 }

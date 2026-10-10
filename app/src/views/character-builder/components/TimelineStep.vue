@@ -11,6 +11,7 @@ import { abilityModifier, deriveAbilities } from '@/rules/derive'
 import { formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
 import { formatResourceText } from '@/rules/resources'
 import { buildTimeline } from '@/rules/timeline'
+import { getValidSpeciesChoice } from '@/rules/origins'
 import { getCheckpointCandidates, isSpellbookReservationCheckpoint } from '@/rules/spellcasting'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
 import type { ChoiceCheckpoint, ClassResource, RuleOption, SpellRule, SubclassFeature, SubclassRule } from '@/types/rules'
@@ -76,7 +77,8 @@ function optionSummary(checkpoint: ChoiceCheckpoint, optionId: string): string {
 }
 
 function selectedIds(checkpointId: string): readonly string[] {
-  return props.selections.find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)?.optionIds ?? []
+  return props.selections.find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)?.optionIds
+    ?? getValidSpeciesChoice(props.draft, rulesRepository.value, checkpointId) ?? []
 }
 
 function isComplete(checkpointId: string, minSelections: number): boolean {
@@ -126,7 +128,7 @@ type OptionCardState = 'default' | 'selected' | 'locked' | 'incompatible'
 
 /** 候选条目解析：专长优先。扩展书专长只登记在 `feats` 中，`options` 仅并入了核心专长（H2 修复原始 ID 展示）。 */
 function candidateRule(optionId: string): RuleOption | undefined {
-  return rulesRepository.value.getFeat(optionId) ?? rulesRepository.value.getOption(optionId)
+  return rulesRepository.value.getFeat(optionId) ?? rulesRepository.value.getOption(optionId) ?? rulesRepository.value.getSpell(optionId) ?? rulesRepository.value.getEquipment(optionId)
 }
 
 /** 专长候选的完整效果（`detail`）：候选卡摘要只放一行，展开区补足完整效果。 */

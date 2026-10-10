@@ -16,7 +16,7 @@ import { getFlexibleBonusGroups, getFlexibleBonusRule, getRaceAbilityBonuses, SK
 import { buildTimeline } from '@/rules/timeline'
 import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellbookExtraAllowance, getSpellbookExtraCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
-import { getBackgroundAllocationIssue, getOriginStepBlockers, getSpeciesProficiencyBlockers } from '@/rules/origins'
+import { getBackgroundAllocationIssue, getOriginStepBlockers, getSpeciesProficiencyBlockers, getSpeciesChoiceCheckpoints, getValidSpeciesChoice } from '@/rules/origins'
 import { validateWeaponMasterySelection } from '@/rules/weapon-mastery'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { isSourceEnabled } from '@/rules/source-books'
@@ -387,6 +387,12 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         )
       ) {
         issues.push({ id: 'spellbook-transcription-invalid', step: 'spells', severity: 'error', message: '抄录记录包含不在法术书中或当前不可用的法术。', resolution: '返回角色卡法术页签检查抄录记录。' })
+      }
+    }
+    for (const checkpoint of getSpeciesChoiceCheckpoints(draft, repository)) {
+      const records = draft.selections.filter((item) => item.checkpointId === checkpoint.id)
+      if (records.length && !getValidSpeciesChoice(draft, repository, checkpoint.id)) {
+        issues.push({ id: `species-choice-invalid-${checkpoint.id}`, step: checkpoint.step, severity: 'error', message: `「${checkpoint.title}」包含失效、重复或不合法的选择。`, resolution: '从当前候选重新确认；原始记录保留，但不会授予收益。' })
       }
     }
     const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })

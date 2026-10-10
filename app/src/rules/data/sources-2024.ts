@@ -176,6 +176,7 @@ export const sources2024: readonly RuleSource[] = [
     contentKind: 'legacy',
   },
   // ===== G2 批次：官方 2024 扩展（合作内容区）=====
+  { id: 'source-2024-lfl', title: '洛温：初光', shortTitle: '洛温初光', ruleset: '5e-2024', category: 'supplement', selectable: true, contentKind: 'official' },
   {
     id: 'source-2024-efa',
     title: '艾伯伦：奇械锻炉',

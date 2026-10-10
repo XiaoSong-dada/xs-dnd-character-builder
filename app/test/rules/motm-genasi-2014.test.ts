@@ -81,7 +81,8 @@ describe('四种MotM元素裔及逐法术免材料', () => {
     const fairy = { ...draftFor('air'), raceId: 'race-2014-motm-fairy', selections: [selection('race-2014-motm-fairy-spellcasting-ability', ['spell-ability-wis'])] }
     expect(getSpeciesSpellcastingProfiles(fairy)[0]?.materialFreeSpellIds).toEqual([])
     expect(rulesRepository.getSpell('spell-2014-levitate')).toEqual(before)
-    expect(rulesRepository2024.races.flatMap((race) => race.spellGrants ?? []).some((grant) => grant.waivesMaterialComponents)).toBe(false)
+    expect(rulesRepository2024.races.filter((race) => race.id !== 'species-2024-lfl-flamekin').flatMap((race) => race.spellGrants ?? []).some((grant) => grant.waivesMaterialComponents)).toBe(false)
+    expect(rulesRepository2024.getRace('species-2024-lfl-flamekin')?.spellGrants?.filter((grant) => grant.waivesMaterialComponents).map((grant) => grant.spellId)).toEqual(['spell-2024-flame-blade'])
     const disabled = { ...draftFor('air'), enabledSourceIds: [] }
     expect(getSpeciesSpellcastingProfiles(disabled)).toEqual([])
   })

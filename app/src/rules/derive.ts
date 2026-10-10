@@ -319,7 +319,8 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     baseArmor = naturalArmorValue
   }
   const armorInfusionBonus = armorOnlyInfusion + (shieldBenefitAllowed ? infusionBonusFor(equippedShield?.id) : 0)
-  const armorClass = baseArmor + shieldBonus + armorInfusionBonus + naturalArmorMagicBonus + defenseStyleBonus + subclassEffects.armorClassBonus
+  const speciesArmorBonus = getDraftSpeciesRules(draft, repository).reduce((total, race) => total + (race.armorClassBonus ?? 0), 0)
+  const armorClass = baseArmor + shieldBonus + armorInfusionBonus + naturalArmorMagicBonus + defenseStyleBonus + subclassEffects.armorClassBonus + speciesArmorBonus
   const selectedClassSkillIds = (classRule?.checkpoints ?? [])
     .filter((checkpoint) => checkpoint.kind === 'skills')
     .flatMap((checkpoint) => draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)?.optionIds ?? [])
@@ -448,6 +449,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     ...(armorInfusionBonus ? [{ id: 'artificer-enhanced-defense', label: '奇械师灌注', value: armorInfusionBonus, detail: '已绑定并装备的强化防御物品' }] : []),
     ...(naturalArmorMagicBonus ? [{ id: 'natural-armor-magic-bonus', label: equippedArmor?.name ?? '魔法护甲', value: naturalArmorMagicBonus, detail: '合法穿戴护甲的魔法AC加值，仅加一次' }] : []),
     ...(subclassEffects.armorClassBonus !== 0 ? [{ id: 'subclass-armor-class', label: '子职护甲加成', value: subclassEffects.armorClassBonus, detail: draft.subclassId ? `${repository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
+    ...(speciesArmorBonus !== 0 ? [{ id: 'species-armor-class', label: '物种护甲加成', value: speciesArmorBonus, detail: getDraftSpeciesRules(draft, repository).filter((race) => race.armorClassBonus).map((race) => race.name).join('、') }] : []),
   ]), manual.derivedAdjustments.armorClass, 'armor-class')
   const initiativeRace = getDraftSpeciesRules(draft, repository).find((race) => race.initiativeProficiency)
   const initiativeValue = withManualAdjustment(derived(modifiers.dex + (initiativeRace ? proficiency : 0), [

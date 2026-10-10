@@ -541,12 +541,13 @@ export interface ClassFeature {
 }
 
 export interface RaceRule {
+  readonly armorClassBonus?: number
   readonly countsAsRaceIds?: readonly string[]
   readonly ancestralMovement?: readonly { readonly kind: 'climb' | 'fly' | 'swim'; readonly speed: number; readonly usesWalkingSpeed?: boolean; readonly condition: string }[]
   readonly lineage?: boolean
   readonly sizeByLevel?: readonly { readonly level: number; readonly size: 'small' | 'medium' }[]
   readonly naturalArmor?: { readonly base: number; readonly addsDexterity: boolean; readonly forbidsArmor?: boolean; readonly requiresUnarmored?: boolean }
-  readonly choices?: readonly (ChoiceCheckpoint & { readonly grantsSkillProficiency?: boolean })[]
+  readonly choices?: readonly (ChoiceCheckpoint & { readonly grantsSkillProficiency?: boolean; readonly grantsToolProficiency?: boolean; readonly defaultOptionIds?: readonly string[]; readonly grantsDamageResistance?: Readonly<Record<string, string>> })[]
   readonly chosenCantripCheckpointId?: string
   readonly id: string
   readonly ruleset: RulesetId

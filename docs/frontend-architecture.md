@@ -12,6 +12,12 @@
 
 ## 2. 总体依赖方向
 
+### S08—S10 实际拓扑（2026-10-10）
+
+- 新增 `rules/data/species-official-expansions-2024`，只依赖2024装备、技能ID及共享类型；2024仓库装配19项与选项／特性，纯映射追加精灵血系。2014仓库未引入该模块，不跨版本导入数据。
+- `origins`统一解析默认戏法、动态候选、具体工具、依赖及抗性选择；`timeline`与`validate`复用检查点和有效选择，`derive`解析有效来源的常驻AC加值，`spellcasting`解析有效戏法和父项施法属性。
+- 时间线组件只调用纯规则和仓库名称查找，不编码物种ID或收益；角色卡、跑团、保存和导出复用既有接口，无新store、迁移版本或rules反向UI依赖。新增19项资料及专项／实际导出测试，保持 views/features → rules/services → types 方向。
+
 ### S03—S07 实际拓扑（2026-10-08）
 
 - 新增纯数据模块 `rules/data/races-official-expansions-2014`，依赖现有PHB装备目录、技能ID和共享类型；由2014仓库装配，不进入2024仓库。
