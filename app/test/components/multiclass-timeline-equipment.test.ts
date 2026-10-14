@@ -49,27 +49,46 @@ function mountTimeline(draft: CharacterDraft) {
   })
 }
 
-function levelLabels(draft: CharacterDraft): string[] {
-  const wrapper = mountTimeline(draft)
-  return wrapper.findAll('.timeline-step__header span').map((item) => item.text())
+/**
+ * 检查点头部的两种标注（需求 D22）：
+ * - 等级徽章 `.timeline-step__badge` 显示「N级」（圆形徽章容不下「职业 + 等级」）；
+ * - 归属职业以 tag 形式出现在 `.timeline-step__title-row`（`UiBadge`，无归属职业时不渲染）。
+ */
+function badgeNumbers(draft: CharacterDraft): string[] {
+  return mountTimeline(draft).findAll('.timeline-step__badge').map((item) => item.text())
+}
+
+/** 每个检查点的「等级徽章 + 职业 tag」配对，便于按检查点整体断言。 */
+function checkpointHeaders(draft: CharacterDraft): { level: string; className: string; title: string; ariaLabel: string }[] {
+  return mountTimeline(draft).findAll('.timeline-step__header').map((header) => ({
+    level: header.get('.timeline-step__badge').text(),
+    className: header.find('.timeline-step__title-row .ui-badge').exists()
+      ? header.get('.timeline-step__title-row .ui-badge').text()
+      : '',
+    title: header.get('.timeline-step__title-row strong').text(),
+    ariaLabel: header.get('.timeline-step__badge').attributes('aria-label') ?? '',
+  }))
 }
 
 describe('MC-E04 时间线多职业标注', () => {
-  it('检查点头部按归属职业标注，不把角色总等级当成职业等级', () => {
+  it('徽章显示「N级」，职业名以 tag 出现在标题行（D22）', () => {
     const draft = mc([
       { classId: 'class-2014-fighter', level: 3 },
       { classId: 'class-2014-rogue', level: 2 },
     ])
-    const labels = levelLabels(draft)
-    const levelLabelPattern = /^\S+ \d+ 级$/
-    // 每个「N 级」形式的标签都必须带归属职业前缀
-    const levelLike = labels.filter((text) => text.endsWith('级'))
-    expect(levelLike.length).toBeGreaterThan(0)
-    expect(levelLike.every((text) => levelLabelPattern.test(text))).toBe(true)
-    expect(labels.some((text) => text.startsWith('战士'))).toBe(true)
-    expect(labels.some((text) => text.startsWith('游荡者'))).toBe(true)
-    // 角色总等级为 5，但没有任何标签写成裸的「5 级」
-    expect(labels).not.toContain('5 级')
+    const headers = checkpointHeaders(draft)
+    expect(headers.length).toBeGreaterThan(0)
+    // 徽章是「数字 + 级」，不带职业名
+    for (const header of headers) {
+      expect(header.level).toMatch(/^\d+级$/)
+      expect(header.className).toMatch(/^(战士|游荡者)$/)
+      // 合成语义仍可读到「职业 第 N 级」，读屏不会只读出一个数字
+      expect(header.ariaLabel).toBe(`${header.className} 第 ${header.level.replace('级', '')} 级`)
+    }
+    // 角色总等级 5：徽章里出现的是各职业自己的等级，不出现总等级 5
+    const totalOwned = headers.filter((header) => header.title.includes('子职'))
+    expect(totalOwned.every((header) => header.level === '3级')).toBe(true)
+    expect(badgeNumbers(draft)).not.toContain('5级')
   })
 
   it('同职业的不同检查点各自显示自己的解锁等级（战士 1 级技能、3 级子职）', () => {
@@ -77,12 +96,28 @@ describe('MC-E04 时间线多职业标注', () => {
       { classId: 'class-2014-fighter', level: 3 },
       { classId: 'class-2014-rogue', level: 2 },
     ])
-    const labels = levelLabels(draft)
-    expect(labels).toContain('战士 1 级')
-    expect(labels).toContain('战士 3 级')
-    // 游荡者只到 2 级：1 级的技能与专精各一条，3 级子职检查点不出现
-    expect(labels.filter((text) => text === '游荡者 1 级')).toHaveLength(2)
-    expect(labels).not.toContain('游荡者 3 级')
+    const headers = checkpointHeaders(draft)
+    const fighterLevels = headers.filter((header) => header.className === '战士').map((header) => header.level)
+    expect(fighterLevels).toContain('1级')
+    expect(fighterLevels).toContain('3级')
+    // 游荡者只到 2 级：1 级的技能与专精各一条，不出现 3 级
+    const rogueLevels = headers.filter((header) => header.className === '游荡者').map((header) => header.level)
+    expect(rogueLevels.filter((level) => level === '1级')).toHaveLength(2)
+    expect(rogueLevels).not.toContain('3级')
+  })
+
+  it('无归属职业的检查点不渲染职业 tag', () => {
+    const draft = mc([
+      { classId: 'class-2014-fighter', level: 3 },
+      { classId: 'class-2014-rogue', level: 2 },
+    ])
+    const headers = checkpointHeaders(draft)
+    const untagged = headers.filter((header) => header.className === '')
+    // 无 tag 时 aria-label 退化为「第 N 级」，不出现空职业名
+    for (const header of untagged) {
+      expect(header.ariaLabel).toBe(`第 ${header.level.replace('级', '')} 级`)
+      expect(header.ariaLabel).not.toContain(' 第')
+    }
   })
 
   it('职业特性区块列出全部职业的自动获得特性并标注归属职业与职业等级', () => {
