@@ -17,7 +17,7 @@ import {
   reconcileSpellSelections,
   restoreInactiveSpellSelection,
 } from '@/rules/spell-selection-reconciliation'
-import { getClassEntries, getPrimaryClassId } from '@/rules/multiclass'
+import { getClassEntries, getPrimaryClassId, getTotalLevel, getTotalLevelBounds, setTotalLevel } from '@/rules/multiclass'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { useLineageTransformation } from '@/views/character-builder/hooks/useLineageTransformation'
@@ -44,9 +44,30 @@ import type {
   SpellSelections,
   StartingEquipmentSelection,
 } from '@/types/character'
+import type { ClassLevelEntry } from '@/types/multiclass'
 
 function isDraftStep(value: unknown): value is DraftStep {
   return typeof value === 'string' && STEP_ORDER.includes(value as DraftStep)
+}
+
+/** 依赖影响确认弹窗的载荷（需求 §3，决策 D37／D43）。 */
+interface PendingChange {
+  readonly title: string
+  readonly affected: readonly string[]
+  readonly explicitAffected: readonly string[]
+  readonly impact?: DependencyImpact
+  readonly apply: () => void
+  /** 「本次变更」摘要（总等级与各职业等级前后、移除与起始职业切换）。 */
+  readonly summary?: readonly string[]
+  /** 待定草稿：确认前不写库，仅用于在控件与弹窗中显示将要生效的值。 */
+  readonly stagedDraft?: CharacterDraft
+  /** 弹窗内继续 `±1`（决策 D43）：连续调整共用一个待定变更。 */
+  readonly levelAdjust?: {
+    readonly level: number
+    readonly min: number
+    readonly max: number
+    readonly apply: (delta: 1 | -1) => void
+  }
 }
 
 export function useCharacterBuilderPage() {
@@ -66,13 +87,7 @@ export function useCharacterBuilderPage() {
   const repositoryFor = (draft: { readonly ruleset: RulesetId } | undefined) => getRulesRepository(draft?.ruleset ?? defaultRuleset.value)
   const exportingFormat = ref<'pdf' | 'xlsx' | 'zip'>()
   const exportNotice = ref<{ readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }>()
-  const pendingChange = ref<{
-    readonly title: string
-    readonly affected: readonly string[]
-    readonly explicitAffected: readonly string[]
-    readonly impact?: DependencyImpact
-    readonly apply: () => void
-  }>()
+  const pendingChange = ref<PendingChange>()
   const derived = computed(() => activeDraft.value ? deriveCharacter(activeDraft.value) : undefined)
   const raceAbilityBonuses = computed(() => {
     const draft = activeDraft.value
@@ -260,7 +275,11 @@ export function useCharacterBuilderPage() {
     title: string,
     apply: () => void,
     additionalAffected: readonly string[] = [],
-    options: { readonly alwaysConfirm?: boolean } = {},
+    options: {
+      readonly alwaysConfirm?: boolean
+      /** 等级／分配类变更的待定态：变更摘要、待定草稿与弹窗内续调（需求 §3，决策 D37／D43）。 */
+      readonly staged?: () => Pick<PendingChange, 'summary' | 'stagedDraft' | 'levelAdjust'>
+    } = {},
   ): void {
     const draft = activeDraft.value
     if (!draft) return
@@ -272,9 +291,19 @@ export function useCharacterBuilderPage() {
     ]
     if (!affected.length && !options.alwaysConfirm) {
       apply()
+      // 无需确认的变更会直接生效：此前挂着的待定变更已被取代，必须一并清掉，
+      // 否则弹窗会停留在旧的待定值上（例如在确认弹窗里把等级调回已提交值）。
+      pendingChange.value = undefined
       return
     }
-    pendingChange.value = { title, affected, explicitAffected: additionalAffected, impact, apply }
+    pendingChange.value = {
+      title,
+      affected,
+      explicitAffected: additionalAffected,
+      impact,
+      apply,
+      ...options.staged?.(),
+    }
   }
 
   function confirmPendingChange(): void {
@@ -287,6 +316,11 @@ export function useCharacterBuilderPage() {
   function cancelPendingChange(): void {
     pendingChange.value = undefined
   }
+
+  /** 待定草稿（决策 D37）：确认前由控件显示，确认或取消后清空。 */
+  const stagedAllocationDraft = computed(() => pendingChange.value?.stagedDraft)
+  /** 确认弹窗内的等级续调句柄（决策 D43）。 */
+  const stagedLevelAdjust = computed(() => pendingChange.value?.levelAdjust)
 
   function updateSetup(targetLevel: number, abilityMethod: AbilityMethod): void {
     const draft = activeDraft.value
@@ -433,7 +467,7 @@ export function useCharacterBuilderPage() {
    * 引导（需求 §3，决策 D28—D30）：在角色卡步骤提交后必须把新增检查点／复查项告诉用户；
    * `navigate: false`（总等级滑杆）只写引导条、不强制跳转。
    */
-  function applyClassAllocation(nextDraft: CharacterDraft, options: { readonly alwaysConfirm?: boolean; readonly navigate?: boolean } = {}): void {
+  function applyClassAllocation(nextDraft: CharacterDraft, options: { readonly navigate?: boolean } = {}): void {
     const draft = activeDraft.value
     if (!draft) return
     const classes = nextDraft.multiclass?.classes ?? []
@@ -519,7 +553,80 @@ export function useCharacterBuilderPage() {
         spellReconciliation?.archived.length ?? 0,
         { navigate },
       )
-    }, additionalAffected, { alwaysConfirm: options.alwaysConfirm ?? true })
+    }, additionalAffected, {
+      // 没有任何实际变化（例如滑杆松手回原位、重复点选当前值）：不弹确认，直接按原样应用，
+      // 顺带让「没有待办项就清空过期引导条」的既有行为继续成立。
+      alwaysConfirm: !isSameAllocation(draft, nextDraft),
+      staged: () => ({
+        summary: allocationSummary(draft, nextDraft, primaryChanged, removedClasses),
+        stagedDraft: nextDraft,
+        levelAdjust: buildStagedLevelAdjust(nextDraft, options),
+      }),
+    })
+  }
+
+  /** 分配前后是否完全一致（职业集合、各自等级与子职、兼职开关、起始职业）。 */
+  function isSameAllocation(draft: CharacterDraft, nextDraft: CharacterDraft): boolean {
+    const key = (entries: readonly ClassLevelEntry[]): string =>
+      entries.map((entry) => `${entry.classId}:${entry.level}:${entry.subclassId ?? ''}`).join('|')
+    return key(getClassEntries(draft)) === key(getClassEntries(nextDraft))
+      && Boolean(draft.multiclass?.enabled) === Boolean(nextDraft.multiclass?.enabled)
+      && getPrimaryClassId(draft) === (nextDraft.multiclass?.primaryClassId ?? getClassEntries(nextDraft)[0]?.classId)
+  }
+
+  /**
+   * 「本次变更」摘要（需求 §3.1，决策 D37／D41）：总等级与各职业等级的前后变化、
+   * 移除的职业与起始职业切换；明细与失效清单仍由确认弹窗的既有分区承担。
+   */
+  function allocationSummary(
+    draft: CharacterDraft,
+    nextDraft: CharacterDraft,
+    primaryChanged: boolean,
+    removedClassIds: readonly string[],
+  ): readonly string[] {
+    const name = (classId: string): string => repositoryFor(draft).getClass(classId)?.name ?? classId
+    const beforeEntries = getClassEntries(draft)
+    const beforeTotal = beforeEntries.reduce((sum, entry) => sum + entry.level, 0)
+    const afterTotal = getClassEntries(nextDraft).reduce((sum, entry) => sum + entry.level, 0)
+    const lines: string[] = [
+      beforeTotal === afterTotal ? `总等级 ${afterTotal}（不变）` : `总等级 ${beforeTotal} → ${afterTotal}`,
+    ]
+    for (const entry of getClassEntries(nextDraft)) {
+      const previous = beforeEntries.find((item) => item.classId === entry.classId)?.level
+      if (previous === undefined) lines.push(`${name(entry.classId)} 新增 ${entry.level} 级`)
+      else if (previous !== entry.level) lines.push(`${name(entry.classId)} ${previous} → ${entry.level} 级`)
+    }
+    for (const classId of removedClassIds) {
+      const previous = beforeEntries.find((item) => item.classId === classId)?.level
+      lines.push(previous === undefined ? `${name(classId)} 移除` : `${name(classId)} ${previous} → 移除`)
+    }
+    if (primaryChanged) {
+      lines.push(`起始职业：${name(getPrimaryClassId(draft) ?? '')} → ${name(nextDraft.multiclass?.primaryClassId ?? '')}`)
+    }
+    return lines
+  }
+
+  /** 弹窗内继续 `±1` 的句柄（需求 §3.1.1，决策 D43）：重建同一个待定变更，弹窗不关闭。 */
+  function buildStagedLevelAdjust(
+    staged: CharacterDraft,
+    options: { readonly navigate?: boolean },
+  ): NonNullable<PendingChange['levelAdjust']> {
+    const bounds = getTotalLevelBounds(staged)
+    return {
+      level: getTotalLevel(staged),
+      min: bounds.min,
+      max: bounds.max,
+      apply: (delta) => {
+        const result = setTotalLevel(staged, getTotalLevel(staged) + delta)
+        if (!result.ok) return
+        applyClassAllocation(result.draft, options)
+      },
+    }
+  }
+
+  /** 确认弹窗内的 `±1`（决策 D43）；由页面模板调用，避免模板里做可选链判断。 */
+  function adjustStagedLevel(delta: 1 | -1): void {
+    pendingChange.value?.levelAdjust?.apply(delta)
   }
 
   /**
@@ -541,11 +648,11 @@ export function useCharacterBuilderPage() {
   }
 
   /**
-   * 总等级滑杆的提交（需求 §3.4）：与逐职业步进分开，使用更轻的确认策略——
-   * 仅当有选择将失效时才弹确认，单纯升级或同级重排不打断。
+   * 等级类变更的提交（滑杆、`＋/－`、等级表格选值；需求 §3／§5）。
    *
-   * 但「不打断」不等于「不提示」（需求 §3.3，决策 D29）：滑杆提交同样要写引导条，
-   * 只是不自动跳转（滑杆常被连续微调，强制跳转会打断操作）。
+   * 与结构类变更（增删职业、起始职业、关闭兼职）走同一个 `class-allocation` 影响计算与确认弹窗
+   * （决策 D37：一律「选值 → 确认 → 应用」），但**不自动跳转**（决策 D29／D43）：
+   * 等级常被连续微调，确认后仍停留在角色卡与「调整等级」弹窗，由引导条提示去补全。
    */
   function applyTotalLevel(nextDraft: CharacterDraft, abilityMethod?: AbilityMethod): void {
     const draft = activeDraft.value
@@ -554,7 +661,7 @@ export function useCharacterBuilderPage() {
       updateSetup(Math.max(1, nextDraft.targetLevel ?? 1), abilityMethod ?? draft.abilityMethod)
       return
     }
-    applyClassAllocation(nextDraft, { alwaysConfirm: false, navigate: false })
+    applyClassAllocation(nextDraft, { navigate: false })
   }
 
   function selectClass(classId: string): void {
@@ -1000,6 +1107,9 @@ export function useCharacterBuilderPage() {
     exportLegacyDraft: store.exportLegacyDraft,
     confirmPendingChange,
     cancelPendingChange,
+    stagedAllocationDraft,
+    stagedLevelAdjust,
+    adjustStagedLevel,
     levelAdjustNotice,
     dismissLevelAdjustNotice,
     startReedit,

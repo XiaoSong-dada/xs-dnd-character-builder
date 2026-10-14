@@ -100,6 +100,9 @@ const {
   exportLegacyDraft,
   confirmPendingChange,
   cancelPendingChange,
+  stagedAllocationDraft,
+  stagedLevelAdjust,
+  adjustStagedLevel,
   levelAdjustNotice,
   dismissLevelAdjustNotice,
   startReedit,
@@ -130,11 +133,11 @@ function closeLevelModal(): void {
 }
 
 /**
- * 角色卡弹窗提交分配（MC-E03）：与第 1／3 步共用同一份分配数据，
- * 收到 apply 后先关闭弹窗，再交给 `class-allocation` 依赖确认流程。
+ * 角色卡弹窗提交分配（MC-E03；需求 §3，决策 D37／Q2）：与第 1／3 步共用同一份分配数据，
+ * 交给 `class-allocation` 待定流程；**不再关闭「调整等级」弹窗**——确认弹窗由层级机制保证在最上层，
+ * 确认后弹窗内直接显示新等级，便于连续调整。
  */
 function applyAllocationFromSheet(nextDraft: CharacterDraft): void {
-  levelModalOpen.value = false
   applyClassAllocation(nextDraft)
 }
 
@@ -328,6 +331,31 @@ function updateMethod(value: AbilityMethod): void {
     :title="pendingChange?.title ?? '确认修改'"
     @close="cancelPendingChange"
   >
+    <section v-if="pendingChange?.summary?.length" class="builder-impact">
+      <h4>本次变更</h4>
+      <ul>
+        <li v-for="line in pendingChange.summary" :key="line">{{ line }}</li>
+      </ul>
+    </section>
+    <!-- 弹窗内继续 ±1（需求 §3.1.1，决策 D43）：连续调整共用一个待定变更，确认一次生效 -->
+    <section v-if="stagedLevelAdjust" class="builder-impact">
+      <h4>继续调整等级</h4>
+      <div class="builder-level-stepper">
+        <BaseButton
+          variant="secondary"
+          :disabled="stagedLevelAdjust.level <= stagedLevelAdjust.min"
+          aria-label="降一级"
+          @click="adjustStagedLevel(-1)"
+        >−</BaseButton>
+        <b>{{ stagedLevelAdjust.level }}级</b>
+        <BaseButton
+          variant="secondary"
+          :disabled="stagedLevelAdjust.level >= stagedLevelAdjust.max"
+          aria-label="升一级"
+          @click="adjustStagedLevel(1)"
+        >＋</BaseButton>
+      </div>
+    </section>
     <section v-if="pendingChange?.impact?.added?.length" class="builder-impact">
       <h4>待补全（新增检查点）</h4>
       <ul>
@@ -402,7 +430,7 @@ function updateMethod(value: AbilityMethod): void {
   <LevelAdjustModal
     v-if="levelModalOpen && activeDraft"
     :open="levelModalOpen"
-    :draft="activeDraft"
+    :draft="stagedAllocationDraft ?? activeDraft"
     @close="closeLevelModal"
     @apply="applyAllocationFromSheet"
     @total-level="(next) => applyTotalLevelAction(next)"
@@ -451,6 +479,21 @@ function updateMethod(value: AbilityMethod): void {
     color: var(--color-text-muted);
     font-size: 0.78rem;
     line-height: 1.6;
+  }
+}
+
+/* 确认弹窗内的等级续调（需求 §3.1.1，决策 D43） */
+.builder-level-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+
+  b {
+    min-width: 3rem;
+    color: var(--color-primary);
+    text-align: center;
+    font-size: 1.05rem;
   }
 }
 </style>
