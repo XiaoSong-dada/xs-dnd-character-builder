@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { DraftStorageService } from '@/services/draft-storage'
 
-const V9_KEY = 'dnd-character-builder:drafts:v9'
+const V10_KEY = 'dnd-character-builder:drafts:v10'
 const V8_KEY = 'dnd-character-builder:drafts:v8'
 const V7_KEY = 'dnd-character-builder:drafts:v7'
 const V5_KEY = 'dnd-character-builder:drafts:v5'
@@ -25,7 +25,7 @@ describe('DraftStorageService', () => {
     localStorage.clear()
   })
 
-  it('v4 草稿迁移到 v9，缺省字段（含来源、法术协调与人工编辑）被补全', () => {
+  it('v4 草稿迁移到 v10，缺省字段（含来源、法术协调与人工编辑）被补全', () => {
     setJson(V4_KEY, [{
       schemaVersion: 4, id: 'v4-1', ruleset: '5e-2014', name: 'v4角色',
       spellSelections: {
@@ -34,7 +34,7 @@ describe('DraftStorageService', () => {
     }])
     const drafts = DraftStorageService.loadAll()
     expect(drafts).toHaveLength(1)
-    expect(drafts[0]?.schemaVersion).toBe(9)
+    expect(drafts[0]?.schemaVersion).toBe(10)
     expect(drafts[0]?.ruleset).toBe('5e-2014')
     expect(drafts[0]?.enabledSourceIds).toBeDefined()
     expect(drafts[0]?.spellSelections.transcribedSpellIds).toEqual([])
@@ -52,7 +52,7 @@ describe('DraftStorageService', () => {
     })
   })
 
-  it('v3 草稿迁移为 v9 并补空转录字段', () => {
+  it('v3 草稿迁移为 v10 并补空转录字段', () => {
     setJson(V3_KEY, [{
       schemaVersion: 3, id: 'v3-1', ruleset: '5e-2014', name: 'v3角色',
       spellSelections: {
@@ -62,13 +62,13 @@ describe('DraftStorageService', () => {
     }])
     const drafts = DraftStorageService.loadAll()
     expect(drafts).toHaveLength(1)
-    expect(drafts[0]?.schemaVersion).toBe(9)
+    expect(drafts[0]?.schemaVersion).toBe(10)
     expect(drafts[0]?.adventureGold).toBe(12)
     expect(drafts[0]?.spellSelections.transcribedSpellIds).toEqual([])
     expect(drafts[0]?.spellSelections.preparedSpellIds).toEqual(['spell-2014-magic-missile'])
   })
 
-  it('v2 草稿迁移为 v9（物品转 legacy，transcribedSpellIds 补空）', () => {
+  it('v2 草稿迁移为 v10（物品转 legacy，transcribedSpellIds 补空）', () => {
     setJson(V2_KEY, [{
       schemaVersion: 2, id: 'v2-1', ruleset: '5e-2014', name: 'v2角色',
       inventoryItemIds: ['dagger', 'dagger'], equippedItemIds: ['dagger'],
@@ -76,18 +76,18 @@ describe('DraftStorageService', () => {
     const drafts = DraftStorageService.loadAll()
     expect(drafts).toHaveLength(1)
     const draft = drafts[0] as NonNullable<typeof drafts[0]>
-    expect(draft.schemaVersion).toBe(9)
+    expect(draft.schemaVersion).toBe(10)
     expect(draft.equipmentNeedsReview).toBe(true)
     expect(draft.inventory[0]).toMatchObject({ itemId: 'dagger', quantity: 2, equippedQuantity: 1, sourceKind: 'legacy' })
     expect(draft.spellSelections.transcribedSpellIds).toEqual([])
   })
 
-  it('v7 草稿迁移为 v9 并保留 2014 规则版本', () => {
+  it('v7 草稿迁移为 v10 并保留 2014 规则版本', () => {
     setJson(V7_KEY, [{ schemaVersion: 7, id: 'v7-1', ruleset: '5e-2014', name: 'v7角色' }])
     const rawBefore = localStorage.getItem(V7_KEY)
     const drafts = DraftStorageService.loadAll()
     expect(drafts.map((draft) => draft.id)).toEqual(['v7-1'])
-    expect(drafts[0]?.schemaVersion).toBe(9)
+    expect(drafts[0]?.schemaVersion).toBe(10)
     expect(drafts[0]?.ruleset).toBe('5e-2014')
     // 迁移只发生在读取路径，旧键原文保持不删不改。
     expect(localStorage.getItem(V7_KEY)).toBe(rawBefore)
@@ -101,7 +101,7 @@ describe('DraftStorageService', () => {
     expect(drafts[0]?.name).toBe('新版')
   })
 
-  it('v5 草稿迁移为 v9，并保留已有数据', () => {
+  it('v5 草稿迁移为 v10，并保留已有数据', () => {
     setJson(V5_KEY, [{
       schemaVersion: 5,
       id: 'v5-1',
@@ -111,37 +111,37 @@ describe('DraftStorageService', () => {
     }])
     const drafts = DraftStorageService.loadAll()
     expect(drafts).toHaveLength(1)
-    expect(drafts[0]?.schemaVersion).toBe(9)
+    expect(drafts[0]?.schemaVersion).toBe(10)
     expect(drafts[0]?.adventureGold).toBe(23)
     expect(drafts[0]?.manualEdits.addedSpells).toEqual([])
   })
 
-  it('saveAll 写入 v9 key', () => {
-    DraftStorageService.saveAll([{ schemaVersion: 9, id: 'save-1', ruleset: '5e-2014', name: '保存' } as never])
-    const raw = readJson<Array<{ id: string }>>(V9_KEY)
+  it('saveAll 写入 v10 key', () => {
+    DraftStorageService.saveAll([{ schemaVersion: 10, id: 'save-1', ruleset: '5e-2014', name: '保存' } as never])
+    const raw = readJson<Array<{ id: string }>>(V10_KEY)
     expect(raw).toHaveLength(1)
     expect(raw[0]?.id).toBe('save-1')
   })
 
-  it('v8 两版草稿迁移到 v9，来源按规则版本分别规范化', () => {
+  it('v8 两版草稿迁移到 v10，来源按规则版本分别规范化', () => {
     setJson(V8_KEY, [
       { schemaVersion: 8, id: '2014-1', ruleset: '5e-2014', name: '旧版', enabledSourceIds: ['xgte-2017-index', 'bogus-2014'] },
       { schemaVersion: 8, id: '2024-1', ruleset: '5e-2024', name: '新版', enabledSourceIds: ['source-2024-ua-eberron', 'xgte-2017-index', 'source-2024-ua-eberron'] },
     ])
     const drafts = DraftStorageService.loadAll()
     expect(drafts.map((draft) => draft.ruleset)).toEqual(['5e-2014', '5e-2024'])
-    expect(drafts.every((draft) => draft.schemaVersion === 9)).toBe(true)
+    expect(drafts.every((draft) => draft.schemaVersion === 10)).toBe(true)
     expect(drafts[0]?.enabledSourceIds).toEqual(['xgte-2017-index'])
     expect(drafts[1]?.enabledSourceIds).toEqual(['source-2024-ua-eberron'])
   })
 
   it('当前键中的非法条目隔离保留，不进入列表且重复加载不重复追加', () => {
-    setJson(V9_KEY, [
-      { schemaVersion: 9, id: 'ok', ruleset: '5e-2014', name: '有效' },
-      { schemaVersion: 9, id: 'unknown-ruleset', ruleset: '5e-2025', name: '未知版本' },
+    setJson(V10_KEY, [
+      { schemaVersion: 10, id: 'ok', ruleset: '5e-2014', name: '有效' },
+      { schemaVersion: 10, id: 'unknown-ruleset', ruleset: '5e-2025', name: '未知版本' },
       { schemaVersion: 99, id: 'future-schema', ruleset: '5e-2014', name: '未来格式' },
       { schemaVersion: 3, id: 'old-2024', ruleset: '5e-2024', name: '旧2024' },
-      { schemaVersion: 9, name: '缺少版本' },
+      { schemaVersion: 10, name: '缺少版本' },
     ])
     const drafts = DraftStorageService.loadAll()
     expect(drafts.map((draft) => draft.id)).toEqual(['ok'])
@@ -157,13 +157,13 @@ describe('DraftStorageService', () => {
   })
 
   it('saveAll 只写入有效草稿，隔离区保留且不被回写', () => {
-    setJson(V9_KEY, [
-      { schemaVersion: 9, id: 'ok', ruleset: '5e-2014', name: '有效' },
-      { schemaVersion: 9, id: 'bad', ruleset: '5e-2025', name: '未知版本' },
+    setJson(V10_KEY, [
+      { schemaVersion: 10, id: 'ok', ruleset: '5e-2014', name: '有效' },
+      { schemaVersion: 10, id: 'bad', ruleset: '5e-2025', name: '未知版本' },
     ])
     const loaded = DraftStorageService.loadAll()
     DraftStorageService.saveAll(loaded)
-    const current = readJson<Array<{ id: string }>>(V9_KEY)
+    const current = readJson<Array<{ id: string }>>(V10_KEY)
     expect(current.map((draft) => draft.id)).toEqual(['ok'])
     expect(readJson<unknown[]>(QUARANTINE_KEY)).toHaveLength(1)
     expect(DraftStorageService.loadAll().map((draft) => draft.id)).toEqual(['ok'])
@@ -180,9 +180,9 @@ describe('DraftStorageService', () => {
     expect(localStorage.getItem(LEGACY_KEY)).toContain('legacy-1')
   })
 
-  it('v9 规范化新增集合，按稳定 ID 去重并过滤非法记录', () => {
-    setJson(V9_KEY, [{
-      schemaVersion: 9,
+  it('v10 规范化新增集合，按稳定 ID 去重并过滤非法记录', () => {
+    setJson(V10_KEY, [{
+      schemaVersion: 10,
       id: 'v9-rich',
       ruleset: '5e-2024',
       name: '新契约',
@@ -211,26 +211,26 @@ describe('DraftStorageService', () => {
   })
 
   it('天命掷骰作为原始选择随草稿往返，非法组被丢弃且不阻塞旧草稿', () => {
-    setJson(V9_KEY, [{
-      schemaVersion: 9,
+    setJson(V10_KEY, [{
+      schemaVersion: 10,
       id: 'destiny-ok',
       ruleset: '5e-2014',
       name: '天命角色',
       abilityMethod: 'custom',
       abilityDestiny: { count: 2, rolls: [[15, 14, 13, 10, 18, 9], [4, 10, 18, 3, 18, 18]] },
     }, {
-      schemaVersion: 9,
+      schemaVersion: 10,
       id: 'destiny-partial',
       ruleset: '5e-2014',
       name: '天命越界',
       abilityDestiny: { count: 99, rolls: [[15, 14, 13, 10, 18, 9], [1, 2, 3], 'x'] },
     }, {
-      schemaVersion: 9,
+      schemaVersion: 10,
       id: 'destiny-legacy',
       ruleset: '5e-2014',
       name: '旧草稿无天命字段',
     }, {
-      schemaVersion: 9,
+      schemaVersion: 10,
       id: 'destiny-invalid',
       ruleset: '5e-2014',
       name: '非法天命记录',
