@@ -25,7 +25,7 @@ import ValidationStep from '@/views/character-builder/components/ValidationStep.
 import { useCharacterBuilderPage } from '@/views/character-builder/hooks/useCharacterBuilderPage'
 import type { SelectionTaskFocusHandle } from '@/views/character-builder/selection-task'
 import { hasBuildChoices } from '@/rules/draft-progress'
-import type { AbilityMethod, DraftStep } from '@/types/character'
+import type { AbilityMethod, CharacterDraft, DraftStep } from '@/types/character'
 
 const {
   drafts,
@@ -66,6 +66,9 @@ const {
   previousStep,
   setStep,
   updateSetup,
+  applyClassAllocation,
+  applyAllocationFromSetup: applyAllocationFromSetupAction,
+  applyTotalLevel: applyTotalLevelAction,
   updateSources,
   selectClass,
   selectRace,
@@ -99,7 +102,6 @@ const {
   cancelPendingChange,
   levelAdjustNotice,
   dismissLevelAdjustNotice,
-  adjustLevel,
   startReedit,
   updateDraft,
 } = useCharacterBuilderPage()
@@ -127,9 +129,13 @@ function closeLevelModal(): void {
   levelModalOpen.value = false
 }
 
-function confirmLevelAdjust(level: number): void {
+/**
+ * 角色卡弹窗提交分配（MC-E03）：与第 1／3 步共用同一份分配数据，
+ * 收到 apply 后先关闭弹窗，再交给 `class-allocation` 依赖确认流程。
+ */
+function applyAllocationFromSheet(nextDraft: CharacterDraft): void {
   levelModalOpen.value = false
-  adjustLevel(level)
+  applyClassAllocation(nextDraft)
 }
 
 function goToLevelAdjustStep(): void {
@@ -141,6 +147,18 @@ function goToLevelAdjustStep(): void {
 
 function updateLevel(value: number): void {
   if (activeDraft.value) updateSetup(value, activeDraft.value.abilityMethod)
+}
+
+/** 第 1 步的分配控件提交（决策 D6）：与第 3 步共用同一份分配数据。 */
+function applyAllocationFromSetup(nextDraft: CharacterDraft): void {
+  if (!activeDraft.value) return
+  applyAllocationFromSetupAction(nextDraft, activeDraft.value.abilityMethod)
+}
+
+/** 第 1 步的总等级滑杆提交（需求 §3.4）：未选职业时只改目标等级。 */
+function applyTotalLevelFromSetup(nextDraft: CharacterDraft): void {
+  if (!activeDraft.value) return
+  applyTotalLevelAction(nextDraft, activeDraft.value.abilityMethod)
 }
 
 function updateMethod(value: AbilityMethod): void {
@@ -180,22 +198,27 @@ function updateMethod(value: AbilityMethod): void {
     </div>
     <SetupStep
       v-if="step === 'setup'"
-      :target-level="activeDraft.targetLevel"
+      :draft="activeDraft"
       :ability-method="activeDraft.abilityMethod"
       :ruleset="activeDraft.ruleset"
       :ruleset-locked="rulesetLocked"
       :ruleset-fallback="rulesetFallbackNotice"
       @level="updateLevel"
       @method="updateMethod"
+      @allocation="applyAllocationFromSetup"
+      @total-level="applyTotalLevelFromSetup"
       @ruleset="updateRuleset"
     />
     <SourcesStep v-else-if="step === 'sources'" :selected="activeDraft.enabledSourceIds" :ruleset="activeDraft.ruleset" @change="updateSources" />
     <ClassStep
       v-else-if="step === 'class'"
+      :draft="activeDraft"
       :selected="activeDraft.classId"
       :enabled-source-ids="activeDraft.enabledSourceIds"
       :ruleset="activeDraft.ruleset"
       @select="selectClass"
+      @allocation="applyClassAllocation"
+      @total-level="(next) => applyTotalLevelAction(next)"
     />
     <OriginStep
       v-else-if="step === 'origin'"
@@ -376,7 +399,8 @@ function updateMethod(value: AbilityMethod): void {
     :open="levelModalOpen"
     :draft="activeDraft"
     @close="closeLevelModal"
-    @confirm="confirmLevelAdjust"
+    @apply="applyAllocationFromSheet"
+    @total-level="(next) => applyTotalLevelAction(next)"
   />
   <LineageTransformationModal :open="lineageTransformation.open.value" :target="lineageTransformation.target.value" :targets="lineageTransformation.targets.value" :retained="lineageTransformation.retained.value" :candidates="lineageTransformation.candidates.value" :preview="lineageTransformation.result.value.preview" :error="lineageTransformation.result.value.error" @close="lineageTransformation.close" @confirm="lineageTransformation.confirm" @target="lineageTransformation.target.value = $event" @toggle="lineageTransformation.toggle" />
 </template>

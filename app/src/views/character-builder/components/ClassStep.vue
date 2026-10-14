@@ -4,13 +4,14 @@ import { computed } from 'vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
+import ClassAllocationControl from '@/views/character-builder/components/ClassAllocationControl.vue'
 import { getClassDetailSummary, getClassGrowthSummary } from '@/rules/recommend'
 import { getRulesRepository } from '@/rules/repositories'
 import { isSourceEnabled } from '@/rules/source-books'
-import type { RulesetId } from '@/types/character'
+import type { CharacterDraft, RulesetId } from '@/types/character'
 
-const props = withDefaults(defineProps<{ selected?: string; enabledSourceIds?: readonly string[]; ruleset?: RulesetId }>(), { ruleset: '5e-2014' })
-defineEmits<{ select: [id: string] }>()
+const props = withDefaults(defineProps<{ draft: CharacterDraft; selected?: string; enabledSourceIds?: readonly string[]; ruleset?: RulesetId }>(), { ruleset: '5e-2014' })
+const emit = defineEmits<{ select: [id: string]; allocation: [draft: CharacterDraft]; totalLevel: [draft: CharacterDraft] }>()
 
 const repository = computed(() => getRulesRepository(props.ruleset))
 const visibleClasses = computed(() => repository.value.classes
@@ -24,6 +25,13 @@ const visibleClasses = computed(() => repository.value.classes
 
 <template>
   <section class="class-step">
+    <!-- 第 3 步也能分配职业等级（决策 D6）：与第 1 步、角色卡弹窗共用同一控件与同一份数据 -->
+    <ClassAllocationControl
+      :draft="draft"
+      @apply="(next) => emit('allocation', next)"
+      @apply-total-level="(next) => emit('totalLevel', next)"
+      @cancel="() => undefined"
+    />
     <p class="class-step__match">当前仅显示核心规则与第 2 步已启用来源中的职业。</p>
     <ListShell>
       <ExpandableOptionCard

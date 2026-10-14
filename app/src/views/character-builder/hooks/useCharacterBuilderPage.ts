@@ -10,13 +10,14 @@ import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, clampDestinyCount, 
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { hasBuildChoices } from '@/rules/draft-progress'
 import { isSourceEnabled, normalizeEnabledSourceIds } from '@/rules/source-books'
-import { buildTimeline } from '@/rules/timeline'
+import { buildTimelineForDraft } from '@/rules/timeline'
 import { applySpellbookReservationSelection, isSpellbookReservationCheckpoint, validateSpellSelections } from '@/rules/spellcasting'
 import {
   deleteInactiveSpellSelection,
   reconcileSpellSelections,
   restoreInactiveSpellSelection,
 } from '@/rules/spell-selection-reconciliation'
+import { getClassEntries, getPrimaryClassId } from '@/rules/multiclass'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { useLineageTransformation } from '@/views/character-builder/hooks/useLineageTransformation'
@@ -119,7 +120,7 @@ export function useCharacterBuilderPage() {
     if (!draft?.classId) return false
     const classRule = getRulesRepository(draft.ruleset).getClass(draft.classId)
     if (classRule?.status !== 'implemented') return true
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+    const timeline = buildTimelineForDraft(draft)
     return timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const bounds = getCheckpointSelectionBounds(draft, checkpoint)
@@ -132,10 +133,24 @@ export function useCharacterBuilderPage() {
     const draft = activeDraft.value
     return draft ? getOriginStepBlockers(draft, repositoryFor(draft)) : []
   })
+  /**
+   * 第 3 步继续条件（决策 D6）：分配已完成即可继续，不要求玩家重做一次选择。
+   * 未选职业时，只要总等级合法（分配控件已把总等级设为各职业等级之和）即可继续。
+   */
+  const allocationComplete = computed(() => {
+    const draft = activeDraft.value
+    if (!draft) return false
+    const entries = getClassEntries(draft)
+    const total = entries.reduce((sum, entry) => sum + entry.level, 0)
+    if (total < 1 || total > 20) return false
+    if (entries.length === 0) return true
+    if (entries.some((entry) => entry.level < 1)) return false
+    return total === draft.targetLevel
+  })
   const canContinue = computed(() => {
     const draft = activeDraft.value
     if (!draft) return false
-    if (step.value === 'class') return Boolean(draft.classId)
+    if (step.value === 'class') return allocationComplete.value
     if (step.value === 'sources') return true
     // 起源完成判定与起源页提示、完成校验同源（B09-07）；不再使用 2014 的 background.languageChoices。
     if (step.value === 'origin') return isOriginStepComplete(draft, repositoryFor(draft))
@@ -413,7 +428,7 @@ export function useCharacterBuilderPage() {
       setStep('setup')
       return
     }
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+    const timeline = buildTimelineForDraft(draft)
     const hasInvalidated = draft.selections.some((selection) => Boolean(selection.invalidatedAt))
     const hasIncompleteCheckpoint = timeline.some((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
@@ -430,6 +445,117 @@ export function useCharacterBuilderPage() {
       return
     }
     setStep('abilities')
+  }
+
+  /**
+   * 应用职业与等级分配（MC-E02，决策 D2／D5／D6）。
+   *
+   * 由第 1 步、第 3 步与角色卡弹窗共用的 `ClassAllocationControl` 提交：
+   * 走 `class-allocation` 依赖变更（旧分配 vs 新分配两条时间线求差），
+   * 降级与移除职业时把失效选择标记失效、并把法术按归属归档到停用历史，不静默删除。
+   */
+  function applyClassAllocation(nextDraft: CharacterDraft, options: { readonly alwaysConfirm?: boolean } = {}): void {
+    const draft = activeDraft.value
+    if (!draft) return
+    const classes = nextDraft.multiclass?.classes ?? []
+    if (classes.length === 0) return
+    const beforeTotal = draft.targetLevel
+    const afterTotal = classes.reduce((sum, entry) => sum + entry.level, 0)
+    const change = {
+      kind: 'class-allocation',
+      classes,
+      levelOrder: nextDraft.multiclass?.levelOrder,
+      enabled: nextDraft.multiclass?.enabled,
+      primaryClassId: nextDraft.multiclass?.primaryClassId,
+    } as const
+    const beforeIds = new Set(getClassEntries(draft).map((entry) => entry.classId))
+    const afterIds = new Set(classes.map((entry) => entry.classId))
+    const removedClasses = [...beforeIds].filter((id) => !afterIds.has(id))
+    // 起始职业（SC-A03）：取 `primaryClassId` 而不是 `classes[0]`——两者在允许切换起始职业后不再等价，
+    // 而 `draft.classId`／`subclassId` 是装备步骤、兼容读取与导出共同依赖的字段。
+    const primaryClassId = nextDraft.multiclass?.primaryClassId ?? classes[0]?.classId
+    const nextPrimary = classes.find((entry) => entry.classId === primaryClassId) ?? classes[0]
+    const primaryChanged = primaryClassId !== undefined && primaryClassId !== getPrimaryClassId(draft)
+    const additionalAffected: string[] = []
+    if (removedClasses.length > 0) {
+      additionalAffected.push(`已移除职业：${removedClasses.map((id) => repositoryFor(draft).getClass(id)?.name ?? id).join('、')}`)
+    }
+    if (afterTotal < beforeTotal) additionalAffected.push('法术位与已知／准备法术（超出新等级的将移入停用记录）')
+    const subclassChanged = getClassEntries(draft)
+      .some((entry) => classes.find((item) => item.classId === entry.classId)?.subclassId !== entry.subclassId)
+    if (subclassChanged) additionalAffected.push('子职及其特性选择')
+    // 更换起始职业会改变 1 级生命值、起始装备与豁免熟练：确认摘要里必须显式列出。
+    if (primaryChanged) additionalAffected.push('起始职业（1 级生命值、起始装备、豁免熟练）')
+
+    requestChange(change, '调整职业与等级分配', () => {
+      const impact = getDependencyImpact(draft, change)
+      const targetSubclassId = nextPrimary?.subclassId
+      const spellReconciliation = afterTotal < beforeTotal || removedClasses.length > 0
+        ? reconcileSpellSelections(draft, {
+            nextClassId: nextPrimary?.classId,
+            nextSubclassId: targetSubclassId,
+            nextTargetLevel: afterTotal,
+            // 兼职口径（MC-D04）：按各职业自己的作用域核对，并把归属职业写进 sourceKey。
+            nextMulticlass: nextDraft.multiclass,
+            removedClassIds: removedClasses,
+            reason: afterTotal < beforeTotal ? 'level-reduced' : 'source-removed',
+            invalidatedAt: new Date().toISOString(),
+          })
+        : undefined
+      store.invalidateSelections(impact.invalidated, '职业与等级分配已调整')
+      const { subclassId: _previousSubclassId, ...rest } = draft
+      store.updateDraft({
+        ...rest,
+        multiclass: nextDraft.multiclass,
+        classId: nextPrimary?.classId,
+        ...(targetSubclassId ? { subclassId: targetSubclassId } : {}),
+        targetLevel: afterTotal,
+        ...(spellReconciliation ? {
+          spellSelections: spellReconciliation.spellSelections,
+          inactiveSpellSelections: spellReconciliation.inactiveSpellSelections,
+        } : {}),
+      })
+      // 更换起始职业会改变 1 级生命值、起始装备与豁免熟练：复用等级调整提示条说明结果。
+      if (primaryChanged) {
+        const before = getPrimaryClassId(draft)
+        levelAdjustNotice.value = {
+          tone: 'warning',
+          message: `已更换起始职业：${before ? repositoryFor(draft).getClass(before)?.name ?? before : '无'} → ${repositoryFor(draft).getClass(primaryClassId)?.name ?? primaryClassId}。1 级生命值、起始装备与豁免熟练已按新起始职业重算。`,
+        }
+      }
+    }, additionalAffected, { alwaysConfirm: options.alwaysConfirm ?? true })
+  }
+
+  /**
+   * 第 1 步的等级分配：未选职业时只改目标等级（走轻量的 `target-level` 路径），已选职业时走分配变更。
+   */
+  function applyAllocationFromSetup(nextDraft: CharacterDraft, abilityMethod: AbilityMethod): void {
+    const draft = activeDraft.value
+    if (!draft) return
+    if (getClassEntries(nextDraft).length === 0) {
+      updateSetup(Math.max(1, nextDraft.targetLevel ?? 1), abilityMethod)
+      return
+    }
+    if (abilityMethod === draft.abilityMethod) {
+      applyClassAllocation(nextDraft)
+      return
+    }
+    store.updateDraft({ abilityMethod })
+    applyClassAllocation(nextDraft)
+  }
+
+  /**
+   * 总等级滑杆的提交（需求 §3.4）：与逐职业步进分开，使用更轻的确认策略——
+   * 仅当有选择将失效时才弹确认，单纯升级或同级重排不打断。
+   */
+  function applyTotalLevel(nextDraft: CharacterDraft, abilityMethod?: AbilityMethod): void {
+    const draft = activeDraft.value
+    if (!draft) return
+    if (getClassEntries(nextDraft).length === 0) {
+      updateSetup(Math.max(1, nextDraft.targetLevel ?? 1), abilityMethod ?? draft.abilityMethod)
+      return
+    }
+    applyClassAllocation(nextDraft, { alwaysConfirm: false })
   }
 
   function selectClass(classId: string): void {
@@ -581,7 +707,7 @@ export function useCharacterBuilderPage() {
     }
     const draft = activeDraft.value
     if (!draft?.classId) return
-    const checkpoint = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+    const checkpoint = buildTimelineForDraft(draft)
       .find((item) => item.id === checkpointId)
     if (checkpoint?.kind === 'subclass') {
       store.updateDraft({ subclassId: optionIds[0] })
@@ -841,6 +967,9 @@ export function useCharacterBuilderPage() {
     previousStep,
     setStep,
     updateSetup,
+    applyClassAllocation,
+    applyAllocationFromSetup,
+    applyTotalLevel,
     updateSources,
     selectClass,
     selectRace,
