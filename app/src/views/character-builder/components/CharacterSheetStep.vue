@@ -27,7 +27,7 @@ import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
 import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSpellCandidates, getSpeciesSpellcastingProfiles, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
-import { buildTimeline } from '@/rules/timeline'
+import { buildTimeline, buildTimelineForDraft } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
 import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, ChoiceSelection, DerivedCharacter, InventoryEntry, ManualAddedSpell, ManualFeatGrant, SpellSelections } from '@/types/character'
 import type { ClassFeature, SpellRule } from '@/types/rules'
@@ -351,6 +351,8 @@ function isAlsoNormallyAcquired(spellId: string): boolean {
 const selectedOptionEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
+  // TODO(multiclass-timeline-scope): 本处、`featureChoiceLabel()` 与 `featAndAsiEntries()` 仍按
+  // 「单职业 + 总等级」展开时间线（需求 §7.3），兼职时职业级检查点会按总等级判定，待单独批次复核。
   const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const choiceCheckpointIds = [
     ...(classInfo.value?.features ?? []).flatMap((feature) => feature.checkpointIds ?? []),
@@ -693,12 +695,17 @@ const backgroundInfo = computed(() => {
   const features = getRulesRepository(props.draft.ruleset).getBackgroundFeatures(ownerId)
   return { background, features }
 })
-/** 存在失效选择或未完成的时间线检查点时，角色卡标记为"待补全"。 */
+/**
+ * 存在失效选择或未完成的时间线检查点时，角色卡标记为"待补全"。
+ *
+ * 兼职口径（需求 §5，决策 D32）：用 `buildTimelineForDraft` 与「重新编辑」「最终校验」同源，
+ * 否则缺口只来自非起始职业时（例如战士4/游荡者1 缺游荡者技能）徽标会漏报。
+ */
 const needsReview = computed(() => {
   const draft = props.draft
   const hasInvalidated = draft.selections.some((item) => Boolean(item.invalidatedAt))
   if (!draft.classId) return hasInvalidated
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+  const timeline = buildTimelineForDraft(props.draft)
   const incomplete = timeline.some((checkpoint) => {
     const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
     return (selection?.optionIds.length ?? 0) < checkpoint.minSelections
