@@ -138,7 +138,9 @@ describe('validateSubclassSelections', () => {
       classId: 'class-2014-fighter',
       subclassId: 'subclass-2014-barbarian-berserker',
     }
-    expect(validateSubclassSelections(draft).some((issue) => issue.id === 'subclass-class-mismatch')).toBe(true)
+    // MC-C04：错误 id 带上职业，便于兼职时区分是哪个职业的子职配对出错
+    expect(validateSubclassSelections(draft).some((issue) => issue.id === 'subclass-class-mismatch-class-2014-fighter')).toBe(true)
+    expect(validateSubclassSelections(draft).find((issue) => issue.id.startsWith('subclass-class-mismatch'))?.message).toContain('属于野蛮人')
   })
 
   it('reports subclass selected before its selection level', () => {
@@ -148,7 +150,9 @@ describe('validateSubclassSelections', () => {
       subclassId: 'subclass-2014-barbarian-berserker',
       targetLevel: 2,
     }
-    expect(validateSubclassSelections(draft).some((issue) => issue.id === 'subclass-level-too-early')).toBe(true)
+    expect(validateSubclassSelections(draft).some((issue) => issue.id === 'subclass-level-too-early-class-2014-barbarian')).toBe(true)
+    expect(validateSubclassSelections(draft).find((issue) => issue.id.startsWith('subclass-level-too-early'))?.resolution)
+      .toContain('提高野蛮人的等级')
   })
 
   it('warns when a required choice feature has no selection and errors on mutually exclusive multi-selection', () => {
