@@ -5,16 +5,18 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
+import LevelGrid from '@/views/character-builder/components/LevelGrid.vue'
 import {
   MAX_CHARACTER_LEVEL,
-  MAX_CLASS_LEVEL,
   addClassEntry,
   getClassEntries,
   getClassLevel,
+  getMaxClassLevel,
   getPrimaryClassId,
   getTotalLevel,
   getTotalLevelBounds,
   isMulticlassActive,
+  mergeIntoPrimaryClass,
   removeClassEntry,
   setClassLevel,
   setMulticlassEnabled,
@@ -27,24 +29,27 @@ import { isSourceEnabled } from '@/rules/source-books'
 import type { CharacterDraft } from '@/types/character'
 
 /**
- * 分配控件（MC-E01；起始职业与总等级滑杆改造见需求 §3、§4）。
+ * 分配控件（MC-E01；等级表格与确认流程改造见需求 §3—§7）。
  *
- * 交互约定：**每次分配动作立即 emit `apply`**（带上新的草稿），页面负责依赖影响确认；
- * 本控件内部的摘要、「关闭兼职」与「选择起始职业」二次确认只作用于本地待定草稿，确认后同样以 `apply` 提交。
- * 这样控件不需要复制页面的依赖影响逻辑，避免了同一份规则判断出现两个实现。
+ * 交互约定：**每次等级／分配动作立即 emit**（带上新的草稿），页面负责依赖影响确认；
+ * 页面持有待定草稿（`pendingChange.stagedDraft`），本控件只显示传入的 `draft`（可能是待定值），
+ * 因此不再保留本地待定副本，也不复制页面的依赖影响逻辑。
+ *
+ * - 等级类动作（等级表格选值、`＋/－` 步进、第 1／3 步的滑杆）→ `applyTotalLevel`；
+ * - 结构类动作（增删职业、职业等级、起始职业、关闭兼职）→ `apply`。
+ *
+ * 形态差异（决策 D38／Q1）：`compact`（角色卡「调整等级」弹窗）不渲染滑杆，
+ * 只提供等级表格与 `＋/－`；内联（第 1 步／第 3 步）保留滑杆。
  */
 const props = withDefaults(defineProps<{
   draft: CharacterDraft
-  /** 角色卡弹窗模式：标题与说明略作调整，逻辑一致。 */
+  /** 角色卡弹窗模式：不渲染滑杆，底部只提供「关闭」。 */
   compact?: boolean
 }>(), { compact: false })
 
 const emit = defineEmits<{
   apply: [draft: CharacterDraft]
-  /**
-   * 总等级滑杆松手后的提交（需求 §3.4）。与 `apply` 分开，因为页面要对它使用更轻的确认策略：
-   * 滑杆只在「有选择将失效」时弹确认，而逐职业步进／移除职业仍保持 `alwaysConfirm`（D7 防误触）。
-   */
+  /** 等级类变更（滑杆、`＋/－`、等级表格选值）；页面按等级变更处理引导与确认。 */
   applyTotalLevel: [draft: CharacterDraft]
   cancel: []
 }>()
@@ -55,18 +60,22 @@ const totalLevel = computed(() => getTotalLevel(props.draft))
 const primaryClassId = computed(() => getPrimaryClassId(props.draft))
 const multiclassActive = computed(() => isMulticlassActive(props.draft))
 const enabled = computed(() => Boolean(props.draft.multiclass?.enabled))
+/** 某职业的等级上限（需求 §8／D42）：兼职 19、单职业 20，由规则层统一给出。 */
+const maxClassLevel = computed(() => getMaxClassLevel(props.draft))
 
 /**
- * 内联模式（第 1 步／第 3 步）：每次操作立即生效，**不保留待定状态**（需求 §4 R3／D21）。
- * 弹窗模式（角色卡「调整等级」）：保留本地待定副本，「取消 / 确认」是确定与关闭的入口（D19）。
+ * 写入基准草稿：恒为传入的 `draft`（页面在确认弹窗打开期间传「待定草稿」）。
+ * 所有写入函数都以它为输入；页面未采纳时由 `onSliderCommit` 的回滚把显示拉回已提交值。
  */
-const inline = computed(() => !props.compact)
+const base = computed(() => props.draft)
 
-/**
- * 显示与写入的基准草稿：内联用已提交的 `props.draft`，弹窗用本地待定副本。
- * 所有写入函数都以它为输入，避免内联在「页面依赖确认被取消」后残留未生效的显示。
- */
-const base = computed(() => (props.compact ? pending.value : props.draft))
+/** 等级表格的展开状态（总等级一个、职业行「单行展开」一个）。 */
+const levelGridOpen = ref(false)
+const expandedClassId = ref<string>()
+
+function toggleClassGrid(classId: string): void {
+  expandedClassId.value = expandedClassId.value === classId ? undefined : classId
+}
 
 /** 「设置起始职业」只在真正有可切换对象时出现（D18）：与职业列表同一条件。 */
 const showOriginEntry = computed(() => multiclassActive.value)
@@ -104,8 +113,9 @@ const totalBounds = computed(() => classes.value.length > 0
   : { min: 1, max: MAX_CHARACTER_LEVEL })
 
 /**
- * 滑杆的本地预览值（需求 §3.4）：拖动中只改这里，松手（`change`）才提交，
- * 避免拖动过程中反复触发页面的依赖影响确认。
+ * 等级卡的本地预览值：滑杆拖动中只改这里，松手（`change`）才提交；
+ * 等级表格选值与 `＋/－` 也先写这里再走同一条提交通道。
+ * 传入的 `draft`（含页面待定草稿）变化时同步，保证显示与待定值一致。
  */
 const sliderLevel = ref(effectiveTotal.value)
 watch(() => props.draft, () => { sliderLevel.value = effectiveTotal.value })
@@ -119,22 +129,24 @@ async function onSliderCommit(): Promise<void> {
   // 尚无职业（第 1 步）：只写目标等级，不下发职业分配（页面按 target-level 路径处理）。
   if (classes.value.length === 0) {
     if (target === props.draft.targetLevel) return
-    const next = { ...base.value, targetLevel: target }
-    if (props.compact) pending.value = next
-    emit('applyTotalLevel', next)
+    emit('applyTotalLevel', { ...base.value, targetLevel: target })
   } else {
     const result = setTotalLevel(base.value, target)
     if (!result.ok) {
       sliderLevel.value = effectiveTotal.value
       return
     }
-    if (props.compact) pending.value = result.draft
     emit('applyTotalLevel', result.draft)
   }
-  if (props.compact) return
-  // 内联：提交若未被页面采纳（例如依赖确认被取消），把显示回到已提交值，不残留未生效的滑杆位置。
+  // 提交若未被页面采纳（例如确认弹窗被取消），把显示回到已提交值，不残留未生效的位置。
   await nextTick()
   if (sliderLevel.value !== effectiveTotal.value) sliderLevel.value = effectiveTotal.value
+}
+
+/** 等级表格选值（需求 §4.2，决策 D38）：与滑杆／步进同一条提交通道。 */
+async function onLevelPick(level: number): Promise<void> {
+  sliderLevel.value = level
+  await onSliderCommit()
 }
 
 /** 等级名的展示口径：兼职时是总等级，否则是该职业（或目标）等级。 */
@@ -147,8 +159,8 @@ function canStepLevel(delta: number): boolean {
 }
 
 /**
- * ±1 步进（需求 §3，决策 D34／D35）：先移动本地预览值，再复用滑杆的提交通道与回滚语义——
- * 只发 `applyTotalLevel`（轻量确认策略），不新增第二条提交实现，也不引入第二套边界判断。
+ * ±1 步进（需求 §5，决策 D39）：先移动本地预览值，再复用滑杆的提交通道与回滚语义——
+ * 只发 `applyTotalLevel`，确认由页面的「调整职业与等级分配」弹窗承担。
  */
 async function stepLevel(delta: -1 | 1): Promise<void> {
   if (!canStepLevel(delta)) return
@@ -156,13 +168,7 @@ async function stepLevel(delta: -1 | 1): Promise<void> {
   await onSliderCommit()
 }
 
-/** 弹窗模式的本地待定副本：内联模式不使用它（R3／D21）。 */
-const pending = ref<CharacterDraft>(props.draft)
-watch(() => props.draft, (next) => { pending.value = next })
-
 function applyDraft(next: CharacterDraft): void {
-  // 内联（即时生效）不保留待定副本；只有弹窗需要它来支撑「取消 / 确认」。
-  if (props.compact) pending.value = next
   emit('apply', next)
 }
 
@@ -218,14 +224,11 @@ function onToggleEnabled(value: boolean): void {
     openOriginPicker()
     return
   }
-  const next = setMulticlassEnabled(base.value, false)
-  // 关闭兼职（D7）：存在多个职业时必须显式选择「合并到起始职业」或取消，且不可撤销。
-  if (getClassEntries(next).length > 1) {
-    closeConfirmOpen.value = true
-    applyDraft(next)
-    return
-  }
-  applyDraft(next)
+  // 关闭兼职（需求 §7，决策 D41）：总等级不变，其他职业并入起始职业。
+  // 破坏性说明写在开关旁常驻文案里，明细与确认由页面的「调整职业与等级分配」弹窗统一承担。
+  const merged = mergeIntoPrimaryClass(base.value)
+  if (!merged.ok) return
+  applyDraft(merged.draft)
 }
 
 /** 手动设置起始职业（不改变兼职开关）——第 1 步／第 3 步／角色卡弹窗三处共用。 */
@@ -236,41 +239,10 @@ function switchPrimary(classId: string): void {
   applyDraft(result.draft)
 }
 
-const closeConfirmOpen = ref(false)
-
-/** 合并到起始职业：总等级不变，其余职业的等级并入起始职业（不超过 19 级上限）。 */
-function mergeIntoPrimary(): void {
-  const entries = getClassEntries(base.value)
-  const primaryClassId = getPrimaryClassId(base.value)
-  if (!primaryClassId) return
-  const total = entries.reduce((sum, entry) => sum + entry.level, 0)
-  const primaryEntry = entries.find((entry) => entry.classId === primaryClassId)
-  const merged = { classId: primaryClassId, level: Math.min(MAX_CLASS_LEVEL, total), ...(primaryEntry?.subclassId ? { subclassId: primaryEntry.subclassId } : {}) }
-  applyDraft({
-    ...base.value,
-    multiclass: {
-      enabled: false,
-      primaryClassId,
-      classes: [merged],
-      levelOrder: Array.from({ length: merged.level }, () => primaryClassId),
-    },
-    classId: primaryClassId,
-    subclassId: merged.subclassId,
-    targetLevel: merged.level,
-  })
-  closeConfirmOpen.value = false
-}
-
-function cancelClose(): void {
-  closeConfirmOpen.value = false
-  // 取消时把开关恢复为打开，避免界面状态与数据不一致
-  applyDraft(setMulticlassEnabled(base.value, true))
-}
-
 function changeLevel(classId: string, delta: number): void {
   const current = getClassLevel(base.value, classId)
   const next = current + delta
-  if (next < 0 || next > MAX_CLASS_LEVEL) return
+  if (next < 0 || next > maxClassLevel.value) return
   if (next === 0) {
     // 降到 0 = 移除该职业（D5），起始职业不可移除（D16）
     const result = removeClassEntry(base.value, classId)
@@ -278,7 +250,12 @@ function changeLevel(classId: string, delta: number): void {
     applyDraft(result.draft)
     return
   }
-  const result = setClassLevel(base.value, classId, next)
+  applyClassLevel(classId, next)
+}
+
+/** 职业等级写入（需求 §6，决策 D40）：等级表格选值与 `＋/－` 共用，走结构类 `apply` 通道。 */
+function applyClassLevel(classId: string, level: number): void {
+  const result = setClassLevel(base.value, classId, level)
   if (!result.ok) return
   applyDraft(result.draft)
 }
@@ -306,26 +283,7 @@ const totalWarning = computed(() => {
   return ''
 })
 
-/** 变更摘要（D2 第 8 条）：总等级前后、各职业等级前后、先决问题数。 */
-const changeSummary = computed(() => {
-  const before = getTotalLevel(props.draft)
-  const after = getTotalLevel(base.value)
-  const beforeEntries = getClassEntries(props.draft)
-  const afterEntries = getClassEntries(base.value)
-  const beforeById = new Map(beforeEntries.map((entry) => [entry.classId, entry.level]))
-  const lines = afterEntries.map((entry) => {
-    const previous = beforeById.get(entry.classId)
-    const label = className(entry.classId)
-    return previous === undefined
-      ? `${label} 新增 ${entry.level} 级`
-      : previous === entry.level ? `${label} 保持 ${entry.level} 级` : `${label} ${previous} → ${entry.level} 级`
-  })
-  const removed = beforeEntries.filter((entry) => !afterEntries.some((item) => item.classId === entry.classId))
-  for (const entry of removed) lines.push(`${className(entry.classId)} 移除（原有 ${entry.level} 级）`)
-  return { before, after, lines, direction: after > before ? 'up' as const : after < before ? 'down' as const : 'same' as const }
-})
-
-const canApply = computed(() => changeSummary.value.lines.some((line) => !line.includes('保持')) || totalLevel.value !== getTotalLevel(props.draft))
+/** 变更摘要由页面的「调整职业与等级分配」确认弹窗统一展示（D37），控件不再保留待定摘要。 */
 </script>
 
 <template>
@@ -343,7 +301,7 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
       </label>
     </header>
 
-    <!-- 等级卡（需求 §2／§3）：滑杆 + ±1 步进；无职业、单职业与兼职三种状态共用（D34） -->
+    <!-- 等级卡（需求 §4）：等级表格 + ±1 步进；角色卡弹窗内不渲染滑杆（Q1） -->
     <div class="allocation__level">
       <div class="allocation__level-head">
         <span>{{ levelLabel }}</span>
@@ -363,7 +321,21 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
           >＋</BaseButton>
         </div>
       </div>
-      <label class="allocation__slider">
+      <button
+        type="button"
+        class="allocation__expand"
+        :aria-expanded="levelGridOpen"
+        @click="levelGridOpen = !levelGridOpen"
+      >{{ levelGridOpen ? '收起等级列表 ▴' : '展开等级列表 ▾' }}</button>
+      <LevelGrid
+        v-if="levelGridOpen"
+        :min="totalBounds.min"
+        :max="totalBounds.max"
+        :value="sliderLevel"
+        :label="levelLabel"
+        @select="onLevelPick"
+      />
+      <label v-if="!compact" class="allocation__slider">
         <input
           type="range"
           :min="totalBounds.min"
@@ -373,11 +345,11 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
           @input="onSliderInput"
           @change="onSliderCommit"
         >
-        <small v-if="classes.length === 0">等级决定需要完成多少次职业、子职和属性提升选择；也可以点按 ± 逐级调整。</small>
+        <small v-if="classes.length === 0">等级决定需要完成多少次职业、子职和属性提升选择；也可以展开等级列表或点按 ± 逐级调整。</small>
         <small v-else-if="multiclassActive">
-          拖动滑杆或点按 ± 调整总等级：加级给列表最后一个职业，减级从末尾往前扣；单个职业最低 1 级，调整不会移除职业。
+          拖动滑杆、展开等级列表或点按 ± 调整总等级：加级给列表最后一个职业，减级从末尾往前扣；单个职业最低 1 级，调整不会移除职业。
         </small>
-        <small v-else>等级决定需要完成多少次职业、子职和属性提升选择；也可以点按 ± 逐级调整。</small>
+        <small v-else>等级决定需要完成多少次职业、子职和属性提升选择；也可以展开等级列表或点按 ± 逐级调整。</small>
       </label>
     </div>
 
@@ -391,7 +363,7 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
 
     <p v-if="!multiclassActive" class="allocation__note">开启兼职前，这里直接设置唯一职业的等级。</p>
 
-    <!-- 兼职：逐职业步进；职业数不设上限（D9） -->
+    <!-- 兼职：逐职业步进 + 该职业的等级表格；职业数不设上限（D9） -->
     <ul v-if="multiclassActive" class="allocation__list">
       <li v-for="entry in classes" :key="entry.classId" class="allocation__row">
         <div class="allocation__row-main">
@@ -404,11 +376,26 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
             <b>{{ entry.level }}</b>
             <BaseButton
               variant="secondary"
-              :disabled="totalLevel >= MAX_CHARACTER_LEVEL || entry.level >= MAX_CLASS_LEVEL"
+              :disabled="totalLevel >= MAX_CHARACTER_LEVEL || entry.level >= maxClassLevel"
               @click="changeLevel(entry.classId, 1)"
             >＋</BaseButton>
           </div>
         </div>
+        <button
+          type="button"
+          class="allocation__expand"
+          :aria-expanded="expandedClassId === entry.classId"
+          @click="toggleClassGrid(entry.classId)"
+        >{{ expandedClassId === entry.classId ? `收起${className(entry.classId)}等级列表 ▴` : `展开${className(entry.classId)}等级列表 ▾` }}</button>
+        <!-- 该职业的等级表格（需求 §6／D40）：单行展开，不含 0（移除仍走 − 降到 0） -->
+        <LevelGrid
+          v-if="expandedClassId === entry.classId"
+          :min="1"
+          :max="maxClassLevel"
+          :value="entry.level"
+          :label="`${className(entry.classId)}等级`"
+          @select="(level) => applyClassLevel(entry.classId, level)"
+        />
         <p v-if="prerequisiteByClass.get(entry.classId)?.status === 'unmet'" class="allocation__warn">
           {{ prerequisiteByClass.get(entry.classId)?.reasons[0] }}
         </p>
@@ -436,24 +423,18 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
       <BaseButton v-if="showOriginEntry" variant="secondary" @click="openOriginPicker">设置起始职业</BaseButton>
     </div>
     <p v-if="!enabled" class="allocation__note">开启「启用兼职」后可以添加第二个职业。</p>
+    <!-- 关闭兼职的破坏性说明常驻在开关下方（明细与确认由页面的确认弹窗承担，D41） -->
+    <p v-if="classes.length > 1" class="allocation__note">
+      关闭兼职会把其他职业的等级并入起始职业（总等级不变），该操作不可撤销。
+    </p>
     <!-- 兼职关闭但草稿仍保留多个职业（D20）：只读说明，避免被误认为数据丢失 -->
     <p v-if="retainedAllocation" class="allocation__note">
       已保留兼职分配：{{ retainedAllocation }}，重新启用后可继续编辑。
     </p>
 
-    <!-- 「本次变更」只属于弹窗的待定流程：内联已即时生效，没有待定状态（D19／R3） -->
-    <section v-if="!inline && canApply" class="allocation__summary">
-      <strong>本次变更</strong>
-      <p>总等级 {{ changeSummary.before }} → {{ changeSummary.after }}</p>
-      <ul>
-        <li v-for="line in changeSummary.lines" :key="line">{{ line }}</li>
-      </ul>
-    </section>
-
-    <!-- 底部「取消 / 确认」只在弹窗模式出现（D19）：内联每次操作已生效，这两个按钮没有作用 -->
-    <footer v-if="!inline" class="allocation__footer">
-      <BaseButton variant="secondary" @click="emit('cancel')">取消</BaseButton>
-      <BaseButton :disabled="Boolean(totalWarning)" @click="emit('apply', pending)">确认</BaseButton>
+    <!-- 底部「关闭」只在弹窗模式出现：提交统一由页面的「调整职业与等级分配」确认弹窗承担（D37／Q2） -->
+    <footer v-if="compact" class="allocation__footer">
+      <BaseButton variant="secondary" @click="emit('cancel')">关闭</BaseButton>
     </footer>
 
     <!-- 选择起始职业（需求 §4.2）：候选按是否已有职业决定 -->
@@ -481,22 +462,6 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
       <template #footer>
         <BaseButton variant="secondary" @click="cancelOriginPicker">取消</BaseButton>
         <BaseButton :disabled="!originChoice" @click="confirmOriginPicker">确认</BaseButton>
-      </template>
-    </UiModal>
-
-    <!-- 关闭兼职的破坏性确认（D7：常驻说明 + 二次确认 + 明细 + 无快捷入口） -->
-    <UiModal :open="closeConfirmOpen" title="关闭兼职" @close="cancelClose">
-      <p>关闭兼职会把其他职业的等级合并到起始职业，<b>总等级不变</b>。</p>
-      <p class="allocation__warn">此操作不可撤销，也不会保留各职业的等级分配历史。</p>
-      <ul>
-        <li v-for="entry in classes.filter((item) => item.classId !== primaryClassId)" :key="entry.classId">
-          将合并：{{ className(entry.classId) }} {{ entry.level }} 级
-        </li>
-      </ul>
-      <p class="allocation__note">合并后：{{ className(primaryClassId ?? '') }} {{ Math.min(MAX_CLASS_LEVEL, totalLevel) }} 级。</p>
-      <template #footer>
-        <BaseButton variant="secondary" @click="cancelClose">保留兼职</BaseButton>
-        <BaseButton variant="danger" @click="mergeIntoPrimary">确认合并</BaseButton>
       </template>
     </UiModal>
 
@@ -549,7 +514,7 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
     small { color: var(--color-text-muted); font-size: 0.72rem; }
   }
 
-  /* 等级卡（需求 §2）：卡片外壳 + 头部（等级名与 ±1 步进）+ 滑杆 */
+  /* 等级卡（需求 §4）：卡片外壳 + 头部（等级名与 ±1 步进）+ 等级表格展开 + 滑杆 */
   &__level {
     display: grid;
     gap: 0.6rem;
@@ -567,7 +532,21 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
     color: var(--color-text-muted);
   }
 
-  /* 等级滑杆（需求 §3）：与改动前的第 1 步同一形态 */
+  /* 等级表格的展开／收起入口（需求 §4.1／§6.3） */
+  &__expand {
+    justify-self: start;
+    min-height: 2.5rem;
+    padding: 0 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-primary);
+    background: var(--color-surface);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* 等级滑杆（需求 §4.3）：只在第 1／3 步内联形态渲染 */
   &__slider {
     display: grid;
     gap: 0.6rem;
@@ -633,18 +612,6 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
   &__note { margin: 0; color: var(--color-text-muted); font-size: 0.72rem; line-height: 1.5; }
 
   &__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-
-  &__summary {
-    display: grid;
-    gap: 0.3rem;
-    padding: 0.75rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-
-    strong { font-size: 0.82rem; }
-    p { margin: 0; font-size: 0.78rem; }
-    ul { margin: 0; padding-left: 1rem; color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.6; }
-  }
 
   &__footer { display: flex; justify-content: flex-end; gap: 0.5rem; }
 

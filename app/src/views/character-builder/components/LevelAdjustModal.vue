@@ -8,12 +8,14 @@ import { getClassEntries, getTotalLevel } from '@/rules/multiclass'
 import type { CharacterDraft } from '@/types/character'
 
 /**
- * 等级调整弹窗（MC-E03）。
+ * 等级调整弹窗（MC-E03；等级表格改造见需求 §4／§6）。
  *
  * 与第 1 步、第 3 步共用同一个 `ClassAllocationControl` 与同一份分配数据（决策 D2／D6）：
- * 单职业时等级滑杆直接设置该职业等级，开启兼职后另有逐职业 −/＋ 与「设置起始职业」入口；
- * 总等级恒为各职业等级之和。页面收到 `apply`／`applyTotalLevel` 后走依赖影响确认
- * （滑杆使用更轻的策略：仅在有选择失效时确认）。
+ * 弹窗形态**不渲染滑杆**（Q1），等级操作是「点击展开的等级表格 + `＋/－`」；
+ * 开启兼职后另有逐职业步进、职业行的等级表格与「设置起始职业」入口；总等级恒为各职业等级之和。
+ *
+ * 页面收到 `apply`／`applyTotalLevel` 后一律走「调整职业与等级分配」确认（决策 D37），
+ * 确认前不写库；传入的 `draft` 可能是页面的**待定草稿**，并由页面保证确认弹窗在最上层。
  */
 const props = defineProps<{
   open: boolean
@@ -22,9 +24,9 @@ const props = defineProps<{
 
 defineEmits<{
   close: []
-  /** 分配控件提交的新草稿（逐职业步进、开关、起始职业切换、确认按钮）。 */
+  /** 结构类变更提交的新草稿（逐职业步进、开关、起始职业切换、职业等级表格）。 */
   apply: [draft: CharacterDraft]
-  /** 总等级滑杆提交的新草稿（需求 §3.4）。 */
+  /** 等级类变更提交的新草稿（等级表格选值、`＋/－`）。 */
   totalLevel: [draft: CharacterDraft]
 }>()
 
