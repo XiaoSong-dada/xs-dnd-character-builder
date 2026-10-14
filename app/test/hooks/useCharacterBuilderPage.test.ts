@@ -213,7 +213,7 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     expect(page.levelAdjustNotice.value?.step).toBe('timeline')
   })
 
-  it('角色卡滑杆升级（D37）：弹确认，确认后出引导条但不跳转', async () => {
+  it('角色卡升级（D37／D44）：弹确认，确认后直接跳到需要处理的步骤', async () => {
     const { page, store } = await setupPage(makeFighterDraft({ selections: level5Selections }))
     const raised = setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 6).draft
 
@@ -228,9 +228,22 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     page.confirmPendingChange()
 
     expect(store.activeDraft?.targetLevel).toBe(6)
-    expect(page.step.value).toBe('sheet')
+    // 新增检查点为 6 级属性提升 → 直接落在第 6 步（不需要再点引导条）
+    expect(page.step.value).toBe('timeline')
     expect(page.levelAdjustNotice.value?.message).toContain('请完成新增检查点')
     expect(page.levelAdjustNotice.value?.step).toBe('timeline')
+  })
+
+  it('角色卡升级（D44）：只有法术缺口时确认后直接进入法术步骤', async () => {
+    const { page, store } = await setupPage(makeSorcererDraft())
+    const raised = setClassLevel(page.activeDraft.value!, 'class-2014-sorcerer', 5).draft
+
+    page.applyTotalLevel(raised)
+    page.confirmPendingChange()
+
+    expect(store.activeDraft?.targetLevel).toBe(5)
+    expect(page.step.value).toBe('spells')
+    expect(page.levelAdjustNotice.value?.step).toBe('spells')
   })
 
   it('确认弹窗内可继续 ±1：连续调整共用一个待定变更（D43）', async () => {
@@ -303,8 +316,9 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     page.confirmPendingChange()
     expect(page.levelAdjustNotice.value?.step).toBe('timeline')
 
-    // 用户在时间线补全 6 级检查点后再提交一次同级滑杆：没有实际变化 → 不弹确认，
-    // 且没有新的待办项，过期引导条被清空。
+    // 用户补全 6 级检查点后回到角色卡，再提交一次同级滑杆：没有实际变化 → 不弹确认；
+    // 且没有新的待办项，过期引导条被清空（引导只在角色卡步骤产生）。
+    page.setStep('sheet')
     store.updateDraft({ selections: level6Selections })
     page.applyTotalLevel(store.activeDraft!)
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import BaseButton from '@/components/ui/BaseButton.vue'
 import UiModal from '@/components/ui/UiModal.vue'
@@ -131,6 +131,17 @@ function openLevelModal(): void {
 function closeLevelModal(): void {
   levelModalOpen.value = false
 }
+
+/**
+ * 步骤一旦离开角色卡就关闭「调整等级」弹窗。
+ *
+ * 该弹窗只在角色卡步骤发起，但它的遮罩是 `position: fixed; inset: 0`——如果跳转到目标步骤
+ * （自动跳转或点击引导条）后弹窗仍然挂载，遮罩会盖住目标步骤，用户点击法术／检查点会**被遮罩吃掉**
+ * （表现为「进入了步骤但点不动」，且第一次点击只是把弹窗关掉）。
+ */
+watch(step, (next) => {
+  if (next !== 'sheet') levelModalOpen.value = false
+})
 
 /**
  * 角色卡弹窗提交分配（MC-E03；需求 §3，决策 D37／Q2）：与第 1／3 步共用同一份分配数据，
