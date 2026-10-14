@@ -373,51 +373,27 @@ export function useCharacterBuilderPage() {
     }
   }
 
-  function dismissLevelAdjustNotice(): void {
-    levelAdjustNotice.value = undefined
+  /**
+   * 角色卡调整后的引导（需求 §3，决策 D28—D30）。
+   *
+   * 只在有待办项时写引导条（没有待补／待复查项就清掉上一条过期提示），
+   * 且只有「升级 + 确认路径」才自动跳转：降级只提示复查、滑杆路径只提示补全，
+   * 是否前往由用户点击引导条决定，避免把正在看角色卡的用户强行带走。
+   */
+  function guideLevelAdjust(
+    direction: 'up' | 'down',
+    targetLevel: number,
+    impact: DependencyImpact,
+    archivedSpellCount: number,
+    options: { readonly navigate?: boolean } = {},
+  ): void {
+    const notice = buildLevelAdjustNotice(direction, targetLevel, impact, archivedSpellCount)
+    levelAdjustNotice.value = notice.step ? notice : undefined
+    if (notice.step && direction === 'up' && options.navigate !== false) setStep(notice.step)
   }
 
-  /** 角色完成后调整等级（升级/降级），始终弹确认并展示受影响清单。 */
-  function adjustLevel(targetLevel: number): void {
-    const draft = activeDraft.value
-    if (!draft?.classId || targetLevel === draft.targetLevel) return
-    if (targetLevel < 1 || targetLevel > 20) return
-    const change = { kind: 'target-level', value: targetLevel } as const
-    const direction = targetLevel > draft.targetLevel ? 'up' : 'down'
-    requestChange(
-      change,
-      direction === 'up' ? `升级至 ${targetLevel} 级` : `降级至 ${targetLevel} 级`,
-      () => {
-        const impact = getDependencyImpact(draft, change)
-        const spellReconciliation = direction === 'down'
-          ? reconcileSpellSelections(draft, {
-              nextClassId: draft.classId,
-              nextSubclassId: draft.subclassId,
-              nextTargetLevel: targetLevel,
-              reason: 'level-reduced',
-              invalidatedAt: new Date().toISOString(),
-            })
-          : undefined
-        store.invalidateSelections(impact.invalidated, `目标等级调整为${targetLevel}级`)
-        store.updateDraft({
-          targetLevel,
-          ...(spellReconciliation ? {
-            spellSelections: spellReconciliation.spellSelections,
-            inactiveSpellSelections: spellReconciliation.inactiveSpellSelections,
-          } : {}),
-        })
-        levelAdjustNotice.value = buildLevelAdjustNotice(direction, targetLevel, impact, spellReconciliation?.archived.length ?? 0)
-        if (direction === 'up') {
-          if ((impact.added?.length ?? 0) > 0) {
-            setStep('timeline')
-          } else if ((impact.spellUpdates?.length ?? 0) > 0) {
-            setStep('spells')
-          }
-        }
-      },
-      [],
-      { alwaysConfirm: true },
-    )
+  function dismissLevelAdjustNotice(): void {
+    levelAdjustNotice.value = undefined
   }
 
   /** 角色完成后重新编辑：智能定位到需要处理的步骤，否则进入属性步骤。 */
@@ -453,8 +429,11 @@ export function useCharacterBuilderPage() {
    * 由第 1 步、第 3 步与角色卡弹窗共用的 `ClassAllocationControl` 提交：
    * 走 `class-allocation` 依赖变更（旧分配 vs 新分配两条时间线求差），
    * 降级与移除职业时把失效选择标记失效、并把法术按归属归档到停用历史，不静默删除。
+   *
+   * 引导（需求 §3，决策 D28—D30）：在角色卡步骤提交后必须把新增检查点／复查项告诉用户；
+   * `navigate: false`（总等级滑杆）只写引导条、不强制跳转。
    */
-  function applyClassAllocation(nextDraft: CharacterDraft, options: { readonly alwaysConfirm?: boolean } = {}): void {
+  function applyClassAllocation(nextDraft: CharacterDraft, options: { readonly alwaysConfirm?: boolean; readonly navigate?: boolean } = {}): void {
     const draft = activeDraft.value
     if (!draft) return
     const classes = nextDraft.multiclass?.classes ?? []
@@ -502,7 +481,6 @@ export function useCharacterBuilderPage() {
             invalidatedAt: new Date().toISOString(),
           })
         : undefined
-      store.invalidateSelections(impact.invalidated, '职业与等级分配已调整')
       const { subclassId: _previousSubclassId, ...rest } = draft
       store.updateDraft({
         ...rest,
@@ -515,14 +493,32 @@ export function useCharacterBuilderPage() {
           inactiveSpellSelections: spellReconciliation.inactiveSpellSelections,
         } : {}),
       })
-      // 更换起始职业会改变 1 级生命值、起始装备与豁免熟练：复用等级调整提示条说明结果。
+      // 先写入新分配、再标记失效：`rest.selections` 是变更前的快照，顺序反过来会把
+      // `invalidateSelections` 刚写下的 `invalidatedAt` 覆盖掉（实施期发现的既有缺陷，见更新任务 §6.3）。
+      store.invalidateSelections(impact.invalidated, '职业与等级分配已调整')
+      // 角色卡上的调整必须给出补全引导（需求 §3，决策 D28—D30）：
+      // 第 1／3 步属于线性流程，后面本就会走到第 6 步，因此不在此处提示、也不跳转。
+      if (step.value !== 'sheet') return
+      const navigate = options.navigate ?? true
       if (primaryChanged) {
         const before = getPrimaryClassId(draft)
         levelAdjustNotice.value = {
           tone: 'warning',
-          message: `已更换起始职业：${before ? repositoryFor(draft).getClass(before)?.name ?? before : '无'} → ${repositoryFor(draft).getClass(primaryClassId)?.name ?? primaryClassId}。1 级生命值、起始装备与豁免熟练已按新起始职业重算。`,
+          message: `已更换起始职业：${before ? repositoryFor(draft).getClass(before)?.name ?? before : '无'} → ${repositoryFor(draft).getClass(primaryClassId)?.name ?? primaryClassId}。1 级生命值与豁免熟练已按新起始职业重算；起始装备需在装备步骤重新选择。`,
+          step: 'equipment',
         }
+        // TODO(primary-class-equipment): 起始装备不会随起始职业变更重算（需求 §7.2），
+        // 是否清空重建或标记需复核需单独决策；当前只在引导条里指向装备步骤。
+        if (navigate) setStep('equipment')
+        return
       }
+      guideLevelAdjust(
+        afterTotal >= beforeTotal ? 'up' : 'down',
+        afterTotal,
+        impact,
+        spellReconciliation?.archived.length ?? 0,
+        { navigate },
+      )
     }, additionalAffected, { alwaysConfirm: options.alwaysConfirm ?? true })
   }
 
@@ -547,6 +543,9 @@ export function useCharacterBuilderPage() {
   /**
    * 总等级滑杆的提交（需求 §3.4）：与逐职业步进分开，使用更轻的确认策略——
    * 仅当有选择将失效时才弹确认，单纯升级或同级重排不打断。
+   *
+   * 但「不打断」不等于「不提示」（需求 §3.3，决策 D29）：滑杆提交同样要写引导条，
+   * 只是不自动跳转（滑杆常被连续微调，强制跳转会打断操作）。
    */
   function applyTotalLevel(nextDraft: CharacterDraft, abilityMethod?: AbilityMethod): void {
     const draft = activeDraft.value
@@ -555,7 +554,7 @@ export function useCharacterBuilderPage() {
       updateSetup(Math.max(1, nextDraft.targetLevel ?? 1), abilityMethod ?? draft.abilityMethod)
       return
     }
-    applyClassAllocation(nextDraft, { alwaysConfirm: false })
+    applyClassAllocation(nextDraft, { alwaysConfirm: false, navigate: false })
   }
 
   function selectClass(classId: string): void {
@@ -1003,7 +1002,6 @@ export function useCharacterBuilderPage() {
     cancelPendingChange,
     levelAdjustNotice,
     dismissLevelAdjustNotice,
-    adjustLevel,
     startReedit,
     updateDraft: store.updateDraft,
   } as const
