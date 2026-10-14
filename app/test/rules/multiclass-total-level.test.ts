@@ -4,9 +4,12 @@ import {
   addClassEntry,
   getClassEntries,
   getClassLevel,
+  getMaxClassLevel,
   getPrimaryClassId,
   getTotalLevel,
   getTotalLevelBounds,
+  mergeIntoPrimaryClass,
+  normalizeMulticlass,
   rebuildLevelOrder,
   removeClassEntry,
   setClassLevel,
@@ -217,5 +220,69 @@ describe('SC-A02 setPrimaryClassId', () => {
     expect(getPrimaryClassId(switched)).toBe(ROGUE)
     expect(getClassEntries(switched)).toEqual([{ classId: ROGUE, level: 1 }, { classId: FIGHTER, level: 5 }])
     expect(getTotalLevel(switched)).toBe(6)
+  })
+})
+
+/**
+ * 职业等级上限按是否兼职区分（需求 §8／决策 D42）。
+ *
+ * 回归背景：`MAX_CLASS_LEVEL`（19）原先对所有草稿生效，导致单职业 19 → 20 无法通过
+ * 控件写入口到达、带兼职状态的单职业 20 级还会被校验判错。
+ */
+describe('D42 职业等级上限按是否兼职区分', () => {
+  it('getMaxClassLevel：单职业（含旧字段合成）为 20，兼职为 19', () => {
+    expect(getMaxClassLevel(solo(5))).toBe(20)
+    expect(getMaxClassLevel(multiclassDraft([{ classId: FIGHTER, level: 3 }, { classId: ROGUE, level: 2 }]))).toBe(19)
+  })
+
+  it('单职业 19 → 20：setTotalLevel 与 setClassLevel 都可写入', () => {
+    const draft = solo(19)
+    const viaTotal = setTotalLevel(draft, 20)
+    expect(viaTotal.ok).toBe(true)
+    expect(getTotalLevel(viaTotal.draft)).toBe(20)
+    expect(getClassLevel(viaTotal.draft, FIGHTER)).toBe(20)
+
+    const viaClass = setClassLevel(draft, FIGHTER, 20)
+    expect(viaClass.ok).toBe(true)
+    expect(getClassLevel(viaClass.draft, FIGHTER)).toBe(20)
+  })
+
+  it('兼职仍以 19 为职业等级上限', () => {
+    const draft = multiclassDraft([{ classId: FIGHTER, level: 18 }, { classId: ROGUE, level: 1 }])
+    const clamped = setClassLevel(draft, FIGHTER, 20).draft
+    expect(getClassLevel(clamped, FIGHTER)).toBe(19)
+    expect(getTotalLevel(clamped)).toBe(20)
+  })
+
+  it('normalizeMulticlass：单职业 20 不再被压到 19，兼职 20 仍压到 19', () => {
+    const single = normalizeMulticlass({ enabled: false, primaryClassId: FIGHTER, classes: [{ classId: FIGHTER, level: 20 }] })
+    expect(single?.classes).toEqual([{ classId: FIGHTER, level: 20 }])
+
+    const multi = normalizeMulticlass({
+      enabled: true,
+      primaryClassId: FIGHTER,
+      classes: [{ classId: FIGHTER, level: 20 }, { classId: ROGUE, level: 1 }],
+    })
+    expect(multi?.classes[0]).toEqual({ classId: FIGHTER, level: 19 })
+  })
+
+  it('mergeIntoPrimaryClass：总等级不变（含总 20），其他职业被删除，起始职业为起始职业', () => {
+    const draft = multiclassDraft([
+      { classId: FIGHTER, level: 10, subclassId: 'subclass-2014-fighter-champion' },
+      { classId: ROGUE, level: 10 },
+    ])
+    const result = mergeIntoPrimaryClass(draft)
+    expect(result.ok).toBe(true)
+    expect(getClassEntries(result.draft)).toEqual([{ classId: FIGHTER, level: 20, subclassId: 'subclass-2014-fighter-champion' }])
+    expect(getTotalLevel(result.draft)).toBe(20)
+    expect(result.draft.targetLevel).toBe(20)
+    expect(result.draft.multiclass?.enabled).toBe(false)
+    expect(result.draft.classId).toBe(FIGHTER)
+    expect(result.draft.subclassId).toBe('subclass-2014-fighter-champion')
+  })
+
+  it('mergeIntoPrimaryClass：无职业时拒绝', () => {
+    const empty = draft2024({ ruleset: '5e-2014', classId: undefined, targetLevel: 1 })
+    expect(mergeIntoPrimaryClass(empty)).toMatchObject({ ok: false, error: 'class-not-found' })
   })
 })

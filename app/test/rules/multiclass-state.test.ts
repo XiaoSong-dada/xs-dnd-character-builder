@@ -122,7 +122,7 @@ describe('MC-A01 等级写入', () => {
     expect(setClassLevel(draft, 'class-2014-fighter', 3).draft).toBe(draft)
   })
 
-  it('等级被钳制在 1—19；钳制后总等级仍超 20 时拒绝写入', () => {
+  it('等级被钳制在职业上限（兼职 19／单职业 20）；钳制后总等级仍超 20 时拒绝写入', () => {
     const draft = multiclassDraft()
     // 战士由 3 提到 0 → 钳制为 1，总等级 3，可写入
     expect(getClassLevel(setClassLevel(draft, 'class-2014-fighter', 0).draft, 'class-2014-fighter')).toBe(1)
@@ -130,9 +130,16 @@ describe('MC-A01 等级写入', () => {
     const rejected = setClassLevel(draft, 'class-2014-fighter', 99)
     expect(rejected).toMatchObject({ ok: false, error: 'total-level-exceeded' })
     expect(rejected.draft).toBe(draft)
-    // 单职业草稿下 19 级可写入（总等级 19）
+    // 单职业草稿：职业上限为 20（D42），写入 99 被钳制到 20
     const solo = draft2024({ classId: 'class-2014-fighter', targetLevel: 5 })
-    expect(getClassLevel(setClassLevel(solo, 'class-2014-fighter', 99).draft, 'class-2014-fighter')).toBe(19)
+    expect(getClassLevel(setClassLevel(solo, 'class-2014-fighter', 99).draft, 'class-2014-fighter')).toBe(20)
+  })
+
+  it('兼职草稿：职业等级仍钳制在 19（D42）', () => {
+    const draft = multiclassDraft({}, {
+      classes: [{ classId: 'class-2014-fighter', level: 1 }, { classId: 'class-2014-rogue', level: 1 }],
+    })
+    expect(getClassLevel(setClassLevel(draft, 'class-2014-fighter', 99).draft, 'class-2014-fighter')).toBe(19)
   })
 
   it('总等级超过 20 时拒绝写入并保留原草稿', () => {

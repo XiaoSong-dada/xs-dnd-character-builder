@@ -100,6 +100,22 @@ describe('MC-F02 问题条目必须同时给出原因与修正指引', () => {
     expect(outOfRange?.message).toContain('20')
     expect(outOfRange?.resolution).toContain('职业等级')
   })
+
+  it('单职业 20 级不再被判越界（D42：上限按是否兼职区分）', () => {
+    const draft = mc([{ classId: 'class-2014-fighter', level: 20 }], {
+      overrides: {
+        multiclass: {
+          enabled: false,
+          primaryClassId: 'class-2014-fighter',
+          classes: [{ classId: 'class-2014-fighter', level: 20 }],
+          levelOrder: [],
+        },
+        targetLevel: 20,
+      },
+    })
+    const issues = validateMulticlassAllocation(draft)
+    expect(issues.find((item) => item.id.startsWith('multiclass-class-level-'))).toBeUndefined()
+  })
 })
 
 describe('MC-F02 法术问题的职业归属与修正指引', () => {

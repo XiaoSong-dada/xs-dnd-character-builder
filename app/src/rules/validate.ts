@@ -22,7 +22,7 @@ import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rule
 import { isSourceEnabled } from '@/rules/source-books'
 import { getActiveLineageRecord, getSpeciesLegacyBenefits } from '@/rules/species-legacy'
 import { isSelectionCheckpointActive, manualFeatParentCheckpointId } from '@/rules/feats'
-import { getClassEntries, MAX_CHARACTER_LEVEL, MAX_CLASS_LEVEL, MIN_CHARACTER_LEVEL, MIN_CLASS_LEVEL } from '@/rules/multiclass'
+import { getClassEntries, getMaxClassLevel, MAX_CHARACTER_LEVEL, MIN_CHARACTER_LEVEL, MIN_CLASS_LEVEL } from '@/rules/multiclass'
 import { getMulticlassPrerequisiteReport } from '@/rules/multiclass-prerequisites'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
 import { artificerReplicatePlans2024, getArtificerReplicatedItemLimit2024 } from '@/rules/data/ua-artificer-2024'
@@ -842,13 +842,14 @@ export function validateMulticlassAllocation(draft: CharacterDraft): readonly Va
       resolution: '调整职业等级分配。',
     })
   }
+  const maxClassLevel = getMaxClassLevel(draft)
   for (const entry of state.classes) {
-    if (entry.level < MIN_CLASS_LEVEL || entry.level > MAX_CLASS_LEVEL) {
+    if (entry.level < MIN_CLASS_LEVEL || entry.level > maxClassLevel) {
       issues.push({
         id: `multiclass-class-level-${entry.classId}`,
         step: 'class',
         severity: 'error',
-        message: `“${repositoryName(draft, entry.classId)}”的等级必须在 ${MIN_CLASS_LEVEL}—${MAX_CLASS_LEVEL} 之间，当前为 ${entry.level}。`,
+        message: `“${repositoryName(draft, entry.classId)}”的等级必须在 ${MIN_CLASS_LEVEL}—${maxClassLevel} 之间，当前为 ${entry.level}。`,
         resolution: '调整该职业的等级；要移除该职业请把等级降到 0。',
       })
     }

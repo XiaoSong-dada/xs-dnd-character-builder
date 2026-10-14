@@ -15,7 +15,12 @@ import type { ClassLevelEntry, MulticlassDraft, MulticlassState } from '@/types/
 /** 角色总等级上下限。 */
 export const MIN_CHARACTER_LEVEL = 1
 export const MAX_CHARACTER_LEVEL = 20
-/** 单职业等级下限（1）与上限（19，留出至少 1 级给其他职业）。 */
+/**
+ * 职业等级下限（1）与**兼职时**的职业等级上限（19，留出至少 1 级给其他职业）。
+ *
+ * 单个职业时职业等级上限等于角色总等级上限（20）——此时不存在「留级给其他职业」的约束，
+ * 具体取值统一走 `getMaxClassLevel()`，不要在调用点直接写死本常量（需求 §8，决策 D42）。
+ */
 export const MIN_CLASS_LEVEL = 1
 export const MAX_CLASS_LEVEL = MAX_CHARACTER_LEVEL - 1
 
@@ -33,9 +38,19 @@ export interface MulticlassWriteResult {
   readonly error?: MulticlassWriteError
 }
 
-function clampClassLevel(level: number): number {
+function clampClassLevel(level: number, max: number): number {
   if (!Number.isFinite(level)) return MIN_CLASS_LEVEL
-  return Math.min(MAX_CLASS_LEVEL, Math.max(MIN_CLASS_LEVEL, Math.trunc(level)))
+  return Math.min(max, Math.max(MIN_CLASS_LEVEL, Math.trunc(level)))
+}
+
+/**
+ * 某草稿允许的职业等级上限（需求 §8，决策 D42）。
+ *
+ * - 兼职（职业数 > 1）：`MAX_CLASS_LEVEL`（19）；
+ * - 单职业（职业数为 1，含由旧字段合成的草稿）：`MAX_CHARACTER_LEVEL`（20）。
+ */
+export function getMaxClassLevel(draft: MulticlassDraft): number {
+  return getClassEntries(draft).length > 1 ? MAX_CLASS_LEVEL : MAX_CHARACTER_LEVEL
 }
 
 /**
@@ -195,13 +210,13 @@ function withClassEntries(draft: CharacterDraft, entries: readonly ClassLevelEnt
   return { ...draft, multiclass: state, targetLevel: total }
 }
 
-/** 写入某职业的等级（1—19）；该职业尚未加入时先加入。总等级超过 20 时拒绝写入。 */
+/** 写入某职业的等级（兼职 1—19／单职业 1—20，见 `getMaxClassLevel`）；该职业尚未加入时先加入。总等级超过 20 时拒绝写入。 */
 export function setClassLevel(draft: CharacterDraft, classId: string, level: number): MulticlassWriteResult {
   if (!classId) return { draft, ok: false, error: 'class-unknown' }
   const entries = getClassEntries(draft)
   const index = entries.findIndex((entry) => entry.classId === classId)
   if (index < 0) return addClassEntry(draft, classId)
-  const next = clampClassLevel(level)
+  const next = clampClassLevel(level, getMaxClassLevel(draft))
   const current = entries[index]!
   if (next === current.level) return { draft, ok: true }
   const others = entries.reduce((sum, entry, position) => position === index ? sum : sum + entry.level, 0)
@@ -254,8 +269,8 @@ export function setMulticlassEnabled(draft: CharacterDraft, enabled: boolean): C
  *
  * 拖动总等级滑杆时按下列顺序搬运等级，**不改变职业数量**：
  * - 加级：加给职业列表的**最后一个职业**。
- *   不需要进位——若末位职业已达 `MAX_CLASS_LEVEL`（19），则总等级 ≥ 19 + (n−1) ≥ 20（n ≥ 2），
- *   此时总等级已到上限、不会再有加级请求；单职业时末位即该职业，与 `setClassLevel` 等价。
+ *   兼职时不需要进位——若末位职业已达 `MAX_CLASS_LEVEL`（19），则总等级 ≥ 19 + (n−1) ≥ 20（n ≥ 2），
+ *   此时总等级已到上限、不会再有加级请求；单职业时末位即该职业，上限为 20（`getMaxClassLevel`）。
  * - 减级：从列表**末尾往前**找第一个「等级 > 1」的职业减 1；因此任何职业都不会因拖动被移除
  *   （要移除职业必须显式调用 `removeClassEntry`）。
  * - 越界（低于职业数量或高于 20）、空职业集合、等级不变时：分别返回 `invalid-level`／
@@ -285,10 +300,45 @@ export function setTotalLevel(draft: CharacterDraft, total: number): MulticlassW
     // 下限已保证存在可减的等级；防御性返回，避免写出总等级不符的草稿。
     if (remaining > 0) return { draft, ok: false, error: 'invalid-level' }
   }
-  if (updated.some((entry) => entry.level > MAX_CLASS_LEVEL || entry.level < MIN_CLASS_LEVEL)) {
+  const maxClassLevel = getMaxClassLevel(draft)
+  if (updated.some((entry) => entry.level > maxClassLevel || entry.level < MIN_CLASS_LEVEL)) {
     return { draft, ok: false, error: 'invalid-level' }
   }
   return { draft: withClassEntries(draft, updated), ok: true }
+}
+
+/**
+ * 关闭兼职时的合并（需求 §7，决策 D41）：**总等级不变**，删除其他职业，
+ * 起始职业等级取当前总等级（单职业上限 20，决策 D42）。
+ *
+ * 返回 `enabled: false` 的单职业草稿；无职业或无起始职业时返回 `class-not-found`。
+ */
+export function mergeIntoPrimaryClass(draft: CharacterDraft): MulticlassWriteResult {
+  const entries = getClassEntries(draft)
+  const primaryClassId = getPrimaryClassId(draft)
+  if (entries.length === 0 || !primaryClassId) return { draft, ok: false, error: 'class-not-found' }
+  const total = entries.reduce((sum, entry) => sum + entry.level, 0)
+  const subclassId = getClassSubclassId(draft, primaryClassId)
+  const merged: ClassLevelEntry = {
+    classId: primaryClassId,
+    level: Math.min(MAX_CHARACTER_LEVEL, Math.max(MIN_CLASS_LEVEL, total)),
+    ...(subclassId ? { subclassId } : {}),
+  }
+  return {
+    draft: {
+      ...draft,
+      multiclass: {
+        enabled: false,
+        primaryClassId,
+        classes: [merged],
+        levelOrder: Array.from({ length: merged.level }, () => primaryClassId),
+      },
+      classId: primaryClassId,
+      subclassId,
+      targetLevel: merged.level,
+    },
+    ok: true,
+  }
 }
 
 /**
@@ -351,20 +401,27 @@ export function normalizeMulticlass(value: unknown): MulticlassState | undefined
   if (!value || typeof value !== 'object') return undefined
   const raw = value as Partial<MulticlassState>
   const seen = new Set<string>()
-  const classes: ClassLevelEntry[] = []
+  const rawClasses: { classId: string; level: number; subclassId?: string }[] = []
   for (const candidate of Array.isArray(raw.classes) ? raw.classes : []) {
     if (!candidate || typeof candidate !== 'object') continue
     const entry = candidate as Partial<ClassLevelEntry>
     if (typeof entry.classId !== 'string' || entry.classId.trim().length === 0) continue
     if (seen.has(entry.classId)) continue
     seen.add(entry.classId)
-    classes.push({
+    rawClasses.push({
       classId: entry.classId,
-      level: clampClassLevel(Number(entry.level)),
+      level: Number(entry.level),
       ...(typeof entry.subclassId === 'string' && entry.subclassId.trim().length > 0 ? { subclassId: entry.subclassId } : {}),
     })
   }
-  if (classes.length === 0) return undefined
+  if (rawClasses.length === 0) return undefined
+  // 上限按**最终职业数**判定（需求 §8，决策 D42）：单职业允许 20，兼职仍为 19。
+  const maxClassLevel = rawClasses.length > 1 ? MAX_CLASS_LEVEL : MAX_CHARACTER_LEVEL
+  const classes: ClassLevelEntry[] = rawClasses.map((entry) => ({
+    classId: entry.classId,
+    level: clampClassLevel(entry.level, maxClassLevel),
+    ...(entry.subclassId ? { subclassId: entry.subclassId } : {}),
+  }))
   const primaryClassId = typeof raw.primaryClassId === 'string' && classes.some((entry) => entry.classId === raw.primaryClassId)
     ? raw.primaryClassId
     : classes[0]!.classId
