@@ -67,18 +67,26 @@ describe('MC-A02 schema v10 迁移', () => {
     expect(migrated?.selections[0]?.optionIds).toEqual(['style-defense'])
   })
 
-  it('顶层法术数组复制为按职业归属的存储形态，顶层数组本身不变', () => {
+  it('单职业旧草稿迁移不建分桶：继续以顶层数组为准（修复「读分桶、写顶层」的根因）', () => {
     const migrated = migrateDraftToV10(v9Draft())
-    expect(migrated?.spellSelections.classSpellSelections).toEqual([{
-      classId: 'class-2014-fighter',
-      cantripIds: ['spell-2014-fire-bolt'],
-      knownSpellIds: [],
-      preparedSpellIds: [],
-      spellbookSpellIds: ['spell-2014-magic-missile'],
-    }])
+    expect(migrated?.spellSelections.classSpellSelections).toBeUndefined()
     expect(migrated?.spellSelections.cantripIds).toEqual(['spell-2014-fire-bolt'])
     expect(migrated?.spellSelections.spellbookSpellIds).toEqual(['spell-2014-magic-missile'])
     expect(migrated?.spellSelections.transcribedSpellIds).toEqual(['spell-2014-magic-missile'])
+  })
+
+  it('v9 没有兼职结构，迁移只会产出单职业草稿，因此不建分桶', () => {
+    const migrated = migrateDraftToV10(v9Draft({
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-fighter',
+        classes: [{ classId: 'class-2014-fighter', level: 6 }, { classId: 'class-2014-rogue', level: 1 }],
+        levelOrder: [...Array.from({ length: 6 }, () => 'class-2014-fighter'), 'class-2014-rogue'],
+      },
+    }))
+    // 迁移只认旧字段 classId／targetLevel（buildMigratedMulticlass），v9 的 multiclass 字段被忽略
+    expect(migrated?.multiclass?.classes).toHaveLength(1)
+    expect(migrated?.spellSelections.classSpellSelections).toBeUndefined()
   })
 
   it('未选职业的草稿不产生兼职结构，也不产生法术分组', () => {
@@ -88,13 +96,56 @@ describe('MC-A02 schema v10 迁移', () => {
     expect(migrated?.schemaVersion).toBe(10)
   })
 
-  it('已带 classSpellSelections 的草稿不会被覆盖', () => {
-    const existing = [{ classId: 'class-2014-wizard', cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] }]
-    const migrated = migrateDraftToV10(v9Draft({
-      classId: 'class-2014-wizard',
-      spellSelections: { cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [], transcribedSpellIds: [], classSpellSelections: existing },
-    }))
-    expect(migrated?.spellSelections.classSpellSelections).toEqual(existing)
+  it('v10 多职业草稿的既有分桶在归一化后保留（只保留仍存在职业的分桶）', () => {
+    const buckets = [
+      { classId: 'class-2014-wizard', cantripIds: ['spell-2014-fire-bolt'], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+      { classId: 'class-2014-rogue', cantripIds: [], knownSpellIds: [], preparedSpellIds: [], spellbookSpellIds: [] },
+    ]
+    const parsed = parseCharacterDraft({
+      ...v9Draft({ classId: 'class-2014-wizard', subclassId: undefined }),
+      schemaVersion: 10,
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-wizard',
+        classes: [{ classId: 'class-2014-wizard', level: 6 }, { classId: 'class-2014-rogue', level: 1 }],
+        levelOrder: [...Array.from({ length: 6 }, () => 'class-2014-wizard'), 'class-2014-rogue'],
+      },
+      spellSelections: {
+        cantripIds: ['spell-2014-fire-bolt'],
+        knownSpellIds: [],
+        preparedSpellIds: [],
+        spellbookSpellIds: [],
+        transcribedSpellIds: [],
+        classSpellSelections: buckets,
+      },
+    })
+    expect(parsed?.spellSelections.classSpellSelections).toEqual(buckets)
+  })
+
+  it('单职业草稿的残留分桶在归一化时折回顶层并清除（幂等）', () => {
+    const stale = [{ classId: 'class-2014-wizard', cantripIds: ['spell-2014-fire-bolt'], knownSpellIds: ['spell-2014-shield'], preparedSpellIds: [], spellbookSpellIds: [] }]
+    const raw = {
+      ...v9Draft({
+        classId: 'class-2014-wizard',
+        subclassId: undefined,
+        spellSelections: {
+          cantripIds: [],
+          knownSpellIds: [],
+          preparedSpellIds: [],
+          spellbookSpellIds: [],
+          transcribedSpellIds: [],
+          classSpellSelections: stale,
+        },
+      }),
+      schemaVersion: 10,
+    }
+    const parsed = parseCharacterDraft(raw)
+    expect(parsed?.spellSelections.classSpellSelections).toBeUndefined()
+    expect(parsed?.spellSelections.cantripIds).toEqual(['spell-2014-fire-bolt'])
+    expect(parsed?.spellSelections.knownSpellIds).toEqual(['spell-2014-shield'])
+    // 幂等：再次归一化结果不变
+    const again = parseCharacterDraft(parsed)
+    expect(again?.spellSelections).toEqual(parsed?.spellSelections)
   })
 
   it('总等级恒等于 Σ 职业等级（归一化时以职业集合为准）', () => {

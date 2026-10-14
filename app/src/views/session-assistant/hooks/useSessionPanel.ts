@@ -4,7 +4,7 @@ import type { Ref } from 'vue'
 import { deriveCharacter } from '@/rules/derive'
 import { getClassLevelLabel, getHitDiceFaces } from '@/rules/multiclass-session'
 import { getRulesRepository } from '@/rules/repositories'
-import { getEffectiveSpellSlots, getRequiredSpellCount, getSpellCandidates, getSpellcastingConfig, getUnpreparedManualSpellIds, getClassSpellcastingProfiles, groupSpellsByLevel } from '@/rules/spellcasting'
+import { applyClassSpellSelections, getClassSpellSelections, getEffectiveSpellSlots, getRequiredSpellCount, getSpellCandidates, getSpellcastingConfig, getUnpreparedManualSpellIds, getClassSpellcastingProfiles, groupSpellsByLevel } from '@/rules/spellcasting'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import {
   applyExhaustionChange,
@@ -52,6 +52,11 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   const hitDiceFaces = computed(() => getHitDiceFaces(draft.value))
 
   // ---- 法术书（spellbook 模式）：未准备法术与准备切换 ----
+  /**
+   * 该角色在跑团助手里编辑的施法作用域数据（起始职业）：与法术步骤、角色卡同一读取口径
+   * （有分桶读分桶、单职业读顶层），写入也走 `applyClassSpellSelections`，避免写进读取不看的数组。
+   */
+  const scopeSelections = computed(() => getClassSpellSelections(draft.value, draft.value.classId ?? ''))
   const requiredSpellCount = computed(() =>
     spellcastingConfig.value ? getRequiredSpellCount(draft.value, spellcastingConfig.value) : 0,
   )
@@ -64,7 +69,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
       .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell))
   })
   const canPrepareMore = computed(() =>
-    draft.value.spellSelections.preparedSpellIds.length < requiredSpellCount.value,
+    scopeSelections.value.preparedSpellIds.length < requiredSpellCount.value,
   )
   /** U01：候选池与人工添加法术合并后，按环级升序 + 同环规则表顺序分组展示。 */
   const unpreparedFromBookGroups = computed(() =>
@@ -84,7 +89,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
       })
       return
     }
-    const current = draft.value.spellSelections.preparedSpellIds
+    const current = scopeSelections.value.preparedSpellIds
     const next = current.includes(spellId)
       ? current.filter((id) => id !== spellId)
       : canPrepareMore.value
@@ -92,7 +97,10 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
         : current
     if (next === current) return
     store.updateDraftById(draft.value.id, {
-      spellSelections: { ...draft.value.spellSelections, preparedSpellIds: next },
+      spellSelections: applyClassSpellSelections(draft.value, draft.value.classId ?? '', {
+        ...scopeSelections.value,
+        preparedSpellIds: next,
+      }),
     })
   }
 

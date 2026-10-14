@@ -9,6 +9,7 @@ import { ABILITY_LABELS } from '@/rules/data/ability-labels'
 import { getRulesRepository } from '@/rules/repositories'
 import { getInactiveSpellRestoreStatus } from '@/rules/spell-selection-reconciliation'
 import {
+  applyClassSpellSelections,
   getAlwaysPreparedSpellIds,
   getEffectiveSpellSlots,
   getMaximumSpellLevel,
@@ -56,46 +57,14 @@ const spellbookExtraAllowance = computed(() => activeScopeData.value?.spellbookE
 const normalSpellbookCount = computed(() => activeScopeData.value?.normalSpellbookCount ?? 0)
 
 /**
- * 兼职写回（MC-D03／D04）：把改动落到**当前职业的分桶**，同时把顶层数组镜像为各职业的并集，
- * 让仍然直接读顶层字段的既有消费方（导出、摘要）保持正确。单职业仍只写顶层数组。
+ * 写回当前职业的法术选择（MC-D03／D04）。
  *
- * 抄录与「子职额外入书／能力预留」是法术书内部的共享标记（`ClassSpellSelections` 不单独持有），
- * 因此这四个数组进分桶，其余共享字段仍写顶层。
+ * 目标数据由规则层 `applyClassSpellSelections` 决定，**与 `getClassSpellSelections` 的读取口径严格对称**：
+ * 该职业已有分桶就写分桶（并把顶层数组刷新为并集镜像），单职业／起始职业且无分桶时写顶层数组。
+ * 修复背景：此前按「施法作用域数 > 1」判断，导致「单职业 + 迁移产生的分桶」写顶层、读分桶，法术加删无效。
  */
-const CLASS_BUCKET_KEYS = ['cantripIds', 'knownSpellIds', 'preparedSpellIds', 'spellbookSpellIds'] as const
 function emitScopeChange(scope: SpellcastingScope, next: SpellSelections): void {
-  const base = props.draft.spellSelections
-  if (scopes.value.length <= 1) {
-    emit('change', next)
-    return
-  }
-  const buckets = (base.classSpellSelections ?? []).map((bucket) => bucket.classId === scope.classId
-    ? {
-        ...bucket,
-        ...Object.fromEntries(CLASS_BUCKET_KEYS.map((key) => [key, next[key] ?? []])),
-      }
-    : bucket)
-  if (!buckets.some((bucket) => bucket.classId === scope.classId)) {
-    buckets.push({
-      classId: scope.classId,
-      cantripIds: next.cantripIds,
-      knownSpellIds: next.knownSpellIds,
-      preparedSpellIds: next.preparedSpellIds,
-      spellbookSpellIds: next.spellbookSpellIds,
-    })
-  }
-  // 顶层数组＝各职业并集（兼容视图；`getClassSpellSelections` 优先读分桶，不会重复计数）。
-  const union = (key: typeof CLASS_BUCKET_KEYS[number]) => [...new Set(buckets.flatMap((bucket) => bucket[key] ?? []))]
-  emit('change', {
-    ...base,
-    cantripIds: union('cantripIds'),
-    knownSpellIds: union('knownSpellIds'),
-    preparedSpellIds: union('preparedSpellIds'),
-    spellbookSpellIds: union('spellbookSpellIds'),
-    ...(next.spellbookExtraSpellIds ? { spellbookExtraSpellIds: next.spellbookExtraSpellIds } : {}),
-    ...(next.spellbookReservedSpellIds ? { spellbookReservedSpellIds: next.spellbookReservedSpellIds } : {}),
-    classSpellSelections: buckets,
-  })
+  emit('change', applyClassSpellSelections(props.draft, scope.classId, next))
 }
 
 /** 吸底栏「去完成」经页面调用该句柄，与起源步骤同一出口（v1.9.1 R3-6）。 */
@@ -107,6 +76,8 @@ const schoolFilter = ref('all')
 const ritualFilter = ref('all')
 const concentrationFilter = ref('all')
 const levelFilter = ref('all')
+/** 「当前名额已选满」提示条：名额满时点击候选项会聚焦它（见 `focusCapacityNotice`）。 */
+const capacityNotice = ref<HTMLElement>()
 
 const sourceOptions = computed(() => [
   { id: 'all', label: '全部来源' },
@@ -316,7 +287,33 @@ function toggleSpellbookExtra(id: string): void {
   if (book.includes(id) || spellbookExtraIds.value.length >= spellbookExtraAllowance.value) return
   emitScopeChange(scope, { ...scopeSelections.value, spellbookSpellIds: [...book, id], spellbookExtraSpellIds: [...spellbookExtraIds.value, id] })
 }
+/**
+ * 名额已满时点击候选项原先**静默无效**（各 toggle 函数直接 return），用户只会觉得「点不动」。
+ * 这里把既有的「当前名额已选满」提示条聚焦（并把视图滚到它），让点击有明确反馈。
+ */
+function capacityBlocked(id: string): boolean {
+  switch (activeTaskKind()) {
+    case 'cantrips':
+      return !scopeSelections.value.cantripIds.includes(id) && scopeSelections.value.cantripIds.length >= requiredCantripCount.value
+    case 'spellbook':
+      return !scopeSelections.value.spellbookSpellIds.includes(id) && normalSpellbookCount.value >= requiredSpellbookCount.value
+    case 'spellbook-extra':
+      return !spellbookExtraIds.value.includes(id) && spellbookExtraIds.value.length >= spellbookExtraAllowance.value
+    default:
+      return !selectedSpellIds.value.includes(id) && selectedSpellIds.value.length >= requiredSpellCount.value
+  }
+}
+function focusCapacityNotice(): void {
+  const notice = capacityNotice.value
+  if (!notice) return
+  notice.focus()
+  notice.scrollIntoView?.({ block: 'center' })
+}
 function toggleForTask(id: string): void {
+  if (capacityBlocked(id)) {
+    focusCapacityNotice()
+    return
+  }
   const kind = activeTaskKind()
   if (kind === 'cantrips') toggleCantrip(id)
   else if (kind === 'spellbook') toggleSpellbook(id)
@@ -344,7 +341,9 @@ function lockedSelectionLabel(spellId: string): string {
       <SelectionTaskNavigator v-model="flow.activeTaskId.value" :tasks="tasks" :completed="flow.completedCount.value" />
       <UiNotice v-if="alwaysPreparedSpells.length" tone="success" title="自动获得／始终准备">{{ alwaysPreparedSpells.map((spell) => spell.name).join('、') }}（不占选择上限）</UiNotice>
       <UiNotice v-if="invalidSpellSelectionCount" tone="warning" title="保留了需要重新确认的旧选择">有 {{ invalidSpellSelectionCount }} 项法术来自之前的职业、等级或法术书状态；它们没有被静默删除，但不会计入合法完成。</UiNotice>
-      <UiNotice v-if="activeFull && filteredCandidates.length && levelFilter !== 'selected'" tone="info" title="当前名额已选满">请先取消一项已选法术，再选择其他法术。</UiNotice>
+      <div ref="capacityNotice" class="spellcasting-step__capacity" tabindex="-1">
+        <UiNotice v-if="activeFull && filteredCandidates.length && levelFilter !== 'selected'" tone="info" title="当前名额已选满">请先取消一项已选法术，再选择其他法术。</UiNotice>
+      </div>
 
       <section class="spellcasting-step__panel" role="tabpanel">
         <h2 ref="headingEl" tabindex="-1">{{ flow.activeTask.value?.label }}</h2>
@@ -407,6 +406,9 @@ function lockedSelectionLabel(spellId: string): string {
   &__summary > strong { min-width: 4.5rem; padding: 0.5rem 0.7rem; border-radius: var(--radius-md); color: var(--color-primary); background: var(--color-primary-soft); text-align: center; }
   &__panel { display: grid; gap: 0.65rem; }
   &__panel > h2 { margin: 0; font-size: 1rem; outline: none; }
+  /* 名额已满提示的聚焦容器：名额满时点击候选项会聚焦到这里作为反馈 */
+  &__capacity { outline: none; }
+  &__capacity:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-md); }
   &__hint { margin: 0; color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; }
   &__inactive {
     display: grid;

@@ -6,6 +6,7 @@ import { defineComponent, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
+import { getClassSpellSelections } from '@/rules/spellcasting'
 import { rulesRepository2014 } from '@/rules/repository'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
@@ -1140,6 +1141,47 @@ describe('CharacterSheetStep 事件绑定契约', () => {
     const value = wrapper.emitted('spells')![0][0] as SpellSelections
     expect(value.preparedSpellIds).not.toContain('spell-2014-bless')
     expect(value.preparedSpellIds).toContain('spell-2014-healing-word')
+  })
+
+  it('带残留分桶的单职业卡：准备/取消准备写入读取真正使用的那份数据（分桶同步）', async () => {
+    const Parent = defineComponent({
+      components: { CharacterSheetStep },
+      props: { draft: { type: Object, required: true } },
+      emits: ['spells'],
+      template: '<CharacterSheetStep :draft="draft" :derived="derived" @change-spell-selections="$emit(\'spells\', $event)" />',
+      setup(props) {
+        return { derived: deriveCharacter(props.draft as CharacterDraft) }
+      },
+    })
+    // 模拟 v10 迁移后的历史形态：单职业 + 该职业的残留分桶（读取优先分桶）
+    const clericDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-cleric',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word'],
+        classSpellSelections: [{
+          classId: 'class-2014-cleric',
+          cantripIds: [],
+          knownSpellIds: [],
+          preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word'],
+          spellbookSpellIds: [],
+        }],
+      },
+    }
+    const wrapper = mount(Parent, { props: { draft: clericDraft } })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    const blessCard = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('祝福术'))
+    expect(blessCard).toBeTruthy()
+    await blessCard!.find('button.character-sheet__spell-action').trigger('click')
+
+    const value = wrapper.emitted('spells')![0][0] as SpellSelections
+    const applied: CharacterDraft = { ...clericDraft, spellSelections: value }
+    // 按读取口径取值必须真的变化（修复前写顶层、读分桶 → 看不见效果）
+    expect(getClassSpellSelections(applied, 'class-2014-cleric').preparedSpellIds).not.toContain('spell-2014-bless')
+    expect(getClassSpellSelections(applied, 'class-2014-cleric').preparedSpellIds).toContain('spell-2014-healing-word')
   })
 })
 

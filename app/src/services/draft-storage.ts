@@ -16,6 +16,7 @@ import { rulesRepository } from '@/rules/repository'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { normalizeAbilityDestiny } from '@/rules/abilities'
 import { normalizeMulticlass, rebuildLevelOrder } from '@/rules/multiclass'
+import { normalizeSpellSelectionBuckets } from '@/rules/spellcasting'
 import { isRulesetId } from '@/rules/repositories'
 
 const STORAGE_KEY = 'dnd-character-builder:drafts:v10'
@@ -177,7 +178,7 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
   const targetLevel = multiclass
     ? multiclass.classes.reduce((sum, entry) => sum + entry.level, 0)
     : draft.targetLevel
-  return {
+  const normalized: CharacterDraft = {
     ...draft,
     targetLevel,
     ...(multiclass ? { multiclass } : {}),
@@ -204,6 +205,9 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     manualEdits: normalizeManualEdits(draft.manualEdits),
     media: normalizeMedia(draft.media),
   }
+  // 分桶卫生（幂等）：单职业草稿回到「顶层数组为准」，并清掉历史遗留／已移除职业的分桶。
+  // 旧卡（v10 迁移时给单职业草稿也建了分桶）靠这一步在**加载时自动修复**。
+  return { ...normalized, spellSelections: normalizeSpellSelectionBuckets(normalized) }
 }
 
 function normalizeLineageHistory(value: unknown): readonly LineageHistoryEntry[] | undefined {
@@ -236,10 +240,20 @@ function buildMigratedMulticlass(draft: Record<string, unknown>): CharacterDraft
   }
 }
 
-/** 把顶层法术数组复制为按职业归属的存储形态（消费方归 MC-D04）；无职业或已有分组时不改写。 */
-function buildMigratedClassSpellSelections(draft: Record<string, unknown>): readonly ClassSpellSelections[] {
+/**
+ * 把顶层法术数组复制为按职业归属的存储形态（消费方归 MC-D04）。
+ *
+ * **只有真正的兼职草稿（职业数 > 1）才建分桶**：单职业仍以顶层数组为准
+ * （`rules/spellcasting.ts` 的读取约定）。此前对所有有 `classId` 的旧草稿都建分桶，
+ * 导致单职业卡「读分桶、写顶层」，法术加删全部无效。
+ */
+function buildMigratedClassSpellSelections(
+  draft: Record<string, unknown>,
+  multiclass: CharacterDraft['multiclass'],
+): readonly ClassSpellSelections[] {
   const classId = typeof draft.classId === 'string' && draft.classId.trim().length > 0 ? draft.classId : undefined
   if (!classId) return []
+  if (!multiclass || multiclass.classes.length <= 1) return []
   const selections = draft.spellSelections
   if (!selections || typeof selections !== 'object') return []
   const source = selections as Partial<Record<keyof SpellSelections, unknown>>
@@ -290,7 +304,7 @@ export function migrateDraftToV10(value: unknown): CharacterDraft | undefined {
     } as unknown as Partial<CharacterDraft>, rulesRepository)
   const { preferences: _preferences, inventoryItemIds: _inventoryItemIds, equippedItemIds: _equippedItemIds, ...rest } = draft
   const multiclass = buildMigratedMulticlass(draft)
-  const classSpellSelections = buildMigratedClassSpellSelections(draft)
+  const classSpellSelections = buildMigratedClassSpellSelections(draft, multiclass)
   const spellSelections = (rest.spellSelections && typeof rest.spellSelections === 'object')
     ? { ...(rest.spellSelections as Record<string, unknown>), ...(classSpellSelections.length > 0 ? { classSpellSelections } : {}) }
     : rest.spellSelections

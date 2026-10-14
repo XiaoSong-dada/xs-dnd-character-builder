@@ -15,6 +15,7 @@ import { isWeaponTrainingCovered } from '@/rules/weapon-training'
 import { abilityFromSpeciesSpellAbilityOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, CharacterDraft, ChoiceSelection, DerivedCharacter, RulesetId, SpellSelections } from '@/types/character'
+import type { ClassSpellSelections } from '@/types/multiclass'
 import type { ChoiceCheckpoint, FixedSpellGrant, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant, SpellRule } from '@/types/rules'
 
 type SpellcraftDraft = Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds' | 'ruleset'>
@@ -308,6 +309,120 @@ export function listClassSpellSelections(
   }))
 }
 
+/** 只落分桶的四个「按职业」数组；共享字段（抄录／额外入书／能力预留）始终在顶层。 */
+const CLASS_SPELL_ARRAY_KEYS = ['cantripIds', 'knownSpellIds', 'preparedSpellIds', 'spellbookSpellIds'] as const
+
+function classSpellArrays(source: SpellSelections): Pick<SpellSelections, typeof CLASS_SPELL_ARRAY_KEYS[number]> {
+  return {
+    cantripIds: source.cantripIds,
+    knownSpellIds: source.knownSpellIds,
+    preparedSpellIds: source.preparedSpellIds,
+    spellbookSpellIds: source.spellbookSpellIds,
+  }
+}
+
+/** 共享字段以 `next` 为准，未提供时保留 `base`（`SpellSelections` 里它们是可选字段）。 */
+function sharedSpellFields(
+  next: SpellSelections,
+  base: SpellSelections,
+): Pick<SpellSelections, 'transcribedSpellIds' | 'spellbookExtraSpellIds' | 'spellbookReservedSpellIds'> {
+  const extra = next.spellbookExtraSpellIds ?? base.spellbookExtraSpellIds
+  const reserved = next.spellbookReservedSpellIds ?? base.spellbookReservedSpellIds
+  return {
+    transcribedSpellIds: next.transcribedSpellIds ?? base.transcribedSpellIds,
+    ...(extra ? { spellbookExtraSpellIds: extra } : {}),
+    ...(reserved ? { spellbookReservedSpellIds: reserved } : {}),
+  }
+}
+
+function unionIds(left: readonly string[], right: readonly string[]): readonly string[] {
+  return [...new Set([...left, ...right])]
+}
+
+/** 由分桶重建顶层并集镜像（共享字段沿用 `base`；分桶是事实源，见 `getClassSpellSelections`）。 */
+function withBucketUnion(base: SpellSelections, buckets: readonly ClassSpellSelections[]): SpellSelections {
+  const union = (key: typeof CLASS_SPELL_ARRAY_KEYS[number]): readonly string[] =>
+    [...new Set(buckets.flatMap((bucket) => bucket[key] ?? []))]
+  return {
+    ...base,
+    cantripIds: union('cantripIds'),
+    knownSpellIds: union('knownSpellIds'),
+    preparedSpellIds: union('preparedSpellIds'),
+    spellbookSpellIds: union('spellbookSpellIds'),
+    classSpellSelections: buckets,
+  }
+}
+
+/**
+ * 写入某职业的法术选择（MC-D03 写入侧）：与 `getClassSpellSelections` 的读取口径**严格对称**。
+ *
+ * 修复背景：读取只要该职业有分桶就以分桶为准，而写入原先按「施法职业数 > 1」判断，
+ * 于是「单职业 + 已有分桶」的草稿（v10 迁移给每张旧卡都建了一个分桶）写入落在顶层数组上，
+ * 界面读的却是分桶 → 法术加不上也删不掉。
+ *
+ * 判定：
+ * - **单职业草稿** → 写顶层数组（既有约定，JSON 往返逐字段不变；分桶由 `normalizeSpellSelectionBuckets` 清理）；
+ * - **多职业草稿** → 分桶是事实源：先确保每个职业都有自己的分桶（按当前生效读取值补齐，
+ *   避免把起始职业写在顶层的既有数据弄丢），再改目标职业的分桶，最后把顶层刷新为并集镜像。
+ *
+ * 共享字段（抄录／子职额外入书／能力预留）不落分桶，始终写顶层。
+ */
+export function applyClassSpellSelections(
+  draft: CharacterDraft,
+  classId: string,
+  next: SpellSelections,
+): SpellSelections {
+  const base = draft.spellSelections
+  const buckets = base.classSpellSelections ?? []
+  const shared = sharedSpellFields(next, base)
+  const entries = getClassEntries(draft)
+  if (entries.length <= 1) {
+    // 单职业：写顶层数组，并顺手清掉历史遗留的分桶（否则读取仍优先读分桶 → 写入不可见）。
+    const { classSpellSelections: _dropped, ...rest } = base
+    return { ...rest, ...classSpellArrays(next), ...shared }
+  }
+  const ensured = entries.map((entry) => buckets.find((bucket) => bucket.classId === entry.classId)
+    ?? { classId: entry.classId, ...classSpellArrays(getClassSpellSelections(draft, entry.classId)) })
+  const nextBuckets = ensured.map((bucket) => bucket.classId === classId
+    ? { ...bucket, ...classSpellArrays(next) }
+    : bucket)
+  return { ...withBucketUnion(base, nextBuckets), ...shared }
+}
+
+/**
+ * 分桶卫生（幂等）：让存储形态与读取约定保持一致。
+ *
+ * - 职业数 ≤ 1：回到「单职业以顶层数组为准」，把存活职业的分桶**并回顶层**（并集，不丢 id），
+ *   并清除 `classSpellSelections`（v10 迁移给单职业草稿建的分桶、关闭兼职合并后的残留分桶都属于这一类）；
+ * - 职业数 > 1：只保留仍存在职业的分桶（被移除职业的分桶丢弃——其法术在移除时已归档进
+ *   `inactiveSpellSelections`），并把顶层刷新为并集镜像；
+ * - 没有分桶时原值返回。
+ */
+export function normalizeSpellSelectionBuckets(draft: CharacterDraft): SpellSelections {
+  const base = draft.spellSelections
+  const buckets = base.classSpellSelections ?? []
+  if (buckets.length === 0) return base
+  const entries = getClassEntries(draft)
+  if (entries.length <= 1) {
+    const { classSpellSelections: _dropped, ...rest } = base
+    const survivingClassId = entries[0]?.classId ?? draft.classId
+    const bucket = buckets.find((item) => item.classId === survivingClassId)
+    if (!bucket) return rest
+    return {
+      ...rest,
+      cantripIds: unionIds(rest.cantripIds, bucket.cantripIds),
+      knownSpellIds: unionIds(rest.knownSpellIds, bucket.knownSpellIds),
+      preparedSpellIds: unionIds(rest.preparedSpellIds, bucket.preparedSpellIds),
+      spellbookSpellIds: unionIds(rest.spellbookSpellIds, bucket.spellbookSpellIds),
+    }
+  }
+  const kept = entries.flatMap((entry) => {
+    const bucket = buckets.find((item) => item.classId === entry.classId)
+    return bucket ? [bucket] : []
+  })
+  return withBucketUnion(base, kept)
+}
+
 /** 页面、跑团与导出共用：职业、始终授予及人工法术按 ID 去重。 */
 export function getEffectiveSelectedSpellIds(draft: CharacterDraft): readonly string[] {
   const repository = getRulesRepository(draft.ruleset)
@@ -589,17 +704,19 @@ export function applySpellbookReservationSelection(
   const safelyReleased = isInitialWizardSpellbookBuild(draft)
     ? new Set([...previousReserved].filter((id) => !reservedSet.has(id) && !retainedByOtherSource.has(id)))
     : new Set<string>()
+  // 法术书属于该职业作用域：写入走与读取对称的入口（有分桶写分桶、单职业写顶层）。
+  const scopeSelections = getClassSpellSelections(draft, draft.classId ?? '')
   const spellbookSpellIds = [...new Set([
-    ...draft.spellSelections.spellbookSpellIds.filter((id) => !safelyReleased.has(id)),
+    ...scopeSelections.spellbookSpellIds.filter((id) => !safelyReleased.has(id)),
     ...reserved,
   ])]
   return {
     selections,
-    spellSelections: {
-      ...draft.spellSelections,
+    spellSelections: applyClassSpellSelections(draft, draft.classId ?? '', {
+      ...scopeSelections,
       spellbookSpellIds,
       spellbookReservedSpellIds: reserved,
-    },
+    }),
   }
 }
 

@@ -11,7 +11,7 @@ import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { hasBuildChoices } from '@/rules/draft-progress'
 import { isSourceEnabled, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { buildTimelineForDraft } from '@/rules/timeline'
-import { applySpellbookReservationSelection, isSpellbookReservationCheckpoint, validateSpellSelections } from '@/rules/spellcasting'
+import { applySpellbookReservationSelection, isSpellbookReservationCheckpoint, normalizeSpellSelectionBuckets, validateSpellSelections } from '@/rules/spellcasting'
 import {
   deleteInactiveSpellSelection,
   reconcileSpellSelections,
@@ -408,11 +408,11 @@ export function useCharacterBuilderPage() {
   }
 
   /**
-   * 角色卡调整后的引导（需求 §3，决策 D28—D30）。
+   * 角色卡调整后的引导（需求 §3，决策 D28—D30／D44）。
    *
-   * 只在有待办项时写引导条（没有待补／待复查项就清掉上一条过期提示），
-   * 且只有「升级 + 确认路径」才自动跳转：降级只提示复查、滑杆路径只提示补全，
-   * 是否前往由用户点击引导条决定，避免把正在看角色卡的用户强行带走。
+   * 只在有待办项时写引导条（没有待补／待复查项就清掉上一条过期提示）；
+   * **升级且存在待办项时直接跳到对应步骤**（timeline 优先于 spells），不再要求用户再点一次引导条；
+   * 降级只提示复查、不跳转（避免把正在看角色卡的用户带走）。
    */
   function guideLevelAdjust(
     direction: 'up' | 'down',
@@ -464,8 +464,8 @@ export function useCharacterBuilderPage() {
    * 走 `class-allocation` 依赖变更（旧分配 vs 新分配两条时间线求差），
    * 降级与移除职业时把失效选择标记失效、并把法术按归属归档到停用历史，不静默删除。
    *
-   * 引导（需求 §3，决策 D28—D30）：在角色卡步骤提交后必须把新增检查点／复查项告诉用户；
-   * `navigate: false`（总等级滑杆）只写引导条、不强制跳转。
+   * 引导（需求 §3，决策 D28—D30／D44）：在角色卡步骤提交后必须把新增检查点／复查项告诉用户，
+   * 并在**升级且有待办项时直接跳到对应步骤**；`navigate: false` 只用于内部需要「只提示不跳转」的场景。
    */
   function applyClassAllocation(nextDraft: CharacterDraft, options: { readonly navigate?: boolean } = {}): void {
     const draft = activeDraft.value
@@ -516,7 +516,7 @@ export function useCharacterBuilderPage() {
           })
         : undefined
       const { subclassId: _previousSubclassId, ...rest } = draft
-      store.updateDraft({
+      const nextDraftForStorage: CharacterDraft = {
         ...rest,
         multiclass: nextDraft.multiclass,
         classId: nextPrimary?.classId,
@@ -526,6 +526,12 @@ export function useCharacterBuilderPage() {
           spellSelections: spellReconciliation.spellSelections,
           inactiveSpellSelections: spellReconciliation.inactiveSpellSelections,
         } : {}),
+      }
+      store.updateDraft({
+        ...nextDraftForStorage,
+        // 分桶卫生：职业数变化后立刻回到自洽形态（单职业回顶层数组、裁掉已移除职业的分桶），
+        // 否则会出现「界面读分桶、写入落顶层」而法术加删无效（见更新任务 §6.3）。
+        spellSelections: normalizeSpellSelectionBuckets(nextDraftForStorage),
       })
       // 先写入新分配、再标记失效：`rest.selections` 是变更前的快照，顺序反过来会把
       // `invalidateSelections` 刚写下的 `invalidatedAt` 覆盖掉（实施期发现的既有缺陷，见更新任务 §6.3）。
@@ -651,8 +657,8 @@ export function useCharacterBuilderPage() {
    * 等级类变更的提交（滑杆、`＋/－`、等级表格选值；需求 §3／§5）。
    *
    * 与结构类变更（增删职业、起始职业、关闭兼职）走同一个 `class-allocation` 影响计算与确认弹窗
-   * （决策 D37：一律「选值 → 确认 → 应用」），但**不自动跳转**（决策 D29／D43）：
-   * 等级常被连续微调，确认后仍停留在角色卡与「调整等级」弹窗，由引导条提示去补全。
+   * （决策 D37：一律「选值 → 确认 → 应用」），**升级后直接跳到需要处理的步骤**（决策 D44，修订 D29／D43：
+   * 不再要求用户再点一次引导条）；降级仍只出复查引导条、不跳转。
    */
   function applyTotalLevel(nextDraft: CharacterDraft, abilityMethod?: AbilityMethod): void {
     const draft = activeDraft.value
@@ -661,7 +667,7 @@ export function useCharacterBuilderPage() {
       updateSetup(Math.max(1, nextDraft.targetLevel ?? 1), abilityMethod ?? draft.abilityMethod)
       return
     }
-    applyClassAllocation(nextDraft, { navigate: false })
+    applyClassAllocation(nextDraft)
   }
 
   function selectClass(classId: string): void {

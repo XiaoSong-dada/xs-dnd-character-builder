@@ -26,7 +26,7 @@ import { getCantripScalingAtLevel, getClassSpellcastingProfiles } from '@/rules/
 import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
-import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSpellCandidates, getSpeciesSpellcastingProfiles, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getClassSpellSelections, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSpellCandidates, getSpeciesSpellcastingProfiles, getSpellcastingConfig, groupSpellsByLevel, applyClassSpellSelections } from '@/rules/spellcasting'
 import { buildTimeline, buildTimelineForDraft } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
 import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, ChoiceSelection, DerivedCharacter, InventoryEntry, ManualAddedSpell, ManualFeatGrant, SpellSelections } from '@/types/character'
@@ -149,6 +149,12 @@ const identityLine = computed(() => {
   return `${classLevelLabel.value} · ${names.join(' · ')}`.replace(/ · $/, '')
 })
 const spellcastingConfig = computed(() => getSpellcastingConfig(props.draft))
+/**
+ * 角色卡展示的施法作用域数据（起始职业）：读取口径与法术步骤、跑团助手一致
+ * （有分桶读分桶，单职业读顶层）。原先这里直接读顶层数组，遇到「单职业 + 迁移产生的分桶」
+ * 的草稿会与法术步骤显示不同的一份数据，准备/取消准备也写不进读取所用的那一份。
+ */
+const spellScopeSelections = computed(() => getClassSpellSelections(props.draft, props.draft.classId ?? ''))
 const speciesSpellcastingProfiles = computed(() => getSpeciesSpellcastingProfiles(props.draft, props.derived))
 const spellSlots = computed(() => getEffectiveSpellSlots(props.draft))
 const editableSpellSlots = computed(() => Array.from({ length: 9 }, (_, index) => ({
@@ -203,10 +209,10 @@ const manualAddedSpells = computed(() => editing.manual.value.addedSpells
   .map((entry) => ({ entry, spell: repository.value.getSpell(entry.spellId) }))
   .filter((item): item is { entry: ManualAddedSpell; spell: SpellRule } => Boolean(item.spell)))
 const existingSpellIds = computed(() => [...new Set([
-  ...props.draft.spellSelections.cantripIds,
-  ...props.draft.spellSelections.knownSpellIds,
-  ...props.draft.spellSelections.preparedSpellIds,
-  ...props.draft.spellSelections.spellbookSpellIds,
+  ...spellScopeSelections.value.cantripIds,
+  ...spellScopeSelections.value.knownSpellIds,
+  ...spellScopeSelections.value.preparedSpellIds,
+  ...spellScopeSelections.value.spellbookSpellIds,
   ...getMagicalSecretsSpellIds(props.draft),
   ...getAlwaysPreparedSpellIds(props.draft),
   ...editing.manual.value.addedSpells.map((item) => item.spellId),
@@ -214,7 +220,7 @@ const existingSpellIds = computed(() => [...new Set([
 const showManualSpellModal = ref(false)
 const spellbookSpells = computed(() => {
   if (spellcastingConfig.value?.mode !== 'spellbook') return []
-  return props.draft.spellSelections.spellbookSpellIds
+  return spellScopeSelections.value.spellbookSpellIds
     .filter((id) => !manualSpellIds.value.has(id))
     .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
@@ -222,10 +228,10 @@ const spellbookSpells = computed(() => {
 const requiredCantripCount = computed(() => (spellcastingConfig.value ? getRequiredCantripCount(props.draft, spellcastingConfig.value) : 0))
 const requiredSpellCount = computed(() => (spellcastingConfig.value ? getRequiredSpellCount(props.draft, spellcastingConfig.value) : 0))
 const requiredSpellbookCount = computed(() => (spellcastingConfig.value ? getRequiredSpellbookCount(props.draft, spellcastingConfig.value) : 0))
-const spellbookExtraIds = computed(() => props.draft.spellSelections.spellbookExtraSpellIds ?? [])
+const spellbookExtraIds = computed(() => spellScopeSelections.value.spellbookExtraSpellIds ?? [])
 /** 升级名额内的法术数：排除抄录与子职额外入书。 */
-const normalSpellbookCount = computed(() => props.draft.spellSelections.spellbookSpellIds
-  .filter((id) => !props.draft.spellSelections.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
+const normalSpellbookCount = computed(() => spellScopeSelections.value.spellbookSpellIds
+  .filter((id) => !spellScopeSelections.value.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
 /** 已准备 / 已掌握法术按环级分组（戏法由 cantripSpells 单独展示）。 */
 const spellGroups = computed(() => {
   return groupSpellsByLevel(preparedOrKnownSpells.value, props.draft.ruleset)
@@ -272,7 +278,7 @@ const preparedCandidateGroups = computed(() => {
 const allPreparedSpells = computed(() => {
   const config = spellcastingConfig.value
   if (!config || config.mode !== 'prepared') return []
-  const knownCantrips = props.draft.spellSelections.cantripIds
+  const knownCantrips = spellScopeSelections.value.cantripIds
     .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
   const leveled = getAvailableSpells(props.draft, config).filter((spell) => spell.level > 0)
@@ -295,18 +301,22 @@ const hasSpellContent = computed(() => hasSelectedSpells.value || hasCandidates.
 /** 仅 prepared / spellbook 模式支持在角色卡切换准备（2014 规则长休可换）。 */
 const canTogglePrepared = computed(() => spellcastingConfig.value?.mode === 'prepared' || spellcastingConfig.value?.mode === 'spellbook')
 /** 已准备数量是否未达上限（决定候选项是否可准备）。 */
-const canPrepareMore = computed(() => props.draft.spellSelections.preparedSpellIds.length < requiredSpellCount.value)
+const canPrepareMore = computed(() => spellScopeSelections.value.preparedSpellIds.length < requiredSpellCount.value)
 /** 点击切换准备状态：已准备项取消准备；候选项在未满时加入准备。 */
 function togglePrepare(id: string): void {
   if (!canTogglePrepared.value) return
-  const current = props.draft.spellSelections.preparedSpellIds
+  const current = spellScopeSelections.value.preparedSpellIds
   const next = current.includes(id)
     ? current.filter((spellId) => spellId !== id)
     : canPrepareMore.value
       ? [...current, id]
       : current
   if (next === current) return
-  emit('changeSpellSelections', { ...props.draft.spellSelections, preparedSpellIds: next })
+  // 写回与读取同一份数据（规则层判定分桶/顶层），避免「界面读分桶、写入落顶层」而看不到效果。
+  emit('changeSpellSelections', applyClassSpellSelections(props.draft, props.draft.classId ?? '', {
+    ...spellScopeSelections.value,
+    preparedSpellIds: next,
+  }))
 }
 /** 抄录法术书（仅 spellbook 模式）：弹层开关与可选预选法术。 */
 const showTranscribeModal = ref(false)
@@ -317,7 +327,7 @@ function openTranscribe(spellId?: string): void {
 }
 /** 法术是否通过抄录获得（展示"抄录"徽标与来源）。 */
 function isTranscribedSpell(id: string): boolean {
-  return props.draft.spellSelections.transcribedSpellIds.includes(id)
+  return spellScopeSelections.value.transcribedSpellIds.includes(id)
 }
 const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || preparedOrKnownSpells.value.length > 0 || spellbookSpells.value.length > 0 || magicalSecretsSpells.value.length > 0)
 
@@ -339,10 +349,10 @@ function manualSpellDestinationLabel(entry: ManualAddedSpell): string {
 }
 
 function isAlsoNormallyAcquired(spellId: string): boolean {
-  return props.draft.spellSelections.cantripIds.includes(spellId)
-    || props.draft.spellSelections.knownSpellIds.includes(spellId)
-    || props.draft.spellSelections.preparedSpellIds.includes(spellId)
-    || props.draft.spellSelections.spellbookSpellIds.includes(spellId)
+  return spellScopeSelections.value.cantripIds.includes(spellId)
+    || spellScopeSelections.value.knownSpellIds.includes(spellId)
+    || spellScopeSelections.value.preparedSpellIds.includes(spellId)
+    || spellScopeSelections.value.spellbookSpellIds.includes(spellId)
     || getMagicalSecretsSpellIds(props.draft).includes(spellId)
     || getAlwaysPreparedSpellIds(props.draft).includes(spellId)
 }
@@ -421,7 +431,7 @@ function featureChoiceLabel(feature: ClassFeature): string {
   return total === 0 ? '需选择' : done >= total ? `已选择 ${total} 项` : `需选择 ${done}/${total}`
 }
 function isPreparedSpell(id: string): boolean {
-  return props.draft.spellSelections.preparedSpellIds.includes(id)
+  return spellScopeSelections.value.preparedSpellIds.includes(id)
 }
 /** 物品页签：已装备（equippedQuantity > 0）与全部物品栏条目。 */
 const equippedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity > 0))
@@ -1029,7 +1039,7 @@ function handleExportPdf(): void {
       </section>
       <template v-if="hasSpellContent">
         <section v-if="cantripSpells.length" class="character-sheet__spell-section">
-          <h4>戏法 · {{ spellcastingConfig ? draft.spellSelections.cantripIds.length : cantripSpells.length }}<template v-if="spellcastingConfig"> / {{ requiredCantripCount }}</template></h4>
+          <h4>戏法 · {{ spellcastingConfig ? spellScopeSelections.cantripIds.length : cantripSpells.length }}<template v-if="spellcastingConfig"> / {{ requiredCantripCount }}</template></h4>
           <ListShell>
             <ExpandableOptionCard
               v-for="spell in cantripSpells"
@@ -1145,7 +1155,7 @@ function handleExportPdf(): void {
         </section>
         <section v-if="spellbookSpells.length" class="character-sheet__spell-section">
           <div class="character-sheet__spell-section-header">
-            <h4>法术书 · {{ normalSpellbookCount }} / {{ requiredSpellbookCount }}{{ draft.spellSelections.transcribedSpellIds.length ? `（抄录 ${draft.spellSelections.transcribedSpellIds.length}）` : '' }}{{ spellbookExtraIds.length ? `（子职额外 ${spellbookExtraIds.length}）` : '' }}</h4>
+            <h4>法术书 · {{ normalSpellbookCount }} / {{ requiredSpellbookCount }}{{ spellScopeSelections.transcribedSpellIds.length ? `（抄录 ${spellScopeSelections.transcribedSpellIds.length}）` : '' }}{{ spellbookExtraIds.length ? `（子职额外 ${spellbookExtraIds.length}）` : '' }}</h4>
             <button v-if="spellcastingConfig?.mode === 'spellbook'" type="button" class="character-sheet__spell-action" aria-label="抄录法术书" @click="openTranscribe()">抄录法术</button>
           </div>
           <ListShell>
