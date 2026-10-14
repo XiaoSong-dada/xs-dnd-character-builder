@@ -36,16 +36,30 @@ const rulesRepository = computed(() => getRulesRepository(props.draft.ruleset))
 const checkpoints = computed(() => buildTimelineForDraft(props.draft))
 
 /**
- * 检查点头部标签：有归属职业的显示「职业 + 该职业等级」，其余（起源／专长等）显示角色等级。
- * 兼职时「3 级」不再歧义于总等级还是职业等级。
+ * 检查点徽章显示「N级」（需求 D22）：圆形徽章只有 2.25rem，塞不下「职业 + 等级」。
+ * 归属职业改为标题右侧的 tag；等级取归属职业等级，无归属职业时取角色等级。
+ * 「级」字保留（用户修订：纯数字缺少单位、不够直观），1—20 级在圆内都不会溢出。
  */
+function checkpointLevelNumber(checkpoint: ChoiceCheckpoint): number {
+  return checkpoint.classId ? (checkpoint.classLevel ?? checkpoint.level) : checkpoint.level
+}
+
+/** 徽章文本：「N级」。 */
+function checkpointBadgeText(checkpoint: ChoiceCheckpoint): string {
+  return `${checkpointLevelNumber(checkpoint)}级`
+}
+
+/** 归属职业名（无归属职业时为空串）：用于标题右侧 tag。 */
+function checkpointClassName(checkpoint: ChoiceCheckpoint): string {
+  if (!checkpoint.classId) return ''
+  return rulesRepository.value.getClass(checkpoint.classId)?.name ?? checkpoint.classId
+}
+
+/** 徽章与 tag 的合成语义（读屏与悬停提示），避免只读出一个数字。 */
 function checkpointLevelLabel(checkpoint: ChoiceCheckpoint): string {
-  if (checkpoint.classId) {
-    const name = rulesRepository.value.getClass(checkpoint.classId)?.name ?? checkpoint.classId
-    const level = checkpoint.classLevel ?? checkpoint.level
-    return `${name} ${level} 级`
-  }
-  return `${checkpoint.level} 级`
+  const name = checkpointClassName(checkpoint)
+  const level = checkpointLevelNumber(checkpoint)
+  return name ? `${name} 第 ${level} 级` : `第 ${level} 级`
 }
 
 /** 当前已熟练的技能与盗贼工具：职业技能选择 + 背景技能。与 validate.ts 的专精校验口径一致。 */
@@ -302,8 +316,15 @@ function spellCandidateDescription(spell: SpellRule): string {
         :aria-expanded="currentCheckpointId === checkpoint.id"
         @click="toggleCheckpoint(checkpoint.id)"
       >
-        <span>{{ checkpointLevelLabel(checkpoint) }}</span>
-        <div><strong>{{ checkpoint.title }}</strong><small>{{ checkpoint.description }}</small></div>
+        <!-- 徽章显示「N级」，职业名以 tag 形式放在标题右侧（需求 D22）：圆形徽章容不下长职业名 -->
+        <span class="timeline-step__badge" :title="checkpointLevelLabel(checkpoint)" :aria-label="checkpointLevelLabel(checkpoint)">{{ checkpointBadgeText(checkpoint) }}</span>
+        <div>
+          <span class="timeline-step__title-row">
+            <strong>{{ checkpoint.title }}</strong>
+            <UiBadge v-if="checkpointClassName(checkpoint)" tone="primary">{{ checkpointClassName(checkpoint) }}</UiBadge>
+          </span>
+          <small>{{ checkpoint.description }}</small>
+        </div>
         <UiBadge :tone="selectedIds(checkpoint.id).length >= checkpointBounds(checkpoint).min ? 'success' : 'warning'">
           {{ selectedIds(checkpoint.id).length }}/{{ checkpointBounds(checkpoint).max }}
         </UiBadge>
@@ -465,10 +486,38 @@ function spellCandidateDescription(spell: SpellRule): string {
     background: transparent;
     cursor: pointer;
 
-    > span { display: grid; width: 2.25rem; height: 2.25rem; flex: none; place-items: center; border-radius: 50%; color: white; background: var(--color-primary); font-size: 0.72rem; font-weight: 700; }
     > div { display: grid; min-width: 0; flex: 1; }
     strong { font-size: 0.82rem; }
     small { color: var(--color-text-muted); line-height: 1.45; }
+  }
+
+  /**
+   * 等级徽章：只放数字（需求 D22）。
+   * 注意规则必须限定到本类，不能用 `&__header > span`——标题行与计数徽章都是 span，
+   * 会被圆形徽章样式一并命中（标题区会被压成 36px 圆）。
+   */
+  &__badge {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: none;
+    place-items: center;
+    border-radius: 50%;
+    color: white;
+    background: var(--color-primary);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  /** 标题行：标题优先收缩，职业 tag 不换行也不被截断（需求 D22）。 */
+  &__title-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.35rem;
+
+    strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    :deep(.ui-badge) { flex: none; }
   }
 
   &__options { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
