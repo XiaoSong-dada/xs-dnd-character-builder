@@ -1,6 +1,6 @@
 import type { PDFCheckBox, PDFField, PDFFont, PDFForm, PDFTextField } from 'pdf-lib'
 
-import { formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
+import { formatExportCantripScaling, formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
 import {
   CHARACTER_SHEET_FONT_URL,
   CHARACTER_SHEET_OFFLINE_MESSAGE,
@@ -517,8 +517,13 @@ function checkboxNearTextField(form: PDFForm, textField: PDFTextField): PDFCheck
   return best?.field
 }
 
+/** 法术卡「施法职业」行（MC-F01）：多职业时列出各施法职业，并附契约池说明。 */
+function spellcastingClassText(model: NonNullable<CharacterExportModel['spellcasting']>): string {
+  return [model.className, model.pactNote].filter(Boolean).join('；')
+}
+
 function fillSpellPage(form: PDFForm, index: ReadonlyMap<string, FormField>, font: PDFFont, model: NonNullable<CharacterExportModel['spellcasting']>, diagnostics: ExportDiagnostic[]): void {
-  setText(index, ['Spellcasting Class 2', 'Spellcasting Class', 'SpellcastingClass'], model.className, 'spells.class', diagnostics, true, 8)
+  setText(index, ['Spellcasting Class 2', 'Spellcasting Class', 'SpellcastingClass'], spellcastingClassText(model), 'spells.class', diagnostics, true, 8)
   setText(index, ['SpellcastingAbility 2', 'Spellcasting Ability 2', 'SpellcastingAbility'], model.abilityLabel, 'spells.ability', diagnostics, true, 8)
   setText(index, ['SpellSaveDC 2', 'Spell Save DC 2', 'SpellSaveDC'], model.saveDc, 'spells.saveDc', diagnostics, true, 10)
   setText(index, ['SpellAtkBonus 2', 'Spell Attack Bonus 2', 'SpellAtkBonus'], formatSigned(model.attackBonus), 'spells.attackBonus', diagnostics, true, 10)
@@ -542,7 +547,9 @@ function fillSpellPage(form: PDFForm, index: ReadonlyMap<string, FormField>, fon
     }
     spells.slice(0, fields.length).forEach((spell, spellIndex) => {
       const field = fields[spellIndex]
-      setSingleLineText(field, spell.name, font, 7, `spells.${level}.${spellIndex}`, diagnostics)
+      // 归属职业（MC-F01）：兼职时标明该法术由哪个职业提供；单职业保持原样。
+      const label = spell.className ? `${spell.name}（${spell.className}）` : spell.name
+      setSingleLineText(field, label, font, 7, `spells.${level}.${spellIndex}`, diagnostics)
       const prepared = checkboxNearTextField(form, field)
       if (prepared) {
         if (spell.prepared) prepared.check()
@@ -599,7 +606,7 @@ export async function fillPdfTemplate(templateBytes: Uint8Array, fontBytes: Uint
   setText(index, ['HPMax'], model.combat.hitPointMaximum, 'combat.hitPointMaximum', diagnostics, true, 8)
   setText(index, ['HPCurrent'], model.combat.hitPointCurrent, 'combat.hitPointCurrent', diagnostics, true, 13)
   setText(index, ['HPTemp'], model.combat.hitPointTemporary, 'combat.hitPointTemporary', diagnostics, true, 13)
-  setText(index, ['HDTotal'], `${model.identity.level}${model.combat.hitDice}`, 'combat.hitDiceTotal', diagnostics, true, 7)
+  setText(index, ['HDTotal'], model.combat.hitDiceTotal, 'combat.hitDiceTotal', diagnostics, true, 7)
   setText(index, ['HD'], model.combat.hitDice, 'combat.hitDice', diagnostics, true, 10)
   setText(index, ['Passive'], model.combat.passivePerception, 'combat.passivePerception', diagnostics, true, 8)
 
@@ -655,6 +662,8 @@ export async function fillPdfTemplate(templateBytes: Uint8Array, fontBytes: Uint
     const featureEntries = [
       ...model.features.map(featureEntryText),
       ...(model.resources.length ? [formatExportResources(model.resources)] : []),
+      // 戏法成长（MC-F01／D11）：与角色卡、跑团助手、法术步骤同一口径，只作展示。
+      ...(model.cantrips.length ? [formatExportCantripScaling(model.cantrips, model.identity.level)] : []),
     ]
     const featureLayout = layoutFeatureEntries(featureEntries, primaryFeatureField, additionalFeatureField, font, 8)
     primaryFeatureField.setText(featureLayout.primaryText)

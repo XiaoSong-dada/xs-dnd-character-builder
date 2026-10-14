@@ -4,7 +4,9 @@ import { getRulesRepository } from '@/rules/repositories'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getEffectiveSpeciesFeatures, getEffectiveSpeciesSize } from '@/rules/origins'
 import { listSessionResources } from '@/rules/session-resources'
-import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpeciesSpellcastingProfiles, getSpellcastingConfig, usesPreparedSelection } from '@/rules/spellcasting'
+import { getClassLevelLabel, getHitDiceFaces } from '@/rules/multiclass-session'
+import { getClassEntries, getTotalLevel } from '@/rules/multiclass'
+import { getCantripScalingAtLevel, getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getSpeciesSpellcastingProfiles, getSpellcastingConfig, listClassSpellSelections, listSpellcastingScopes, usesPreparedSelection } from '@/rules/spellcasting'
 import { getFixedSpeciesLanguages } from '@/rules/languages'
 import { isSourceEnabled } from '@/rules/source-books'
 import { buildTimeline } from '@/rules/timeline'
@@ -69,6 +71,8 @@ export interface ExportResource {
   readonly recovery: 'short-rest' | 'long-rest' | 'none' | 'special'
   /** 短休只恢复固定数量（如狂暴短休回 1 次）。 */
   readonly shortRestRecovery?: number
+  /** 同名资源合并来源（MC-F01）：多个职业共用同一计数池时列出各来源特性名。 */
+  readonly sharedSources?: readonly string[]
 }
 
 export interface ExportSpell {
@@ -76,6 +80,28 @@ export interface ExportSpell {
   readonly name: string
   readonly level: number
   readonly prepared: boolean
+  /** 归属职业名（MC-F01）：兼职时说明该法术由哪个职业提供；单职业不输出。 */
+  readonly className?: string
+}
+
+/** 逐职业行（MC-F01）：PDF／XLSX 的多职业输出以此为准。 */
+export interface ExportClassRow {
+  readonly classId: string
+  readonly className: string
+  readonly level: number
+  readonly subclassName?: string
+  /** 是否为起始职业（豁免熟练与起始装备的唯一来源）。 */
+  readonly primary: boolean
+}
+
+/** 戏法成长行（MC-F01／D11）：只作展示，不进入任何自动结算。 */
+export interface ExportCantrip {
+  readonly id: string
+  readonly name: string
+  /** 归属职业名（兼职时输出）。 */
+  readonly className?: string
+  /** 当前角色总等级下的成长值（如 `2d10`、`2 道`）。 */
+  readonly scaling: string
 }
 
 export interface CharacterExportModel {
@@ -90,6 +116,8 @@ export interface CharacterExportModel {
     readonly alignment: string
     readonly playerName: string
     readonly experience: number
+    /** 逐职业行（MC-F01）；单职业只有一行。 */
+    readonly classRows: readonly ExportClassRow[]
   }
   readonly abilities: Readonly<Record<AbilityKey, ExportAbility>>
   readonly combat: {
@@ -100,7 +128,10 @@ export interface CharacterExportModel {
     readonly hitPointMaximum: number
     readonly hitPointCurrent: number
     readonly hitPointTemporary: number
+    /** 单职业 `d10`；多职业 `5d10 + 5d8`（生命骰按各职业骰面汇集，需求 §2.4）。 */
     readonly hitDice: string
+    /** 生命骰总览文本：单职业 `5d10`；多职业 `10（5d10 + 5d8）`。 */
+    readonly hitDiceTotal: string
     readonly passivePerception: number
   }
   readonly skills: readonly ExportSkill[]
@@ -110,6 +141,8 @@ export interface CharacterExportModel {
   readonly currency: { readonly cp: number; readonly sp: number; readonly ep: number; readonly gp: number; readonly pp: number }
   readonly features: readonly ExportFeature[]
   readonly resources: readonly ExportResource[]
+  /** 戏法成长行（MC-F01／D11）；未登记成长规则的条目不入列（D12）。 */
+  readonly cantrips: readonly ExportCantrip[]
   readonly spellcasting?: {
     readonly className: string
     readonly abilityLabel: string
@@ -117,6 +150,10 @@ export interface CharacterExportModel {
     readonly attackBonus: number
     readonly slots: readonly { readonly level: number; readonly count: number; readonly pact: boolean }[]
     readonly spells: readonly ExportSpell[]
+    /** 各施法职业行（MC-F01）：`法师5`、`魔契师3`；单职业只有一项。 */
+    readonly classes: readonly string[]
+    /** 契约魔法说明（魔契师）：法术位按自身职业等级单独结算。 */
+    readonly pactNote?: string
   }
   readonly profile: { readonly backstory: string }
   readonly diagnostics: readonly ExportDiagnostic[]
@@ -333,7 +370,59 @@ function buildResources(draft: CharacterDraft, derived: DerivedCharacter): reado
     unit: resource.unit,
     recovery: resource.recovery,
     ...(resource.shortRestRecovery !== undefined ? { shortRestRecovery: resource.shortRestRecovery } : {}),
+    ...(resource.sharedSources ? { sharedSources: resource.sharedSources } : {}),
   }))
+}
+
+/**
+ * 戏法成长行（MC-F01／D11）：按**角色总等级**给出当前成长值。
+ * 未登记成长规则、或当前等级仍是 1 级基础值的戏法不入列（决策 D12：不写「无成长」）。
+ */
+function buildCantrips(draft: CharacterDraft, spellIds: readonly string[]): readonly ExportCantrip[] {
+  const repository = getRulesRepository(draft.ruleset)
+  const totalLevel = getTotalLevel(draft) || draft.targetLevel
+  const owners = spellOwners(draft)
+  return spellIds.flatMap((id) => {
+    const spell = repository.getSpell(id)
+    if (!spell || spell.level !== 0) return []
+    const scaling = getCantripScalingAtLevel(draft.ruleset, id, totalLevel)
+    if (!scaling || scaling.isBase) return []
+    const parts = [
+      scaling.dice ?? '',
+      scaling.count !== undefined ? `${scaling.count} 道` : '',
+      scaling.die ?? '',
+      scaling.note ?? '',
+    ].filter(Boolean)
+    if (parts.length === 0) return []
+    const owner = owners.get(id)
+    const className = owner ? repository.getClass(owner)?.name : undefined
+    return [{
+      id,
+      name: spell.name,
+      scaling: parts.join('；'),
+      ...(owners.size > 0 && className ? { className } : {}),
+    }]
+  })
+}
+
+/** 法术 → 归属职业（MC-F01）：仅兼职草稿有分桶时给出，单职业返回空表。 */
+function spellOwners(draft: CharacterDraft): ReadonlyMap<string, string> {
+  const owners = new Map<string, string>()
+  if (getClassEntries(draft).length <= 1) return owners
+  for (const { classId, selections } of listClassSpellSelections(draft)) {
+    for (const id of [...selections.cantripIds, ...selections.knownSpellIds, ...selections.preparedSpellIds, ...selections.spellbookSpellIds]) {
+      if (!owners.has(id)) owners.set(id, classId)
+    }
+  }
+  return owners
+}
+
+/** 戏法成长区块文本（PDF 与 XLSX 共用）：`戏法成长（角色总等级 5 级）：火焰箭 2d10；魔能爆 2 道`。 */
+export function formatExportCantripScaling(cantrips: readonly ExportCantrip[], totalLevel: number): string {
+  if (!cantrips.length) return ''
+  const text = cantrips.map((cantrip) =>
+    `${cantrip.name} ${cantrip.scaling}${cantrip.className ? `（${cantrip.className}）` : ''}`).join('；')
+  return `戏法成长（角色总等级 ${totalLevel} 级）：${text}`
 }
 
 const RESOURCE_RECOVERY_LABELS: Readonly<Record<ExportResource['recovery'], string>> = {
@@ -348,9 +437,10 @@ export function formatExportResources(resources: readonly ExportResource[]): str
   if (!resources.length) return ''
   const text = resources.map((resource) => {
     const count = `${resource.max}${resource.unit}`
+    const merged = resource.sharedSources?.length ? `（${resource.sharedSources.join('、')}共用）` : ''
     return resource.shortRestRecovery !== undefined
-      ? `${resource.name} ${count}（短休回${resource.shortRestRecovery}）`
-      : `${resource.name} ${count}（${RESOURCE_RECOVERY_LABELS[resource.recovery]}）`
+      ? `${resource.name} ${count}（短休回${resource.shortRestRecovery}）${merged}`
+      : `${resource.name} ${count}（${RESOURCE_RECOVERY_LABELS[resource.recovery]}）${merged}`
   }).join('；')
   return `资源：${text}`
 }
@@ -371,22 +461,45 @@ function buildInventory(draft: CharacterDraft, diagnostics: ExportDiagnostic[]) 
   })
 }
 
+/**
+ * 法术清单（MC-F01）：多职业草稿以**各职业分桶**为事实源（顶层数组只是兼容视图），
+ * 单职业草稿仍读顶层数组，行为与改造前一致。
+ */
 function spellList(draft: CharacterDraft, diagnostics: ExportDiagnostic[]): readonly ExportSpell[] {
   const repository = getRulesRepository(draft.ruleset)
   const config = getSpellcastingConfig(draft)
-  const baseIds = config?.mode === 'spellbook'
-    ? [...draft.spellSelections.cantripIds, ...draft.spellSelections.spellbookSpellIds]
-    : config && usesPreparedSelection(config)
-      ? [...draft.spellSelections.cantripIds, ...getAvailableSpells(draft, config).filter((spell) => spell.level > 0).map((spell) => spell.id)]
-      : [...draft.spellSelections.cantripIds, ...draft.spellSelections.knownSpellIds]
+  const multiClass = getClassEntries(draft).length > 1
+  const scoped = multiClass
+    ? listClassSpellSelections(draft).flatMap(({ selections }) => [
+        ...selections.cantripIds,
+        ...selections.knownSpellIds,
+        ...selections.preparedSpellIds,
+        ...selections.spellbookSpellIds,
+      ])
+    : []
+  const selections = draft.spellSelections
+  const baseIds = multiClass
+    ? [...new Set(scoped)]
+    : config?.mode === 'spellbook'
+      ? [...selections.cantripIds, ...selections.spellbookSpellIds]
+      : config && usesPreparedSelection(config)
+        ? [...selections.cantripIds, ...getAvailableSpells(draft, config).filter((spell) => spell.level > 0).map((spell) => spell.id)]
+        : [...selections.cantripIds, ...selections.knownSpellIds]
   const alwaysPrepared = getAlwaysPreparedSpellIds(draft)
   const manual = normalizeManualEdits(draft.manualEdits).addedSpells
   const ids = [...new Set([...baseIds, ...alwaysPrepared, ...getMagicalSecretsSpellIds(draft), ...manual.map((item) => item.spellId)])]
-  const prepared = new Set([...draft.spellSelections.preparedSpellIds, ...alwaysPrepared, ...manual.filter((item) => item.prepared).map((item) => item.spellId)])
+  const prepared = new Set([...selections.preparedSpellIds, ...alwaysPrepared, ...manual.filter((item) => item.prepared).map((item) => item.spellId)])
+  const owners = spellOwners(draft)
   return ids.map((id) => {
     const spell = repository.getSpell(id)
     if (!spell) diagnostics.push({ code: 'missing-rule-data', severity: 'warning', field: `spell.${id}`, message: `无法解析法术 ${id}。` })
-    return spell ? { id, name: spell.name, level: spell.level, prepared: prepared.has(id) } : undefined
+    if (!spell) return undefined
+    const ownerClassId = owners.get(id)
+    const className = ownerClassId ? repository.getClass(ownerClassId)?.name : undefined
+    return {
+      id, name: spell.name, level: spell.level, prepared: prepared.has(id),
+      ...(owners.size > 0 && className ? { className } : {}),
+    }
   }).filter((spell): spell is ExportSpell => Boolean(spell)).sort((left, right) =>
     Number(right.prepared) - Number(left.prepared)
     || left.level - right.level
@@ -427,6 +540,8 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
     score: derived.abilities[key],
     modifier: derived.modifiers[key],
     savingThrow: derived.savingThrows[key].value,
+    // 豁免熟练只来自起始职业（兼职口径，MC-B02）；标签沿用既有 '职业豁免熟练'，
+    // 来源具体职业写在 detail 中，避免导出层依赖具体标签文案。
     savingThrowProficient: derived.savingThrows[key].sources.some((source) => source.label === '职业豁免熟练'),
   }])) as Record<AbilityKey, ExportAbility>
   const skills = Object.entries(derived.skills).map(([id, value]) => {
@@ -438,18 +553,55 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
   const speciesProfiles = getSpeciesSpellcastingProfiles(draft, derived)
   const primarySpeciesProfile = speciesProfiles.length === 1 ? speciesProfiles[0] : undefined
   const grantedSpellIds = getAlwaysPreparedSpellIds(draft)
+  const spellSlots = getEffectiveSpellSlots(draft)
+  const spells = spellList(draft, diagnostics)
+  const classEntries = getClassEntries(draft)
+  const multiClass = classEntries.length > 1
+  // 逐职业行（MC-F01）：起始职业在首位，子职名按各职业自己的子职解析。
+  const classRows: ExportClassRow[] = classEntries.map((entry, index) => {
+    const classRule = repository.getClass(entry.classId)
+    const entrySubclass = entry.subclassId ? repository.getSubclass(entry.subclassId) : undefined
+    return {
+      classId: entry.classId,
+      className: classRule?.name ?? entry.classId,
+      level: entry.level,
+      ...(entrySubclass ? { subclassName: entrySubclass.name } : {}),
+      primary: index === 0,
+    }
+  })
+  // 职业标签（MC-F01，需求 §3.1）：多职业统一格式；单职业保持既有 `职业（N级）` 文案逐字段不变。
+  const classLabel = getClassLevelLabel(draft, repository)
+  // 生命骰（需求 §2.4）：按各职业骰面汇集；单职业仍是 `5d10`。
+  const hitDiceFaces = getHitDiceFaces(draft)
+  const hitDice = multiClass
+    ? [...hitDiceFaces.reduce((groups, die) => groups.set(die, (groups.get(die) ?? 0) + 1), new Map<number, number>())]
+        .sort(([left], [right]) => left - right)
+        .map(([die, count]) => `${count}d${die}`)
+        .join(' + ')
+    : classRule ? `d${classRule.hitDie}` : ''
+  // 各施法职业行与契约池说明（MC-F01）：法术位按「兼职施法者」表或各职业自身表结算。
+  const scopes = listSpellcastingScopes(draft)
+  const castingClasses = scopes.map((scope) => `${scope.className}${scope.classLevel}`)
+  const pactScope = scopes.find((scope) => scope.pact)
+  const pactSlot = pactScope ? spellSlots.find((slot) => slot.pact) : undefined
+  const pactNote = pactSlot && pactScope
+    ? `契约魔法：${pactSlot.count} 个 ${pactSlot.level} 环法术位，按${pactScope.className}${pactScope.classLevel}级结算（短休恢复）`
+    : undefined
 
   return {
     identity: {
-      characterName: draft.name || '', className: classRule?.name ?? '', level: draft.targetLevel, classLevel: classRule ? `${classRule.name}（${draft.targetLevel}级）` : '',
+      characterName: draft.name || '', className: classRule?.name ?? '', level: draft.targetLevel,
+      classLevel: multiClass && classLabel ? classLabel : classRule ? `${classRule.name}（${draft.targetLevel}级）` : '',
       subclassName: subclass?.name ?? '', raceName: subrace?.name ?? race?.name ?? '', backgroundName: backgroundVariant?.name ?? background?.name ?? '',
       alignment: draft.alignment, playerName: '', experience: 0,
+      classRows,
     },
     abilities,
     combat: {
       proficiencyBonus: derived.proficiencyBonus.value, armorClass: derived.armorClass.value, initiative: derived.initiative.value, speed: derived.speed.value,
       hitPointMaximum: derived.hitPoints.value, hitPointCurrent: derived.hitPoints.value, hitPointTemporary: 0,
-      hitDice: classRule ? `d${classRule.hitDie}` : '', passivePerception: derived.passivePerception.value,
+      hitDice, hitDiceTotal: multiClass ? `${draft.targetLevel}（${hitDice}）` : `${draft.targetLevel}${hitDice}`,
+      passivePerception: derived.passivePerception.value,
     },
     skills,
     proficiencies: { languages, text: languages.join('、') },
@@ -458,14 +610,19 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
     currency: { ...draft.currency, gp: draft.currency.gp + draft.adventureGold },
     features: buildFeatures(draft, derived),
     resources: buildResources(draft, derived),
-    ...(spellcastingConfig || grantedSpellIds.length > 0 || normalizeManualEdits(draft.manualEdits).addedSpells.length > 0 || getEffectiveSpellSlots(draft).length > 0 ? {
+    cantrips: buildCantrips(draft, spells.filter((spell) => spell.level === 0).map((spell) => spell.id)),
+    ...(spellcastingConfig || scopes.length > 0 || grantedSpellIds.length > 0 || normalizeManualEdits(draft.manualEdits).addedSpells.length > 0 || spellSlots.length > 0 ? {
       spellcasting: {
-        className: spellcastingConfig ? classRule?.name ?? subclass?.name ?? '' : primarySpeciesProfile?.sourceName ?? (grantedSpellIds.length ? '授予法术' : classRule?.name ?? subclass?.name ?? '人工施法'),
+        className: multiClass && castingClasses.length > 0
+          ? castingClasses.join(' / ')
+          : spellcastingConfig ? classRule?.name ?? subclass?.name ?? '' : primarySpeciesProfile?.sourceName ?? (grantedSpellIds.length ? '授予法术' : classRule?.name ?? subclass?.name ?? '人工施法'),
         abilityLabel: spellcastingConfig ? ABILITY_LABELS[spellcastingConfig.ability] : primarySpeciesProfile ? ABILITY_LABELS[primarySpeciesProfile.ability] : speciesProfiles.length > 1 ? '多来源，见特性' : grantedSpellIds.length ? '待确认' : '人工',
         saveDc: spellcastingConfig ? derived.spellSaveDc?.value ?? 0 : primarySpeciesProfile?.saveDc ?? derived.spellSaveDc?.value ?? 0,
         attackBonus: spellcastingConfig ? derived.spellAttackBonus?.value ?? 0 : primarySpeciesProfile?.attackBonus ?? derived.spellAttackBonus?.value ?? 0,
-        slots: getEffectiveSpellSlots(draft).map((slot) => ({ ...slot, pact: Boolean(slot.pact) })),
-        spells: spellList(draft, diagnostics),
+        slots: spellSlots.map((slot) => ({ ...slot, pact: Boolean(slot.pact) })),
+        spells,
+        classes: castingClasses,
+        ...(pactNote ? { pactNote } : {}),
       },
     } : {}),
     profile: { backstory: draft.notes },

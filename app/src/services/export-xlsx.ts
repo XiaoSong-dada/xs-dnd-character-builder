@@ -1,6 +1,6 @@
 import type { Workbook } from 'exceljs'
 
-import { formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
+import { formatExportCantripScaling, formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
 import {
   CHARACTER_SHEET_OFFLINE_MESSAGE,
   CHARACTER_SHEET_XLSX_TEMPLATE_URL,
@@ -49,6 +49,8 @@ function splitFeatureText(model: CharacterExportModel): { primary: string; addit
   const entries = [
     ...model.features.map(compactFeature),
     ...(model.resources.length ? [formatExportResources(model.resources)] : []),
+    // 戏法成长（MC-F01／D11）：与角色卡、跑团助手、法术步骤同一口径，只作展示。
+    ...(model.cantrips.length ? [formatExportCantripScaling(model.cantrips, model.identity.level)] : []),
   ]
   const primary: string[] = []
   const additional: string[] = []
@@ -77,7 +79,8 @@ export function buildXlsxFieldValues(model: CharacterExportModel): { values: Rec
 
   const values: Record<string, string | number> = {
     character_name: model.identity.characterName,
-    class_name: model.identity.className,
+    // 职业格（MC-F01）：多职业时写需求 §3.1 的统一标签；单职业保持职业名不变。
+    class_name: model.identity.classRows.length > 1 ? model.identity.classLevel : model.identity.className,
     race: model.identity.raceName,
     background: model.identity.backgroundName,
     level: model.identity.level,
@@ -96,7 +99,9 @@ export function buildXlsxFieldValues(model: CharacterExportModel): { values: Rec
     additional_features: featureText.additional,
     equipment: model.inventory.map((entry) => `${entry.name}×${entry.quantity}${entry.equippedQuantity ? '（已装备）' : ''}`).join('、'),
     backstory: model.profile.backstory,
-    spellcasting_class: model.spellcasting?.className ?? '',
+    spellcasting_class: model.spellcasting
+      ? [model.spellcasting.className, model.spellcasting.pactNote].filter(Boolean).join('；')
+      : '',
     spellcasting_ability: model.spellcasting?.abilityLabel ?? '',
     proficiency_bonus: model.combat.proficiencyBonus,
     initiative: model.combat.initiative,
@@ -105,7 +110,9 @@ export function buildXlsxFieldValues(model: CharacterExportModel): { values: Rec
     spell_attack_bonus: model.spellcasting?.attackBonus ?? '',
     cp: model.currency.cp, sp: model.currency.sp, ep: model.currency.ep, gp: model.currency.gp, pp: model.currency.pp,
     profile_character_name: model.identity.characterName,
-    profile_class_level: `${model.identity.className} ${model.identity.level}`.trim(),
+    profile_class_level: model.identity.classRows.length > 1
+      ? model.identity.classLevel
+      : `${model.identity.className} ${model.identity.level}`.trim(),
     profile_race: model.identity.raceName,
     profile_background: model.identity.backgroundName,
     spell_character_name: model.identity.characterName,
@@ -129,14 +136,21 @@ export function buildXlsxFieldValues(model: CharacterExportModel): { values: Rec
     values[`attack_${position}_bonus`] = formatSigned(attack.attackBonus)
     values[`attack_${position}_damage`] = `${attack.damage}${attack.note ? `；${attack.note}` : ''}`
   })
-  for (let level = 1; level <= 9; level += 1) values[`spell_slot_${level}_total`] = model.spellcasting?.slots.find((slot) => slot.level === level)?.count ?? 0
+  // 法术位（MC-F01）：兼职时优先写通用池，契约池另在「施法职业」格里说明；
+  // 单职业魔契师没有通用池，回退到契约池（既有行为不变）。
+  for (let level = 1; level <= 9; level += 1) {
+    const slots = model.spellcasting?.slots.filter((slot) => slot.level === level) ?? []
+    const general = slots.find((slot) => !slot.pact)
+    values[`spell_slot_${level}_total`] = (general ?? slots[0])?.count ?? 0
+  }
   const spellCapacities = [8, 10, 10, 10, 10, 10, 10, 10, 10, 10]
   for (let level = 0; level <= 9; level += 1) {
     const spells = model.spellcasting?.spells.filter((spell) => spell.level === level) ?? []
     if (spells.length > spellCapacities[level]) diagnostics.push({ code: 'content-truncated', severity: 'warning', field: `spells.${level}`, message: `${level} 环法术超过模板容量，额外法术已省略。` })
     spells.slice(0, spellCapacities[level]).forEach((spell, index) => {
       values[`spell_${level}_${index + 1}_prepared`] = spell.prepared ? '●' : ''
-      values[`spell_${level}_${index + 1}_name`] = spell.name
+      // 归属职业（MC-F01）：兼职时在法术名后标注；单职业保持原样。
+      values[`spell_${level}_${index + 1}_name`] = spell.className ? `${spell.name}（${spell.className}）` : spell.name
     })
   }
   return { values, diagnostics }
