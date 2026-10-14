@@ -117,7 +117,9 @@ describe('SC-B01 分配控件：兼职模式下的总等级滑杆', () => {
     const draft = appliedTotalLevel(wrapper)
     // 加级给列表最后一个职业（游荡者 2 → 4）
     expect(getClassEntries(draft)).toEqual([{ classId: 'class-2014-fighter', level: 3 }, { classId: 'class-2014-rogue', level: 4 }])
-    expect(wrapper.get('.allocation__slider').text()).toContain('总等级')
+    // 等级读数移到等级卡头部（LV-B01）：标签为「总等级」，不再是「目标等级」
+    expect(wrapper.get('.allocation__level-head').text()).toContain('总等级')
+    expect(wrapper.get('.allocation__level-head').text()).not.toContain('目标等级')
   })
 
   it('兼职时滑杆减级不会移除职业（下限为职业数量）', async () => {
@@ -575,7 +577,9 @@ describe('PC-B 内联一致性：提交未被采纳时不残留未生效的显�
     // 事件已发出，但本用例不更新 props —— 等价于页面弹确认后被取消
     expect(wrapper.emitted('applyTotalLevel')).toBeTruthy()
     await flushPromises()
-    expect(wrapper.get('.allocation__slider').text()).toContain('目标等级 5级')
+    // 等级读数在等级卡头部（LV-B01）：仍验证显示回到已提交值
+    expect(wrapper.get('.allocation__level-head').text()).toContain('目标等级')
+    expect(wrapper.get('.allocation__level-head').text()).toContain('5级')
     expect(wrapper.get('.allocation__total').text()).toContain('总等级 5')
     expect(wrapper.find('.allocation__summary').exists()).toBe(false)
   })
@@ -587,7 +591,7 @@ describe('PC-B 内联一致性：提交未被采纳时不残留未生效的显�
     const next = appliedTotalLevel(wrapper)
     await wrapper.setProps({ draft: next })
     await flushPromises()
-    expect(wrapper.get('.allocation__slider').text()).toContain('目标等级 7级')
+    expect(wrapper.get('.allocation__level-head').text()).toContain('7级')
     expect(wrapper.get('.allocation__total').text()).toContain('总等级 7')
   })
 
@@ -597,5 +601,148 @@ describe('PC-B 内联一致性：提交未被采纳时不残留未生效的显�
     await rogueRow.findAll('button')[1]!.trigger('click')
     await flushPromises()
     expect(wrapper.find('.allocation__summary').exists()).toBe(false)
+  })
+})
+
+describe('LV 等级卡 ±1 步进（D34—D36）', () => {
+  /** 等级卡头部（等级名 + 步进）的降 / 升按钮。 */
+  function stepButtons(wrapper: ReturnType<typeof mount>) {
+    const buttons = wrapper.get('.allocation__level-head').findAll('button')
+    return { minus: buttons[0]!, plus: buttons[1]! }
+  }
+
+  it('单职业：加号升一级，只发 applyTotalLevel（不走 apply）', async () => {
+    const wrapper = mountControl(solo())
+    const { minus, plus } = stepButtons(wrapper)
+
+    expect(minus.attributes('aria-label')).toBe('目标等级降一级')
+    expect(plus.attributes('aria-label')).toBe('目标等级升一级')
+    // 步进不在 <label> 内：避免点按钮同时命中滑杆
+    expect(wrapper.get('.allocation__slider').findAll('button')).toHaveLength(0)
+
+    await plus.trigger('click')
+    expect(getClassEntries(appliedTotalLevel(wrapper))).toEqual([{ classId: 'class-2014-fighter', level: 6 }])
+    expect(wrapper.emitted('apply')).toBeFalsy()
+  })
+
+  it('单职业：减号降一级', async () => {
+    const wrapper = mountControl(solo())
+    await stepButtons(wrapper).minus.trigger('click')
+    expect(getClassEntries(appliedTotalLevel(wrapper))).toEqual([{ classId: 'class-2014-fighter', level: 4 }])
+    expect(wrapper.emitted('apply')).toBeFalsy()
+  })
+
+  it('没有职业时步进改目标等级', async () => {
+    const wrapper = mountControl(draft2024({ ruleset: '5e-2014', classId: undefined, targetLevel: 5 }))
+    await stepButtons(wrapper).plus.trigger('click')
+    const next = appliedTotalLevel(wrapper)
+    expect(next.targetLevel).toBe(6)
+    expect(next.multiclass).toBeUndefined()
+  })
+
+  it('边界：1 级时减号禁用，20 级时加号禁用', async () => {
+    const lowest = mountControl(solo({ targetLevel: 1 }))
+    const lowestButtons = stepButtons(lowest)
+    expect(lowestButtons.minus.attributes('disabled')).toBeDefined()
+    expect(lowestButtons.plus.attributes('disabled')).toBeUndefined()
+    await lowestButtons.minus.trigger('click')
+    // 越界不产生事件
+    expect(lowest.emitted('applyTotalLevel')).toBeFalsy()
+
+    const highest = mountControl(solo({ targetLevel: 20 }))
+    const highestButtons = stepButtons(highest)
+    expect(highestButtons.plus.attributes('disabled')).toBeDefined()
+    await highestButtons.plus.trigger('click')
+    expect(highest.emitted('applyTotalLevel')).toBeFalsy()
+  })
+
+  it('兼职：加号加给列表最后一个职业，减号从末尾往前扣', async () => {
+    const plusWrapper = mountControl(mc())
+    const plusButtons = stepButtons(plusWrapper)
+    expect(plusButtons.plus.attributes('aria-label')).toBe('总等级升一级')
+    await plusButtons.plus.trigger('click')
+    expect(getClassEntries(appliedTotalLevel(plusWrapper))).toEqual([
+      { classId: 'class-2014-fighter', level: 3 },
+      { classId: 'class-2014-rogue', level: 3 },
+    ])
+
+    const minusWrapper = mountControl(mc())
+    await stepButtons(minusWrapper).minus.trigger('click')
+    expect(getClassEntries(appliedTotalLevel(minusWrapper))).toEqual([
+      { classId: 'class-2014-fighter', level: 3 },
+      { classId: 'class-2014-rogue', level: 1 },
+    ])
+  })
+
+  it('兼职：总等级达下限（职业数量）时减号禁用，不会移除职业', async () => {
+    const draft = draft2024({
+      ruleset: '5e-2014',
+      baseAbilities: ABILITIES,
+      classId: 'class-2014-fighter',
+      targetLevel: 2,
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-fighter',
+        classes: [{ classId: 'class-2014-fighter', level: 1 }, { classId: 'class-2014-rogue', level: 1 }],
+        levelOrder: ['class-2014-fighter', 'class-2014-rogue'],
+      },
+    })
+    const wrapper = mountControl(draft)
+    const { minus, plus } = stepButtons(wrapper)
+    expect(minus.attributes('disabled')).toBeDefined()
+    await minus.trigger('click')
+    expect(wrapper.emitted('applyTotalLevel')).toBeFalsy()
+
+    await plus.trigger('click')
+    const next = appliedTotalLevel(wrapper)
+    expect(getTotalLevel(next)).toBe(3)
+    expect(getClassEntries(next)).toHaveLength(2)
+  })
+
+  it('弹窗模式：步进进入本地待定摘要，确认才提交步进后的草稿', async () => {
+    const wrapper = mountCompact(mc())
+    await stepButtons(wrapper).plus.trigger('click')
+
+    expect(wrapper.get('.allocation__level-head').text()).toContain('6级')
+    expect(wrapper.get('.allocation__summary').text()).toContain('总等级 5 → 6')
+
+    await wrapper.findAll('.allocation__footer button')[1]!.trigger('click')
+    const applied = appliedDraft(wrapper)
+    expect(getTotalLevel(applied)).toBe(6)
+    expect(getClassEntries(applied).find((entry) => entry.classId === 'class-2014-rogue')?.level).toBe(3)
+  })
+
+  it('内联：页面未采纳时显示回到已提交值（与滑杆同一不变式）', async () => {
+    const wrapper = mountControl(solo())
+    await stepButtons(wrapper).plus.trigger('click')
+    expect(wrapper.emitted('applyTotalLevel')).toBeTruthy()
+    await flushPromises()
+
+    expect(wrapper.get('.allocation__level-head').text()).toContain('5级')
+    expect(wrapper.get('.allocation__total').text()).toContain('总等级 5')
+  })
+
+  it('弹窗模式：连续步进可累计（每次采纳后继续 +1）', async () => {
+    const wrapper = mountCompact(solo())
+    await stepButtons(wrapper).plus.trigger('click')
+    await wrapper.setProps({ draft: appliedTotalLevel(wrapper) })
+    await flushPromises()
+
+    await stepButtons(wrapper).plus.trigger('click')
+    const events = wrapper.emitted('applyTotalLevel')!
+    expect(getTotalLevel(events[events.length - 1]![0] as CharacterDraft)).toBe(7)
+    expect(wrapper.get('.allocation__level-head').text()).toContain('7级')
+  })
+
+  it('内联：页面采纳后显示跟随新草稿，且滑杆位置同步', async () => {
+    const wrapper = mountControl(solo())
+    await stepButtons(wrapper).plus.trigger('click')
+    await flushPromises()
+    const next = appliedTotalLevel(wrapper)
+    await wrapper.setProps({ draft: next })
+    await flushPromises()
+
+    expect(wrapper.get('.allocation__level-head').text()).toContain('6级')
+    expect((wrapper.get('.allocation__slider input[type="range"]').element as HTMLInputElement).value).toBe('6')
   })
 })
