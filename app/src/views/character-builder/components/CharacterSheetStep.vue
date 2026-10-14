@@ -109,8 +109,19 @@ function abilityLabel(key: string): string {
 function skillLabel(skillId: string): string {
   return getRulesRepository(props.draft.ruleset).getOption(skillId)?.name ?? skillId
 }
-function sourceNote(sources: DerivedCharacter['armorClass']['sources']): string {
-  return sources.map((source) => `${source.label} ${source.value >= 0 ? '+' : ''}${source.value}`).join(' · ')
+/**
+ * 数值来源明细（D26）：逐条返回「来源名 ±数值」，并在有来源说明时附上（如「战士 d10 最大值 + 体质调整值」）。
+ * 说明区显示与明细弹窗共用这一份数组（R9），不再单独拼一份字符串。
+ *
+ * TODO(detail-list-overflow)：生命值来源是**逐级一条**（1 级 + 第 2…N 级 + 加成），20 级角色会产生 20+ 条，
+ * 明细弹窗因此很长（用户 2026-10-12 决定本轮不处理）。后续若做分组/折叠，从这里或 `StatNote` 入手；
+ * 记录见 docs/需求文档/界面优化-时间线徽章与数值说明截断-更新任务.md §6.5 第 2 条。
+ */
+function sourceDetails(sources: DerivedCharacter['armorClass']['sources']): string[] {
+  return sources.map((source) => {
+    const base = `${source.label} ${source.value >= 0 ? '+' : ''}${source.value}`
+    return source.detail ? `${base} · ${source.detail}` : base
+  })
 }
 function abilityNote(key: AbilityKey): string {
   const modifier = props.derived.modifiers[key]
@@ -752,23 +763,23 @@ function handleExportPdf(): void {
       {{ issue.message }} {{ issue.resolution }}
     </UiNotice>
     <div v-if="activeTab === 'overview'" class="character-sheet__stats">
-      <EditableStatTile label="护甲等级" :value="derived.armorClass.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.armorClass.sources)" @commit="editing.commitDerived('armorClass', $event)" />
-      <EditableStatTile label="最大生命值" :value="derived.hitPoints.value" :minimum="1" :edit-mode="editing.editMode.value" :note="sourceNote(derived.hitPoints.sources)" @commit="editing.commitDerived('hitPoints', $event)" />
-      <EditableStatTile label="先攻" :value="derived.initiative.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.initiative.sources)" @commit="editing.commitDerived('initiative', $event)" />
-      <EditableStatTile label="速度" :value="derived.speed.value" :minimum="0" suffix="尺" :edit-mode="editing.editMode.value" :note="sourceNote(derived.speed.sources)" @commit="editing.commitDerived('speed', $event)" />
-      <EditableStatTile label="熟练加值" :value="derived.proficiencyBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.proficiencyBonus.sources)" @commit="editing.commitProficiency" />
-      <EditableStatTile v-for="(value, key) in derived.abilities" :key="key" :label="abilityLabel(String(key))" :value="value" :minimum="1" :edit-mode="editing.editMode.value" :note="abilityNote(key)" @commit="editing.commitAbility(key, $event)" />
+      <EditableStatTile label="护甲等级" :value="derived.armorClass.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.armorClass.sources)" @commit="editing.commitDerived('armorClass', $event)" />
+      <EditableStatTile label="最大生命值" :value="derived.hitPoints.value" :minimum="1" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.hitPoints.sources)" @commit="editing.commitDerived('hitPoints', $event)" />
+      <EditableStatTile label="先攻" :value="derived.initiative.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.initiative.sources)" @commit="editing.commitDerived('initiative', $event)" />
+      <EditableStatTile label="速度" :value="derived.speed.value" :minimum="0" suffix="尺" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.speed.sources)" @commit="editing.commitDerived('speed', $event)" />
+      <EditableStatTile label="熟练加值" :value="derived.proficiencyBonus.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.proficiencyBonus.sources)" @commit="editing.commitProficiency" />
+      <EditableStatTile v-for="(value, key) in derived.abilities" :key="key" :label="abilityLabel(String(key))" :value="value" :minimum="1" :edit-mode="editing.editMode.value" :details="[abilityNote(key)]" @commit="editing.commitAbility(key, $event)" />
     </div>
     <div v-else-if="activeTab === 'combat'" class="character-sheet__panel">
       <h3>主要武器</h3>
       <div class="character-sheet__combat-stats">
-        <EditableStatTile label="武器命中加值" :value="derived.attackBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.attackBonus.sources)" @commit="editing.commitDerived('attackBonus', $event)" />
-        <EditableStatTile label="武器伤害加值" :value="derived.attackDamageBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.attackDamageBonus.sources)" @commit="editing.commitDerived('attackDamageBonus', $event)" />
+        <EditableStatTile label="武器命中加值" :value="derived.attackBonus.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.attackBonus.sources)" @commit="editing.commitDerived('attackBonus', $event)" />
+        <EditableStatTile label="武器伤害加值" :value="derived.attackDamageBonus.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.attackDamageBonus.sources)" @commit="editing.commitDerived('attackDamageBonus', $event)" />
       </div>
       <h3>使用灵巧武器</h3>
       <div class="character-sheet__combat-stats">
-        <EditableStatTile label="武器命中加值" :value="derived.dexterityAttackBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.dexterityAttackBonus.sources)" @commit="editing.commitDerived('dexterityAttackBonus', $event)" />
-        <EditableStatTile label="武器伤害加值" :value="derived.dexterityAttackDamageBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.dexterityAttackDamageBonus.sources)" @commit="editing.commitDerived('dexterityAttackDamageBonus', $event)" />
+        <EditableStatTile label="武器命中加值" :value="derived.dexterityAttackBonus.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.dexterityAttackBonus.sources)" @commit="editing.commitDerived('dexterityAttackBonus', $event)" />
+        <EditableStatTile label="武器伤害加值" :value="derived.dexterityAttackDamageBonus.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.dexterityAttackDamageBonus.sources)" @commit="editing.commitDerived('dexterityAttackDamageBonus', $event)" />
       </div>
     </div>
     <div v-else-if="activeTab === 'features'" class="character-sheet__derived">
@@ -781,7 +792,7 @@ function handleExportPdf(): void {
             :label="abilityLabel(String(key))"
             :value="value.value"
             :edit-mode="editing.editMode.value"
-            :note="sourceNote(value.sources)"
+            :details="sourceDetails(value.sources)"
             @commit="editing.commitSavingThrow(key, $event)"
           />
         </div>
@@ -795,14 +806,14 @@ function handleExportPdf(): void {
             :label="skillLabel(String(key))"
             :value="value.value"
             :edit-mode="editing.editMode.value"
-            :note="sourceNote(value.sources)"
+            :details="sourceDetails(value.sources)"
             @commit="editing.commitSkill(String(key), $event)"
           />
         </div>
       </section>
       <section>
         <h3>被动察觉</h3>
-        <div><EditableStatTile label="被动察觉" :value="derived.passivePerception.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.passivePerception.sources)" @commit="editing.commitDerived('passivePerception', $event)" /></div>
+        <div><EditableStatTile label="被动察觉" :value="derived.passivePerception.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.passivePerception.sources)" @commit="editing.commitDerived('passivePerception', $event)" /></div>
       </section>
       <!-- 职业特性（MC-E03）：兼职时按职业分区，每个职业只显示**该职业等级**已解锁的特性 -->
       <section v-if="classInfos.length">
@@ -967,8 +978,8 @@ function handleExportPdf(): void {
     </div>
     <div v-else-if="activeTab === 'spells'" class="character-sheet__spells">
       <div class="character-sheet__spell-stats">
-        <EditableStatTile label="法术攻击" :value="derived.spellAttackBonus?.value ?? 0" :edit-mode="editing.editMode.value" :note="derived.spellAttackBonus ? sourceNote(derived.spellAttackBonus.sources) : '当前职业无施法能力'" @commit="editing.commitDerived('spellAttackBonus', $event)" />
-        <EditableStatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? 0" :minimum="0" :edit-mode="editing.editMode.value" :note="derived.spellSaveDc ? sourceNote(derived.spellSaveDc.sources) : '当前职业无施法能力'" @commit="editing.commitDerived('spellSaveDc', $event)" />
+        <EditableStatTile label="法术攻击" :value="derived.spellAttackBonus?.value ?? 0" :edit-mode="editing.editMode.value" :details="derived.spellAttackBonus ? sourceDetails(derived.spellAttackBonus.sources) : ['当前职业无施法能力']" @commit="editing.commitDerived('spellAttackBonus', $event)" />
+        <EditableStatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? 0" :minimum="0" :edit-mode="editing.editMode.value" :details="derived.spellSaveDc ? sourceDetails(derived.spellSaveDc.sources) : ['当前职业无施法能力']" @commit="editing.commitDerived('spellSaveDc', $event)" />
       </div>
       <p v-if="spellSlots.length && !editing.editMode.value" class="character-sheet__spell-slots">法术位：{{ spellSlotsLabel }}</p>
       <!-- 每职业施法属性（MC-D02）：兼职时法术攻击／DC 按归属职业分别给出 -->

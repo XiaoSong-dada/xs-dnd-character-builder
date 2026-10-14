@@ -466,11 +466,11 @@ function openTranscribe(spellId?: string): void {
     <div v-if="activeTab === 'overview'" class="session-panel__tab">
       <section class="session-panel__section">
         <div class="session-panel__stats">
-          <StatTile label="护甲等级" :value="panel.derived.value.armorClass.value" :note="panel.derived.value.armorClass.sources.map((item) => item.label).join(' + ')" />
-          <StatTile label="先攻" :value="panel.derived.value.initiative.value >= 0 ? `+${panel.derived.value.initiative.value}` : `${panel.derived.value.initiative.value}`" note="敏捷调整值" />
-          <StatTile label="速度" :value="`${panel.derived.value.speed.value}尺`" :note="panel.derived.value.speed.sources[0]?.detail" />
-          <StatTile label="熟练加值" :value="`+${panel.derived.value.proficiencyBonus.value}`" :note="`${draft.targetLevel}级角色`" />
-          <StatTile v-for="key in abilityKeys" :key="key" :label="ABILITY_LABELS[key]" :value="panel.derived.value.abilities[key]" :note="`${panel.derived.value.modifiers[key] >= 0 ? '+' : ''}${panel.derived.value.modifiers[key]}`" />
+          <StatTile label="护甲等级" :value="panel.derived.value.armorClass.value" :details="panel.derived.value.armorClass.sources.map((item) => `${item.label} ${item.value >= 0 ? '+' : ''}${item.value}${item.detail ? ` · ${item.detail}` : ''}`)" />
+          <StatTile label="先攻" :value="panel.derived.value.initiative.value >= 0 ? `+${panel.derived.value.initiative.value}` : `${panel.derived.value.initiative.value}`" :details="['敏捷调整值']" />
+          <StatTile label="速度" :value="`${panel.derived.value.speed.value}尺`" :details="panel.derived.value.speed.sources.map((item) => item.detail ?? item.label)" />
+          <StatTile label="熟练加值" :value="`+${panel.derived.value.proficiencyBonus.value}`" :details="[`${draft.targetLevel}级角色`]" />
+          <StatTile v-for="key in abilityKeys" :key="key" :label="ABILITY_LABELS[key]" :value="panel.derived.value.abilities[key]" :details="[`${panel.derived.value.modifiers[key] >= 0 ? '+' : ''}${panel.derived.value.modifiers[key]}`]" />
         </div>
       </section>
       <section class="session-panel__section">
@@ -524,7 +524,7 @@ function openTranscribe(spellId?: string): void {
             :key="key"
             :label="abilityLabel(String(key))"
             :value="value.value >= 0 ? `+${value.value}` : `${value.value}`"
-            :note="value.sources.map((source) => source.label).join(' + ')"
+            :details="value.sources.map((source) => `${source.label} ${source.value >= 0 ? '+' : ''}${source.value}${source.detail ? ` · ${source.detail}` : ''}`)"
           />
         </div>
       </section>
@@ -536,7 +536,7 @@ function openTranscribe(spellId?: string): void {
             :key="key"
             :label="skillLabel(String(key))"
             :value="value.value >= 0 ? `+${value.value}` : `${value.value}`"
-            :note="value.sources.map((source) => source.detail).join(' · ')"
+            :details="value.sources.map((source) => (source.detail ? `${source.label} ${source.value >= 0 ? '+' : ''}${source.value} · ${source.detail}` : `${source.label} ${source.value >= 0 ? '+' : ''}${source.value}`))"
           />
         </div>
       </section>
