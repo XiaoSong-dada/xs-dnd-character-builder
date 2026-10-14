@@ -455,6 +455,14 @@ src/components/ui/StatNote.vue
   -> src/components/ui/UiModal.vue（明细弹窗）
   （无业务、stores、rules 依赖；截断与明细来自同一个 items 数组，保证显示与弹窗同源）
 
+src/components/ui/UiModal.vue
+  -> src/components/ui/modal-layer.ts（弹窗层级：按打开顺序领取自增 z-index）
+src/components/ui/UiScrollModal.vue
+  -> src/components/ui/modal-layer.ts（与 UiModal 共用同一套层级）
+src/components/ui/modal-layer.ts
+  （模块级计数器 + useModalLayer(open: Readonly<Ref<boolean>>) → ComputedRef<{ zIndex }>，基底 100；
+    解决「常驻挂载的页面级确认弹窗被后挂载弹窗盖住」——层级不再取决于 DOM 挂载顺序）
+
 src/features/quick-build/components/CharacterDrawer.vue
   -> src/components/ui/{StatTile,UiDrawer}
   -> src/types/character
@@ -463,8 +471,8 @@ src/features/quick-build/components/QuickBuildShell.vue   （无 import，纯插
 src/features/quick-build/components/StepHeader.vue        -> src/components/ui/UiProgress
 src/features/quick-build/components/StickyActionBar.vue   -> src/components/ui/BaseButton
 
-src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiScrollModal、UiNotice、UiProgress、UiTabs）
-  -> 无项目内 import，仅依赖全局 CSS 变量主题（UiTabs 自 v0.7.0 支持 wrap 模式：固定宽度 + 换行；UiScrollModal 默认由内容区滚动，也可关闭 body 滚动并由调用方提供内部滚动区；用于抄录法术书与新增物品弹窗）
+src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiScrollModal、UiNotice、UiProgress、UiTabs、modal-layer.ts）
+  -> 无项目内 import（modal-layer 仅依赖 vue），仅依赖全局 CSS 变量主题（UiTabs 自 v0.7.0 支持 wrap 模式：固定宽度 + 换行；UiScrollModal 默认由内容区滚动，也可关闭 body 滚动并由调用方提供内部滚动区；用于抄录法术书与新增物品弹窗；UiModal／UiScrollModal 的 z-index 由 modal-layer 统一提供）
 
 src/components/AddItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
   -> src/components/ui/{ExpandableOptionCard,UiScrollModal}
@@ -758,7 +766,9 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 
 `rules/data/sources-2014.ts` 是 2014 来源注册表；`rules/source-books.ts` 提供核心永久启用、可选来源归一化、草稿迁移推导与统一可用性判断。`SourcesStep` 只写入草稿来源 ID，页面内搜索/筛选不持久化。`rules/recommend.ts` 仅保留职业成长速览和种族/背景提示，不再提供职业评分。
 
-`rules/dependency.ts` 的 `target-level` 与 `class-allocation` 两种变更都支持升级与降级影响计算：升级时返回 `added`（新等级新增且未完成的检查点清单，含等级与标题，供 UI 引导补全），降级时返回 `invalidatedDetails`（将失效选择的等级与标题）与 `reviews`（按新等级列出数量减少的资源：熟练加值、属性提升/专长次数、战技数量、已知法术上限、子职特性、生命值上限），并沿用"旧选择保留并标记失效、不静默删除"的约定。页面层 `CharacterSheetStep` 提供"调整等级 / 重新编辑"入口与"待补全"徽标（徽标用兼职口径的 `buildTimelineForDraft`，与 `startReedit`、`validate` 同源），`LevelAdjustModal.vue`（页面私有组件）内嵌与第 1／3 步共用的 `ClassAllocationControl`（等级卡：总等级滑杆 + `− N级 ＋` ±1 步进；兼职另有逐职业步进与起始职业入口）；升级/降级确认复用 `useCharacterBuilderPage` 的 `pendingChange` 依赖影响弹窗（按新增待补 / 将失效 / 需复查 / 保留分节展示）。调整后的引导由 `guideLevelAdjust()` 统一产出：**只在角色卡步骤**（第 1／3 步属线性流程，不提示也不跳转）写 `levelAdjustNotice`，确认路径的升级自动跳转 `timeline`／`spells`，降级与滑杆路径只出引导条（点击前往，`step` 缺失时不显示可点击文案），没有待办项时清空过期引导条；`startReedit` 智能定位到需处理步骤（否则进入属性步骤）。草稿首页角色条仅保留打开与删除操作，编辑、等级调整与导出均从角色卡页发起。
+`rules/dependency.ts` 的 `target-level` 与 `class-allocation` 两种变更都支持升级与降级影响计算：升级时返回 `added`（新等级新增且未完成的检查点清单，含等级与标题，供 UI 引导补全），降级时返回 `invalidatedDetails`（将失效选择的等级与标题）与 `reviews`（按新等级列出数量减少的资源：熟练加值、属性提升/专长次数、战技数量、已知法术上限、子职特性、生命值上限），并沿用"旧选择保留并标记失效、不静默删除"的约定。页面层 `CharacterSheetStep` 提供"调整等级 / 重新编辑"入口与"待补全"徽标（徽标用兼职口径的 `buildTimelineForDraft`，与 `startReedit`、`validate` 同源），`LevelAdjustModal.vue`（页面私有组件）内嵌与第 1／3 步共用的 `ClassAllocationControl`；等级操作由 `LevelGrid.vue`（页面私有：固定 1—20 单元格、越界禁用）与 `− N级 ＋` 组成——**角色卡弹窗形态不渲染滑杆**，第 1／3 步内联形态保留滑杆（决策 D38／Q1），兼职另有逐职业步进、职业行的等级表格（单行展开）与起始职业入口。
+
+所有等级／分配变更统一走**页面持有的待定态**（决策 D37／D43）：控件只 emit（等级类 `applyTotalLevel`、结构类 `apply`），`useCharacterBuilderPage` 的 `applyClassAllocation` 恒 `alwaysConfirm` 生成 `pendingChange`（含 `summary`「本次变更」、`stagedDraft` 待定草稿、`levelAdjust` 续调句柄；完全没有变化时仍走轻量路径），`index.vue` 的确认弹窗按「本次变更 / 继续调整等级（`±1`，共用同一待定变更）/ 待补全 / 需复查 / 将失效 / 保留 / 将协调」展示，**确认前不写库**；确认后「调整等级」弹窗保留并显示新等级（`stagedAllocationDraft ?? activeDraft`）。关闭兼职即提交 `mergeIntoPrimaryClass` 的合并草稿（总等级不变、只保留起始职业），明细由确认弹窗呈现。调整后的引导由 `guideLevelAdjust()` 统一产出：**只在角色卡步骤**（第 1／3 步属线性流程，不提示也不跳转）写 `levelAdjustNotice`，结构类升级自动跳转 `timeline`／`spells`，等级类变更与降级只出引导条（点击前往，`step` 缺失时不显示可点击文案），没有待办项时清空过期引导条；`startReedit` 智能定位到需处理步骤（否则进入属性步骤）。草稿首页角色条仅保留打开与删除操作，编辑、等级调整与导出均从角色卡页发起。
 
 `views/character-builder/steps.ts` 是车卡步骤顺序（`STEP_ORDER`）与友好文案（`STEP_META`，`eyebrow`/`title`）的公共常量模块，仅依赖 `types/character`（`DraftStep`）；`useCharacterBuilderPage`（步骤编排、`stepMeta`/`stepNumber`）与 `StartPanel`（首页角色条第三段信息）共用。`StartPanel` 的角色条信息分级展示：完成态（`sheet`）显示职业名（查询不到回退"角色完成"），进行中已选职业显示"职业 · 第N步"，未选职业显示"第N步 · 步骤名"，不再裸显 `currentStep` 英文 ID。
 
@@ -805,6 +815,8 @@ src/rules/data/multiclass-spell-slots-2014.ts  兼职施法者法术位表（20�
 src/rules/data/cantrip-scaling-2014.ts     戏法成长规则（2014，25 条）
 src/rules/data/cantrip-scaling-2024.ts     戏法成长规则（2024，18 条）
 src/views/character-builder/components/ClassAllocationControl.vue  职业与等级分配控件（第 1 步／第 3 步／等级调整弹窗共用的单一数据源）
+src/views/character-builder/components/LevelGrid.vue  等级表格（1—20 单元格、越界禁用、点当前值不产生事件；总等级与兼职各职业共用）
+src/components/ui/modal-layer.ts  弹窗层级（按打开顺序领取自增 z-index；UiModal 与 UiScrollModal 共用）
 ```
 
 **依赖方向**：全部保持 `views/features → rules → rules/data → types`，无反向依赖、无跨层导入。`rules/multiclass*` 与 `rules/data/multiclass-*` 之间为单向依赖；`derive`／`validate`／`spellcasting`／`timeline`／`session-resources`／`spell-selection-reconciliation` 对 `rules/multiclass*` 的引用属同层引用。`rules/multiclass-session.ts` 与 `rules/derive.ts` 之间存在既有的双向引用（`derive` 取 HP／骰面，`multiclass-session` 取属性调整值与熟练加值），与改造前 `derive ↔ spellcasting` 的形态一致，不影响初始化顺序。
