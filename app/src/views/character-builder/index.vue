@@ -193,8 +193,13 @@ function updateMethod(value: AbilityMethod): void {
     </template>
 
     <UiNotice v-if="importError" tone="error" title="导入失败">{{ importError }}</UiNotice>
-    <div v-if="levelAdjustNotice" class="builder-level-notice" @click="goToLevelAdjustStep">
-      <UiNotice :tone="levelAdjustNotice.tone" :title="levelAdjustNotice.message">点击前往对应步骤处理。</UiNotice>
+    <div
+      v-if="levelAdjustNotice"
+      class="builder-level-notice"
+      :class="{ 'builder-level-notice--static': !levelAdjustNotice.step }"
+      @click="goToLevelAdjustStep"
+    >
+      <UiNotice :tone="levelAdjustNotice.tone" :title="levelAdjustNotice.message">{{ levelAdjustNotice.step ? '点击前往对应步骤处理。' : '' }}</UiNotice>
     </div>
     <SetupStep
       v-if="step === 'setup'"
@@ -411,6 +416,20 @@ function updateMethod(value: AbilityMethod): void {
 
   :deep(.ui-notice) {
     border-color: var(--color-primary);
+  }
+
+  // 没有目标步骤的引导条不可点击（需求 §4.1，决策 D31）：不显示提示文案、不显示手型光标，
+  // 避免出现「写了『点击前往』但点了没反应」。
+  &--static {
+    cursor: default;
+
+    :deep(.ui-notice) {
+      border-color: var(--color-border);
+
+      p:empty {
+        display: none;
+      }
+    }
   }
 }
 
