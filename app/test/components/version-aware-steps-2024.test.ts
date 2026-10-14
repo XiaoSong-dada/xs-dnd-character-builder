@@ -8,6 +8,7 @@ import { rulesRepository as rulesRepository2014 } from '@/rules/repository'
 import { rulesRepository2024 } from '@/rules/repositories'
 import AddManualSpellModal from '@/views/character-builder/components/AddManualSpellModal.vue'
 import ClassStep from '@/views/character-builder/components/ClassStep.vue'
+import { draft2024 } from '../fixtures/draft-2024'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
 import SourcesStep from '@/views/character-builder/components/SourcesStep.vue'
 import { draft2024 } from '../fixtures/draft-2024'
@@ -27,18 +28,18 @@ describe('B09-02 各步骤按草稿版本解析', () => {
 
   it('ClassStep 按版本列出职业并发出对应版本 ID', async () => {
     vi.useFakeTimers()
-    const modern = mount(ClassStep, { props: { ruleset: '5e-2024', enabledSourceIds: [] } })
+    const modern = mount(ClassStep, { props: { draft: draft2024({ ruleset: '5e-2024' }), ruleset: '5e-2024', enabledSourceIds: [] } })
     const modernCards = modern.findAll('.expandable-option-card')
     expect(modernCards).toHaveLength(12)
     await modernCards.find((card) => card.get('strong').text() === '战士')!.find('.expandable-option-card__main').trigger('click')
     vi.advanceTimersByTime(400)
     expect(modern.emitted('select')).toEqual([['class-2024-fighter']])
 
-    const withUa = mount(ClassStep, { props: { ruleset: '5e-2024', enabledSourceIds: ['source-2024-ua-eberron'] } })
+    const withUa = mount(ClassStep, { props: { draft: draft2024({ ruleset: '5e-2024' }), ruleset: '5e-2024', enabledSourceIds: ['source-2024-ua-eberron'] } })
     expect(withUa.findAll('.expandable-option-card')).toHaveLength(13)
     expect(withUa.text()).toContain('奇械师')
 
-    const legacy = mount(ClassStep, { props: { ruleset: '5e-2014' } })
+    const legacy = mount(ClassStep, { props: { draft: draft2024({ ruleset: '5e-2014' }), ruleset: '5e-2014' } })
     expect(legacy.findAll('.expandable-option-card')).toHaveLength(rulesRepository2014.classes.length)
     await legacy.findAll('.expandable-option-card').find((card) => card.get('strong').text() === '战士')!.find('.expandable-option-card__main').trigger('click')
     vi.advanceTimersByTime(400)

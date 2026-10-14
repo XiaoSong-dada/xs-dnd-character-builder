@@ -9,16 +9,20 @@ import type {
   LineageHistoryEntry,
   SpellSelections,
 } from '@/types/character'
+import type { ClassSpellSelections } from '@/types/multiclass'
 import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
 import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { rulesRepository } from '@/rules/repository'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { normalizeAbilityDestiny } from '@/rules/abilities'
+import { normalizeMulticlass, rebuildLevelOrder } from '@/rules/multiclass'
+import { normalizeSpellSelectionBuckets } from '@/rules/spellcasting'
 import { isRulesetId } from '@/rules/repositories'
 
-const STORAGE_KEY = 'dnd-character-builder:drafts:v9'
+const STORAGE_KEY = 'dnd-character-builder:drafts:v10'
 /** 无法解析的当前键条目隔离区；与草稿键分开，避免被 saveAll 覆盖。 */
 const QUARANTINE_KEY = 'dnd-character-builder:drafts:unsupported:v1'
+const V9_STORAGE_KEY = 'dnd-character-builder:drafts:v9'
 const V8_STORAGE_KEY = 'dnd-character-builder:drafts:v8'
 const V7_STORAGE_KEY = 'dnd-character-builder:drafts:v7'
 const V6_STORAGE_KEY = 'dnd-character-builder:drafts:v6'
@@ -28,8 +32,8 @@ const V3_STORAGE_KEY = 'dnd-character-builder:drafts:v3'
 const V2_STORAGE_KEY = 'dnd-character-builder:drafts:v2'
 const LEGACY_STORAGE_KEY = 'dnd-character-builder:drafts:v1'
 
-const SUPPORTED_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8, 9])
-const MIGRATABLE_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8])
+const SUPPORTED_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8, 9, 10])
+const MIGRATABLE_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8, 9])
 
 interface QuarantinedDraftRecord {
   readonly fingerprint: string
@@ -63,6 +67,7 @@ function normalizeStringIds(value: unknown): readonly string[] {
 function normalizeSpellSelections(value: unknown): SpellSelections {
   if (!value || typeof value !== 'object') return emptySpellSelections()
   const selections = value as Partial<Record<keyof SpellSelections, unknown>>
+  const classSelections = normalizeClassSpellSelections(selections.classSpellSelections)
   return {
     cantripIds: normalizeStringIds(selections.cantripIds),
     knownSpellIds: normalizeStringIds(selections.knownSpellIds),
@@ -71,7 +76,27 @@ function normalizeSpellSelections(value: unknown): SpellSelections {
     transcribedSpellIds: normalizeStringIds(selections.transcribedSpellIds),
     spellbookExtraSpellIds: normalizeStringIds(selections.spellbookExtraSpellIds),
     spellbookReservedSpellIds: normalizeStringIds(selections.spellbookReservedSpellIds),
+    ...(classSelections.length > 0 ? { classSpellSelections: classSelections } : {}),
   }
+}
+
+/** 按职业归属的法术选择（schema v10）：同职业只保留一条，非法条目不写入。 */
+function normalizeClassSpellSelections(value: unknown): readonly ClassSpellSelections[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const entry = item as Partial<ClassSpellSelections>
+    if (typeof entry.classId !== 'string' || entry.classId.trim().length === 0 || seen.has(entry.classId)) return []
+    seen.add(entry.classId)
+    return [{
+      classId: entry.classId,
+      cantripIds: normalizeStringIds(entry.cantripIds),
+      knownSpellIds: normalizeStringIds(entry.knownSpellIds),
+      preparedSpellIds: normalizeStringIds(entry.preparedSpellIds),
+      spellbookSpellIds: normalizeStringIds(entry.spellbookSpellIds),
+    }]
+  })
 }
 
 const inactiveSpellBuckets = new Set<InactiveSpellBucket>([
@@ -106,7 +131,7 @@ function normalizeInactiveSpellSelections(value: unknown): readonly InactiveSpel
 function isDraft(value: unknown): value is CharacterDraft {
   if (!value || typeof value !== 'object') return false
   const draft = value as Partial<CharacterDraft>
-  return draft.schemaVersion === 9 && isRulesetId(draft.ruleset) && typeof draft.id === 'string'
+  return draft.schemaVersion === 10 && isRulesetId(draft.ruleset) && typeof draft.id === 'string'
 }
 
 function normalizeMedia(value: unknown): CharacterMedia | undefined {
@@ -149,8 +174,14 @@ function normalizeBackgroundAbilityAllocation(value: unknown): Readonly<Partial<
 }
 
 function normalizeDraft(draft: CharacterDraft): CharacterDraft {
-  return {
+  const multiclass = normalizeMulticlass(draft.multiclass)
+  const targetLevel = multiclass
+    ? multiclass.classes.reduce((sum, entry) => sum + entry.level, 0)
+    : draft.targetLevel
+  const normalized: CharacterDraft = {
     ...draft,
+    targetLevel,
+    ...(multiclass ? { multiclass } : {}),
     enabledSourceIds: normalizeDraftSourceIds(draft),
     backgroundAbilityAllocation: normalizeBackgroundAbilityAllocation(draft.backgroundAbilityAllocation),
     speciesSizeChoice: draft.speciesSizeChoice === 'small' || draft.speciesSizeChoice === 'medium' ? draft.speciesSizeChoice : undefined,
@@ -174,6 +205,9 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     manualEdits: normalizeManualEdits(draft.manualEdits),
     media: normalizeMedia(draft.media),
   }
+  // 分桶卫生（幂等）：单职业草稿回到「顶层数组为准」，并清掉历史遗留／已移除职业的分桶。
+  // 旧卡（v10 迁移时给单职业草稿也建了分桶）靠这一步在**加载时自动修复**。
+  return { ...normalized, spellSelections: normalizeSpellSelectionBuckets(normalized) }
 }
 
 function normalizeLineageHistory(value: unknown): readonly LineageHistoryEntry[] | undefined {
@@ -190,14 +224,57 @@ function normalizeLineageHistory(value: unknown): readonly LineageHistoryEntry[]
   })
 }
 
-/** v2—v8 统一迁移入口；v2—v7 仅支持 2014，v8 支持两版。 */
-export function migrateDraftToV9(value: unknown): CharacterDraft | undefined {
+/** 依据旧草稿的单职业字段合成兼职结构（schema v10 迁移用）。 */
+function buildMigratedMulticlass(draft: Record<string, unknown>): CharacterDraft['multiclass'] {
+  const classId = typeof draft.classId === 'string' && draft.classId.trim().length > 0 ? draft.classId : undefined
+  if (!classId) return undefined
+  const rawLevel = Number(draft.targetLevel)
+  const level = Number.isFinite(rawLevel) ? Math.min(19, Math.max(1, Math.trunc(rawLevel))) : 1
+  const subclassId = typeof draft.subclassId === 'string' && draft.subclassId.trim().length > 0 ? draft.subclassId : undefined
+  const classes = [{ classId, level, ...(subclassId ? { subclassId } : {}) }]
+  return {
+    enabled: false,
+    primaryClassId: classId,
+    classes,
+    levelOrder: rebuildLevelOrder(classes),
+  }
+}
+
+/**
+ * 把顶层法术数组复制为按职业归属的存储形态（消费方归 MC-D04）。
+ *
+ * **只有真正的兼职草稿（职业数 > 1）才建分桶**：单职业仍以顶层数组为准
+ * （`rules/spellcasting.ts` 的读取约定）。此前对所有有 `classId` 的旧草稿都建分桶，
+ * 导致单职业卡「读分桶、写顶层」，法术加删全部无效。
+ */
+function buildMigratedClassSpellSelections(
+  draft: Record<string, unknown>,
+  multiclass: CharacterDraft['multiclass'],
+): readonly ClassSpellSelections[] {
+  const classId = typeof draft.classId === 'string' && draft.classId.trim().length > 0 ? draft.classId : undefined
+  if (!classId) return []
+  if (!multiclass || multiclass.classes.length <= 1) return []
+  const selections = draft.spellSelections
+  if (!selections || typeof selections !== 'object') return []
+  const source = selections as Partial<Record<keyof SpellSelections, unknown>>
+  if (Array.isArray(source.classSpellSelections) && source.classSpellSelections.length > 0) return []
+  return [{
+    classId,
+    cantripIds: normalizeStringIds(source.cantripIds),
+    knownSpellIds: normalizeStringIds(source.knownSpellIds),
+    preparedSpellIds: normalizeStringIds(source.preparedSpellIds),
+    spellbookSpellIds: normalizeStringIds(source.spellbookSpellIds),
+  }]
+}
+
+/** v2—v9 统一迁移入口（输出 schema v10）；v2—v7 仅支持 2014，v8 起支持两版。 */
+export function migrateDraftToV10(value: unknown): CharacterDraft | undefined {
   if (!value || typeof value !== 'object') return undefined
   const draft = value as Record<string, unknown>
   const oldVersion = Number(draft.schemaVersion)
   if (!MIGRATABLE_SCHEMA_VERSIONS.has(oldVersion) || typeof draft.id !== 'string') return undefined
   if (oldVersion < 8 && draft.ruleset !== '5e-2014') return undefined
-  if (oldVersion === 8 && !isRulesetId(draft.ruleset)) return undefined
+  if (oldVersion >= 8 && !isRulesetId(draft.ruleset)) return undefined
   const inventoryItemIds = oldVersion === 2 && Array.isArray(draft.inventoryItemIds)
     ? draft.inventoryItemIds.filter((item): item is string => typeof item === 'string')
     : []
@@ -226,9 +303,16 @@ export function migrateDraftToV9(value: unknown): CharacterDraft | undefined {
       inventory: migratedInventory,
     } as unknown as Partial<CharacterDraft>, rulesRepository)
   const { preferences: _preferences, inventoryItemIds: _inventoryItemIds, equippedItemIds: _equippedItemIds, ...rest } = draft
+  const multiclass = buildMigratedMulticlass(draft)
+  const classSpellSelections = buildMigratedClassSpellSelections(draft, multiclass)
+  const spellSelections = (rest.spellSelections && typeof rest.spellSelections === 'object')
+    ? { ...(rest.spellSelections as Record<string, unknown>), ...(classSpellSelections.length > 0 ? { classSpellSelections } : {}) }
+    : rest.spellSelections
   return normalizeDraft({
     ...rest,
-    schemaVersion: 9,
+    schemaVersion: 10,
+    ...(spellSelections ? { spellSelections } : {}),
+    ...(multiclass ? { multiclass } : {}),
     currentStep: draft.currentStep === 'preferences' ? 'sources' : draft.currentStep,
     enabledSourceIds,
     startingEquipmentSelections: oldVersion === 2 ? [] : draft.startingEquipmentSelections,
@@ -243,17 +327,18 @@ export function migrateDraftToV9(value: unknown): CharacterDraft | undefined {
   } as unknown as CharacterDraft)
 }
 
-/** 当前键与导入共用的解析入口：v9 规范化，v2—v8 迁移。 */
+/** 当前键与导入共用的解析入口：v10 规范化，v2—v9 迁移。 */
 export function parseCharacterDraft(value: unknown): CharacterDraft | undefined {
   if (isDraft(value)) return normalizeDraft(value)
-  return migrateDraftToV9(value)
+  return migrateDraftToV10(value)
 }
 
-/** 兼容旧调用名；统一返回当前 v9 草稿。 */
-export const migrateDraftToV8 = migrateDraftToV9
-export const migrateDraftToV7 = migrateDraftToV9
-export const migrateDraftToV6 = migrateDraftToV9
-export const migrateDraftToV5 = migrateDraftToV9
+/** 兼容旧调用名；统一返回当前 v10 草稿。 */
+export const migrateDraftToV9 = migrateDraftToV10
+export const migrateDraftToV8 = migrateDraftToV10
+export const migrateDraftToV7 = migrateDraftToV10
+export const migrateDraftToV6 = migrateDraftToV10
+export const migrateDraftToV5 = migrateDraftToV10
 
 /** 无法解析条目的中文原因；与 JSON 导入提示保持一致。 */
 function draftFailureReason(value: unknown): string {
@@ -328,13 +413,14 @@ export const DraftStorageService = {
     quarantineRejected(rejected)
     const seenIds = new Set(current.map((draft) => draft.id))
     const migrated = [
-      ...readArray(V8_STORAGE_KEY).map(migrateDraftToV9),
-      ...readArray(V7_STORAGE_KEY).map(migrateDraftToV9),
-      ...readArray(V6_STORAGE_KEY).map(migrateDraftToV9),
-      ...readArray(V5_STORAGE_KEY).map(migrateDraftToV9),
-      ...readArray(V4_STORAGE_KEY).map(migrateDraftToV9),
-      ...readArray(V3_STORAGE_KEY).map(migrateDraftToV9),
-      ...readArray(V2_STORAGE_KEY).map(migrateDraftToV9),
+      ...readArray(V9_STORAGE_KEY).map(migrateDraftToV10),
+      ...readArray(V8_STORAGE_KEY).map(migrateDraftToV10),
+      ...readArray(V7_STORAGE_KEY).map(migrateDraftToV10),
+      ...readArray(V6_STORAGE_KEY).map(migrateDraftToV10),
+      ...readArray(V5_STORAGE_KEY).map(migrateDraftToV10),
+      ...readArray(V4_STORAGE_KEY).map(migrateDraftToV10),
+      ...readArray(V3_STORAGE_KEY).map(migrateDraftToV10),
+      ...readArray(V2_STORAGE_KEY).map(migrateDraftToV10),
     ]
       .filter((draft): draft is CharacterDraft => {
         if (!draft || seenIds.has(draft.id)) return false

@@ -7,10 +7,11 @@ import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
 import { getRulesRepository } from '@/rules/repositories'
+import { getClassEntries } from '@/rules/multiclass'
 import { abilityModifier, deriveAbilities } from '@/rules/derive'
 import { formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
 import { formatResourceText } from '@/rules/resources'
-import { buildTimeline } from '@/rules/timeline'
+import { buildTimelineForDraft } from '@/rules/timeline'
 import { getValidSpeciesChoice } from '@/rules/origins'
 import { getCheckpointCandidates, isSpellbookReservationCheckpoint } from '@/rules/spellcasting'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
@@ -31,7 +32,35 @@ const expandedCheckpointId = ref<string>()
 /** 当前草稿规则版本的仓库：职业、子职、专长与装备名称一律由它解析。 */
 const rulesRepository = computed(() => getRulesRepository(props.draft.ruleset))
 
-const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId, enabledSourceIds: props.draft.enabledSourceIds, selections: props.draft.selections, ruleset: props.draft.ruleset, raceId: props.draft.raceId, backgroundId: props.draft.backgroundId }))
+/** 时间线（MC-E04）：由草稿统一入口构建，自动带上兼职职业集合、各职业子职与来源开关。 */
+const checkpoints = computed(() => buildTimelineForDraft(props.draft))
+
+/**
+ * 检查点徽章显示「N级」（需求 D22）：圆形徽章只有 2.25rem，塞不下「职业 + 等级」。
+ * 归属职业改为标题右侧的 tag；等级取归属职业等级，无归属职业时取角色等级。
+ * 「级」字保留（用户修订：纯数字缺少单位、不够直观），1—20 级在圆内都不会溢出。
+ */
+function checkpointLevelNumber(checkpoint: ChoiceCheckpoint): number {
+  return checkpoint.classId ? (checkpoint.classLevel ?? checkpoint.level) : checkpoint.level
+}
+
+/** 徽章文本：「N级」。 */
+function checkpointBadgeText(checkpoint: ChoiceCheckpoint): string {
+  return `${checkpointLevelNumber(checkpoint)}级`
+}
+
+/** 归属职业名（无归属职业时为空串）：用于标题右侧 tag。 */
+function checkpointClassName(checkpoint: ChoiceCheckpoint): string {
+  if (!checkpoint.classId) return ''
+  return rulesRepository.value.getClass(checkpoint.classId)?.name ?? checkpoint.classId
+}
+
+/** 徽章与 tag 的合成语义（读屏与悬停提示），避免只读出一个数字。 */
+function checkpointLevelLabel(checkpoint: ChoiceCheckpoint): string {
+  const name = checkpointClassName(checkpoint)
+  const level = checkpointLevelNumber(checkpoint)
+  return name ? `${name} 第 ${level} 级` : `第 ${level} 级`
+}
 
 /** 当前已熟练的技能与盗贼工具：职业技能选择 + 背景技能。与 validate.ts 的专精校验口径一致。 */
 const proficientSkillIds = computed(() => {
@@ -47,7 +76,14 @@ const selectedSubclassId = computed(() => {
 })
 const subclassFeatures = computed(() => selectedSubclassId.value ? rulesRepository.value.getSubclass(selectedSubclassId.value)?.features ?? [] : [])
 /** 职业基础特性（只读展示）：只列自动获得项，需玩家选择的特性已在对应检查点提供选择入口。 */
-const classFeatures = computed(() => (rulesRepository.value.getClass(props.classId)?.features ?? []).filter((feature) => !feature.requiresChoice))
+/** 职业基础特性（只读展示）：兼职时列出**全部职业**的自动获得项，并标注归属职业。 */
+const classFeatures = computed(() => getClassEntries(props.draft).flatMap((entry) => {
+  const classRule = rulesRepository.value.getClass(entry.classId)
+  if (!classRule) return []
+  return (classRule.features ?? [])
+    .filter((feature) => !feature.requiresChoice && feature.level <= entry.level)
+    .map((feature) => ({ feature, className: classRule.name, classLevel: entry.level, classId: entry.classId }))
+}))
 const firstClassCheckpointId = computed(() => checkpoints.value.find((checkpoint) => checkpoint.kind !== 'subclass-feature')?.id)
 const featureByCheckpointId = computed(() => {
   const map = new Map<string, SubclassFeature>()
@@ -280,8 +316,15 @@ function spellCandidateDescription(spell: SpellRule): string {
         :aria-expanded="currentCheckpointId === checkpoint.id"
         @click="toggleCheckpoint(checkpoint.id)"
       >
-        <span>{{ checkpoint.level }}级</span>
-        <div><strong>{{ checkpoint.title }}</strong><small>{{ checkpoint.description }}</small></div>
+        <!-- 徽章显示「N级」，职业名以 tag 形式放在标题右侧（需求 D22）：圆形徽章容不下长职业名 -->
+        <span class="timeline-step__badge" :title="checkpointLevelLabel(checkpoint)" :aria-label="checkpointLevelLabel(checkpoint)">{{ checkpointBadgeText(checkpoint) }}</span>
+        <div>
+          <span class="timeline-step__title-row">
+            <strong>{{ checkpoint.title }}</strong>
+            <UiBadge v-if="checkpointClassName(checkpoint)" tone="primary">{{ checkpointClassName(checkpoint) }}</UiBadge>
+          </span>
+          <small>{{ checkpoint.description }}</small>
+        </div>
         <UiBadge :tone="selectedIds(checkpoint.id).length >= checkpointBounds(checkpoint).min ? 'success' : 'warning'">
           {{ selectedIds(checkpoint.id).length }}/{{ checkpointBounds(checkpoint).max }}
         </UiBadge>
@@ -401,19 +444,19 @@ function spellCandidateDescription(spell: SpellRule): string {
           </ExpandableOptionCard>
         </div>
         <div v-if="checkpoint.id === firstClassCheckpointId && classFeatures.length" class="timeline-step__subclass-features">
-          <h4>职业特性 · {{ rulesRepository.getClass(classId)?.name ?? '' }}</h4>
+          <h4>职业特性 · {{ classFeatures.map((item) => item.className).filter((name, index, all) => all.indexOf(name) === index).join(' / ') }}</h4>
           <ExpandableOptionCard
-            v-for="feature in classFeatures"
-            :key="feature.id"
-            :title="feature.name"
-            :description="[`${feature.level}级 · ${feature.englishName}`, featureResourceText(feature)].filter(Boolean).join(' · ')"
+            v-for="item in classFeatures"
+            :key="item.feature.id"
+            :title="item.feature.name"
+            :description="[`${item.className} ${item.feature.level}级 · ${item.feature.englishName}`, featureResourceText(item.feature)].filter(Boolean).join(' · ')"
             expanded-label="特性详情"
           >
             <template #suffix>
-              <UiBadge v-if="feature.status === 'index-only'" tone="warning">仅索引</UiBadge>
-              <UiBadge v-else-if="feature.status === 'selectable'" tone="warning">可选择 · 情境效果</UiBadge>
+              <UiBadge v-if="item.feature.status === 'index-only'" tone="warning">仅索引</UiBadge>
+              <UiBadge v-else-if="item.feature.status === 'selectable'" tone="warning">可选择 · 情境效果</UiBadge>
             </template>
-            <template #expanded>{{ feature.description }}</template>
+            <template #expanded>{{ item.feature.description }}</template>
           </ExpandableOptionCard>
         </div>
       </div>
@@ -443,10 +486,38 @@ function spellCandidateDescription(spell: SpellRule): string {
     background: transparent;
     cursor: pointer;
 
-    > span { display: grid; width: 2.25rem; height: 2.25rem; flex: none; place-items: center; border-radius: 50%; color: white; background: var(--color-primary); font-size: 0.72rem; font-weight: 700; }
     > div { display: grid; min-width: 0; flex: 1; }
     strong { font-size: 0.82rem; }
     small { color: var(--color-text-muted); line-height: 1.45; }
+  }
+
+  /**
+   * 等级徽章：只放数字（需求 D22）。
+   * 注意规则必须限定到本类，不能用 `&__header > span`——标题行与计数徽章都是 span，
+   * 会被圆形徽章样式一并命中（标题区会被压成 36px 圆）。
+   */
+  &__badge {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: none;
+    place-items: center;
+    border-radius: 50%;
+    color: white;
+    background: var(--color-primary);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  /** 标题行：标题优先收缩，职业 tag 不换行也不被截断（需求 D22）。 */
+  &__title-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.35rem;
+
+    strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    :deep(.ui-badge) { flex: none; }
   }
 
   &__options { display: grid; gap: 0.5rem; margin-top: 0.75rem; }

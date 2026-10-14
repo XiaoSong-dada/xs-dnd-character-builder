@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import { getRulesRepository } from '@/rules/repositories'
+import { getSelectableSources } from '@/rules/source-books'
 import { applyResourceChange, applyRestRecovery, getResourceUsed, listSessionResources } from '@/rules/session-resources'
 import { createInitialSessionState } from '@/rules/session-state'
 import type { CharacterDraft } from '@/types/character'
 import { draft2024 } from '../fixtures/draft-2024'
+import { isSourceEnabled } from '@/rules/source-books'
 
 /** B10-05 整体验收：12 个 2024 职业、全部核心子职与 2014 行为不变。 */
 
@@ -25,8 +27,17 @@ const CLASS_IDS = [
 
 const MODIFIERS = { str: 3, dex: 2, con: 2, int: 0, wis: 1, cha: 1 }
 
-function draftFor(classId: string, subclassId?: string): CharacterDraft {
-  return draft2024({ classId, ...(subclassId ? { subclassId } : {}), targetLevel: 20 })
+function draftFor(classId: string, subclassId?: string, level = 20): CharacterDraft {
+  const repository = getRulesRepository('5e-2024')
+  const owner = repository.getClass(classId)
+  const subclass = subclassId ? repository.getSubclass(subclassId) : undefined
+  // 全量验收：启用本规则集的全部来源（来源关闭时特性不生效，属既定语义）。
+  const enabledSourceIds = [...new Set([
+    ...getSelectableSources('5e-2024').map((source) => source.id),
+    ...(owner?.sourceIds ?? []),
+    ...(subclass?.sourceIds ?? []),
+  ])]
+  return draft2024({ classId, ...(subclassId ? { subclassId } : {}), targetLevel: level, enabledSourceIds })
 }
 
 describe('B10-05 跑团资源结算整体验收', () => {
@@ -82,7 +93,7 @@ describe('B10-05 跑团资源结算整体验收', () => {
 
   it('已登记结算数据的职业／子职特性都进入资源或免费施法列表', () => {
     const repository = getRulesRepository('5e-2024')
-    const assertSettled = (ownerId: string, subclassId: string | undefined, features: readonly { id: string; resource?: unknown; dicePool?: { recovery?: string }; grantedSpells?: readonly { freeCastings?: number; freeCastingsFrom?: unknown }[] }[]) => {
+    const assertSettled = (ownerId: string, subclassId: string | undefined, features: readonly { id: string; level?: number; resource?: { readonly maxByLevel?: readonly number[] }; dicePool?: { recovery?: string }; grantedSpells?: readonly { freeCastings?: number; freeCastingsFrom?: unknown }[] }[]) => {
       const resources = listSessionResources(draftFor(ownerId, subclassId), MODIFIERS)
       for (const feature of features) {
         const hasFreeCast = (feature.grantedSpells ?? []).some((grant) => (grant.freeCastings ?? 0) > 0 || grant.freeCastingsFrom !== undefined)
@@ -90,8 +101,19 @@ describe('B10-05 跑团资源结算整体验收', () => {
           || Boolean(feature.dicePool?.recovery && feature.dicePool.recovery !== 'none')
           || hasFreeCast
         if (!hasSettlement) continue
-        const found = resources.some((item) => item.id === feature.id || item.id.startsWith(`${feature.id}:`))
-        expect(found, `${ownerId}:${feature.id}`).toBe(true)
+        // 上限为 0 的条目按定义不进入资源列表（如某些限次特性在 20 级已无上限值）；
+        // 按「特性已获得的等级」逐步核对：只要该等级上限 > 0，就必须出现在资源列表里。
+        const levels = feature.resource?.maxByLevel?.length
+          ? feature.resource.maxByLevel
+            .map((value, index) => ({ value, level: index + 1 }))
+            .filter((item) => item.value > 0 && item.level >= (feature.level ?? 1))
+          : [{ value: 1, level: 20 }]
+        for (const { level } of levels) {
+          const draft = draftFor(ownerId, subclassId, level)
+          const settled = listSessionResources(draft, MODIFIERS)
+          const found = settled.some((item) => item.id === feature.id || item.id.startsWith(`${feature.id}:`))
+          expect(found, `${ownerId}:${feature.id}@${level}`).toBe(true)
+        }
       }
     }
     for (const classRule of repository.classes) {

@@ -1,5 +1,5 @@
 import { getRulesRepository } from '@/rules/repositories'
-import { getAvailableSpells, getSpellcastingConfig } from '@/rules/spellcasting'
+import { applyClassSpellSelections, getAvailableSpells, getClassSpellSelections, getSpellcastingConfig } from '@/rules/spellcasting'
 import type { CharacterDraft, RulesetId, SpellSelections } from '@/types/character'
 import type { SpellcastingConfig, SpellRule } from '@/types/rules'
 
@@ -100,15 +100,18 @@ export function applyTranscription(
     : new Set<string>()
   const valid = [...new Set(spellIds)].filter((id) => candidateIds.has(id))
   const cost = getTranscribeTotalCost(valid, mode, draft.ruleset)
-  const book = draft.spellSelections.spellbookSpellIds
+  // 法术书是**该职业作用域**的一部分（MC-D04）：抄录必须写进读取时真正使用的那份数据
+  // （有分桶写分桶、单职业写顶层），否则界面读分桶、写入落顶层 → 抄录看不到效果。
+  const scopeSelections = getClassSpellSelections(draft, draft.classId ?? '')
+  const book = scopeSelections.spellbookSpellIds
   const transcribed = draft.spellSelections.transcribedSpellIds
   const added = valid.filter((id) => !book.includes(id))
   return {
-    spellSelections: {
-      ...draft.spellSelections,
+    spellSelections: applyClassSpellSelections(draft, draft.classId ?? '', {
+      ...scopeSelections,
       spellbookSpellIds: [...book, ...added],
       transcribedSpellIds: [...transcribed, ...added],
-    },
+    }),
     adventureGold: draft.adventureGold - cost,
     cost,
   }

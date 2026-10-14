@@ -7,6 +7,7 @@ import type { CharacterDraft } from '@/types/character'
 export function hasBuildChoices(draft: Pick<CharacterDraft,
   | 'classId'
   | 'subclassId'
+  | 'multiclass'
   | 'raceId'
   | 'subraceId'
   | 'backgroundId'
@@ -24,6 +25,8 @@ export function hasBuildChoices(draft: Pick<CharacterDraft,
   | 'languages'
 >): boolean {
   if (draft.classId || draft.subclassId) return true
+  // 兼职分配本身也是构筑选择（职业集合或等级分配一经改动，规则版本即不可原地切换）。
+  if (draft.multiclass && (draft.multiclass.classes.length > 0 || draft.multiclass.enabled)) return true
   if (draft.raceId || draft.subraceId || draft.backgroundId || draft.backgroundVariantId) return true
   if (draft.selections.some((selection) => !selection.invalidatedAt)) return true
   const spells = draft.spellSelections

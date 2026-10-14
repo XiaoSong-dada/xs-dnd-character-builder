@@ -2,8 +2,9 @@ import { computed, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 
 import { deriveCharacter } from '@/rules/derive'
+import { getClassLevelLabel, getHitDiceFaces } from '@/rules/multiclass-session'
 import { getRulesRepository } from '@/rules/repositories'
-import { getEffectiveSpellSlots, getRequiredSpellCount, getSpellCandidates, getSpellcastingConfig, getUnpreparedManualSpellIds, groupSpellsByLevel } from '@/rules/spellcasting'
+import { applyClassSpellSelections, getClassSpellSelections, getEffectiveSpellSlots, getRequiredSpellCount, getSpellCandidates, getSpellcastingConfig, getUnpreparedManualSpellIds, getClassSpellcastingProfiles, groupSpellsByLevel } from '@/rules/spellcasting'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import {
   applyExhaustionChange,
@@ -15,6 +16,7 @@ import {
   clampCurrentHp,
   createInitialSessionState,
   ensureHitDicePool,
+  getHitDicePoolEntries,
   restoreLastRest,
   spendHitDice,
   toggleDebuff,
@@ -36,6 +38,8 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   /** 名称与条目解析按草稿版本（2024 草稿不得使用 2014 静态仓库）。 */
   const repository = computed(() => getRulesRepository(draft.value.ruleset))
   const className = computed(() => draft.value.classId ? (repository.value.getClass(draft.value.classId)?.name ?? '') : '')
+  /** 职业展示标签（MC-E05）：单职业 `战士5`，多职业 `战士3 / 游荡者2（5 级角色）`；未选职业时为空串。 */
+  const classLabel = computed(() => getClassLevelLabel(draft.value, repository.value))
   const spellcastingConfig = computed(() => getSpellcastingConfig(draft.value))
   const spellSlots = computed(() => getEffectiveSpellSlots(draft.value))
   const pactSlotLevels = computed(() => spellSlots.value.filter((slot) => slot.pact).map((slot) => slot.level))
@@ -44,8 +48,15 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   const classHitDie = computed(() => draft.value.classId
     ? repository.value.getClass(draft.value.classId)?.hitDie ?? 8
     : 8)
+  /** 生命骰按骰面展开（MC-E05）：兼职时池里同时有 d10 与 d8，必须分组记账。 */
+  const hitDiceFaces = computed(() => getHitDiceFaces(draft.value))
 
   // ---- 法术书（spellbook 模式）：未准备法术与准备切换 ----
+  /**
+   * 该角色在跑团助手里编辑的施法作用域数据（起始职业）：与法术步骤、角色卡同一读取口径
+   * （有分桶读分桶、单职业读顶层），写入也走 `applyClassSpellSelections`，避免写进读取不看的数组。
+   */
+  const scopeSelections = computed(() => getClassSpellSelections(draft.value, draft.value.classId ?? ''))
   const requiredSpellCount = computed(() =>
     spellcastingConfig.value ? getRequiredSpellCount(draft.value, spellcastingConfig.value) : 0,
   )
@@ -58,7 +69,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
       .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell))
   })
   const canPrepareMore = computed(() =>
-    draft.value.spellSelections.preparedSpellIds.length < requiredSpellCount.value,
+    scopeSelections.value.preparedSpellIds.length < requiredSpellCount.value,
   )
   /** U01：候选池与人工添加法术合并后，按环级升序 + 同环规则表顺序分组展示。 */
   const unpreparedFromBookGroups = computed(() =>
@@ -78,7 +89,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
       })
       return
     }
-    const current = draft.value.spellSelections.preparedSpellIds
+    const current = scopeSelections.value.preparedSpellIds
     const next = current.includes(spellId)
       ? current.filter((id) => id !== spellId)
       : canPrepareMore.value
@@ -86,7 +97,10 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
         : current
     if (next === current) return
     store.updateDraftById(draft.value.id, {
-      spellSelections: { ...draft.value.spellSelections, preparedSpellIds: next },
+      spellSelections: applyClassSpellSelections(draft.value, draft.value.classId ?? '', {
+        ...scopeSelections.value,
+        preparedSpellIds: next,
+      }),
     })
   }
 
@@ -103,8 +117,8 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     if (existing) return existing
     const loaded = SessionStateStorageService.load(draft.value.id)
     const next = loaded
-      ? clampCurrentHp(tracksHitDice.value ? ensureHitDicePool(loaded, draft.value.targetLevel) : loaded, maxHp.value)
-      : createInitialSessionState(draft.value.id, maxHp.value, tracksHitDice.value ? draft.value.targetLevel : undefined)
+      ? clampCurrentHp(tracksHitDice.value ? ensureHitDicePool(loaded, hitDiceFaces.value) : loaded, maxHp.value)
+      : createInitialSessionState(draft.value.id, maxHp.value, tracksHitDice.value ? hitDiceFaces.value : undefined)
     sessionState.value = next
     return next
   }
@@ -176,37 +190,79 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   }
 
   // ---- 休息与撤回 ----
-  /** 生命骰池视图：剩余数量、骰面与“直接回”平均值（仅 2024）。 */
-  const hitDice = computed(() => {
-    if (!tracksHitDice.value) return undefined
+  /**
+   * 生命骰池视图（MC-E05）：按**骰面**分组，每组各自剩余数与「直接回」平均值。
+   * 旧状态（只有 total／spent、无骰面信息）退化为单组，骰面取起始职业，行为与改造前一致。
+   */
+  const hitDiceGroups = computed(() => {
+    if (!tracksHitDice.value) return []
     const pool = ensureState().hitDice
-    if (!pool) return undefined
-    return {
-      total: pool.total,
-      spent: pool.spent,
-      remaining: Math.max(0, pool.total - pool.spent),
-      die: classHitDie.value,
-      average: averageHitDieValue(classHitDie.value),
+    if (!pool) return []
+    const groups = getHitDicePoolEntries(pool)
+    if (groups.length === 0) {
+      return [{
+        die: classHitDie.value,
+        total: pool.total,
+        spent: pool.spent,
+        remaining: Math.max(0, pool.total - pool.spent),
+        average: averageHitDieValue(classHitDie.value),
+      }]
     }
+    return groups.map((group) => ({
+      die: group.die,
+      total: group.total,
+      spent: group.spent,
+      remaining: Math.max(0, group.total - group.spent),
+      average: averageHitDieValue(group.die),
+    }))
+  })
+  /** 汇总视图：总剩余／总上限，供「全部耗尽」判断与既有调用点使用。 */
+  const hitDice = computed(() => {
+    const groups = hitDiceGroups.value
+    if (groups.length === 0) return undefined
+    const total = groups.reduce((sum, group) => sum + group.total, 0)
+    const spent = groups.reduce((sum, group) => sum + group.spent, 0)
+    const remaining = Math.max(0, total - spent)
+    return { total, spent, remaining, groups }
   })
   const hitDiceSnapshotAvailable = computed(() => Boolean(ensureState().lastHitDiceSnapshot))
 
-  /** 短休花费生命骰：mode = roll 掷骰（随机骰点）或 average 直接回（骰面平均值）。 */
-  function spendHitDiceAction(count: number, mode: 'roll' | 'average'): void {
+  /**
+   * 短休花费生命骰：mode = roll 掷骰（随机骰点）或 average 直接回（骰面平均值）。
+   * `die` 指定骰面时只扣该组（兼职角色按骰面记账）；省略时沿用汇总扣减。
+   */
+  function spendHitDiceAction(count: number, mode: 'roll' | 'average', die?: number): void {
     const state = ensureState()
     const pool = state.hitDice
     if (!pool) return
-    const remaining = Math.max(0, pool.total - pool.spent)
+    const groups = getHitDicePoolEntries(pool)
+    const target = die !== undefined ? groups.find((group) => group.die === die) : undefined
+    // 指定骰面但池中无该组（旧状态）时按汇总处理，避免操作静默失效。
+    const effectiveDie = target?.die ?? (groups.length === 0 ? classHitDie.value : die)
+    const remaining = target
+      ? Math.max(0, target.total - target.spent)
+      : Math.max(0, pool.total - pool.spent)
     const spendCount = Math.min(count, remaining)
     if (spendCount <= 0) {
-      operationError.value = '生命骰已用完。'
+      operationError.value = effectiveDie === undefined
+        ? '生命骰已用完。'
+        : `d${effectiveDie} 生命骰已用完。`
       return
     }
-    const die = classHitDie.value
+    if (effectiveDie === undefined) {
+      operationError.value = '请先选择要花费的生命骰类型。'
+      return
+    }
     const outcomes = Array.from({ length: spendCount }, () => mode === 'roll'
-      ? Math.floor(Math.random() * die) + 1
-      : averageHitDieValue(die))
-    const next = spendHitDice(state, { count: spendCount, outcomes, conModifier: derived.value.modifiers.con, maxHp: maxHp.value })
+      ? Math.floor(Math.random() * effectiveDie) + 1
+      : averageHitDieValue(effectiveDie))
+    const next = spendHitDice(state, {
+      count: spendCount,
+      outcomes,
+      conModifier: derived.value.modifiers.con,
+      maxHp: maxHp.value,
+      ...(target ? { die: effectiveDie } : {}),
+    })
     operationError.value = ''
     persist(next)
   }
@@ -215,6 +271,8 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     persist(undoHitDiceSpend(ensureState()))
   }
 
+  /** 每职业施法属性（MC-D02）：兼职时并列展示各职业的法术攻击／DC。 */
+  const classSpellcastingProfiles = computed(() => getClassSpellcastingProfiles(draft.value))
   /** 已登记的职业、种族及免费施法资源，按草稿规则集解析。 */
   const sessionResources = computed(() => listSessionResources(draft.value, derived.value.modifiers))
 
@@ -290,6 +348,8 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   return {
     derived,
     className,
+    classLabel,
+    classSpellcastingProfiles,
     maxHp,
     spellSlots,
     sessionState,
@@ -305,6 +365,7 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     changeExhaustion,
     toggleStatus,
     hitDice,
+    hitDiceGroups,
     hitDiceSnapshotAvailable,
     resourceViews,
     changeResource,

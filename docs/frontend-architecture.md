@@ -408,7 +408,7 @@ src/views/character-builder/hooks/useCharacterSheetEditing.ts
 src/views/character-builder/components/*
   -> src/views/character-builder/components/SelectionTaskNavigator.vue（OriginStep／SpellcastingStep 共用的页面私有任务导航与键盘操作）
   -> src/views/character-builder/hooks/{useSelectionTaskFlow,useSpellcastingStepFlow}.ts
-  -> src/views/character-builder/components/{EditableStatTile,AddManualSpellModal}（双击/键盘数值编辑与完整系统法术库选择）
+  -> src/views/character-builder/components/{EditableStatTile,AddManualSpellModal}（双击/键盘数值编辑与完整系统法术库选择；说明区由 components/ui/StatNote 承担两行截断与明细弹窗）
   -> src/views/character-builder/components/{FeatChoicePanel}（页面内复用）
   -> src/features/spellbook-transcription（CharacterSheetStep 抄录弹层：同一草稿的 spellSelections 与 adventureGold）
   -> src/components/ui/*
@@ -448,6 +448,21 @@ src/features/character-media（身份步骤、角色卡、车卡首页与跑团�
   -> src/services/{character-image,character-media-storage}
   -> src/types/character
 
+src/components/ui/StatTile.vue
+  -> src/components/ui/StatNote.vue（说明区：两行截断 + 溢出检测 + 明细弹窗；跑团助手为只读视图，说明始终可交互）
+
+src/components/ui/StatNote.vue
+  -> src/components/ui/UiModal.vue（明细弹窗）
+  （无业务、stores、rules 依赖；截断与明细来自同一个 items 数组，保证显示与弹窗同源）
+
+src/components/ui/UiModal.vue
+  -> src/components/ui/modal-layer.ts（弹窗层级：按打开顺序领取自增 z-index）
+src/components/ui/UiScrollModal.vue
+  -> src/components/ui/modal-layer.ts（与 UiModal 共用同一套层级）
+src/components/ui/modal-layer.ts
+  （模块级计数器 + useModalLayer(open: Readonly<Ref<boolean>>) → ComputedRef<{ zIndex }>，基底 100；
+    解决「常驻挂载的页面级确认弹窗被后挂载弹窗盖住」——层级不再取决于 DOM 挂载顺序）
+
 src/features/quick-build/components/CharacterDrawer.vue
   -> src/components/ui/{StatTile,UiDrawer}
   -> src/types/character
@@ -456,8 +471,8 @@ src/features/quick-build/components/QuickBuildShell.vue   （无 import，纯插
 src/features/quick-build/components/StepHeader.vue        -> src/components/ui/UiProgress
 src/features/quick-build/components/StickyActionBar.vue   -> src/components/ui/BaseButton
 
-src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiScrollModal、UiNotice、UiProgress、UiTabs）
-  -> 无项目内 import，仅依赖全局 CSS 变量主题（UiTabs 自 v0.7.0 支持 wrap 模式：固定宽度 + 换行；UiScrollModal 默认由内容区滚动，也可关闭 body 滚动并由调用方提供内部滚动区；用于抄录法术书与新增物品弹窗）
+src/components/ui/*（BaseButton、ExpandableOptionCard、OptionCard、StatTile、UiBadge、UiChip、UiDrawer、UiModal、UiScrollModal、UiNotice、UiProgress、UiTabs、modal-layer.ts）
+  -> 无项目内 import（modal-layer 仅依赖 vue），仅依赖全局 CSS 变量主题（UiTabs 自 v0.7.0 支持 wrap 模式：固定宽度 + 换行；UiScrollModal 默认由内容区滚动，也可关闭 body 滚动并由调用方提供内部滚动区；用于抄录法术书与新增物品弹窗；UiModal／UiScrollModal 的 z-index 由 modal-layer 统一提供）
 
 src/components/AddItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
   -> src/components/ui/{ExpandableOptionCard,UiScrollModal}
@@ -615,20 +630,20 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
 src/rules/repository.ts          -> src/rules/data/{classes-2014,class-features-2014,arcane-casters-2014,fighter,martials-2014,equipment-2014,magic-items-2014,magic-items-dmg-catalog-2014,magic-items-expansions-2014,magic-items-xgte-tcoe-2014,generated/magic-items-catalog-index-2014,feats-2014,half-casters-2014,full-casters-2014,origins-2014,spell-lists-2014,starting-equipment-2014,subclasses-2014,spells-2014}
 src/rules/repositories.ts        -> src/rules/data/{classes-2024,sources-2024,subclasses-2024,skill-options-2024,barbarian-2024,bard-2024,cleric-2024,druid-2024,fighter-2024,invocations-2024,metamagic-2024,monk-2024,paladin-2024,ranger-2024,rogue-2024,sorcerer-2024,warlock-2024,wizard-2024,feats-2024,spells-2024,origins-2024,species-traits-2024,equipment-2024,equipment-packs-2024,magic-items-2024,starting-equipment-2024,weapon-masteries-2024} + src/rules/repository（双版本仓库注册、未知版本拒绝与已开放版本判断）
 src/rules/item-catalog-loader.ts  -> src/rules/data/generated/magic-items-catalog-2014（2014 动态 import，模块级 Promise 缓存 + 失败重试）；ruleset 为 5e-2024 时返回 equipment-2024 与 magic-items-2024 的静态装配（B09-06 最小切片；购买与来源关闭全量语义归 B07-05）
-src/rules/derive.ts              -> src/rules/{repositories,feats,origins,subclass-effects}
-src/rules/validate.ts            -> src/rules/{repositories,derive,feats,abilities,timeline,spellcasting,starting-equipment,weapon-mastery}（含子职必备戏法等提示级校验）
+src/rules/derive.ts              -> src/rules/{repositories,feats,origins,subclass-effects,multiclass,multiclass-session}
+src/rules/validate.ts            -> src/rules/{repositories,derive,feats,abilities,timeline,spellcasting,starting-equipment,weapon-mastery,multiclass,multiclass-prerequisites}（含子职必备戏法等提示级校验与逐职业法术核对）
 src/rules/draft-progress.ts      （无内部依赖，纯函数：是否存在构筑选择，供改版门禁与后续影响提示使用）
-src/rules/dependency.ts          -> src/rules/{derive,repositories,feats,timeline}
-src/rules/timeline.ts            -> src/rules/{repositories,feats} + src/rules/data/feats-2014（含固定背景专长与手动授予实例的未预设子任务展开）
-src/rules/spellcasting.ts        -> src/rules/{repositories,derive,origins}（双版本施法配置、表定准备数、始终准备与免费施法来源解析）
-src/rules/spell-selection-reconciliation.ts -> src/rules/spellcasting + src/types/character（转职／降级后的有效选择、停用历史与显式恢复纯函数）
+src/rules/dependency.ts          -> src/rules/{derive,repositories,feats,timeline,multiclass}（`class-allocation` 分支按 `primaryClassId` 取起始职业，而不是 `classes[0]`）
+src/rules/timeline.ts            -> src/rules/{repositories,feats,multiclass} + src/rules/data/feats-2014（含固定背景专长与手动授予实例的未预设子任务展开；按职业集合展开检查点并注入 classId／classLevel）
+src/rules/spellcasting.ts        -> src/rules/{repositories,derive,origins,multiclass} + src/rules/data/{multiclass-2014,multiclass-2024,multiclass-spell-slots-2014,cantrip-scaling-2014,cantrip-scaling-2024}（双版本施法配置、表定准备数、始终准备与免费施法来源解析；施法作用域、兼职施法等级与法术位表、戏法成长）
+src/rules/spell-selection-reconciliation.ts -> src/rules/spellcasting + src/types/{character,multiclass}（转职／降级后的有效选择、停用历史与显式恢复纯函数；兼职时逐职业核对并把归属职业写入 sourceKey）
 src/rules/spellbook.ts           -> src/rules/{repositories,spellcasting}（抄录候选池、双费率费用、金币校验与抄录应用纯函数）
 src/rules/starting-equipment.ts  -> src/rules/{repositories,repository,currency}（按草稿版本解析；无版本兼容入口固定 2014）
 src/rules/weapon-mastery.ts      -> src/types/rules（2024 精通候选与选择校验纯函数）
 src/rules/weapon-training.ts     （无依赖，纯函数：武器类别与训练覆盖判定，含词条覆盖的军用武器）
 src/rules/weapon-attacks.ts      -> src/rules/{repositories,weapon-training}（按草稿版本解析职业武器训练；2014 回退兼容映射）
 src/rules/resources.ts           （无依赖，纯函数：资源上限／恢复文本与骰池文本）
-src/rules/session-resources.ts   -> src/rules/{repositories,resources,spellcasting} + src/types/{character,rules,session-state}（跑团资源结算：枚举 2024 职业资源、可消耗骰池与免费施法授予、消耗／恢复 reducer、休息回充与短休力竭差额；2014 无登记保持为空）
+src/rules/session-resources.ts   -> src/rules/{repositories,resources,spellcasting,multiclass,multiclass-features} + src/types/{character,rules,session-state}（跑团资源结算：枚举 2024 职业资源、可消耗骰池与免费施法授予、消耗／恢复 reducer、休息回充与短休力竭差额；资源上限按**所属职业等级**取值，同名资源合并为一个计数池）
 src/rules/feats.ts               -> src/rules/{repositories,source-books} + src/rules/data/{feats-2014,feats-2024}（双版本专长能力：稳定授予实例、手动实例子检查点／存活判断、结构化效果摘要、候选池、前置、复选、属性上限与护甲训练）
 src/rules/origins.ts             -> src/rules/{repositories,source-books}（物种链、背景属性分配与校验、物种生命值）
 src/rules/languages.ts           （无 rules 内部依赖，纯函数：2024 标准语言表与 2014 候选；必选数＝规则基础值＋职业特性追加 `ClassFeature.languageChoices`）
@@ -641,6 +656,10 @@ src/rules/equipment-filter.ts    -> src/types/rules（中英文/ID、稀有度�
 src/rules/abilities.ts           （无 rules 内部依赖，最纯）
 src/rules/subclass-effects.ts    （无依赖，纯函数）
 src/rules/dice.ts                -> src/types/dice（骰池、d100、总和与投掷准备纯函数）
+src/rules/multiclass.ts          -> src/types/{character,multiclass}（多职业状态纯函数族：职业集合／等级／升级顺序的读写、总等级与起始职业解析、`normalizeMulticlass` 的稳定错误码；写入函数不静默失败、不改动 selections；不依赖仓库，保持最纯）
+src/rules/multiclass-prerequisites.ts -> src/rules/{repositories,source-books,multiclass,data/multiclass-2014,data/ability-labels} + src/rules/data/multiclass-2024（兼职先决：只读基础属性、anyOf 表达「或／及」、未登记先决返回 pending 不阻断）
+src/rules/multiclass-session.ts  -> src/rules/{repositories,multiclass,derive,source-books,weapon-training,data/multiclass-2014,data/multiclass-2024}（兼职熟练项合并、起始职业豁免、生命骰骰面与逐级 HP 明细、`getClassLevelLabel` 职业展示标签的唯一实现）
+src/rules/multiclass-features.ts -> src/rules/{repositories,source-books,multiclass}（按各职业自己的等级汇总角色特性；额外攻击取最大值、AC 公式收集、同名资源使用并集说明）
 ```
 
 规则层保持框架无关：不导入 Vue、Pinia、Router、DOM、Cookie、存储或 `import.meta.env`。`rules/data` 之间仅存在单向、无环的横向依赖：
@@ -747,7 +766,9 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 
 `rules/data/sources-2014.ts` 是 2014 来源注册表；`rules/source-books.ts` 提供核心永久启用、可选来源归一化、草稿迁移推导与统一可用性判断。`SourcesStep` 只写入草稿来源 ID，页面内搜索/筛选不持久化。`rules/recommend.ts` 仅保留职业成长速览和种族/背景提示，不再提供职业评分。
 
-`rules/dependency.ts` 的 `target-level` 变更支持升级与降级影响计算：升级时返回 `added`（新等级新增且未完成的检查点清单，含等级与标题，供 UI 引导补全），降级时返回 `invalidatedDetails`（将失效选择的等级与标题）与 `reviews`（按新等级列出数量减少的资源：熟练加值、属性提升/专长次数、战技数量、已知法术上限、子职特性、生命值上限），并沿用"旧选择保留并标记失效、不静默删除"的约定。页面层 `CharacterSheetStep` 提供"调整等级 / 重新编辑"入口与"待补全"徽标，`LevelAdjustModal.vue`（页面私有组件）提供 1—20 级数字网格与影响摘要预览；升级/降级确认复用 `useCharacterBuilderPage` 的 `pendingChange` 依赖影响弹窗（按新增待补 / 将失效 / 需复查 / 保留分节展示），升级后引导条可一键跳转 `timeline` 补全新检查点，`startReedit` 智能定位到需处理步骤（否则进入属性步骤）。草稿首页角色条仅保留打开与删除操作，编辑、等级调整与导出均从角色卡页发起。
+`rules/dependency.ts` 的 `target-level` 与 `class-allocation` 两种变更都支持升级与降级影响计算：升级时返回 `added`（新等级新增且未完成的检查点清单，含等级与标题，供 UI 引导补全），降级时返回 `invalidatedDetails`（将失效选择的等级与标题）与 `reviews`（按新等级列出数量减少的资源：熟练加值、属性提升/专长次数、战技数量、已知法术上限、子职特性、生命值上限），并沿用"旧选择保留并标记失效、不静默删除"的约定。页面层 `CharacterSheetStep` 提供"调整等级 / 重新编辑"入口与"待补全"徽标（徽标用兼职口径的 `buildTimelineForDraft`，与 `startReedit`、`validate` 同源），`LevelAdjustModal.vue`（页面私有组件）内嵌与第 1／3 步共用的 `ClassAllocationControl`；等级操作由 `LevelGrid.vue`（页面私有：固定 1—20 单元格、越界禁用）与 `− N级 ＋` 组成——**角色卡弹窗形态不渲染滑杆**，第 1／3 步内联形态保留滑杆（决策 D38／Q1），兼职另有逐职业步进、职业行的等级表格（单行展开）与起始职业入口。
+
+所有等级／分配变更统一走**页面持有的待定态**（决策 D37／D43）：控件只 emit（等级类 `applyTotalLevel`、结构类 `apply`），`useCharacterBuilderPage` 的 `applyClassAllocation` 恒 `alwaysConfirm` 生成 `pendingChange`（含 `summary`「本次变更」、`stagedDraft` 待定草稿、`levelAdjust` 续调句柄；完全没有变化时仍走轻量路径），`index.vue` 的确认弹窗按「本次变更 / 继续调整等级（`±1`，共用同一待定变更）/ 待补全 / 需复查 / 将失效 / 保留 / 将协调」展示，**确认前不写库**；确认后「调整等级」弹窗保留并显示新等级（`stagedAllocationDraft ?? activeDraft`）。关闭兼职即提交 `mergeIntoPrimaryClass` 的合并草稿（总等级不变、只保留起始职业），明细由确认弹窗呈现。调整后的引导由 `guideLevelAdjust()` 统一产出：**只在角色卡步骤**（第 1／3 步属线性流程，不提示也不跳转）写 `levelAdjustNotice`，结构类升级自动跳转 `timeline`／`spells`，等级类变更与降级只出引导条（点击前往，`step` 缺失时不显示可点击文案），没有待办项时清空过期引导条；`startReedit` 智能定位到需处理步骤（否则进入属性步骤）。草稿首页角色条仅保留打开与删除操作，编辑、等级调整与导出均从角色卡页发起。
 
 `views/character-builder/steps.ts` 是车卡步骤顺序（`STEP_ORDER`）与友好文案（`STEP_META`，`eyebrow`/`title`）的公共常量模块，仅依赖 `types/character`（`DraftStep`）；`useCharacterBuilderPage`（步骤编排、`stepMeta`/`stepNumber`）与 `StartPanel`（首页角色条第三段信息）共用。`StartPanel` 的角色条信息分级展示：完成态（`sheet`）显示职业名（查询不到回退"角色完成"），进行中已选职业显示"职业 · 第N步"，未选职业显示"第N步 · 步骤名"，不再裸显 `currentStep` 英文 ID。
 
@@ -777,3 +798,29 @@ localStorage 副作用只存在于 services（其中 `EMPTY_CURRENCY` 的跨层�
 ### 种族属性方案与体型（S01-A）
 
 `types/rules.RaceRule.flexibleBonusAlternatives` 登记有序方案，`types/character.CharacterDraft.raceAbilityBonusOptionId` 保存原始选择。`rules/derive.getFlexibleBonusGroups` 是派生、校验与页面 hook 的共用解析入口；`useCharacterBuilderPage` 返回方案、有效分组及更新操作，`index.vue` 仅绑定 `AbilitiesStep` 的单选控件。切换保留属性选择，更换种族/子种族按既有重置流程清除方案；`services/draft-storage` 只做字段归一化。两版体型阻断共用 `rules/origins`，`features/character-export/build-export-data` 新增对该纯规则模块的依赖，仅导出有效种族链允许的体型。依赖方向保持 views/hooks/features → rules → types，无新增模块或反向依赖。
+
+### 兼职（多职业）拓扑（MC 批次）
+
+**新增模块与目录**（均在既有目录职责内，无新顶层目录）：
+
+```text
+src/types/multiclass.ts                    多职业状态、职业等级条目、按职业法术分桶、兼职先决与熟练项类型
+src/rules/multiclass.ts                    多职业状态纯函数族
+src/rules/multiclass-prerequisites.ts      兼职先决判定
+src/rules/multiclass-session.ts            兼职熟练项、起始职业豁免、生命骰骰面与职业展示标签
+src/rules/multiclass-features.ts           按各职业等级汇总特性、额外攻击／AC 公式／同名资源
+src/rules/data/multiclass-2014.ts          2014 兼职先决、兼职熟练项、施法系数、1/3 施法子职
+src/rules/data/multiclass-2024.ts          2024 兼职先决（复用 B01 字段）、兼职受训条目、施法系数
+src/rules/data/multiclass-spell-slots-2014.ts  兼职施法者法术位表（20×9）
+src/rules/data/cantrip-scaling-2014.ts     戏法成长规则（2014，25 条）
+src/rules/data/cantrip-scaling-2024.ts     戏法成长规则（2024，18 条）
+src/views/character-builder/components/ClassAllocationControl.vue  职业与等级分配控件（第 1 步／第 3 步／等级调整弹窗共用的单一数据源）
+src/views/character-builder/components/LevelGrid.vue  等级表格（1—20 单元格、越界禁用、点当前值不产生事件；总等级与兼职各职业共用）
+src/components/ui/modal-layer.ts  弹窗层级（按打开顺序领取自增 z-index；UiModal 与 UiScrollModal 共用）
+```
+
+**依赖方向**：全部保持 `views/features → rules → rules/data → types`，无反向依赖、无跨层导入。`rules/multiclass*` 与 `rules/data/multiclass-*` 之间为单向依赖；`derive`／`validate`／`spellcasting`／`timeline`／`session-resources`／`spell-selection-reconciliation` 对 `rules/multiclass*` 的引用属同层引用。`rules/multiclass-session.ts` 与 `rules/derive.ts` 之间存在既有的双向引用（`derive` 取 HP／骰面，`multiclass-session` 取属性调整值与熟练加值），与改造前 `derive ↔ spellcasting` 的形态一致，不影响初始化顺序。
+
+**存储边界**：草稿 `schemaVersion` 升到 10，新增 `multiclass` 与 `spellSelections.classSpellSelections`；迁移与归一化仍然只由 `services/draft-storage.ts` 负责，规则层不读写存储。局内状态新增 `HitDicePool.byDie` 与 `resourceUsage` 的同名合并用法，仍由 `services/session-state-storage.ts` 持久化。
+
+**展示层单一来源**：职业展示标签由 `rules/multiclass-session.getClassLevelLabel` 单点定义，角色卡头部、跑团助手标题、草稿列表与车卡吸底摘要共用；导出模型（`features/character-export/build-export-data`）复用同一函数，不在各页面重复拼接。

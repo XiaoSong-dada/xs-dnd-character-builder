@@ -1,4 +1,11 @@
 import { abilityModifier, deriveAbilities, deriveCharacter, proficiencyBonus } from '@/rules/derive'
+import { ABILITY_LABELS } from '@/rules/data/ability-labels'
+import { getClassEntries, getClassLevel, getClassSubclassId, getPrimaryClassId, getTotalLevel, MAX_CHARACTER_LEVEL } from '@/rules/multiclass'
+import { multiclassCasterWeights2014, multiclassThirdCasterSubclasses2014 } from '@/rules/data/multiclass-2014'
+import { multiclassCasterWeights2024, multiclassThirdCasterSubclasses2024 } from '@/rules/data/multiclass-2024'
+import { getMulticlassSlotRow } from '@/rules/data/multiclass-spell-slots-2014'
+import { getCantripScaling2014 } from '@/rules/data/cantrip-scaling-2014'
+import { getCantripScaling2024 } from '@/rules/data/cantrip-scaling-2024'
 import { getFeatChosenAbility, isFeatGrantParentActive, isSelectionCheckpointActive, listActiveFeats, listFeatGrants } from '@/rules/feats'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getDraftSpeciesRules, getValidSpeciesChoice } from '@/rules/origins'
@@ -8,6 +15,7 @@ import { isWeaponTrainingCovered } from '@/rules/weapon-training'
 import { abilityFromSpeciesSpellAbilityOption } from '@/rules/data/spell-lists-2024'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, CharacterDraft, ChoiceSelection, DerivedCharacter, RulesetId, SpellSelections } from '@/types/character'
+import type { ClassSpellSelections } from '@/types/multiclass'
 import type { ChoiceCheckpoint, FixedSpellGrant, RaceRule, RulesRepository, SpellcastingConfig, SpeciesSpellGrant, SpellRule } from '@/types/rules'
 
 type SpellcraftDraft = Pick<CharacterDraft, 'classId' | 'subclassId' | 'enabledSourceIds' | 'ruleset'>
@@ -42,17 +50,377 @@ export function getSpellSlots(config: SpellcastingConfig, classLevel: number): r
     .filter((slot) => slot.count > 0)
 }
 
-/** 角色最终法术位：职业表加人工环位差值；无施法职业也可通过人工调整获得环位。 */
+/** 兼职施法等级结果（MC-D01）。 */
+export interface MulticlassSpellcastingLevel {
+  /** 用于查「兼职施法者」表的施法等级。 */
+  readonly casterLevel: number
+  /** 契约魔法只按魔契师（邪术师）等级结算，不参与通用池。 */
+  readonly pactClassId?: string
+  readonly pactCasterLevel: number
+  /** 逐职业算入的施法等级（供来源说明与界面展示）。 */
+  readonly contributions: readonly { readonly classId: string; readonly className: string; readonly classLevel: number; readonly weight: 'full' | 'half' | 'third'; readonly value: number }[]
+}
+
+/**
+ * 兼职施法等级（需求 §2.8；决策 D1）。
+ *
+ * 累加规则：
+ * - 全施法者（吟游诗人／牧师／德鲁伊／术士／法师）等级**全额**；
+ * - 半施法者（圣武士／游侠／奇械师）等级 ÷2 **向下取整**（2014 与 2024 同口径，D1）；
+ * - 奥法骑士／诡术师按其职业等级 ÷3 **向下取整**（需已选择该子职）；
+ * - 魔契师走契约魔法，不进入通用池。
+ */
+export function getMulticlassSpellcastingLevel(
+  draft: Pick<CharacterDraft, 'ruleset' | 'subclassId' | 'classId' | 'targetLevel'> & Parameters<typeof getClassEntries>[0],
+): MulticlassSpellcastingLevel {
+  const repository = getRulesRepository(draft.ruleset)
+  const contributions: MulticlassSpellcastingLevel['contributions'][number][] = []
+  let pactClassId: string | undefined
+  let pactCasterLevel = 0
+  for (const entry of getClassEntries(draft)) {
+    const classRule = repository.getClass(entry.classId)
+    // 1/3 施法子职（奥法骑士／诡术师）：其职业本身没有施法特性，施法来自子职。
+    const assignment = getCasterWeightAssignment(
+      draft.ruleset,
+      entry.classId,
+      getClassSubclassId(draft, entry.classId),
+    )
+    const config = classRule?.spellcasting
+    const subclassConfig = assignment?.weight === 'third'
+      ? repository.getSubclass(getClassSubclassId(draft, entry.classId) ?? '')?.spellcasting
+      : undefined
+    if (config?.mode === 'pact') {
+      // 契约魔法：只记录，不并入通用池
+      if (entry.level > pactCasterLevel) {
+        pactCasterLevel = entry.level
+        pactClassId = entry.classId
+      }
+      continue
+    }
+    if (!config && !subclassConfig) continue
+    if (!assignment) continue
+    const value = assignment.weight === 'full'
+      ? entry.level
+      : assignment.weight === 'half'
+        ? Math.floor(entry.level / 2)
+        : Math.floor(entry.level / 3)
+    if (value <= 0) continue
+    contributions.push({
+      classId: entry.classId,
+      className: repository.getClass(entry.classId)?.name ?? entry.classId,
+      classLevel: entry.level,
+      weight: assignment.weight,
+      value,
+    })
+  }
+  return {
+    casterLevel: Math.min(MAX_CHARACTER_LEVEL, contributions.reduce((sum, item) => sum + item.value, 0)),
+    ...(pactClassId ? { pactClassId } : {}),
+    pactCasterLevel,
+    contributions,
+  }
+}
+
+/** 单个职业的施法系数分配：1/3 施法由子职决定，其余按职业登记。 */
+function getCasterWeightAssignment(
+  ruleset: RulesetId,
+  classId: string,
+  subclassId: string | undefined,
+): { readonly weight: 'full' | 'half' | 'third' } | undefined {
+  const thirdCasters = ruleset === '5e-2014' ? multiclassThirdCasterSubclasses2014 : multiclassThirdCasterSubclasses2024
+  if (subclassId && thirdCasters.includes(subclassId)) return { weight: 'third' }
+  const weights = ruleset === '5e-2014' ? multiclassCasterWeights2014 : multiclassCasterWeights2024
+  const weight = weights[classId]
+  return weight ? { weight } : undefined
+}
+
+/**
+ * 兼职通用法术位池：按施法等级查「兼职施法者」表；契约法术位单独返回（`pact: true`）。
+ */
+export function getMulticlassSpellSlots(draft: CharacterDraft): readonly SpellSlotInfo[] {
+  const level = getMulticlassSpellcastingLevel(draft)
+  const slots: SpellSlotInfo[] = level.casterLevel > 0
+    ? getMulticlassSlotRow(level.casterLevel)
+      .map((count, index) => ({ level: index + 1, count }))
+      .filter((slot) => slot.count > 0)
+    : []
+  // 契约魔法池：按魔契师等级查契约表，与通用池并存互不合并。
+  if (level.pactClassId) {
+    const pactConfig = getRulesRepository(draft.ruleset).getClass(level.pactClassId)?.spellcasting
+    const pact = pactConfig?.pactSlotsByClassLevel?.[level.pactCasterLevel - 1]
+    if (pact && pact[0] > 0) slots.push({ level: pact[1], count: pact[0], pact: true })
+  }
+  return slots
+}
+
+/** 是否需要使用兼职法术位表：两个及以上职业时。单职业保持各职业自己的表（行为不变）。 */
+function usesMulticlassSlotTable(draft: CharacterDraft): boolean {
+  return getClassEntries(draft).length > 1
+}
+
+/**
+ * 角色最终法术位：职业表（或兼职表）加人工环位差值；无施法职业也可通过人工调整获得环位。
+ *
+ * 通用池与契约池**按环级分别保留**（MC-D02）：两者可以停在同一环级（如 `魔契师3/法师5`
+ * 的 2 环同时有通用 3 个与契约 2 个），此前按环级去重会让契约池覆盖通用池，丢掉通用环位。
+ * 人工调整施加在通用池；没有通用池时（单职业魔契师）回退到契约池，保持既有行为不变。
+ */
 export function getEffectiveSpellSlots(draft: CharacterDraft): readonly SpellSlotInfo[] {
-  const config = getSpellcastingConfig(draft)
-  const base = config ? getSpellSlots(config, draft.targetLevel) : []
-  const baseByLevel = new Map(base.map((slot) => [slot.level, slot]))
+  let base: readonly SpellSlotInfo[]
+  if (usesMulticlassSlotTable(draft)) {
+    base = getMulticlassSpellSlots(draft)
+  } else {
+    const config = getSpellcastingConfig(draft)
+    base = config ? getSpellSlots(config, draft.targetLevel) : []
+  }
+  const generalByLevel = new Map(base.filter((slot) => !slot.pact).map((slot) => [slot.level, slot]))
+  const pactByLevel = new Map(base.filter((slot) => slot.pact).map((slot) => [slot.level, slot]))
   const adjustments = normalizeManualEdits(draft.manualEdits).spellSlotAdjustments
-  return Array.from({ length: 9 }, (_, index) => index + 1).flatMap((level) => {
-    const system = baseByLevel.get(level)
-    const count = (system?.count ?? 0) + (adjustments[level] ?? 0)
-    return count > 0 ? [{ level, count, ...(system?.pact ? { pact: true } : {}) }] : []
+  const slots: SpellSlotInfo[] = []
+  for (let level = 1; level <= 9; level += 1) {
+    const adjustment = adjustments[level] ?? 0
+    const general = generalByLevel.get(level)
+    const pact = pactByLevel.get(level)
+    // 人工调整每环只施加一次：优先通用池，其次契约池，两者都没有时自行建立一个通用环位
+    // （无施法职业仍可通过人工调整获得 1—9 环法术位）。
+    if (general) {
+      const count = general.count + adjustment
+      if (count > 0) slots.push({ level, count })
+      if (pact && pact.count > 0) slots.push({ level, count: pact.count, pact: true })
+      continue
+    }
+    if (pact) {
+      const count = pact.count + adjustment
+      if (count > 0) slots.push({ level, count, pact: true })
+      continue
+    }
+    if (adjustment > 0) slots.push({ level, count: adjustment })
+  }
+  return slots
+}
+
+/** 戏法成长在某个角色总等级下的结果（MC-D05，决策 D4／D11／D12）。 */
+export interface CantripScalingAtLevel {
+  readonly spellId: string
+  readonly name: string
+  /** 数据来源标注。 */
+  readonly sourceNote: string
+  /** 是否为 1 级基础值（true 表示当前等级尚未获得成长，界面无需提示「已成长」）。 */
+  readonly isBase: boolean
+  /** 当前等级起的伤害骰。 */
+  readonly dice?: string
+  /** 当前等级起的射线／光束数量。 */
+  readonly count?: number
+  /** 当前等级起的骰型。 */
+  readonly die?: string
+  /** 特殊分支说明（只作展示，不进入结算）。 */
+  readonly note?: string
+}
+
+/**
+ * 按**角色总等级**取戏法的成长值；未登记成长规则时返回 undefined。
+ *
+ * 边界（决策 D12）：未登记条目不产出成长值，界面**不显示成长行**，也不写「无成长」——
+ * 避免把「未登记」呈现为规则结论（2014 侧仅法定戏法与部分扩展戏法已登记）。
+ */
+export function getCantripScalingAtLevel(
+  ruleset: RulesetId,
+  spellId: string,
+  characterLevel: number,
+): CantripScalingAtLevel | undefined {
+  const rule = ruleset === '5e-2014' ? getCantripScaling2014(spellId) : getCantripScaling2024(spellId)
+  if (!rule || rule.steps.length === 0) return undefined
+  const level = Math.max(1, Math.trunc(characterLevel))
+  const applicable = rule.steps.filter((step) => step.level <= level)
+  const step = applicable[applicable.length - 1] ?? rule.steps[0]
+  if (!step) return undefined
+  return {
+    spellId: rule.id,
+    name: rule.name,
+    sourceNote: rule.sourceNote,
+    isBase: step.level <= 1,
+    ...(step.dice ? { dice: step.dice } : {}),
+    ...(step.count !== undefined ? { count: step.count } : {}),
+    ...(step.die ? { die: step.die } : {}),
+    ...(step.note ? { note: step.note } : {}),
+  }
+}
+
+/** 快捷入口：按草稿的**角色总等级**取戏法成长（兼职时取各职业等级之和）。 */
+export function getDraftCantripScaling(draft: CharacterDraft, spellId: string): CantripScalingAtLevel | undefined {
+  return getCantripScalingAtLevel(draft.ruleset, spellId, getTotalLevel(draft) || draft.targetLevel)
+}
+
+/**
+ * 单个职业的法术选择（MC-D03）。
+ *
+ * 规则要求为**每个职业分别**制定已知／准备列表（需求 §2.8）。存储上：
+ * - 多职业草稿以 `classSpellSelections` 为事实源；
+ * - 单职业草稿继续以顶层数组为准（既有行为与 JSON 往返逐字段不变）；
+ * - 多职业草稿里**没有自己分桶**的职业返回空选择，绝不回退到顶层数组——
+ *   否则新建兼职角色时第二个职业会读到起始职业的法术（本轮修正）。
+ */
+export function getClassSpellSelections(
+  draft: Pick<CharacterDraft, 'spellSelections' | 'classId'> & Parameters<typeof getClassEntries>[0],
+  classId: string,
+): SpellSelections {
+  const buckets = draft.spellSelections.classSpellSelections
+  const perClass = buckets?.find((item) => item.classId === classId)
+  if (perClass) {
+    return {
+      cantripIds: perClass.cantripIds,
+      knownSpellIds: perClass.knownSpellIds,
+      preparedSpellIds: perClass.preparedSpellIds,
+      spellbookSpellIds: perClass.spellbookSpellIds,
+      transcribedSpellIds: draft.spellSelections.transcribedSpellIds,
+      spellbookExtraSpellIds: draft.spellSelections.spellbookExtraSpellIds,
+      spellbookReservedSpellIds: draft.spellSelections.spellbookReservedSpellIds,
+      classSpellSelections: buckets,
+    }
+  }
+  // 未分桶：只有起始职业沿用顶层数组；其余职业视为空。
+  if (getClassEntries(draft).length > 1 && classId !== getPrimaryClassId(draft)) return emptySpellSelections()
+  return draft.spellSelections
+}
+
+/** 空法术选择（含共享字段的占位）。 */
+function emptySpellSelections(): SpellSelections {
+  return {
+    cantripIds: [],
+    knownSpellIds: [],
+    preparedSpellIds: [],
+    spellbookSpellIds: [],
+    transcribedSpellIds: [],
+  }
+}
+
+/** 该草稿是否以按职业分桶的法术选择为准（兼职时；分桶按需在写入时创建）。 */
+export function usesClassSpellSelections(draft: CharacterDraft): boolean {
+  return getClassEntries(draft).length > 1
+}
+
+/** 全部职业的法术选择（含各自归属）；单职业返回顶层视图。 */
+export function listClassSpellSelections(
+  draft: CharacterDraft,
+): readonly { readonly classId: string; readonly selections: SpellSelections }[] {
+  return getClassEntries(draft).map((entry) => ({
+    classId: entry.classId,
+    selections: getClassSpellSelections(draft, entry.classId),
+  }))
+}
+
+/** 只落分桶的四个「按职业」数组；共享字段（抄录／额外入书／能力预留）始终在顶层。 */
+const CLASS_SPELL_ARRAY_KEYS = ['cantripIds', 'knownSpellIds', 'preparedSpellIds', 'spellbookSpellIds'] as const
+
+function classSpellArrays(source: SpellSelections): Pick<SpellSelections, typeof CLASS_SPELL_ARRAY_KEYS[number]> {
+  return {
+    cantripIds: source.cantripIds,
+    knownSpellIds: source.knownSpellIds,
+    preparedSpellIds: source.preparedSpellIds,
+    spellbookSpellIds: source.spellbookSpellIds,
+  }
+}
+
+/** 共享字段以 `next` 为准，未提供时保留 `base`（`SpellSelections` 里它们是可选字段）。 */
+function sharedSpellFields(
+  next: SpellSelections,
+  base: SpellSelections,
+): Pick<SpellSelections, 'transcribedSpellIds' | 'spellbookExtraSpellIds' | 'spellbookReservedSpellIds'> {
+  const extra = next.spellbookExtraSpellIds ?? base.spellbookExtraSpellIds
+  const reserved = next.spellbookReservedSpellIds ?? base.spellbookReservedSpellIds
+  return {
+    transcribedSpellIds: next.transcribedSpellIds ?? base.transcribedSpellIds,
+    ...(extra ? { spellbookExtraSpellIds: extra } : {}),
+    ...(reserved ? { spellbookReservedSpellIds: reserved } : {}),
+  }
+}
+
+function unionIds(left: readonly string[], right: readonly string[]): readonly string[] {
+  return [...new Set([...left, ...right])]
+}
+
+/** 由分桶重建顶层并集镜像（共享字段沿用 `base`；分桶是事实源，见 `getClassSpellSelections`）。 */
+function withBucketUnion(base: SpellSelections, buckets: readonly ClassSpellSelections[]): SpellSelections {
+  const union = (key: typeof CLASS_SPELL_ARRAY_KEYS[number]): readonly string[] =>
+    [...new Set(buckets.flatMap((bucket) => bucket[key] ?? []))]
+  return {
+    ...base,
+    cantripIds: union('cantripIds'),
+    knownSpellIds: union('knownSpellIds'),
+    preparedSpellIds: union('preparedSpellIds'),
+    spellbookSpellIds: union('spellbookSpellIds'),
+    classSpellSelections: buckets,
+  }
+}
+
+/**
+ * 写入某职业的法术选择（MC-D03 写入侧）：与 `getClassSpellSelections` 的读取口径**严格对称**。
+ *
+ * 修复背景：读取只要该职业有分桶就以分桶为准，而写入原先按「施法职业数 > 1」判断，
+ * 于是「单职业 + 已有分桶」的草稿（v10 迁移给每张旧卡都建了一个分桶）写入落在顶层数组上，
+ * 界面读的却是分桶 → 法术加不上也删不掉。
+ *
+ * 判定：
+ * - **单职业草稿** → 写顶层数组（既有约定，JSON 往返逐字段不变；分桶由 `normalizeSpellSelectionBuckets` 清理）；
+ * - **多职业草稿** → 分桶是事实源：先确保每个职业都有自己的分桶（按当前生效读取值补齐，
+ *   避免把起始职业写在顶层的既有数据弄丢），再改目标职业的分桶，最后把顶层刷新为并集镜像。
+ *
+ * 共享字段（抄录／子职额外入书／能力预留）不落分桶，始终写顶层。
+ */
+export function applyClassSpellSelections(
+  draft: CharacterDraft,
+  classId: string,
+  next: SpellSelections,
+): SpellSelections {
+  const base = draft.spellSelections
+  const buckets = base.classSpellSelections ?? []
+  const shared = sharedSpellFields(next, base)
+  const entries = getClassEntries(draft)
+  if (entries.length <= 1) {
+    // 单职业：写顶层数组，并顺手清掉历史遗留的分桶（否则读取仍优先读分桶 → 写入不可见）。
+    const { classSpellSelections: _dropped, ...rest } = base
+    return { ...rest, ...classSpellArrays(next), ...shared }
+  }
+  const ensured = entries.map((entry) => buckets.find((bucket) => bucket.classId === entry.classId)
+    ?? { classId: entry.classId, ...classSpellArrays(getClassSpellSelections(draft, entry.classId)) })
+  const nextBuckets = ensured.map((bucket) => bucket.classId === classId
+    ? { ...bucket, ...classSpellArrays(next) }
+    : bucket)
+  return { ...withBucketUnion(base, nextBuckets), ...shared }
+}
+
+/**
+ * 分桶卫生（幂等）：让存储形态与读取约定保持一致。
+ *
+ * - 职业数 ≤ 1：回到「单职业以顶层数组为准」，把存活职业的分桶**并回顶层**（并集，不丢 id），
+ *   并清除 `classSpellSelections`（v10 迁移给单职业草稿建的分桶、关闭兼职合并后的残留分桶都属于这一类）；
+ * - 职业数 > 1：只保留仍存在职业的分桶（被移除职业的分桶丢弃——其法术在移除时已归档进
+ *   `inactiveSpellSelections`），并把顶层刷新为并集镜像；
+ * - 没有分桶时原值返回。
+ */
+export function normalizeSpellSelectionBuckets(draft: CharacterDraft): SpellSelections {
+  const base = draft.spellSelections
+  const buckets = base.classSpellSelections ?? []
+  if (buckets.length === 0) return base
+  const entries = getClassEntries(draft)
+  if (entries.length <= 1) {
+    const { classSpellSelections: _dropped, ...rest } = base
+    const survivingClassId = entries[0]?.classId ?? draft.classId
+    const bucket = buckets.find((item) => item.classId === survivingClassId)
+    if (!bucket) return rest
+    return {
+      ...rest,
+      cantripIds: unionIds(rest.cantripIds, bucket.cantripIds),
+      knownSpellIds: unionIds(rest.knownSpellIds, bucket.knownSpellIds),
+      preparedSpellIds: unionIds(rest.preparedSpellIds, bucket.preparedSpellIds),
+      spellbookSpellIds: unionIds(rest.spellbookSpellIds, bucket.spellbookSpellIds),
+    }
+  }
+  const kept = entries.flatMap((entry) => {
+    const bucket = buckets.find((item) => item.classId === entry.classId)
+    return bucket ? [bucket] : []
   })
+  return withBucketUnion(base, kept)
 }
 
 /** 页面、跑团与导出共用：职业、始终授予及人工法术按 ID 去重。 */
@@ -70,7 +438,11 @@ export function getEffectiveSelectedSpellIds(draft: CharacterDraft): readonly st
         || item.destination === 'granted'
     })
     .map((item) => item.spellId)
-  return [...new Set([...draft.spellSelections.cantripIds, ...normal, ...getAlwaysPreparedSpellIds(draft), ...manual])]
+  // 兼职：合并各职业自己的戏法与已知／准备法术（每个法术都带职业归属）。
+  const perClass = usesClassSpellSelections(draft)
+    ? listClassSpellSelections(draft).flatMap(({ selections }) => [...selections.cantripIds, ...selections.preparedSpellIds, ...selections.knownSpellIds, ...selections.spellbookSpellIds])
+    : []
+  return [...new Set([...draft.spellSelections.cantripIds, ...normal, ...perClass, ...getAlwaysPreparedSpellIds(draft), ...manual])]
 }
 
 /** 人工加入准备列表/法术书、但尚未准备的有环法术。 */
@@ -87,24 +459,26 @@ export function usesPreparedSelection(config: SpellcastingConfig): boolean {
   return config.mode === 'prepared' || config.mode === 'spellbook' || (config.mode === 'pact' && Boolean(config.preparedCountByLevel))
 }
 
-export function getRequiredSpellCount(draft: CharacterDraft, config: SpellcastingConfig): number {
-  if (draft.targetLevel < config.startsAtLevel) return 0
-  if (config.preparedCountByLevel) return config.preparedCountByLevel[draft.targetLevel - 1] ?? 0
-  if (config.mode === 'known' || config.mode === 'pact') return config.spellsKnownByLevel?.[draft.targetLevel - 1] ?? 0
+export function getRequiredSpellCount(draft: CharacterDraft, config: SpellcastingConfig, scope?: SpellcastingScope): number {
+  const level = (scope ?? resolveScope(draft, config)).classLevel
+  if (level < config.startsAtLevel) return 0
+  if (config.preparedCountByLevel) return config.preparedCountByLevel[level - 1] ?? 0
+  if (config.mode === 'known' || config.mode === 'pact') return config.spellsKnownByLevel?.[level - 1] ?? 0
   if (config.preparedFormula === 'ability-plus-half-level') {
-    return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + Math.floor(draft.targetLevel / 2))
+    return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + Math.floor(level / 2))
   }
   if (config.preparedFormula === 'ability-plus-half-level-ceil') {
-    return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + Math.ceil(draft.targetLevel / 2))
+    return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + Math.ceil(level / 2))
   }
   if (config.preparedFormula === 'ability-plus-level') {
-    return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + draft.targetLevel)
+    return Math.max(1, abilityModifier(abilityScoreAfterOrigin(draft, config.ability)) + level)
   }
   return 0
 }
 
-export function getRequiredCantripCount(draft: CharacterDraft, config: SpellcastingConfig): number {
-  const base = config.cantripsKnownByLevel?.[draft.targetLevel - 1] ?? 0
+export function getRequiredCantripCount(draft: CharacterDraft, config: SpellcastingConfig, scope?: SpellcastingScope): number {
+  const resolved = scope ?? resolveScope(draft, config)
+  const base = config.cantripsKnownByLevel?.[resolved.classLevel - 1] ?? 0
   if (base === 0) return 0
   // 选择类特性可追加戏法（如 2024 牧师圣职·奇术使）。
   const repository = getRulesRepository(draft.ruleset)
@@ -116,15 +490,20 @@ export function getRequiredCantripCount(draft: CharacterDraft, config: Spellcast
   return base + bonus
 }
 
-export function getRequiredSpellbookCount(draft: CharacterDraft, config: SpellcastingConfig): number {
-  return config.spellbookSpellsByLevel?.[draft.targetLevel - 1] ?? 0
+export function getRequiredSpellbookCount(draft: CharacterDraft, config: SpellcastingConfig, scope?: SpellcastingScope): number {
+  const level = (scope ?? resolveScope(draft, config)).classLevel
+  return config.spellbookSpellsByLevel?.[level - 1] ?? 0
 }
 
 /** 子职额外入书规则（如 2024 塑能学者）；未选择子职或子职未声明时返回 undefined。 */
-export function getSpellbookExtraRule(draft: CharacterDraft): { readonly base: number; readonly perNewSpellLevel: number; readonly schools: readonly string[]; readonly startsAtLevel: number } | undefined {
-  if (!draft.subclassId) return undefined
+export function getSpellbookExtraRule(
+  draft: Pick<CharacterDraft, 'subclassId' | 'enabledSourceIds' | 'ruleset'>,
+  scope?: SpellcastingScope,
+): { readonly base: number; readonly perNewSpellLevel: number; readonly schools: readonly string[]; readonly startsAtLevel: number } | undefined {
+  const subclassId = scope?.subclassId ?? draft.subclassId
+  if (!subclassId) return undefined
   const repository = getRulesRepository(draft.ruleset)
-  const subclass = repository.getSubclass(draft.subclassId)
+  const subclass = repository.getSubclass(subclassId)
   const rule = subclass?.spellbookExtraSpells
   if (!subclass || !rule) return undefined
   if (!isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)) return undefined
@@ -132,28 +511,31 @@ export function getSpellbookExtraRule(draft: CharacterDraft): { readonly base: n
 }
 
 /** 额外入书名额：基础名额＋子职获得后每个新法术环位追加名额。 */
-export function getSpellbookExtraAllowance(draft: CharacterDraft, config: SpellcastingConfig): number {
-  const extra = getSpellbookExtraRule(draft)
-  if (!extra || config.mode !== 'spellbook' || draft.targetLevel < extra.startsAtLevel) return 0
-  const maximumLevels = config.maxSpellLevelByClassLevel ?? []
+export function getSpellbookExtraAllowance(draft: CharacterDraft, config: SpellcastingConfig, scope?: SpellcastingScope): number {
+  const resolved = scope ?? resolveScope(draft, config)
+  const extra = getSpellbookExtraRule(draft, resolved)
+  if (!extra || resolved.config.mode !== 'spellbook' || resolved.classLevel < extra.startsAtLevel) return 0
+  const maximumLevels = resolved.config.maxSpellLevelByClassLevel ?? []
   let gained = 0
-  for (let level = extra.startsAtLevel + 1; level <= draft.targetLevel; level += 1) {
+  for (let level = extra.startsAtLevel + 1; level <= resolved.classLevel; level += 1) {
     if ((maximumLevels[level - 1] ?? 0) > (maximumLevels[level - 2] ?? 0)) gained += 1
   }
   return extra.base + gained * extra.perNewSpellLevel
 }
 
 /** 额外入书候选：当前可用法术中学派匹配的部分（含已在书中的条目，供界面标记状态）。 */
-export function getSpellbookExtraCandidates(draft: CharacterDraft, config: SpellcastingConfig): readonly SpellRule[] {
-  const extra = getSpellbookExtraRule(draft)
+export function getSpellbookExtraCandidates(draft: CharacterDraft, config: SpellcastingConfig, scope?: SpellcastingScope): readonly SpellRule[] {
+  const resolved = scope ?? resolveScope(draft, config)
+  const extra = getSpellbookExtraRule(draft, resolved)
   if (!extra) return []
-  return getAvailableSpells(draft, config)
+  return getAvailableSpells(draft, resolved.config, resolved)
     .filter((spell) => spell.level > 0 && spell.school !== undefined && extra.schools.includes(spell.school))
 }
 
-export function getSelectedSpellIds(draft: CharacterDraft, config: SpellcastingConfig): readonly string[] {
-  if (usesPreparedSelection(config)) return draft.spellSelections.preparedSpellIds
-  return draft.spellSelections.knownSpellIds
+export function getSelectedSpellIds(draft: CharacterDraft, config: SpellcastingConfig, scope?: SpellcastingScope): readonly string[] {
+  const selections = (scope ?? resolveScope(draft, config)).selections
+  if (usesPreparedSelection(config)) return selections.preparedSpellIds
+  return selections.knownSpellIds
 }
 
 /** 候选池：可更换（准备）但尚未选择的法术 ID。`known`/`pact` 模式在 2014 规则中平时不可更换，无候选。 */
@@ -166,41 +548,45 @@ export interface SpellCandidates {
   readonly prepareFromBook: readonly string[]
 }
 
-export function getSpellCandidates(draft: CharacterDraft, config: SpellcastingConfig): SpellCandidates {
-  const availableIds = getAvailableSpells(draft, config)
+export function getSpellCandidates(draft: CharacterDraft, config: SpellcastingConfig, scope?: SpellcastingScope): SpellCandidates {
+  const resolved = scope ?? resolveScope(draft, config)
+  const availableIds = getAvailableSpells(draft, resolved.config, resolved)
     .filter((spell) => spell.level > 0)
     .map((spell) => spell.id)
   const empty: SpellCandidates = { prepared: [], writeToBook: [], prepareFromBook: [] }
-  if (config.mode === 'spellbook') {
-    const book = draft.spellSelections.spellbookSpellIds
-    const prepared = draft.spellSelections.preparedSpellIds
+  if (resolved.config.mode === 'spellbook') {
+    const book = resolved.selections.spellbookSpellIds
+    const prepared = resolved.selections.preparedSpellIds
     return {
       prepared: [],
       writeToBook: availableIds.filter((id) => !book.includes(id)),
       prepareFromBook: book.filter((id) => !prepared.includes(id)),
     }
   }
-  if (usesPreparedSelection(config)) {
-    const selected = getSelectedSpellIds(draft, config)
+  if (usesPreparedSelection(resolved.config)) {
+    const selected = getSelectedSpellIds(draft, resolved.config, resolved)
     return { ...empty, prepared: availableIds.filter((id) => !selected.includes(id)) }
   }
   return empty
 }
 
-export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingConfig) {
+export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingConfig, scope?: SpellcastingScope) {
   const repository = getRulesRepository(draft.ruleset)
-  const maximumLevel = getMaximumSpellLevel(config, draft.targetLevel)
-  const expanded = config.expandedSpellPool && draft.targetLevel >= config.expandedSpellPool.startsAtLevel
-    ? config.expandedSpellPool.spellIds
+  const resolved = scope ?? resolveScope(draft, config)
+  const classLevel = resolved.classLevel
+  const maximumLevel = getMaximumSpellLevel(resolved.config, classLevel)
+  const expanded = resolved.config.expandedSpellPool && classLevel >= resolved.config.expandedSpellPool.startsAtLevel
+    ? resolved.config.expandedSpellPool.spellIds
     : []
   // 专长扩表（如龙纹「纹中之法」）：仅在来源启用时加入候选。
   const featExpanded = listActiveFeats(draft, repository).flatMap((feat) => feat.expandedSpellPool ?? [])
   // 子职法术书扩表（如 EGtW 时间魔法／重力法师的秘迹学法术）：仅在选择该子职且来源启用时加入候选。
-  const subclass = draft.subclassId ? repository.getSubclass(draft.subclassId) : undefined
+  const subclassId = resolved.subclassId
+  const subclass = subclassId ? repository.getSubclass(subclassId) : undefined
   const subclassExpanded = subclass && isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)
     ? subclass.spellbookSpellIds ?? []
     : []
-  return [...new Set([...config.classSpellIds, ...expanded, ...featExpanded, ...subclassExpanded])]
+  return [...new Set([...resolved.config.classSpellIds, ...expanded, ...featExpanded, ...subclassExpanded])]
     .map((id) => repository.getSpell(id))
     .filter((spell): spell is NonNullable<typeof spell> => Boolean(
       spell
@@ -318,17 +704,19 @@ export function applySpellbookReservationSelection(
   const safelyReleased = isInitialWizardSpellbookBuild(draft)
     ? new Set([...previousReserved].filter((id) => !reservedSet.has(id) && !retainedByOtherSource.has(id)))
     : new Set<string>()
+  // 法术书属于该职业作用域：写入走与读取对称的入口（有分桶写分桶、单职业写顶层）。
+  const scopeSelections = getClassSpellSelections(draft, draft.classId ?? '')
   const spellbookSpellIds = [...new Set([
-    ...draft.spellSelections.spellbookSpellIds.filter((id) => !safelyReleased.has(id)),
+    ...scopeSelections.spellbookSpellIds.filter((id) => !safelyReleased.has(id)),
     ...reserved,
   ])]
   return {
     selections,
-    spellSelections: {
-      ...draft.spellSelections,
+    spellSelections: applyClassSpellSelections(draft, draft.classId ?? '', {
+      ...scopeSelections,
       spellbookSpellIds,
       spellbookReservedSpellIds: reserved,
-    },
+    }),
   }
 }
 
@@ -416,6 +804,140 @@ export function getSpellcastingConfig(draft: SpellcraftDraft): SpellcastingConfi
   const classRule = draft.classId ? repository.getClass(draft.classId) : undefined
   if (classRule && !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds, repository)) return undefined
   return repository.getSpellcastingConfig(draft)
+}
+
+/**
+ * 施法作用域（MC-D02／D03）：**一个职业自己的**施法配置、等级与法术选择。
+ *
+ * 兼职角色的每个施法职业必须独立制定已知／准备列表（需求 §2.8），
+ * 因此数量、环级上限、候选池与写回目标都以作用域为单位，而不是角色总等级与顶层数组。
+ */
+export interface SpellcastingScope {
+  readonly classId: string
+  readonly className: string
+  /** 该职业**自己的**等级（不是角色总等级）。 */
+  readonly classLevel: number
+  readonly subclassId?: string
+  readonly config: SpellcastingConfig
+  /** 该职业自己的法术选择分桶；单职业草稿即顶层数组。 */
+  readonly selections: SpellSelections
+  /** 是否为契约魔法（魔契师）：契约池按该职业自身等级查表，不并入通用池。 */
+  readonly pact: boolean
+}
+
+/** 单个职业的施法作用域；该职业没有施法能力（含 1/3 施法子职）时返回 undefined。 */
+export function getSpellcastingScope(draft: CharacterDraft, classId: string | undefined): SpellcastingScope | undefined {
+  if (!classId) return undefined
+  const repository = getRulesRepository(draft.ruleset)
+  const subclassId = getClassSubclassId(draft, classId)
+  const classRule = repository.getClass(classId)
+  if (!classRule || !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds, repository)) return undefined
+  const config = getSpellcastingConfig({
+    ruleset: draft.ruleset,
+    classId,
+    subclassId,
+    enabledSourceIds: draft.enabledSourceIds,
+  })
+  if (!config) return undefined
+  return {
+    classId,
+    className: classRule.name,
+    classLevel: getClassLevel(draft, classId) || draft.targetLevel,
+    ...(subclassId ? { subclassId } : {}),
+    config,
+    selections: getClassSpellSelections(draft, classId),
+    pact: config.mode === 'pact',
+  }
+}
+
+/**
+ * 草稿的全部施法作用域（按职业加入顺序）。
+ * 单职业草稿返回 0 或 1 项，各消费方在省略作用域参数时即按本函数的第一项行为取值。
+ */
+export function listSpellcastingScopes(draft: CharacterDraft): readonly SpellcastingScope[] {
+  const entries = getClassEntries(draft)
+  const scopes = entries.flatMap((entry) => {
+    const scope = getSpellcastingScope(draft, entry.classId)
+    return scope ? [scope] : []
+  })
+  if (scopes.length > 0 || entries.length > 0) return scopes
+  // 无职业字段的旧夹具：退回按 classId／targetLevel 解析，保持既有行为。
+  const fallback = getSpellcastingScope(draft, draft.classId)
+  return fallback ? [fallback] : []
+}
+
+/**
+ * 作用域缺省值：省略 `scope` 参数时按起始职业 + 角色总等级 + 顶层数组构造，
+ * 保证单职业草稿的全部调用点逐字段不变。
+ */
+function defaultScope(draft: CharacterDraft): SpellcastingScope | undefined {
+  const config = getSpellcastingConfig(draft)
+  if (!config) return undefined
+  const classId = draft.classId ?? ''
+  return {
+    classId,
+    className: getRulesRepository(draft.ruleset).getClass(classId)?.name ?? '',
+    classLevel: draft.targetLevel,
+    ...(draft.subclassId ? { subclassId: draft.subclassId } : {}),
+    config,
+    selections: draft.spellSelections,
+    pact: config.mode === 'pact',
+  }
+}
+
+/** 解析生效作用域：显式传入优先，其次按草稿默认口径。 */
+function resolveScope(draft: CharacterDraft, config: SpellcastingConfig, scope?: SpellcastingScope): SpellcastingScope {
+  if (scope) return scope
+  return defaultScope(draft) ?? {
+    classId: draft.classId ?? '',
+    className: '',
+    classLevel: draft.targetLevel,
+    ...(draft.subclassId ? { subclassId: draft.subclassId } : {}),
+    config,
+    selections: draft.spellSelections,
+    pact: config.mode === 'pact',
+  }
+}
+
+/**
+ * 每职业施法属性（MC-D02）：法术攻击加值与豁免 DC 按**归属职业**分别给出。
+ *
+ * 熟练加值取**角色总等级**口径（兼职规则：熟练加值按总等级）；属性调整值取该职业的施法属性
+ * （法术只能用该职业的施法属性施展，需求 §2.8）。
+ * 手动调整（`manualEdits.derivedAdjustments`）是角色级覆盖，不在此重复计入。
+ */
+export interface ClassSpellcastingProfile {
+  readonly classId: string
+  readonly className: string
+  readonly classLevel: number
+  readonly ability: AbilityKey
+  readonly abilityLabel: string
+  readonly saveDc: number
+  readonly attackBonus: number
+  readonly mode: SpellcastingConfig['mode']
+  /** 契约魔法（魔契师）：法术位按该职业自身等级单独结算。 */
+  readonly pact: boolean
+  /** 该职业等级下可用的最高法术环级。 */
+  readonly maxSpellLevel: number
+}
+
+export function getClassSpellcastingProfiles(draft: CharacterDraft, scopes?: readonly SpellcastingScope[]): readonly ClassSpellcastingProfile[] {
+  const proficiency = proficiencyBonus(getTotalLevel(draft) || draft.targetLevel)
+  return (scopes ?? listSpellcastingScopes(draft)).map((scope) => {
+    const modifier = abilityModifier(abilityScoreAfterOrigin(draft, scope.config.ability))
+    return {
+      classId: scope.classId,
+      className: scope.className,
+      classLevel: scope.classLevel,
+      ability: scope.config.ability,
+      abilityLabel: ABILITY_LABELS[scope.config.ability],
+      saveDc: 8 + proficiency + modifier,
+      attackBonus: proficiency + modifier,
+      mode: scope.config.mode,
+      pact: scope.pact,
+      maxSpellLevel: getMaximumSpellLevel(scope.config, scope.classLevel),
+    }
+  })
 }
 
 function findClassCheckpoint(repository: RulesRepository, checkpointId: string): ChoiceCheckpoint | undefined {
@@ -748,21 +1270,29 @@ export function getSpellFreeCastings(
   return grants
 }
 
-export function validateSpellSelections(draft: CharacterDraft): boolean {
-  const config = getSpellcastingConfig(draft)
-  if (!config || draft.targetLevel < config.startsAtLevel) return true
-  const selected = getSelectedSpellIds(draft, config)
-  const availableSpells = getAvailableSpells(draft, config)
+/**
+ * 单个施法职业的法术选择是否合法（MC-D03）。
+ *
+ * 数量与环级上限一律按**该职业自己的等级**（`scope.classLevel`）取值：
+ * `游侠4/术士3` 的游侠侧最高 1 环，因此准备 2 环游侠法术会被判为非法。
+ */
+export function validateSpellSelectionScope(draft: CharacterDraft, scope: SpellcastingScope): boolean {
+  const config = scope.config
+  if (scope.classLevel < config.startsAtLevel) return true
+  const selections = scope.selections
+  const selected = getSelectedSpellIds(draft, config, scope)
+  const availableSpells = getAvailableSpells(draft, config, scope)
   const availableIds = new Set(availableSpells.filter((spell) => spell.level > 0).map((spell) => spell.id))
   const cantripIds = new Set(availableSpells.filter((spell) => spell.level === 0).map((spell) => spell.id))
-  const requiredCantrips = getRequiredCantripCount(draft, config)
+  const requiredCantrips = getRequiredCantripCount(draft, config, scope)
   const cantripsValid = requiredCantrips === 0
-    || (draft.spellSelections.cantripIds.length === requiredCantrips
-      && draft.spellSelections.cantripIds.length === new Set(draft.spellSelections.cantripIds).size
-      && draft.spellSelections.cantripIds.every((id) => cantripIds.has(id)))
+    || (selections.cantripIds.length === requiredCantrips
+      && selections.cantripIds.length === new Set(selections.cantripIds).size
+      && selections.cantripIds.every((id) => cantripIds.has(id)))
   // 法术书校验：抄录所得与子职额外入书的法术不计入升级名额，
   // 升级名额（非抄录、非额外）至少达到 requiredSpellbookCount（抄录与额外可超出总数）。
-  const spellbookSpells = draft.spellSelections.spellbookSpellIds
+  // 抄录与额外入书记录是法术书内部的共享标记，仍从顶层读取。
+  const spellbookSpells = selections.spellbookSpellIds
   const transcribed = draft.spellSelections.transcribedSpellIds
   const extras = draft.spellSelections.spellbookExtraSpellIds ?? []
   const storedReservations = draft.spellSelections.spellbookReservedSpellIds ?? []
@@ -771,16 +1301,16 @@ export function validateSpellSelections(draft: CharacterDraft): boolean {
     || (storedReservations.length === new Set(storedReservations).size
       && storedReservations.every((id) => spellbookSpells.includes(id) && selectedReservations.includes(id))
       && selectedReservations.every((id) => spellbookSpells.includes(id) && availableIds.has(id)))
-  const extraAllowance = getSpellbookExtraAllowance(draft, config)
+  const extraAllowance = getSpellbookExtraAllowance(draft, config, scope)
   const normalBookCount = spellbookSpells.filter((id) => !transcribed.includes(id)
     && (!extras.includes(id) || selectedReservations.includes(id))).length
-  const extraCandidates = new Set(getSpellbookExtraCandidates(draft, config).map((spell) => spell.id))
+  const extraCandidates = new Set(getSpellbookExtraCandidates(draft, config, scope).map((spell) => spell.id))
   const extrasValid = config.mode !== 'spellbook'
     || (extras.length <= extraAllowance
       && extras.length === new Set(extras).size
       && extras.every((id) => spellbookSpells.includes(id) && extraCandidates.has(id) && !transcribed.includes(id)))
   const spellbookValid = config.mode !== 'spellbook'
-    || (normalBookCount >= getRequiredSpellbookCount(draft, config)
+    || (normalBookCount >= getRequiredSpellbookCount(draft, config, scope)
       && spellbookSpells.length === new Set(spellbookSpells).size
       && spellbookSpells.every((id) => availableIds.has(id))
       && selected.every((id) => spellbookSpells.includes(id)))
@@ -788,7 +1318,26 @@ export function validateSpellSelections(draft: CharacterDraft): boolean {
     && spellbookValid
     && extrasValid
     && reservationsValid
-    && selected.length === getRequiredSpellCount(draft, config)
+    && selected.length === getRequiredSpellCount(draft, config, scope)
     && selected.length === new Set(selected).size
     && selected.every((id) => availableIds.has(id))
+}
+
+/**
+ * 法术选择整体校验（MC-D03）：**逐施法职业**校验。
+ * 单职业草稿只有一个作用域，结论与改造前一致。
+ */
+export function validateSpellSelections(draft: CharacterDraft): boolean {
+  const scopes = listSpellcastingScopes(draft)
+  if (scopes.length === 0) return true
+  return scopes.every((scope) => validateSpellSelectionScope(draft, scope))
+}
+
+/** 逐职业校验报告：供校验页给出「哪个职业的哪一项不合法」的中文原因。 */
+export function getSpellSelectionValidationReport(draft: CharacterDraft): readonly { readonly classId: string; readonly className: string; readonly valid: boolean }[] {
+  return listSpellcastingScopes(draft).map((scope) => ({
+    classId: scope.classId,
+    className: scope.className,
+    valid: validateSpellSelectionScope(draft, scope),
+  }))
 }

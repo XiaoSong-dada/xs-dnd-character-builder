@@ -6,6 +6,7 @@ import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import { getRulesRepository } from '@/rules/repositories'
+import { getClassEntries } from '@/rules/multiclass'
 import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
 import {
@@ -36,6 +37,8 @@ const emit = defineEmits<{
 
 const classProfile = computed(() =>
   props.draft.classId ? rulesRepository.value.getClassStartingEquipment(props.draft.classId) : undefined)
+/** 兼职标记（MC-E04）：用于提示起始装备只来自起始职业。 */
+const hasMultipleClasses = computed(() => getClassEntries(props.draft).length > 1)
 const backgroundProfile = computed(() =>
   props.draft.backgroundVariantId || props.draft.backgroundId
     ? rulesRepository.value.getBackgroundStartingEquipment(props.draft.backgroundVariantId ?? props.draft.backgroundId!)
@@ -146,6 +149,10 @@ function sourceLabel(entry: InventoryEntry): string {
           {{ complete ? '已完成' : `${draft.startingEquipmentSelections.length}/${(classProfile?.groups.length ?? 0) + (backgroundProfile?.groups?.length ?? 0)}` }}
         </UiBadge>
       </header>
+      <!-- 兼职（MC-E04）：起始装备只来自起始职业，兼职不会带来新职业的起始装备 -->
+      <p v-if="hasMultipleClasses" class="equipment-step__note">
+        本角色的起始装备来自起始职业「{{ rulesRepository.getClass(draft.classId ?? '')?.name ?? '' }}」。兼职不会获得其他职业的起始装备（规则：只能获得首次选择职业时的起始装备）。
+      </p>
 
       <div v-if="classProfile?.fixedGrants.length" class="equipment-step__fixed">
         <strong>必得物品</strong>
@@ -322,6 +329,13 @@ function sourceLabel(entry: InventoryEntry): string {
 .equipment-step {
   display: grid;
   gap: 1rem;
+
+  &__note {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    line-height: 1.6;
+  }
 
   &__section {
     display: grid;

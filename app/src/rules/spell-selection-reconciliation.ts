@@ -5,6 +5,7 @@ import {
   getRequiredSpellCount,
   getSpellbookExtraAllowance,
   getSpellcastingConfig,
+  getSpellcastingScope,
   usesPreparedSelection,
 } from '@/rules/spellcasting'
 import type {
@@ -14,6 +15,7 @@ import type {
   InactiveSpellSelection,
   SpellSelections,
 } from '@/types/character'
+import type { MulticlassState } from '@/types/multiclass'
 
 const ACTIVE_BUCKETS = [
   'cantripIds',
@@ -31,6 +33,13 @@ export interface SpellSelectionReconciliationChange {
   readonly nextClassId?: string
   readonly nextSubclassId?: string
   readonly nextTargetLevel: number
+  /**
+   * 分配变更后的职业集合（MC-D04）。提供时按**各职业自己的作用域**核对法术，
+   * 并把丢失法术的 `sourceKey` 写成它真正所属的职业；省略时保持单职业口径。
+   */
+  readonly nextMulticlass?: MulticlassState
+  /** 被移除的职业 id（即使 `nextMulticlass` 不再包含它们，也能把其法术正确归档）。 */
+  readonly removedClassIds?: readonly string[]
   readonly reason: Extract<InactiveSpellReason, 'class-changed' | 'level-reduced' | 'source-removed'>
   readonly invalidatedAt: string
 }
@@ -70,6 +79,10 @@ function reservationCheckpointRemainsActive(checkpointId: string, classId: strin
 /**
  * 在职业或等级变化发生时，把不再属于当前有效构筑的法术移入历史。
  * 合法但超出新数量上限的项目不会被自动挑选删除，仍留给用户在当前页面处理。
+ *
+ * 兼职口径（MC-D04）：提供 `nextMulticlass` 时逐职业核对——被移除职业的法术按
+ * **该职业自己的作用域**判失效，`sourceKey` 写成它真正所属的职业，因此停用记录能区分
+ * 「是哪个职业丢失的法术」。
  */
 export function reconcileSpellSelections(
   draft: CharacterDraft,
@@ -80,6 +93,7 @@ export function reconcileSpellSelections(
     classId: change.nextClassId ?? draft.classId,
     subclassId: change.nextSubclassId,
     targetLevel: change.nextTargetLevel,
+    ...(change.nextMulticlass ? { multiclass: change.nextMulticlass } : {}),
   }
   const config = getSpellcastingConfig(nextDraft)
   const available = config && nextDraft.targetLevel >= config.startsAtLevel
@@ -94,6 +108,14 @@ export function reconcileSpellSelections(
     .flatMap((selection) => selection.optionIds))
   const archived: InactiveSpellSelection[] = []
   const existingHistory = [...(draft.inactiveSpellSelections ?? [])]
+
+  /** 该法术在变更后是否仍属于此职业的可用列表（用于逐职业核对）。 */
+  function remainsForClass(spellId: string, classId: string, isCantrip: boolean): boolean {
+    const scope = getSpellcastingScope(nextDraft, classId)
+    if (!scope) return false
+    return getAvailableSpells(nextDraft, scope.config, scope)
+      .some((spell) => spell.id === spellId && (isCantrip ? spell.level === 0 : spell.level > 0))
+  }
 
   const nextBuckets = Object.fromEntries(ACTIVE_BUCKETS.map((bucket) => {
     const retained: string[] = []
@@ -117,6 +139,56 @@ export function reconcileSpellSelections(
     }
     return [bucket, retained]
   })) as unknown as Record<ActiveSpellBucket, readonly string[]>
+
+  // 按职业分桶的核对（MC-D04）：被移除职业的法术带上归属职业的 sourceKey。
+  const removedClassIds = new Set(change.removedClassIds ?? [])
+  const perClassHistory = new Map<string, string[]>()
+  if (change.nextMulticlass) {
+    for (const bucket of draft.spellSelections.classSpellSelections ?? []) {
+      const retainedCantrips: string[] = []
+      const retainedKnown: string[] = []
+      const retainedPrepared: string[] = []
+      const retainedBook: string[] = []
+      const removed = removedClassIds.has(bucket.classId)
+      for (const [key, target] of [
+        ['cantripIds', retainedCantrips],
+        ['knownSpellIds', retainedKnown],
+        ['preparedSpellIds', retainedPrepared],
+        ['spellbookSpellIds', retainedBook],
+      ] as const) {
+        for (const spellId of bucket[key] ?? []) {
+          const isCantrip = key === 'cantripIds'
+          const remains = !removed && remainsForClass(spellId, bucket.classId, isCantrip)
+          if (remains) { target.push(spellId); continue }
+          if (existingHistory.some((item) => item.spellId === spellId && item.originalBucket === key)) continue
+          if (archived.some((item) => item.spellId === spellId && item.originalBucket === key)) continue
+          archived.push({
+            id: inactiveId(change.reason, change.invalidatedAt, key, spellId),
+            spellId,
+            originalBucket: key,
+            reason: change.reason,
+            sourceKey: bucket.classId,
+            invalidatedAt: change.invalidatedAt,
+          })
+        }
+      }
+      perClassHistory.set(bucket.classId, [...new Set([
+        ...retainedCantrips, ...retainedKnown, ...retainedPrepared, ...retainedBook,
+      ])])
+    }
+  }
+  const nextClassSpellSelections = change.nextMulticlass
+    ? (draft.spellSelections.classSpellSelections ?? []).map((bucket) => {
+        const retained = new Set(perClassHistory.get(bucket.classId) ?? [])
+        return {
+          ...bucket,
+          cantripIds: bucket.cantripIds.filter((id) => retained.has(id)),
+          knownSpellIds: bucket.knownSpellIds.filter((id) => retained.has(id)),
+          preparedSpellIds: bucket.preparedSpellIds.filter((id) => retained.has(id)),
+          spellbookSpellIds: bucket.spellbookSpellIds.filter((id) => retained.has(id)),
+        }
+      })
+    : undefined
 
   // 法术书子集合与准备列表不能引用已退出法术书的项目。
   const retainedBook = new Set(nextBuckets.spellbookSpellIds)
@@ -150,6 +222,7 @@ export function reconcileSpellSelections(
       transcribedSpellIds: nextBuckets.transcribedSpellIds,
       spellbookExtraSpellIds: nextBuckets.spellbookExtraSpellIds,
       spellbookReservedSpellIds: nextBuckets.spellbookReservedSpellIds,
+      ...(nextClassSpellSelections ? { classSpellSelections: nextClassSpellSelections } : {}),
     },
     inactiveSpellSelections: [...existingHistory, ...archived],
     archived,

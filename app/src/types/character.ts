@@ -1,3 +1,5 @@
+import type { ClassSpellSelections, MulticlassState } from '@/types/multiclass'
+
 export type RulesetId = '5e-2014' | '5e-2024'
 export type CompatibilityStatus = 'implemented' | 'selectable' | 'index-only' | 'dm-only' | 'unavailable'
 export type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
@@ -100,6 +102,11 @@ export interface SpellSelections {
   readonly spellbookExtraSpellIds?: readonly string[]
   /** 由法术精通／招牌法术等前置节点预留、并计入正常法术书学习额度的法术。 */
   readonly spellbookReservedSpellIds?: readonly string[]
+  /**
+   * 按职业归属的法术选择（schema v10 起；兼职时每个职业各一份）。
+   * 单职业草稿仍以上方顶层数组为准；多职业草稿以本字段为准（消费方归 MC-D04）。
+   */
+  readonly classSpellSelections?: readonly ClassSpellSelections[]
 }
 
 export interface InactiveSpellSelection {
@@ -186,15 +193,21 @@ export interface CharacterMedia {
 
 export interface CharacterDraft {
   readonly lineageHistory?: readonly LineageHistoryEntry[]
-  readonly schemaVersion: 9
+  readonly schemaVersion: 10
   readonly id: string
   readonly ruleset: RulesetId
   readonly createdAt: string
   readonly updatedAt: string
+  /** 角色总等级：schema v10 起恒等于 `Σ multiclass.classes[].level`（派生值，不单独维护）。 */
   readonly targetLevel: number
   readonly abilityMethod: AbilityMethod
   /** 当前角色允许使用的可选来源；Basic Rules 与 PHB 始终启用，不写入此数组；按草稿规则版本分别解释。 */
   readonly enabledSourceIds: readonly string[]
+  /**
+   * 兼职（多职业）状态；缺省表示单职业草稿，由 `classId`／`targetLevel`／`subclassId` 合成读取结果。
+   * 见 `rules/multiclass.ts` 与需求文档 §4.1、决策 D2／D9。
+   */
+  readonly multiclass?: MulticlassState
   readonly classId?: string
   readonly subclassId?: string
   readonly raceId?: string
@@ -302,6 +315,11 @@ export interface DerivedCharacter {
 export interface DerivedCharacterSummary {
   readonly level: number
   readonly className?: string
+  /**
+   * 职业展示标签（MC-E05，需求 §3.1）：单职业 `战士5`，多职业 `战士3 / 游荡者2（5 级角色）`；未选职业时不提供。
+   * 与 `className` 并存：`className` 仍是「起始职业」的语义，导出与既有调用点依赖它。
+   */
+  readonly classLabel?: string
   readonly proficiencyBonus: string
   readonly hitPoints?: number
   readonly armorClass?: number

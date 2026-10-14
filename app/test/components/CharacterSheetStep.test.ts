@@ -6,6 +6,7 @@ import { defineComponent, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
+import { getClassSpellSelections } from '@/rules/spellcasting'
 import { rulesRepository2014 } from '@/rules/repository'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
@@ -392,6 +393,37 @@ describe('CharacterSheetStep 升级降级与重新编辑入口', () => {
       props: { draft: { ...draft, selections: completeSelections }, derived: deriveCharacter({ ...draft, selections: completeSelections }) },
     })
     expect(complete.text()).not.toContain('待补全')
+  })
+
+  it('缺口只来自非起始职业时仍显示待补全徽标（D32 兼职口径）', () => {
+    const multiclassDraft: CharacterDraft = {
+      ...draft,
+      targetLevel: 5,
+      subclassId: 'subclass-2014-fighter-battle-master',
+      selections: completeSelections,
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-fighter',
+        classes: [
+          { classId: 'class-2014-fighter', level: 4, subclassId: 'subclass-2014-fighter-battle-master' },
+          { classId: 'class-2014-rogue', level: 1 },
+        ],
+        levelOrder: [
+          'class-2014-fighter',
+          'class-2014-fighter',
+          'class-2014-fighter',
+          'class-2014-fighter',
+          'class-2014-rogue',
+        ],
+      },
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: multiclassDraft, derived: deriveCharacter(multiclassDraft) },
+    })
+
+    // 起始职业（战士 4 级）的检查点全部完成且无失效选择，
+    // 缺口只来自新增的游荡者 1 级（4 项技能 + 2 项专精）——按单职业口径会漏报。
+    expect(wrapper.text()).toContain('待补全')
   })
 })
 
@@ -1109,6 +1141,47 @@ describe('CharacterSheetStep 事件绑定契约', () => {
     const value = wrapper.emitted('spells')![0][0] as SpellSelections
     expect(value.preparedSpellIds).not.toContain('spell-2014-bless')
     expect(value.preparedSpellIds).toContain('spell-2014-healing-word')
+  })
+
+  it('带残留分桶的单职业卡：准备/取消准备写入读取真正使用的那份数据（分桶同步）', async () => {
+    const Parent = defineComponent({
+      components: { CharacterSheetStep },
+      props: { draft: { type: Object, required: true } },
+      emits: ['spells'],
+      template: '<CharacterSheetStep :draft="draft" :derived="derived" @change-spell-selections="$emit(\'spells\', $event)" />',
+      setup(props) {
+        return { derived: deriveCharacter(props.draft as CharacterDraft) }
+      },
+    })
+    // 模拟 v10 迁移后的历史形态：单职业 + 该职业的残留分桶（读取优先分桶）
+    const clericDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-cleric',
+      targetLevel: 3,
+      spellSelections: {
+        ...draft.spellSelections,
+        preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word'],
+        classSpellSelections: [{
+          classId: 'class-2014-cleric',
+          cantripIds: [],
+          knownSpellIds: [],
+          preparedSpellIds: ['spell-2014-bless', 'spell-2014-healing-word'],
+          spellbookSpellIds: [],
+        }],
+      },
+    }
+    const wrapper = mount(Parent, { props: { draft: clericDraft } })
+    await wrapper.get('[role="tab"]:nth-child(4)').trigger('click')
+
+    const blessCard = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('祝福术'))
+    expect(blessCard).toBeTruthy()
+    await blessCard!.find('button.character-sheet__spell-action').trigger('click')
+
+    const value = wrapper.emitted('spells')![0][0] as SpellSelections
+    const applied: CharacterDraft = { ...clericDraft, spellSelections: value }
+    // 按读取口径取值必须真的变化（修复前写顶层、读分桶 → 看不见效果）
+    expect(getClassSpellSelections(applied, 'class-2014-cleric').preparedSpellIds).not.toContain('spell-2014-bless')
+    expect(getClassSpellSelections(applied, 'class-2014-cleric').preparedSpellIds).toContain('spell-2014-healing-word')
   })
 })
 

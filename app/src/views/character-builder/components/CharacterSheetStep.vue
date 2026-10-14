@@ -20,11 +20,14 @@ import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, formatFeatGrantSource, getCheckpointSelectionBounds, getFeatStructuredEffectLabels, manualFeatParentCheckpointId, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { getClassEntries, getClassLevel, getPrimaryClassId, getTotalLevel } from '@/rules/multiclass'
+import { getClassLevelLabel } from '@/rules/multiclass-session'
+import { getCantripScalingAtLevel, getClassSpellcastingProfiles } from '@/rules/spellcasting'
 import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
-import { getAlwaysPreparedSpellIds, getAvailableSpells, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSpellCandidates, getSpeciesSpellcastingProfiles, getSpellcastingConfig, groupSpellsByLevel } from '@/rules/spellcasting'
-import { buildTimeline } from '@/rules/timeline'
+import { getAlwaysPreparedSpellIds, getAvailableSpells, getClassSpellSelections, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMaximumSpellLevel, getMagicalSecretsSpellIds, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSpellCandidates, getSpeciesSpellcastingProfiles, getSpellcastingConfig, groupSpellsByLevel, applyClassSpellSelections } from '@/rules/spellcasting'
+import { buildTimeline, buildTimelineForDraft } from '@/rules/timeline'
 import { useCharacterSheetEditing } from '@/views/character-builder/hooks/useCharacterSheetEditing'
 import type { AbilityKey, CharacterDraft, CharacterManualEdits, CharacterMedia, ChoiceSelection, DerivedCharacter, InventoryEntry, ManualAddedSpell, ManualFeatGrant, SpellSelections } from '@/types/character'
 import type { ClassFeature, SpellRule } from '@/types/rules'
@@ -106,27 +109,52 @@ function abilityLabel(key: string): string {
 function skillLabel(skillId: string): string {
   return getRulesRepository(props.draft.ruleset).getOption(skillId)?.name ?? skillId
 }
-function sourceNote(sources: DerivedCharacter['armorClass']['sources']): string {
-  return sources.map((source) => `${source.label} ${source.value >= 0 ? '+' : ''}${source.value}`).join(' · ')
+/**
+ * 数值来源明细（D26）：逐条返回「来源名 ±数值」，并在有来源说明时附上（如「战士 d10 最大值 + 体质调整值」）。
+ * 说明区显示与明细弹窗共用这一份数组（R9），不再单独拼一份字符串。
+ *
+ * TODO(detail-list-overflow)：生命值来源是**逐级一条**（1 级 + 第 2…N 级 + 加成），20 级角色会产生 20+ 条，
+ * 明细弹窗因此很长（用户 2026-10-12 决定本轮不处理）。后续若做分组/折叠，从这里或 `StatNote` 入手；
+ * 记录见 docs/需求文档/界面优化-时间线徽章与数值说明截断-更新任务.md §6.5 第 2 条。
+ */
+function sourceDetails(sources: DerivedCharacter['armorClass']['sources']): string[] {
+  return sources.map((source) => {
+    const base = `${source.label} ${source.value >= 0 ? '+' : ''}${source.value}`
+    return source.detail ? `${base} · ${source.detail}` : base
+  })
 }
 function abilityNote(key: AbilityKey): string {
   const modifier = props.derived.modifiers[key]
   const adjustment = editing.manual.value.abilityAdjustments[key]
   return `调整值 ${modifier >= 0 ? '+' : ''}${modifier}${adjustment ? ` · 人工调整 ${adjustment >= 0 ? '+' : ''}${adjustment}` : ''}`
 }
+/**
+ * 职业展示（MC-E03／MC-E05）：格式统一由 `getClassLevelLabel` 定义，与草稿列表、跑团助手、导出同一实现。
+ * 单职业为「战士5」；兼职为「战士3 / 游荡者2（5 级角色）」。
+ */
+const classLevelLabel = computed(() => getClassLevelLabel(props.draft, repository.value))
 const identityLine = computed(() => {
   const draft = props.draft
+  const entries = getClassEntries(draft)
+  const subclassNames = entries
+    .map((entry) => (entry.subclassId ? repository.value.getSubclass(entry.subclassId)?.name : undefined))
+    .filter((name): name is string => Boolean(name))
   const names = [
-    draft.classId ? repository.value.getClass(draft.classId)?.name : undefined,
-    draft.subclassId ? repository.value.getSubclass(draft.subclassId)?.name : undefined,
+    ...subclassNames,
     draft.raceId ? repository.value.getRace(draft.raceId)?.name : undefined,
     draft.subraceId ? repository.value.getRace(draft.subraceId)?.name : undefined,
     draft.backgroundId ? repository.value.getBackground(draft.backgroundId)?.name : undefined,
     draft.backgroundVariantId ? repository.value.getBackground(draft.backgroundVariantId)?.name : undefined,
   ].filter(Boolean)
-  return `${draft.targetLevel}级 · ${names.join(' · ')}`
+  return `${classLevelLabel.value} · ${names.join(' · ')}`.replace(/ · $/, '')
 })
 const spellcastingConfig = computed(() => getSpellcastingConfig(props.draft))
+/**
+ * 角色卡展示的施法作用域数据（起始职业）：读取口径与法术步骤、跑团助手一致
+ * （有分桶读分桶，单职业读顶层）。原先这里直接读顶层数组，遇到「单职业 + 迁移产生的分桶」
+ * 的草稿会与法术步骤显示不同的一份数据，准备/取消准备也写不进读取所用的那一份。
+ */
+const spellScopeSelections = computed(() => getClassSpellSelections(props.draft, props.draft.classId ?? ''))
 const speciesSpellcastingProfiles = computed(() => getSpeciesSpellcastingProfiles(props.draft, props.derived))
 const spellSlots = computed(() => getEffectiveSpellSlots(props.draft))
 const editableSpellSlots = computed(() => Array.from({ length: 9 }, (_, index) => ({
@@ -135,17 +163,42 @@ const editableSpellSlots = computed(() => Array.from({ length: 9 }, (_, index) =
 })))
 const spellSlotsLabel = computed(() => {
   if (!spellSlots.value.length) return ''
-  if (spellSlots.value[0]?.pact) {
-    const slot = spellSlots.value[0]
-    return `契约法术位：${slot.count} 个 ${slot.level} 环（短休恢复）`
-  }
-  return spellSlots.value.map((slot) => `${slot.level}环×${slot.count}`).join(' · ')
+  // 兼职可能同时存在通用池与契约池（MC-D02）：两池分别展示，不能只显示第一个。
+  const parts = spellSlots.value.map((slot) => slot.pact
+    ? `契约：${slot.count} 个 ${slot.level} 环（短休恢复）`
+    : `${slot.level}环×${slot.count}`)
+  const hasPact = spellSlots.value.some((slot) => slot.pact)
+  return hasPact ? `法术位 ${parts.join(' · ')}` : parts.join(' · ')
 })
 const manualSpellIds = computed(() => new Set(editing.manual.value.addedSpells.map((item) => item.spellId)))
+/**
+ * 每职业施法属性（MC-D02）：兼职时每个施法职业各自给出法术攻击／DC 与最高环级。
+ * 单职业只有一行，与顶部「法术攻击／法术豁免 DC」重复，因此界面只在兼职时展示。
+ */
+const classSpellcastingProfiles = computed(() => getClassSpellcastingProfiles(props.draft))
 const cantripSpells = computed(() => getEffectiveSelectedSpellIds(props.draft)
   .filter((id) => !manualSpellIds.value.has(id))
   .map((id) => repository.value.getSpell(id))
   .filter((spell): spell is SpellRule => Boolean(spell) && spell?.level === 0))
+
+/**
+ * 戏法成长标注（MC-E03 接入 MC-D05）：按**角色总等级**给出当前生效的成长值。
+ * 未登记成长规则的戏法不显示成长行（决策 D12），也不写「无成长」。
+ */
+const totalLevel = computed(() => getTotalLevel(props.draft) || props.draft.targetLevel)
+const cantripScalingNotes = computed(() => new Map(
+  cantripSpells.value.flatMap((spell) => {
+    const scaling = getCantripScalingAtLevel(props.draft.ruleset, spell.id, totalLevel.value)
+    if (!scaling || scaling.isBase) return []
+    const parts = [
+      scaling.dice ? `当前 ${scaling.dice}` : '',
+      scaling.count !== undefined ? `当前 ${scaling.count} 道` : '',
+      scaling.die ? `当前 ${scaling.die}` : '',
+      scaling.note ?? '',
+    ].filter(Boolean)
+    return parts.length > 0 ? [[spell.id, `按角色总等级 ${totalLevel.value} 级：${parts.join('；')}`] as const] : []
+  }),
+))
 const preparedOrKnownSpells = computed(() => {
   return getEffectiveSelectedSpellIds(props.draft)
     .filter((id) => !manualSpellIds.value.has(id))
@@ -156,10 +209,10 @@ const manualAddedSpells = computed(() => editing.manual.value.addedSpells
   .map((entry) => ({ entry, spell: repository.value.getSpell(entry.spellId) }))
   .filter((item): item is { entry: ManualAddedSpell; spell: SpellRule } => Boolean(item.spell)))
 const existingSpellIds = computed(() => [...new Set([
-  ...props.draft.spellSelections.cantripIds,
-  ...props.draft.spellSelections.knownSpellIds,
-  ...props.draft.spellSelections.preparedSpellIds,
-  ...props.draft.spellSelections.spellbookSpellIds,
+  ...spellScopeSelections.value.cantripIds,
+  ...spellScopeSelections.value.knownSpellIds,
+  ...spellScopeSelections.value.preparedSpellIds,
+  ...spellScopeSelections.value.spellbookSpellIds,
   ...getMagicalSecretsSpellIds(props.draft),
   ...getAlwaysPreparedSpellIds(props.draft),
   ...editing.manual.value.addedSpells.map((item) => item.spellId),
@@ -167,7 +220,7 @@ const existingSpellIds = computed(() => [...new Set([
 const showManualSpellModal = ref(false)
 const spellbookSpells = computed(() => {
   if (spellcastingConfig.value?.mode !== 'spellbook') return []
-  return props.draft.spellSelections.spellbookSpellIds
+  return spellScopeSelections.value.spellbookSpellIds
     .filter((id) => !manualSpellIds.value.has(id))
     .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
@@ -175,10 +228,10 @@ const spellbookSpells = computed(() => {
 const requiredCantripCount = computed(() => (spellcastingConfig.value ? getRequiredCantripCount(props.draft, spellcastingConfig.value) : 0))
 const requiredSpellCount = computed(() => (spellcastingConfig.value ? getRequiredSpellCount(props.draft, spellcastingConfig.value) : 0))
 const requiredSpellbookCount = computed(() => (spellcastingConfig.value ? getRequiredSpellbookCount(props.draft, spellcastingConfig.value) : 0))
-const spellbookExtraIds = computed(() => props.draft.spellSelections.spellbookExtraSpellIds ?? [])
+const spellbookExtraIds = computed(() => spellScopeSelections.value.spellbookExtraSpellIds ?? [])
 /** 升级名额内的法术数：排除抄录与子职额外入书。 */
-const normalSpellbookCount = computed(() => props.draft.spellSelections.spellbookSpellIds
-  .filter((id) => !props.draft.spellSelections.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
+const normalSpellbookCount = computed(() => spellScopeSelections.value.spellbookSpellIds
+  .filter((id) => !spellScopeSelections.value.transcribedSpellIds.includes(id) && !spellbookExtraIds.value.includes(id)).length)
 /** 已准备 / 已掌握法术按环级分组（戏法由 cantripSpells 单独展示）。 */
 const spellGroups = computed(() => {
   return groupSpellsByLevel(preparedOrKnownSpells.value, props.draft.ruleset)
@@ -225,7 +278,7 @@ const preparedCandidateGroups = computed(() => {
 const allPreparedSpells = computed(() => {
   const config = spellcastingConfig.value
   if (!config || config.mode !== 'prepared') return []
-  const knownCantrips = props.draft.spellSelections.cantripIds
+  const knownCantrips = spellScopeSelections.value.cantripIds
     .map((id) => repository.value.getSpell(id))
     .filter((spell): spell is SpellRule => Boolean(spell))
   const leveled = getAvailableSpells(props.draft, config).filter((spell) => spell.level > 0)
@@ -248,18 +301,22 @@ const hasSpellContent = computed(() => hasSelectedSpells.value || hasCandidates.
 /** 仅 prepared / spellbook 模式支持在角色卡切换准备（2014 规则长休可换）。 */
 const canTogglePrepared = computed(() => spellcastingConfig.value?.mode === 'prepared' || spellcastingConfig.value?.mode === 'spellbook')
 /** 已准备数量是否未达上限（决定候选项是否可准备）。 */
-const canPrepareMore = computed(() => props.draft.spellSelections.preparedSpellIds.length < requiredSpellCount.value)
+const canPrepareMore = computed(() => spellScopeSelections.value.preparedSpellIds.length < requiredSpellCount.value)
 /** 点击切换准备状态：已准备项取消准备；候选项在未满时加入准备。 */
 function togglePrepare(id: string): void {
   if (!canTogglePrepared.value) return
-  const current = props.draft.spellSelections.preparedSpellIds
+  const current = spellScopeSelections.value.preparedSpellIds
   const next = current.includes(id)
     ? current.filter((spellId) => spellId !== id)
     : canPrepareMore.value
       ? [...current, id]
       : current
   if (next === current) return
-  emit('changeSpellSelections', { ...props.draft.spellSelections, preparedSpellIds: next })
+  // 写回与读取同一份数据（规则层判定分桶/顶层），避免「界面读分桶、写入落顶层」而看不到效果。
+  emit('changeSpellSelections', applyClassSpellSelections(props.draft, props.draft.classId ?? '', {
+    ...spellScopeSelections.value,
+    preparedSpellIds: next,
+  }))
 }
 /** 抄录法术书（仅 spellbook 模式）：弹层开关与可选预选法术。 */
 const showTranscribeModal = ref(false)
@@ -270,7 +327,7 @@ function openTranscribe(spellId?: string): void {
 }
 /** 法术是否通过抄录获得（展示"抄录"徽标与来源）。 */
 function isTranscribedSpell(id: string): boolean {
-  return props.draft.spellSelections.transcribedSpellIds.includes(id)
+  return spellScopeSelections.value.transcribedSpellIds.includes(id)
 }
 const hasSelectedSpells = computed(() => cantripSpells.value.length > 0 || preparedOrKnownSpells.value.length > 0 || spellbookSpells.value.length > 0 || magicalSecretsSpells.value.length > 0)
 
@@ -292,10 +349,10 @@ function manualSpellDestinationLabel(entry: ManualAddedSpell): string {
 }
 
 function isAlsoNormallyAcquired(spellId: string): boolean {
-  return props.draft.spellSelections.cantripIds.includes(spellId)
-    || props.draft.spellSelections.knownSpellIds.includes(spellId)
-    || props.draft.spellSelections.preparedSpellIds.includes(spellId)
-    || props.draft.spellSelections.spellbookSpellIds.includes(spellId)
+  return spellScopeSelections.value.cantripIds.includes(spellId)
+    || spellScopeSelections.value.knownSpellIds.includes(spellId)
+    || spellScopeSelections.value.preparedSpellIds.includes(spellId)
+    || spellScopeSelections.value.spellbookSpellIds.includes(spellId)
     || getMagicalSecretsSpellIds(props.draft).includes(spellId)
     || getAlwaysPreparedSpellIds(props.draft).includes(spellId)
 }
@@ -304,6 +361,8 @@ function isAlsoNormallyAcquired(spellId: string): boolean {
 const selectedOptionEntries = computed(() => {
   const draft = props.draft
   if (!draft.classId) return []
+  // TODO(multiclass-timeline-scope): 本处、`featureChoiceLabel()` 与 `featAndAsiEntries()` 仍按
+  // 「单职业 + 总等级」展开时间线（需求 §7.3），兼职时职业级检查点会按总等级判定，待单独批次复核。
   const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
   const choiceCheckpointIds = [
     ...(classInfo.value?.features ?? []).flatMap((feature) => feature.checkpointIds ?? []),
@@ -372,7 +431,7 @@ function featureChoiceLabel(feature: ClassFeature): string {
   return total === 0 ? '需选择' : done >= total ? `已选择 ${total} 项` : `需选择 ${done}/${total}`
 }
 function isPreparedSpell(id: string): boolean {
-  return props.draft.spellSelections.preparedSpellIds.includes(id)
+  return spellScopeSelections.value.preparedSpellIds.includes(id)
 }
 /** 物品页签：已装备（equippedQuantity > 0）与全部物品栏条目。 */
 const equippedEntries = computed(() => props.draft.inventory.filter((entry) => entry.equippedQuantity > 0))
@@ -461,10 +520,30 @@ const classInfo = computed(() => {
   if (!classId) return undefined
   const classRule = getRulesRepository(props.draft.ruleset).getClass(classId)
   if (!classRule) return undefined
-  // 角色卡只展示当前等级已解锁的特性（更高等级的特性不显示）。
+  // 角色卡只展示**该职业自己的等级**已解锁的特性（更高等级的特性不显示）。
+  const classLevel = getClassLevel(props.draft, classId) || props.draft.targetLevel
   const features = (classRule.features ?? [])
-    .filter((feature) => feature.level <= props.draft.targetLevel)
+    .filter((feature) => feature.level <= classLevel)
   return { classRule, features }
+})
+
+/** 多职业时的逐职业信息（MC-E03）：每个职业各自显示等级、子职与已解锁特性。 */
+const classInfos = computed(() => {
+  const repository = getRulesRepository(props.draft.ruleset)
+  return getClassEntries(props.draft).flatMap((entry) => {
+    const classRule = repository.getClass(entry.classId)
+    if (!classRule) return []
+    const subclass = entry.subclassId ? repository.getSubclass(entry.subclassId) : undefined
+    return [{
+      classId: entry.classId,
+      classLevel: entry.level,
+      classRule,
+      subclass,
+      isPrimary: entry.classId === getPrimaryClassId(props.draft),
+      features: (classRule.features ?? []).filter((feature) => feature.level <= entry.level),
+      subclassFeatures: (subclass?.features ?? []).filter((feature) => feature.level <= entry.level),
+    }]
+  })
 })
 /**
  * 专长与属性提升条目（H3）：生效专长与规则层 `listFeatGrants` 同源，
@@ -626,12 +705,17 @@ const backgroundInfo = computed(() => {
   const features = getRulesRepository(props.draft.ruleset).getBackgroundFeatures(ownerId)
   return { background, features }
 })
-/** 存在失效选择或未完成的时间线检查点时，角色卡标记为"待补全"。 */
+/**
+ * 存在失效选择或未完成的时间线检查点时，角色卡标记为"待补全"。
+ *
+ * 兼职口径（需求 §5，决策 D32）：用 `buildTimelineForDraft` 与「重新编辑」「最终校验」同源，
+ * 否则缺口只来自非起始职业时（例如战士4/游荡者1 缺游荡者技能）徽标会漏报。
+ */
 const needsReview = computed(() => {
   const draft = props.draft
   const hasInvalidated = draft.selections.some((item) => Boolean(item.invalidatedAt))
   if (!draft.classId) return hasInvalidated
-  const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+  const timeline = buildTimelineForDraft(props.draft)
   const incomplete = timeline.some((checkpoint) => {
     const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
     return (selection?.optionIds.length ?? 0) < checkpoint.minSelections
@@ -658,7 +742,7 @@ function handleExportPdf(): void {
 <template>
   <section class="character-sheet">
     <UiNotice v-if="draft.ruleset === '5e-2024'" tone="info" title="2024 支持">
-      2024 车卡、跑团资源结算与导出已可用；魔法物品为自由添加、仅索引条目不可加入；生物／召唤数据与多职业不在本轮。
+      2024 车卡、跑团资源结算与导出已可用；魔法物品为自由添加、仅索引条目不可加入；兼职（多职业）已支持，生物／召唤数据不在本轮。
     </UiNotice>
     <header :class="{ 'character-sheet__header--media': draft.media?.avatar || draft.media?.portrait }">
       <div class="character-sheet__header-content" :class="{ 'character-sheet__header-content--portrait': draft.media?.portrait }">
@@ -696,23 +780,23 @@ function handleExportPdf(): void {
       {{ issue.message }} {{ issue.resolution }}
     </UiNotice>
     <div v-if="activeTab === 'overview'" class="character-sheet__stats">
-      <EditableStatTile label="护甲等级" :value="derived.armorClass.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.armorClass.sources)" @commit="editing.commitDerived('armorClass', $event)" />
-      <EditableStatTile label="最大生命值" :value="derived.hitPoints.value" :minimum="1" :edit-mode="editing.editMode.value" :note="sourceNote(derived.hitPoints.sources)" @commit="editing.commitDerived('hitPoints', $event)" />
-      <EditableStatTile label="先攻" :value="derived.initiative.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.initiative.sources)" @commit="editing.commitDerived('initiative', $event)" />
-      <EditableStatTile label="速度" :value="derived.speed.value" :minimum="0" suffix="尺" :edit-mode="editing.editMode.value" :note="sourceNote(derived.speed.sources)" @commit="editing.commitDerived('speed', $event)" />
-      <EditableStatTile label="熟练加值" :value="derived.proficiencyBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.proficiencyBonus.sources)" @commit="editing.commitProficiency" />
-      <EditableStatTile v-for="(value, key) in derived.abilities" :key="key" :label="abilityLabel(String(key))" :value="value" :minimum="1" :edit-mode="editing.editMode.value" :note="abilityNote(key)" @commit="editing.commitAbility(key, $event)" />
+      <EditableStatTile label="护甲等级" :value="derived.armorClass.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.armorClass.sources)" @commit="editing.commitDerived('armorClass', $event)" />
+      <EditableStatTile label="最大生命值" :value="derived.hitPoints.value" :minimum="1" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.hitPoints.sources)" @commit="editing.commitDerived('hitPoints', $event)" />
+      <EditableStatTile label="先攻" :value="derived.initiative.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.initiative.sources)" @commit="editing.commitDerived('initiative', $event)" />
+      <EditableStatTile label="速度" :value="derived.speed.value" :minimum="0" suffix="尺" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.speed.sources)" @commit="editing.commitDerived('speed', $event)" />
+      <EditableStatTile label="熟练加值" :value="derived.proficiencyBonus.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.proficiencyBonus.sources)" @commit="editing.commitProficiency" />
+      <EditableStatTile v-for="(value, key) in derived.abilities" :key="key" :label="abilityLabel(String(key))" :value="value" :minimum="1" :edit-mode="editing.editMode.value" :details="[abilityNote(key)]" @commit="editing.commitAbility(key, $event)" />
     </div>
     <div v-else-if="activeTab === 'combat'" class="character-sheet__panel">
       <h3>主要武器</h3>
       <div class="character-sheet__combat-stats">
-        <EditableStatTile label="武器命中加值" :value="derived.attackBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.attackBonus.sources)" @commit="editing.commitDerived('attackBonus', $event)" />
-        <EditableStatTile label="武器伤害加值" :value="derived.attackDamageBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.attackDamageBonus.sources)" @commit="editing.commitDerived('attackDamageBonus', $event)" />
+        <EditableStatTile label="武器命中加值" :value="derived.attackBonus.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.attackBonus.sources)" @commit="editing.commitDerived('attackBonus', $event)" />
+        <EditableStatTile label="武器伤害加值" :value="derived.attackDamageBonus.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.attackDamageBonus.sources)" @commit="editing.commitDerived('attackDamageBonus', $event)" />
       </div>
       <h3>使用灵巧武器</h3>
       <div class="character-sheet__combat-stats">
-        <EditableStatTile label="武器命中加值" :value="derived.dexterityAttackBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.dexterityAttackBonus.sources)" @commit="editing.commitDerived('dexterityAttackBonus', $event)" />
-        <EditableStatTile label="武器伤害加值" :value="derived.dexterityAttackDamageBonus.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.dexterityAttackDamageBonus.sources)" @commit="editing.commitDerived('dexterityAttackDamageBonus', $event)" />
+        <EditableStatTile label="武器命中加值" :value="derived.dexterityAttackBonus.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.dexterityAttackBonus.sources)" @commit="editing.commitDerived('dexterityAttackBonus', $event)" />
+        <EditableStatTile label="武器伤害加值" :value="derived.dexterityAttackDamageBonus.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.dexterityAttackDamageBonus.sources)" @commit="editing.commitDerived('dexterityAttackDamageBonus', $event)" />
       </div>
     </div>
     <div v-else-if="activeTab === 'features'" class="character-sheet__derived">
@@ -725,7 +809,7 @@ function handleExportPdf(): void {
             :label="abilityLabel(String(key))"
             :value="value.value"
             :edit-mode="editing.editMode.value"
-            :note="sourceNote(value.sources)"
+            :details="sourceDetails(value.sources)"
             @commit="editing.commitSavingThrow(key, $event)"
           />
         </div>
@@ -739,25 +823,34 @@ function handleExportPdf(): void {
             :label="skillLabel(String(key))"
             :value="value.value"
             :edit-mode="editing.editMode.value"
-            :note="sourceNote(value.sources)"
+            :details="sourceDetails(value.sources)"
             @commit="editing.commitSkill(String(key), $event)"
           />
         </div>
       </section>
       <section>
         <h3>被动察觉</h3>
-        <div><EditableStatTile label="被动察觉" :value="derived.passivePerception.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.passivePerception.sources)" @commit="editing.commitDerived('passivePerception', $event)" /></div>
+        <div><EditableStatTile label="被动察觉" :value="derived.passivePerception.value" :edit-mode="editing.editMode.value" :details="sourceDetails(derived.passivePerception.sources)" @commit="editing.commitDerived('passivePerception', $event)" /></div>
       </section>
-      <section v-if="classInfo">
-        <section v-if="classInfo.features.length" class="character-sheet__subclass-features">
+      <!-- 职业特性（MC-E03）：兼职时按职业分区，每个职业只显示**该职业等级**已解锁的特性 -->
+      <section v-if="classInfos.length">
+        <section
+          v-for="info in classInfos"
+          :key="info.classId"
+          v-show="info.features.length"
+          class="character-sheet__subclass-features"
+        >
           <header class="character-sheet__subclass-features-header">
-            <h3>职业特性 · {{ classInfo.classRule.name }}</h3>
-            <span v-if="classInfo.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
-            <span v-else-if="classInfo.features.some((feature) => feature.status === 'selectable')" class="character-sheet__subclass-features-note">可选择 · 情境效果按摘要处理</span>
+            <h3>
+              职业特性 · {{ info.classRule.name }}{{ info.classLevel }} 级
+              <template v-if="info.isPrimary">（起始职业）</template>
+            </h3>
+            <span v-if="info.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
+            <span v-else-if="info.features.some((feature) => feature.status === 'selectable')" class="character-sheet__subclass-features-note">可选择 · 情境效果按摘要处理</span>
           </header>
           <ListShell>
             <ExpandableOptionCard
-              v-for="feature in classInfo.features"
+              v-for="feature in info.features"
               :key="feature.id"
               :title="feature.name"
               :description="`${feature.level}级 · ${feature.englishName}`"
@@ -772,18 +865,19 @@ function handleExportPdf(): void {
             </ExpandableOptionCard>
           </ListShell>
         </section>
-        <p v-else class="character-sheet__empty-features">该职业在当前等级暂无已登记特性。</p>
+        <p v-if="!classInfos.some((info) => info.features.length)" class="character-sheet__empty-features">该职业在当前等级暂无已登记特性。</p>
       </section>
-      <template v-if="subclassInfo">
-        <section v-if="subclassInfo.features.length" class="character-sheet__subclass-features">
+      <!-- 子职特性（MC-E03）：兼职时每个职业各自展示自己的子职 -->
+      <template v-for="info in classInfos.filter((item) => item.subclass)" :key="`subclass-${info.classId}`">
+        <section v-if="info.subclassFeatures.length" class="character-sheet__subclass-features">
           <header class="character-sheet__subclass-features-header">
-            <h3>子职特性 · {{ subclassInfo.subclass.name }}</h3>
-            <span v-if="subclassInfo.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
-            <span v-else-if="subclassInfo.features.some((feature) => feature.status === 'selectable')" class="character-sheet__subclass-features-note">可选择 · 情境效果按摘要处理</span>
+            <h3>子职特性 · {{ info.subclass?.name }}（{{ info.classRule.name }}{{ info.classLevel }} 级）</h3>
+            <span v-if="info.subclassFeatures.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
+            <span v-else-if="info.subclassFeatures.some((feature) => feature.status === 'selectable')" class="character-sheet__subclass-features-note">可选择 · 情境效果按摘要处理</span>
           </header>
           <ListShell>
             <ExpandableOptionCard
-              v-for="feature in subclassInfo.features"
+              v-for="feature in info.subclassFeatures"
               :key="feature.id"
               :title="feature.name"
               :description="`${feature.level}级 · ${feature.englishName}`"
@@ -798,7 +892,7 @@ function handleExportPdf(): void {
         </section>
         <p v-else class="character-sheet__empty-features">该子职在当前等级暂无已登记特性。</p>
       </template>
-      <p v-else class="character-sheet__empty-features">尚未选择子职，完成时间线步骤后这里会展示子职特性。</p>
+      <p v-if="!classInfos.some((info) => info.subclass)" class="character-sheet__empty-features">尚未选择子职，完成时间线步骤后这里会展示子职特性。</p>
       <template v-if="raceInfo">
         <section v-if="raceInfo.features.length" class="character-sheet__subclass-features">
           <header class="character-sheet__subclass-features-header">
@@ -901,10 +995,18 @@ function handleExportPdf(): void {
     </div>
     <div v-else-if="activeTab === 'spells'" class="character-sheet__spells">
       <div class="character-sheet__spell-stats">
-        <EditableStatTile label="法术攻击" :value="derived.spellAttackBonus?.value ?? 0" :edit-mode="editing.editMode.value" :note="derived.spellAttackBonus ? sourceNote(derived.spellAttackBonus.sources) : '当前职业无施法能力'" @commit="editing.commitDerived('spellAttackBonus', $event)" />
-        <EditableStatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? 0" :minimum="0" :edit-mode="editing.editMode.value" :note="derived.spellSaveDc ? sourceNote(derived.spellSaveDc.sources) : '当前职业无施法能力'" @commit="editing.commitDerived('spellSaveDc', $event)" />
+        <EditableStatTile label="法术攻击" :value="derived.spellAttackBonus?.value ?? 0" :edit-mode="editing.editMode.value" :details="derived.spellAttackBonus ? sourceDetails(derived.spellAttackBonus.sources) : ['当前职业无施法能力']" @commit="editing.commitDerived('spellAttackBonus', $event)" />
+        <EditableStatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? 0" :minimum="0" :edit-mode="editing.editMode.value" :details="derived.spellSaveDc ? sourceDetails(derived.spellSaveDc.sources) : ['当前职业无施法能力']" @commit="editing.commitDerived('spellSaveDc', $event)" />
       </div>
       <p v-if="spellSlots.length && !editing.editMode.value" class="character-sheet__spell-slots">法术位：{{ spellSlotsLabel }}</p>
+      <!-- 每职业施法属性（MC-D02）：兼职时法术攻击／DC 按归属职业分别给出 -->
+      <section v-if="classSpellcastingProfiles.length > 1" class="character-sheet__spell-section">
+        <h4>各职业施法属性</h4>
+        <p v-for="profile in classSpellcastingProfiles" :key="profile.classId">
+          {{ profile.className }}{{ profile.classLevel }} 级 · {{ abilityLabel(profile.ability) }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }} · 最高 {{ profile.maxSpellLevel }} 环
+          <template v-if="profile.pact"><br>契约魔法：法术位按{{ profile.className }}自身等级单独结算（短休恢复）。</template>
+        </p>
+      </section>
       <section v-if="speciesSpellcastingProfiles.length" class="character-sheet__spell-section">
         <h4>种族施法</h4>
         <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
@@ -937,14 +1039,14 @@ function handleExportPdf(): void {
       </section>
       <template v-if="hasSpellContent">
         <section v-if="cantripSpells.length" class="character-sheet__spell-section">
-          <h4>戏法 · {{ spellcastingConfig ? draft.spellSelections.cantripIds.length : cantripSpells.length }}<template v-if="spellcastingConfig"> / {{ requiredCantripCount }}</template></h4>
+          <h4>戏法 · {{ spellcastingConfig ? spellScopeSelections.cantripIds.length : cantripSpells.length }}<template v-if="spellcastingConfig"> / {{ requiredCantripCount }}</template></h4>
           <ListShell>
             <ExpandableOptionCard
               v-for="spell in cantripSpells"
               expanded-label="法术效果"
               :key="spell.id"
               :title="spell.name"
-              :description="spell.englishName"
+              :description="cantripScalingNotes.get(spell.id) ?? spell.englishName"
             >
               <template v-if="spell.description" #expanded>{{ spell.description }}</template>
             </ExpandableOptionCard>
@@ -1053,7 +1155,7 @@ function handleExportPdf(): void {
         </section>
         <section v-if="spellbookSpells.length" class="character-sheet__spell-section">
           <div class="character-sheet__spell-section-header">
-            <h4>法术书 · {{ normalSpellbookCount }} / {{ requiredSpellbookCount }}{{ draft.spellSelections.transcribedSpellIds.length ? `（抄录 ${draft.spellSelections.transcribedSpellIds.length}）` : '' }}{{ spellbookExtraIds.length ? `（子职额外 ${spellbookExtraIds.length}）` : '' }}</h4>
+            <h4>法术书 · {{ normalSpellbookCount }} / {{ requiredSpellbookCount }}{{ spellScopeSelections.transcribedSpellIds.length ? `（抄录 ${spellScopeSelections.transcribedSpellIds.length}）` : '' }}{{ spellbookExtraIds.length ? `（子职额外 ${spellbookExtraIds.length}）` : '' }}</h4>
             <button v-if="spellcastingConfig?.mode === 'spellbook'" type="button" class="character-sheet__spell-action" aria-label="抄录法术书" @click="openTranscribe()">抄录法术</button>
           </div>
           <ListShell>

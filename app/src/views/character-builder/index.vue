@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import BaseButton from '@/components/ui/BaseButton.vue'
 import UiModal from '@/components/ui/UiModal.vue'
@@ -25,7 +25,7 @@ import ValidationStep from '@/views/character-builder/components/ValidationStep.
 import { useCharacterBuilderPage } from '@/views/character-builder/hooks/useCharacterBuilderPage'
 import type { SelectionTaskFocusHandle } from '@/views/character-builder/selection-task'
 import { hasBuildChoices } from '@/rules/draft-progress'
-import type { AbilityMethod, DraftStep } from '@/types/character'
+import type { AbilityMethod, CharacterDraft, DraftStep } from '@/types/character'
 
 const {
   drafts,
@@ -66,6 +66,9 @@ const {
   previousStep,
   setStep,
   updateSetup,
+  applyClassAllocation,
+  applyAllocationFromSetup: applyAllocationFromSetupAction,
+  applyTotalLevel: applyTotalLevelAction,
   updateSources,
   selectClass,
   selectRace,
@@ -97,9 +100,11 @@ const {
   exportLegacyDraft,
   confirmPendingChange,
   cancelPendingChange,
+  stagedAllocationDraft,
+  stagedLevelAdjust,
+  adjustStagedLevel,
   levelAdjustNotice,
   dismissLevelAdjustNotice,
-  adjustLevel,
   startReedit,
   updateDraft,
 } = useCharacterBuilderPage()
@@ -127,9 +132,24 @@ function closeLevelModal(): void {
   levelModalOpen.value = false
 }
 
-function confirmLevelAdjust(level: number): void {
-  levelModalOpen.value = false
-  adjustLevel(level)
+/**
+ * 步骤一旦离开角色卡就关闭「调整等级」弹窗。
+ *
+ * 该弹窗只在角色卡步骤发起，但它的遮罩是 `position: fixed; inset: 0`——如果跳转到目标步骤
+ * （自动跳转或点击引导条）后弹窗仍然挂载，遮罩会盖住目标步骤，用户点击法术／检查点会**被遮罩吃掉**
+ * （表现为「进入了步骤但点不动」，且第一次点击只是把弹窗关掉）。
+ */
+watch(step, (next) => {
+  if (next !== 'sheet') levelModalOpen.value = false
+})
+
+/**
+ * 角色卡弹窗提交分配（MC-E03；需求 §3，决策 D37／Q2）：与第 1／3 步共用同一份分配数据，
+ * 交给 `class-allocation` 待定流程；**不再关闭「调整等级」弹窗**——确认弹窗由层级机制保证在最上层，
+ * 确认后弹窗内直接显示新等级，便于连续调整。
+ */
+function applyAllocationFromSheet(nextDraft: CharacterDraft): void {
+  applyClassAllocation(nextDraft)
 }
 
 function goToLevelAdjustStep(): void {
@@ -141,6 +161,18 @@ function goToLevelAdjustStep(): void {
 
 function updateLevel(value: number): void {
   if (activeDraft.value) updateSetup(value, activeDraft.value.abilityMethod)
+}
+
+/** 第 1 步的分配控件提交（决策 D6）：与第 3 步共用同一份分配数据。 */
+function applyAllocationFromSetup(nextDraft: CharacterDraft): void {
+  if (!activeDraft.value) return
+  applyAllocationFromSetupAction(nextDraft, activeDraft.value.abilityMethod)
+}
+
+/** 第 1 步的总等级滑杆提交（需求 §3.4）：未选职业时只改目标等级。 */
+function applyTotalLevelFromSetup(nextDraft: CharacterDraft): void {
+  if (!activeDraft.value) return
+  applyTotalLevelAction(nextDraft, activeDraft.value.abilityMethod)
 }
 
 function updateMethod(value: AbilityMethod): void {
@@ -175,27 +207,37 @@ function updateMethod(value: AbilityMethod): void {
     </template>
 
     <UiNotice v-if="importError" tone="error" title="导入失败">{{ importError }}</UiNotice>
-    <div v-if="levelAdjustNotice" class="builder-level-notice" @click="goToLevelAdjustStep">
-      <UiNotice :tone="levelAdjustNotice.tone" :title="levelAdjustNotice.message">点击前往对应步骤处理。</UiNotice>
+    <div
+      v-if="levelAdjustNotice"
+      class="builder-level-notice"
+      :class="{ 'builder-level-notice--static': !levelAdjustNotice.step }"
+      @click="goToLevelAdjustStep"
+    >
+      <UiNotice :tone="levelAdjustNotice.tone" :title="levelAdjustNotice.message">{{ levelAdjustNotice.step ? '点击前往对应步骤处理。' : '' }}</UiNotice>
     </div>
     <SetupStep
       v-if="step === 'setup'"
-      :target-level="activeDraft.targetLevel"
+      :draft="activeDraft"
       :ability-method="activeDraft.abilityMethod"
       :ruleset="activeDraft.ruleset"
       :ruleset-locked="rulesetLocked"
       :ruleset-fallback="rulesetFallbackNotice"
       @level="updateLevel"
       @method="updateMethod"
+      @allocation="applyAllocationFromSetup"
+      @total-level="applyTotalLevelFromSetup"
       @ruleset="updateRuleset"
     />
     <SourcesStep v-else-if="step === 'sources'" :selected="activeDraft.enabledSourceIds" :ruleset="activeDraft.ruleset" @change="updateSources" />
     <ClassStep
       v-else-if="step === 'class'"
+      :draft="activeDraft"
       :selected="activeDraft.classId"
       :enabled-source-ids="activeDraft.enabledSourceIds"
       :ruleset="activeDraft.ruleset"
       @select="selectClass"
+      @allocation="applyClassAllocation"
+      @total-level="(next) => applyTotalLevelAction(next)"
     />
     <OriginStep
       v-else-if="step === 'origin'"
@@ -300,6 +342,31 @@ function updateMethod(value: AbilityMethod): void {
     :title="pendingChange?.title ?? '确认修改'"
     @close="cancelPendingChange"
   >
+    <section v-if="pendingChange?.summary?.length" class="builder-impact">
+      <h4>本次变更</h4>
+      <ul>
+        <li v-for="line in pendingChange.summary" :key="line">{{ line }}</li>
+      </ul>
+    </section>
+    <!-- 弹窗内继续 ±1（需求 §3.1.1，决策 D43）：连续调整共用一个待定变更，确认一次生效 -->
+    <section v-if="stagedLevelAdjust" class="builder-impact">
+      <h4>继续调整等级</h4>
+      <div class="builder-level-stepper">
+        <BaseButton
+          variant="secondary"
+          :disabled="stagedLevelAdjust.level <= stagedLevelAdjust.min"
+          aria-label="降一级"
+          @click="adjustStagedLevel(-1)"
+        >−</BaseButton>
+        <b>{{ stagedLevelAdjust.level }}级</b>
+        <BaseButton
+          variant="secondary"
+          :disabled="stagedLevelAdjust.level >= stagedLevelAdjust.max"
+          aria-label="升一级"
+          @click="adjustStagedLevel(1)"
+        >＋</BaseButton>
+      </div>
+    </section>
     <section v-if="pendingChange?.impact?.added?.length" class="builder-impact">
       <h4>待补全（新增检查点）</h4>
       <ul>
@@ -374,9 +441,10 @@ function updateMethod(value: AbilityMethod): void {
   <LevelAdjustModal
     v-if="levelModalOpen && activeDraft"
     :open="levelModalOpen"
-    :draft="activeDraft"
+    :draft="stagedAllocationDraft ?? activeDraft"
     @close="closeLevelModal"
-    @confirm="confirmLevelAdjust"
+    @apply="applyAllocationFromSheet"
+    @total-level="(next) => applyTotalLevelAction(next)"
   />
   <LineageTransformationModal :open="lineageTransformation.open.value" :target="lineageTransformation.target.value" :targets="lineageTransformation.targets.value" :retained="lineageTransformation.retained.value" :candidates="lineageTransformation.candidates.value" :preview="lineageTransformation.result.value.preview" :error="lineageTransformation.result.value.error" @close="lineageTransformation.close" @confirm="lineageTransformation.confirm" @target="lineageTransformation.target.value = $event" @toggle="lineageTransformation.toggle" />
 </template>
@@ -387,6 +455,20 @@ function updateMethod(value: AbilityMethod): void {
 
   :deep(.ui-notice) {
     border-color: var(--color-primary);
+  }
+
+  // 没有目标步骤的引导条不可点击（需求 §4.1，决策 D31）：不显示提示文案、不显示手型光标，
+  // 避免出现「写了『点击前往』但点了没反应」。
+  &--static {
+    cursor: default;
+
+    :deep(.ui-notice) {
+      border-color: var(--color-border);
+
+      p:empty {
+        display: none;
+      }
+    }
   }
 }
 
@@ -408,6 +490,21 @@ function updateMethod(value: AbilityMethod): void {
     color: var(--color-text-muted);
     font-size: 0.78rem;
     line-height: 1.6;
+  }
+}
+
+/* 确认弹窗内的等级续调（需求 §3.1.1，决策 D43） */
+.builder-level-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+
+  b {
+    min-width: 3rem;
+    color: var(--color-primary);
+    text-align: center;
+    font-size: 1.05rem;
   }
 }
 </style>

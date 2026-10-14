@@ -6,6 +6,7 @@ import {
 import { ABILITY_IMPROVEMENT_OPTION_IDS_2024 } from '@/rules/data/feats-2024'
 import { SKILL_IDS } from '@/rules/data/skill-ids'
 import { getRulesRepository } from '@/rules/repositories'
+import { getClassLevel, getTotalLevel } from '@/rules/multiclass'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, AbilityScores, CharacterDraft, ManualFeatGrant, RulesetId } from '@/types/character'
 import type { ArmorTraining, ChoiceCheckpoint, FeatCategory, FeatChoiceSpec, FeatRule, RulesRepository } from '@/types/rules'
@@ -554,17 +555,26 @@ export function classHasFightingStyle(
   return Boolean(classRule?.checkpoints.some((checkpoint) => checkpoint.kind === 'fighting-style' && checkpoint.level <= level))
 }
 
-/** 检查点动态选择数量：默认取 min/max；声明按熟练加值时取当前熟练加值。 */
+/**
+ * 检查点动态选择数量：默认取 min/max；声明按熟练加值时取当前熟练加值。
+ *
+ * 兼职口径（MC-B05）：
+ * - `selectionCountFrom: 'proficiency-bonus'` 按**角色总等级**的熟练加值（2014 与 2024 同）。
+ * - `selectionCountByLevel` 是**职业等级表**（如 2024 战士武器精通 3／4／5／6），
+ *   检查点带 `classId` 时取该职业等级，否则退回总等级（单职业草稿两者相等）。
+ */
 export function getCheckpointSelectionBounds(
   draft: CharacterDraft,
   checkpoint: ChoiceCheckpoint,
 ): { readonly min: number; readonly max: number } {
   if (checkpoint.selectionCountFrom === 'proficiency-bonus') {
-    const bonus = 2 + Math.floor((Math.max(1, draft.targetLevel) - 1) / 4)
+    const bonus = 2 + Math.floor((Math.max(1, getTotalLevel(draft) || draft.targetLevel) - 1) / 4)
     return { min: bonus, max: bonus }
   }
   if (checkpoint.selectionCountByLevel?.length) {
-    const level = Math.min(Math.max(1, Math.trunc(draft.targetLevel)), checkpoint.selectionCountByLevel.length)
+    const classLevel = checkpoint.classId ? getClassLevel(draft, checkpoint.classId) : 0
+    const effectiveLevel = classLevel > 0 ? classLevel : getTotalLevel(draft) || draft.targetLevel
+    const level = Math.min(Math.max(1, Math.trunc(effectiveLevel)), checkpoint.selectionCountByLevel.length)
     const count = Math.max(0, checkpoint.selectionCountByLevel[level - 1] ?? 0)
     return { min: count, max: count }
   }

@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
 
+import StatNote from '@/components/ui/StatNote.vue'
+
 const props = withDefaults(defineProps<{
   label: string
   value: number
+  /** 逐条来源说明（推荐）：弹窗按条列出，内联用 ` · ` 拼接后两行截断。 */
+  details?: readonly string[]
+  /** 兼容入口：单条说明原文。 */
   note?: string
   editMode: boolean
   minimum?: number
   suffix?: string
-}>(), { minimum: Number.NEGATIVE_INFINITY, suffix: '' })
+}>(), { minimum: Number.NEGATIVE_INFINITY, suffix: '', details: undefined, note: undefined })
 const emit = defineEmits<{ commit: [value: number] }>()
 
 const editing = ref(false)
@@ -85,7 +90,16 @@ watch(() => props.editMode, (enabled) => {
     >
     <strong v-else>{{ value }}{{ suffix }}</strong>
     <small v-if="error" class="editable-stat__error">{{ error }}</small>
-    <small v-else-if="note">{{ note }}</small>
+    <!-- 说明区（D23—D27）：两行截断；非编辑态被截断时双击/触屏双击/键盘看逐条明细。
+         编辑态传 interactive=false，避免与根节点的「双击编辑数值」冲突。 -->
+    <StatNote
+      v-else-if="details?.length || note"
+      :items="details"
+      :fallback="note"
+      :label="label"
+      :value="`${value}${suffix}`"
+      :interactive="!editMode"
+    />
     <small v-if="editMode && !editing" class="editable-stat__hint">双击编辑</small>
   </div>
 </template>

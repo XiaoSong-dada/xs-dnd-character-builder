@@ -1,4 +1,4 @@
-﻿import { getRulesRepository } from '@/rules/repositories'
+import { getRulesRepository } from '@/rules/repositories'
 import { deriveAbilities } from '@/rules/derive'
 import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
@@ -13,8 +13,8 @@ import {
 } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abilities'
 import { getFlexibleBonusGroups, getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
-import { buildTimeline } from '@/rules/timeline'
-import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellbookExtraAllowance, getSpellbookExtraCandidates, getSpellcastingConfig } from '@/rules/spellcasting'
+import { buildTimelineForDraft } from '@/rules/timeline'
+import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellbookExtraAllowance, getSpellbookExtraCandidates, getSpellcastingConfig, listSpellcastingScopes } from '@/rules/spellcasting'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
 import { getBackgroundAllocationIssue, getOriginStepBlockers, getSpeciesProficiencyBlockers, getSpeciesChoiceCheckpoints, getValidSpeciesChoice } from '@/rules/origins'
 import { validateWeaponMasterySelection } from '@/rules/weapon-mastery'
@@ -22,6 +22,8 @@ import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rule
 import { isSourceEnabled } from '@/rules/source-books'
 import { getActiveLineageRecord, getSpeciesLegacyBenefits } from '@/rules/species-legacy'
 import { isSelectionCheckpointActive, manualFeatParentCheckpointId } from '@/rules/feats'
+import { getClassEntries, getMaxClassLevel, MAX_CHARACTER_LEVEL, MIN_CHARACTER_LEVEL, MIN_CLASS_LEVEL } from '@/rules/multiclass'
+import { getMulticlassPrerequisiteReport } from '@/rules/multiclass-prerequisites'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
 import { artificerReplicatePlans2024, getArtificerReplicatedItemLimit2024 } from '@/rules/data/ua-artificer-2024'
 import type { AbilityKey, CharacterDraft, ValidationIssue } from '@/types/character'
@@ -303,7 +305,60 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
       })
     }
     const spellcasting = getSpellcastingConfig(draft)
-    if (spellcasting && draft.targetLevel >= spellcasting.startsAtLevel) {
+    // 兼职（MC-F02）：逐职业核对法术选择，错误带归属职业与可执行的修正指引。
+    if (getClassEntries(draft).length > 1) {
+      for (const scope of listSpellcastingScopes(draft)) {
+        if (scope.classLevel < scope.config.startsAtLevel) continue
+        const selections = scope.selections
+        const scopeAvailable = getAvailableSpells(draft, scope.config, scope)
+        const scopeAvailableIds = new Set(scopeAvailable.filter((spell) => spell.level > 0).map((spell) => spell.id))
+        const scopeCantripIds = new Set(scopeAvailable.filter((spell) => spell.level === 0).map((spell) => spell.id))
+        const scopeSelectedIds = getSelectedSpellIds(draft, scope.config, scope)
+        const scopeRequired = getRequiredSpellCount(draft, scope.config, scope)
+        const scopeRequiredCantrips = getRequiredCantripCount(draft, scope.config, scope)
+        const scopeLabel = `${scope.className}（${scope.classLevel}级）`
+        if (scopeSelectedIds.length !== scopeRequired) {
+          issues.push({
+            id: `spell-count-${scope.classId}`,
+            step: 'spells',
+            severity: 'error',
+            message: `${scopeLabel}的法术选择尚未完成：已选 ${scopeSelectedIds.length} 个，需要 ${scopeRequired} 个。`,
+            resolution: `回到第 8 步，切到「… · ${scope.className}」任务继续选择；兼职时每个职业的列表独立计数。`,
+          })
+        }
+        const scopeUnavailable = scopeSelectedIds.filter((id) => !scopeAvailableIds.has(id))
+        if (scopeUnavailable.length > 0) {
+          const names = scopeUnavailable.map((id) => repository.getSpell(id)?.name ?? id).join('、')
+          const maxLevel = scope.config.maxSpellLevelByClassLevel?.[scope.classLevel - 1] ?? 0
+          issues.push({
+            id: `unavailable-spell-${scope.classId}`,
+            step: 'spells',
+            severity: 'error',
+            message: `${scopeLabel}的法术列表包含该职业当前无法使用的法术：${names}。`,
+            resolution: `这些法术超出了${scope.className}在 ${scope.classLevel} 级能用的最高环级（${maxLevel} 环）；请移除它们，或提高${scope.className}的等级。`,
+          })
+        }
+        if (scopeRequiredCantrips > 0 && selections.cantripIds.length !== scopeRequiredCantrips) {
+          issues.push({
+            id: `cantrip-count-${scope.classId}`,
+            step: 'spells',
+            severity: 'error',
+            message: `${scopeLabel}的戏法选择尚未完成：已选 ${selections.cantripIds.length} 个，需要 ${scopeRequiredCantrips} 个。`,
+            resolution: `在第 8 步的「选择戏法 · ${scope.className}」任务里补齐。`,
+          })
+        }
+        if (selections.cantripIds.some((id) => !scopeCantripIds.has(id))) {
+          issues.push({
+            id: `unavailable-cantrip-${scope.classId}`,
+            step: 'spells',
+            severity: 'error',
+            message: `${scopeLabel}的戏法列表包含该职业无法选择的戏法。`,
+            resolution: `只保留${scope.className}法术列表中的戏法。`,
+          })
+        }
+      }
+    }
+    if (spellcasting && draft.targetLevel >= spellcasting.startsAtLevel && getClassEntries(draft).length <= 1) {
       const selectedSpellIds = getSelectedSpellIds(draft, spellcasting)
       const requiredCount = getRequiredSpellCount(draft, spellcasting)
       const availableSpells = getAvailableSpells(draft, spellcasting)
@@ -395,7 +450,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         issues.push({ id: `species-choice-invalid-${checkpoint.id}`, step: checkpoint.step, severity: 'error', message: `「${checkpoint.title}」包含失效、重复或不合法的选择。`, resolution: '从当前候选重新确认；原始记录保留，但不会授予收益。' })
       }
     }
-    const timeline = buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, manualFeatGrants: draft.manualEdits?.addedFeats ?? [], ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId })
+    const timeline = buildTimelineForDraft(draft)
     const checkpointLevels = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint.level]))
     const isV2024 = repository.ruleset === '5e-2024'
     for (const checkpoint of timeline) {
@@ -647,6 +702,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     }
   }
   issues.push(...validateSubclassSelections(draft))
+  issues.push(...validateMulticlassAllocation(draft))
   issues.push(...validateRaceSkillChoices(draft))
   return issues
 }
@@ -679,54 +735,160 @@ function validateRaceSkillChoices(draft: CharacterDraft): readonly ValidationIss
   return issues
 }
 
+/**
+ * 子职选择校验（MC-C04）。
+ *
+ * 兼职时按**职业配对**校验：每个职业各自的子职必须属于该职业，
+ * 并且要求该职业的等级（不是总等级）达到子职解锁等级。
+ */
 export function validateSubclassSelections(draft: CharacterDraft): readonly ValidationIssue[] {
   const repository = getRulesRepository(draft.ruleset)
   const issues: ValidationIssue[] = []
-  if (!draft.classId || !draft.subclassId) return issues
-  const subclass = repository.getSubclass(draft.subclassId)
-  if (!subclass) {
-    issues.push({ id: 'subclass-unknown', step: 'timeline', severity: 'error', message: '所选子职不存在。', resolution: '返回时间线重新选择子职。' })
-    return issues
-  }
-  if (subclass.classId !== draft.classId) {
-    issues.push({ id: 'subclass-class-mismatch', step: 'timeline', severity: 'error', message: `“${subclass.name}”不属于当前职业。`, resolution: '选择当前职业的子职。' })
-  }
-  if (draft.targetLevel < subclass.selectionLevel) {
-    issues.push({ id: 'subclass-level-too-early', step: 'timeline', severity: 'error', message: `“${subclass.name}”需要在${subclass.selectionLevel}级才能选择。`, resolution: '提高目标等级或移除子职选择。' })
-  }
-  if (subclass.status === 'index-only') {
-    issues.push({ id: 'subclass-index-only', step: 'timeline', severity: 'warning', message: `“${subclass.name}”目前只有规则索引。`, resolution: '可以继续生成预览草稿，但不能标记为资料完整角色。' })
-  }
-  const features = repository.getSubclass(draft.subclassId)?.features ?? []
-  for (const feature of features) {
-    if (!feature.requiresChoice || ((feature.optionIds?.length ?? 0) === 0 && (feature.featCategories?.length ?? 0) === 0)) continue
-    // 未解锁等级的特性不校验（与时间线检查点按等级过滤一致）。
-    if (feature.level > draft.targetLevel) continue
-    const min = feature.minSelections ?? 1
-    const max = feature.maxSelections ?? 1
-    const checkpointId = `subclass-feature-${feature.id}`
-    const count = draft.selections
-      .find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)
-      ?.optionIds.length ?? 0
-    if (count < min) {
+  const entries = getClassEntries(draft)
+  const pairs = entries.length > 0
+    ? entries.map((entry) => ({ classId: entry.classId, subclassId: entry.subclassId, classLevel: entry.level }))
+    : draft.classId && draft.subclassId
+      ? [{ classId: draft.classId, subclassId: draft.subclassId, classLevel: draft.targetLevel }]
+      : []
+  for (const pair of pairs) {
+    if (!pair.subclassId) continue
+    const subclass = repository.getSubclass(pair.subclassId)
+    if (!subclass) {
+      issues.push({ id: 'subclass-unknown', step: 'timeline', severity: 'error', message: '所选子职不存在。', resolution: '返回时间线重新选择子职。' })
+      continue
+    }
+    if (subclass.classId !== pair.classId) {
+      const ownerName = repository.getClass(subclass.classId)?.name ?? subclass.classId
+      const holderName = repository.getClass(pair.classId)?.name ?? pair.classId
       issues.push({
-        id: `subclass-feature-choice-${feature.id}`,
-        step: 'timeline',
-        severity: 'warning',
-        message: `子职特性「${feature.name}」需要选择${min === max ? min : `${min}—${max}`}项。`,
-        resolution: '完成子职特性选择后角色资料才完整。',
-      })
-    } else if (count > max) {
-      issues.push({
-        id: `subclass-feature-exclusive-${feature.id}`,
+        id: `subclass-class-mismatch-${pair.classId}`,
         step: 'timeline',
         severity: 'error',
-        message: max === 1
-          ? `子职特性「${feature.name}」的选项互斥。`
-          : `子职特性「${feature.name}」最多只能选择 ${max} 项。`,
-        resolution: max === 1 ? '每个特性只能选择其中一项。' : `请移除多余选项，仅保留 ${max} 项。`,
+        message: `“${subclass.name}”属于${ownerName}，不能作为${holderName}的子职。`,
+        resolution: `为${holderName}选择本职业的子职，或把该子职改挂到${ownerName}。`,
+      })
+    }
+    // 兼职口径：按**该职业自己的等级**判断解锁（单职业下与总等级相等）。
+    const effectiveLevel = entries.length > 0 ? pair.classLevel : draft.targetLevel
+    if (effectiveLevel < subclass.selectionLevel) {
+      const className = repository.getClass(pair.classId)?.name ?? pair.classId
+      issues.push({
+        id: `subclass-level-too-early-${pair.classId}`,
+        step: 'timeline',
+        severity: 'error',
+        message: `“${subclass.name}”需要${className}达到${subclass.selectionLevel}级才能选择（当前${effectiveLevel}级）。`,
+        resolution: `提高${className}的等级，或移除该子职选择。`,
+      })
+    }
+    if (subclass.status === 'index-only') {
+      issues.push({ id: `subclass-index-only-${pair.classId}`, step: 'timeline', severity: 'warning', message: `“${subclass.name}”目前只有规则索引。`, resolution: '可以继续生成预览草稿，但不能标记为资料完整角色。' })
+    }
+    const features = subclass.features
+    for (const feature of features) {
+      if (!feature.requiresChoice || ((feature.optionIds?.length ?? 0) === 0 && (feature.featCategories?.length ?? 0) === 0)) continue
+      // 未解锁等级的特性不校验（与时间线检查点按各职业等级过滤一致）。
+      if (feature.level > effectiveLevel) continue
+      const min = feature.minSelections ?? 1
+      const max = feature.maxSelections ?? 1
+      const checkpointId = `subclass-feature-${feature.id}`
+      const count = draft.selections
+        .find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)
+        ?.optionIds.length ?? 0
+      if (count < min) {
+        issues.push({
+          id: `subclass-feature-choice-${feature.id}`,
+          step: 'timeline',
+          severity: 'warning',
+          message: `子职特性「${feature.name}」需要选择${min === max ? min : `${min}—${max}`}项。`,
+          resolution: '完成子职特性选择后角色资料才完整。',
+        })
+      } else if (count > max) {
+        issues.push({
+          id: `subclass-feature-exclusive-${feature.id}`,
+          step: 'timeline',
+          severity: 'error',
+          message: max === 1
+            ? `子职特性「${feature.name}」的选项互斥。`
+            : `子职特性「${feature.name}」最多只能选择 ${max} 项。`,
+          resolution: max === 1 ? '每个特性只能选择其中一项。' : `请移除多余选项，仅保留 ${max} 项。`,
+        })
+      }
+    }
+  }
+  return issues
+}
+
+/** 兼职分配与先决校验（MC-C04）：总等级一致性、等级范围、职业先决。 */
+export function validateMulticlassAllocation(draft: CharacterDraft): readonly ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+  const state = draft.multiclass
+  if (!state || state.classes.length === 0) return issues
+  const total = state.classes.reduce((sum, entry) => sum + entry.level, 0)
+  if (total !== draft.targetLevel) {
+    issues.push({
+      id: 'multiclass-total-mismatch',
+      step: 'class',
+      severity: 'error',
+      message: `总等级与各职业等级之和不一致（总等级 ${draft.targetLevel}，职业合计 ${total}）。`,
+      resolution: '回到第 1 步或第 3 步重新分配职业等级。',
+    })
+  }
+  if (total < MIN_CHARACTER_LEVEL || total > MAX_CHARACTER_LEVEL) {
+    issues.push({
+      id: 'multiclass-total-out-of-range',
+      step: 'class',
+      severity: 'error',
+      message: `角色总等级必须在 ${MIN_CHARACTER_LEVEL}—${MAX_CHARACTER_LEVEL} 之间，当前为 ${total}。`,
+      resolution: '调整职业等级分配。',
+    })
+  }
+  const maxClassLevel = getMaxClassLevel(draft)
+  for (const entry of state.classes) {
+    if (entry.level < MIN_CLASS_LEVEL || entry.level > maxClassLevel) {
+      issues.push({
+        id: `multiclass-class-level-${entry.classId}`,
+        step: 'class',
+        severity: 'error',
+        message: `“${repositoryName(draft, entry.classId)}”的等级必须在 ${MIN_CLASS_LEVEL}—${maxClassLevel} 之间，当前为 ${entry.level}。`,
+        resolution: '调整该职业的等级；要移除该职业请把等级降到 0。',
+      })
+    }
+  }
+  if (!state.classes.some((entry) => entry.classId === state.primaryClassId)) {
+    issues.push({
+      id: 'multiclass-primary-missing',
+      step: 'class',
+      severity: 'error',
+      message: '起始职业不在当前职业列表中。',
+      resolution: '重新指定起始职业（承载 1 级生命值、起始装备与豁免熟练）。',
+    })
+  }
+  // 先决：所有职业都必须满足；未登记先决的职业只给提示级问题（决策 D8）。
+  const report = getMulticlassPrerequisiteReport(draft)
+  for (const result of report.results) {
+    if (result.status === 'pending') {
+      issues.push({
+        id: `multiclass-prerequisite-pending-${result.classId}`,
+        step: 'class',
+        severity: 'warning',
+        message: result.reasons[0] ?? `「${result.className}」的兼职先决条件尚未登记。`,
+        resolution: '与 DM 确认该职业的兼职属性要求。',
+      })
+      continue
+    }
+    if (result.status === 'unmet') {
+      issues.push({
+        id: `multiclass-prerequisite-${result.classId}`,
+        step: 'class',
+        severity: 'error',
+        message: result.reasons[0] ?? `不满足「${result.className}」的兼职先决条件。`,
+        resolution: '返回第 5 步提高对应基础属性，或改选其他职业。',
       })
     }
   }
   return issues
+}
+
+function repositoryName(draft: CharacterDraft, classId: string): string {
+  return getRulesRepository(draft.ruleset).getClass(classId)?.name ?? classId
 }

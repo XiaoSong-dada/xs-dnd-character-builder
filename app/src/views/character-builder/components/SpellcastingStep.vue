@@ -9,12 +9,15 @@ import { ABILITY_LABELS } from '@/rules/data/ability-labels'
 import { getRulesRepository } from '@/rules/repositories'
 import { getInactiveSpellRestoreStatus } from '@/rules/spell-selection-reconciliation'
 import {
+  applyClassSpellSelections,
   getAlwaysPreparedSpellIds,
+  getEffectiveSpellSlots,
   getMaximumSpellLevel,
   getSpellbookExtraCandidates,
   getSpellSlots,
   sortSpellsByLevel,
   usesPreparedSelection,
+  type SpellcastingScope,
 } from '@/rules/spellcasting'
 import type { CharacterDraft, InactiveSpellReason, SpellSelections } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
@@ -32,8 +35,37 @@ const emit = defineEmits<{
 const draft = toRef(() => props.draft)
 const headingEl = ref<HTMLElement>()
 const stepFlow = useSpellcastingStepFlow(draft, headingEl)
-const { config, availableSpells, requiredCantripCount, requiredSpellCount, requiredSpellbookCount, selectedSpellIds, spellbookExtraIds, spellbookReservedIds, spellbookExtraAllowance, normalSpellbookCount, invalidSpellSelectionCount, tasks, flow } = stepFlow
+const { scopes, activeScopeData, invalidSpellSelectionCount, tasks, flow } = stepFlow
 const repository = computed(() => getRulesRepository(props.draft.ruleset))
+
+/**
+ * 当前任务所属的施法职业（MC-D03）：所有数量、候选与写回目标都取自该职业自己的作用域。
+ * 单职业草稿只有一个作用域，取值与改造前逐字段一致。
+ */
+const activeScope = computed(() => activeScopeData.value?.scope)
+/** 当前职业自己的法术选择分桶；单职业即顶层数组。 */
+const scopeSelections = computed<SpellSelections>(() => activeScope.value?.selections ?? props.draft.spellSelections)
+const config = computed(() => activeScope.value?.config)
+const availableSpells = computed<readonly SpellRule[]>(() => activeScopeData.value?.availableSpells ?? [])
+const requiredCantripCount = computed(() => activeScopeData.value?.requiredCantripCount ?? 0)
+const requiredSpellCount = computed(() => activeScopeData.value?.requiredSpellCount ?? 0)
+const requiredSpellbookCount = computed(() => activeScopeData.value?.requiredSpellbookCount ?? 0)
+const selectedSpellIds = computed<readonly string[]>(() => activeScopeData.value?.selectedSpellIds ?? [])
+const spellbookExtraIds = computed<readonly string[]>(() => activeScopeData.value?.spellbookExtraIds ?? [])
+const spellbookReservedIds = computed<readonly string[]>(() => activeScopeData.value?.spellbookReservedIds ?? [])
+const spellbookExtraAllowance = computed(() => activeScopeData.value?.spellbookExtraAllowance ?? 0)
+const normalSpellbookCount = computed(() => activeScopeData.value?.normalSpellbookCount ?? 0)
+
+/**
+ * 写回当前职业的法术选择（MC-D03／D04）。
+ *
+ * 目标数据由规则层 `applyClassSpellSelections` 决定，**与 `getClassSpellSelections` 的读取口径严格对称**：
+ * 该职业已有分桶就写分桶（并把顶层数组刷新为并集镜像），单职业／起始职业且无分桶时写顶层数组。
+ * 修复背景：此前按「施法作用域数 > 1」判断，导致「单职业 + 迁移产生的分桶」写顶层、读分桶，法术加删无效。
+ */
+function emitScopeChange(scope: SpellcastingScope, next: SpellSelections): void {
+  emit('change', applyClassSpellSelections(props.draft, scope.classId, next))
+}
 
 /** 吸底栏「去完成」经页面调用该句柄，与起源步骤同一出口（v1.9.1 R3-6）。 */
 defineExpose<SelectionTaskFocusHandle>({ focusFirstIncomplete: flow.focusFirstIncomplete })
@@ -44,6 +76,8 @@ const schoolFilter = ref('all')
 const ritualFilter = ref('all')
 const concentrationFilter = ref('all')
 const levelFilter = ref('all')
+/** 「当前名额已选满」提示条：名额满时点击候选项会聚焦它（见 `focusCapacityNotice`）。 */
+const capacityNotice = ref<HTMLElement>()
 
 const sourceOptions = computed(() => [
   { id: 'all', label: '全部来源' },
@@ -53,15 +87,26 @@ const sourceOptions = computed(() => [
 ])
 const schoolOptions = computed(() => [...new Set(taskCandidates.value.map((spell) => spell.school).filter((school): school is string => Boolean(school)))])
 const hasConcentrationMetadata = computed(() => taskCandidates.value.some((spell) => spell.concentration !== undefined))
+/** 当前职业的施法来源名：1/3 施法子职（奥法骑士／诡术师）显示子职名。 */
 const castingSourceName = computed(() => {
-  if (props.draft.subclassId) {
-    const subclass = repository.value.getSubclass(props.draft.subclassId)
-    if (subclass?.spellcasting) return subclass.name
-  }
-  return props.draft.classId ? repository.value.getClass(props.draft.classId)?.name ?? '' : ''
+  const scope = activeScope.value
+  if (!scope) return ''
+  const subclass = scope.subclassId ? repository.value.getSubclass(scope.subclassId) : undefined
+  if (subclass?.spellcasting) return subclass.name
+  return scope.className
 })
-const maximumLevel = computed(() => config.value ? getMaximumSpellLevel(config.value, props.draft.targetLevel) : 0)
-const spellSlots = computed(() => config.value ? getSpellSlots(config.value, props.draft.targetLevel) : [])
+const maximumLevel = computed(() => config.value && activeScope.value
+  ? getMaximumSpellLevel(config.value, activeScope.value.classLevel)
+  : 0)
+/**
+ * 法术位（D01／D02）：兼职时两个职业共用「兼职施法者」表算出的池，因此显示生效池；
+ * 单职业仍显示该职业自己的表（既有行为不变）。
+ */
+const spellSlots = computed(() => {
+  const scope = activeScope.value
+  if (!config.value || !scope) return []
+  return scopes.value.length > 1 ? getEffectiveSpellSlots(props.draft) : getSpellSlots(config.value, scope.classLevel)
+})
 const spellSlotsLabel = computed(() => {
   if (!spellSlots.value.length) return ''
   const first = spellSlots.value[0]
@@ -92,22 +137,33 @@ const inactiveSpellEntries = computed(() => (props.draft.inactiveSpellSelections
   restore: getInactiveSpellRestoreStatus(props.draft, entry),
 })))
 
+/**
+ * 任务 id 带职业前缀（MC-E04）：兼职时不会与另一职业的同名任务冲突。
+ * 这里只按后缀分派，前缀不参与判断。
+ */
+function activeTaskKind(): 'cantrips' | 'spellbook' | 'spellbook-extra' | 'spells' {
+  const id = flow.activeTaskId.value ?? ''
+  const suffix = id.includes(':') ? id.slice(id.indexOf(':') + 1) : id
+  if (suffix === 'cantrips' || suffix === 'spellbook' || suffix === 'spellbook-extra') return suffix
+  return 'spells'
+}
+
 const taskSelectedIds = computed<readonly string[]>(() => {
-  switch (flow.activeTaskId.value) {
-    case 'cantrips': return props.draft.spellSelections.cantripIds
-    case 'spellbook': return props.draft.spellSelections.spellbookSpellIds
+  switch (activeTaskKind()) {
+    case 'cantrips': return scopeSelections.value.cantripIds
+    case 'spellbook': return scopeSelections.value.spellbookSpellIds
     case 'spellbook-extra': return spellbookExtraIds.value
     default: return selectedSpellIds.value
   }
 })
 /** 当前任务的候选来源（未排序）：数据登记顺序会因扩表池成块追加而打断环位。 */
 const taskCandidatePool = computed<readonly SpellRule[]>(() => {
-  switch (flow.activeTaskId.value) {
+  switch (activeTaskKind()) {
     case 'cantrips': return availableSpells.value.filter((spell) => spell.level === 0)
     case 'spellbook': return availableSpells.value.filter((spell) => spell.level > 0)
     case 'spellbook-extra': return spellbookExtraCandidates.value
     case 'spells': return config.value?.mode === 'spellbook'
-      ? availableSpells.value.filter((spell) => spell.level > 0 && props.draft.spellSelections.spellbookSpellIds.includes(spell.id))
+      ? availableSpells.value.filter((spell) => spell.level > 0 && scopeSelections.value.spellbookSpellIds.includes(spell.id))
       : availableSpells.value.filter((spell) => spell.level > 0)
     default: return []
   }
@@ -153,14 +209,14 @@ const selectedSpells = computed(() => sortSpellsByLevel(
   taskSelectedIds.value.map((id) => repository.value.getSpell(id)).filter((spell): spell is SpellRule => Boolean(spell)),
   props.draft.ruleset,
 ))
-const activeRequiredCount = computed(() => flow.activeTaskId.value === 'cantrips' ? requiredCantripCount.value
-  : flow.activeTaskId.value === 'spellbook' ? requiredSpellbookCount.value
-    : flow.activeTaskId.value === 'spellbook-extra' ? spellbookExtraAllowance.value
+const activeRequiredCount = computed(() => activeTaskKind() === 'cantrips' ? requiredCantripCount.value
+  : activeTaskKind() === 'spellbook' ? requiredSpellbookCount.value
+    : activeTaskKind() === 'spellbook-extra' ? spellbookExtraAllowance.value
       : requiredSpellCount.value)
-const activeCount = computed(() => flow.activeTaskId.value === 'spellbook' ? normalSpellbookCount.value : taskSelectedIds.value.length)
+const activeCount = computed(() => activeTaskKind() === 'spellbook' ? normalSpellbookCount.value : taskSelectedIds.value.length)
 const activeFull = computed(() => activeCount.value >= activeRequiredCount.value)
 const selectedCountLabel = computed(() => {
-  if (flow.activeTaskId.value !== 'spellbook') return `${activeCount.value} / ${activeRequiredCount.value}`
+  if (activeTaskKind() !== 'spellbook') return `${activeCount.value} / ${activeRequiredCount.value}`
   const transcribedCount = props.draft.spellSelections.transcribedSpellIds.length
   const reservedCount = spellbookReservedIds.value.length
   return `${activeCount.value} / ${activeRequiredCount.value}${reservedCount ? `（含预留 ${reservedCount}）` : ''}${transcribedCount ? `（另有抄录 ${transcribedCount}）` : ''}`
@@ -169,15 +225,15 @@ const selectedCountLabel = computed(() => {
 /** 抄录锁定与「已在书中」判定 + 候选徽标（v1.9.1 追加）：不可切换的候选项要说明原因，不能静默失效。 */
 const transcribedIds = computed(() => new Set(props.draft.spellSelections.transcribedSpellIds))
 function isTranscribedLocked(spell: SpellRule): boolean {
-  return flow.activeTaskId.value === 'spellbook' && transcribedIds.value.has(spell.id)
+  return activeTaskKind() === 'spellbook' && transcribedIds.value.has(spell.id)
 }
 function isReservedLocked(spell: SpellRule): boolean {
-  return flow.activeTaskId.value === 'spellbook' && spellbookReservedIds.value.includes(spell.id)
+  return activeTaskKind() === 'spellbook' && spellbookReservedIds.value.includes(spell.id)
 }
 /** 额外入书候选含已在书中的法术（`getSpellbookExtraCandidates`）；这些法术不能再占额外名额。 */
 function isAlreadyInBook(spell: SpellRule): boolean {
-  return flow.activeTaskId.value === 'spellbook-extra'
-    && props.draft.spellSelections.spellbookSpellIds.includes(spell.id)
+  return activeTaskKind() === 'spellbook-extra'
+    && scopeSelections.value.spellbookSpellIds.includes(spell.id)
     && !spellbookExtraIds.value.includes(spell.id)
 }
 function candidateBadge(spell: SpellRule): string {
@@ -186,52 +242,86 @@ function candidateBadge(spell: SpellRule): string {
   if (isAlreadyInBook(spell)) return '已在书中'
   if (taskSelectedIds.value.includes(spell.id)) return '已选'
   if (activeFull.value) return '已满'
-  return flow.activeTaskId.value.includes('spellbook') ? '写入' : '选择'
+  return activeTaskKind().includes('spellbook') ? '写入' : '选择'
 }
 
 function toggleSpell(id: string): void {
+  const scope = activeScope.value
   const current = selectedSpellIds.value
   const next = current.includes(id) ? current.filter((spellId) => spellId !== id) : current.length < requiredSpellCount.value ? [...current, id] : current
-  if (!config.value || next === current) return
-  emit('change', { ...props.draft.spellSelections, ...(usesPreparedSelection(config.value) ? { preparedSpellIds: next } : { knownSpellIds: next }) })
+  if (!scope || !config.value || next === current) return
+  emitScopeChange(scope, { ...scopeSelections.value, ...(usesPreparedSelection(config.value) ? { preparedSpellIds: next } : { knownSpellIds: next }) })
 }
 function toggleCantrip(id: string): void {
-  const current = props.draft.spellSelections.cantripIds
+  const scope = activeScope.value
+  if (!scope) return
+  const current = scopeSelections.value.cantripIds
   const next = current.includes(id) ? current.filter((spellId) => spellId !== id) : current.length < requiredCantripCount.value ? [...current, id] : current
-  if (next !== current) emit('change', { ...props.draft.spellSelections, cantripIds: next })
+  if (next !== current) emitScopeChange(scope, { ...scopeSelections.value, cantripIds: next })
 }
 function toggleSpellbook(id: string): void {
-  const current = props.draft.spellSelections.spellbookSpellIds
+  const scope = activeScope.value
+  if (!scope) return
+  const current = scopeSelections.value.spellbookSpellIds
   const transcribed = props.draft.spellSelections.transcribedSpellIds
   const removing = current.includes(id)
   if (removing && (transcribed.includes(id) || spellbookReservedIds.value.includes(id))) return
   const nextBook = removing ? current.filter((spellId) => spellId !== id) : normalSpellbookCount.value < requiredSpellbookCount.value ? [...current, id] : current
   if (nextBook === current) return
-  emit('change', {
-    ...props.draft.spellSelections,
+  emitScopeChange(scope, {
+    ...scopeSelections.value,
     spellbookSpellIds: nextBook,
     ...(removing ? { spellbookExtraSpellIds: spellbookExtraIds.value.filter((spellId) => spellId !== id) } : {}),
-    preparedSpellIds: removing ? props.draft.spellSelections.preparedSpellIds.filter((spellId) => spellId !== id) : props.draft.spellSelections.preparedSpellIds,
+    preparedSpellIds: removing ? scopeSelections.value.preparedSpellIds.filter((spellId) => spellId !== id) : scopeSelections.value.preparedSpellIds,
   })
 }
 function toggleSpellbookExtra(id: string): void {
-  const book = props.draft.spellSelections.spellbookSpellIds
+  const scope = activeScope.value
+  if (!scope) return
+  const book = scopeSelections.value.spellbookSpellIds
   if (spellbookExtraIds.value.includes(id)) {
     const keepInBook = spellbookReservedIds.value.includes(id)
-    emit('change', { ...props.draft.spellSelections, spellbookSpellIds: keepInBook ? book : book.filter((spellId) => spellId !== id), spellbookExtraSpellIds: spellbookExtraIds.value.filter((spellId) => spellId !== id), preparedSpellIds: keepInBook ? props.draft.spellSelections.preparedSpellIds : props.draft.spellSelections.preparedSpellIds.filter((spellId) => spellId !== id) })
+    emitScopeChange(scope, { ...scopeSelections.value, spellbookSpellIds: keepInBook ? book : book.filter((spellId) => spellId !== id), spellbookExtraSpellIds: spellbookExtraIds.value.filter((spellId) => spellId !== id), preparedSpellIds: keepInBook ? scopeSelections.value.preparedSpellIds : scopeSelections.value.preparedSpellIds.filter((spellId) => spellId !== id) })
     return
   }
   if (book.includes(id) || spellbookExtraIds.value.length >= spellbookExtraAllowance.value) return
-  emit('change', { ...props.draft.spellSelections, spellbookSpellIds: [...book, id], spellbookExtraSpellIds: [...spellbookExtraIds.value, id] })
+  emitScopeChange(scope, { ...scopeSelections.value, spellbookSpellIds: [...book, id], spellbookExtraSpellIds: [...spellbookExtraIds.value, id] })
+}
+/**
+ * 名额已满时点击候选项原先**静默无效**（各 toggle 函数直接 return），用户只会觉得「点不动」。
+ * 这里把既有的「当前名额已选满」提示条聚焦（并把视图滚到它），让点击有明确反馈。
+ */
+function capacityBlocked(id: string): boolean {
+  switch (activeTaskKind()) {
+    case 'cantrips':
+      return !scopeSelections.value.cantripIds.includes(id) && scopeSelections.value.cantripIds.length >= requiredCantripCount.value
+    case 'spellbook':
+      return !scopeSelections.value.spellbookSpellIds.includes(id) && normalSpellbookCount.value >= requiredSpellbookCount.value
+    case 'spellbook-extra':
+      return !spellbookExtraIds.value.includes(id) && spellbookExtraIds.value.length >= spellbookExtraAllowance.value
+    default:
+      return !selectedSpellIds.value.includes(id) && selectedSpellIds.value.length >= requiredSpellCount.value
+  }
+}
+function focusCapacityNotice(): void {
+  const notice = capacityNotice.value
+  if (!notice) return
+  notice.focus()
+  notice.scrollIntoView?.({ block: 'center' })
 }
 function toggleForTask(id: string): void {
-  if (flow.activeTaskId.value === 'cantrips') toggleCantrip(id)
-  else if (flow.activeTaskId.value === 'spellbook') toggleSpellbook(id)
-  else if (flow.activeTaskId.value === 'spellbook-extra') toggleSpellbookExtra(id)
+  if (capacityBlocked(id)) {
+    focusCapacityNotice()
+    return
+  }
+  const kind = activeTaskKind()
+  if (kind === 'cantrips') toggleCantrip(id)
+  else if (kind === 'spellbook') toggleSpellbook(id)
+  else if (kind === 'spellbook-extra') toggleSpellbookExtra(id)
   else toggleSpell(id)
 }
 function canRemove(spellId: string): boolean {
-  return !(flow.activeTaskId.value === 'spellbook'
+  return !(activeTaskKind() === 'spellbook'
     && (props.draft.spellSelections.transcribedSpellIds.includes(spellId) || spellbookReservedIds.value.includes(spellId)))
 }
 function lockedSelectionLabel(spellId: string): string {
@@ -251,12 +341,14 @@ function lockedSelectionLabel(spellId: string): string {
       <SelectionTaskNavigator v-model="flow.activeTaskId.value" :tasks="tasks" :completed="flow.completedCount.value" />
       <UiNotice v-if="alwaysPreparedSpells.length" tone="success" title="自动获得／始终准备">{{ alwaysPreparedSpells.map((spell) => spell.name).join('、') }}（不占选择上限）</UiNotice>
       <UiNotice v-if="invalidSpellSelectionCount" tone="warning" title="保留了需要重新确认的旧选择">有 {{ invalidSpellSelectionCount }} 项法术来自之前的职业、等级或法术书状态；它们没有被静默删除，但不会计入合法完成。</UiNotice>
-      <UiNotice v-if="activeFull && filteredCandidates.length && levelFilter !== 'selected'" tone="info" title="当前名额已选满">请先取消一项已选法术，再选择其他法术。</UiNotice>
+      <div ref="capacityNotice" class="spellcasting-step__capacity" tabindex="-1">
+        <UiNotice v-if="activeFull && filteredCandidates.length && levelFilter !== 'selected'" tone="info" title="当前名额已选满">请先取消一项已选法术，再选择其他法术。</UiNotice>
+      </div>
 
       <section class="spellcasting-step__panel" role="tabpanel">
         <h2 ref="headingEl" tabindex="-1">{{ flow.activeTask.value?.label }}</h2>
-        <p v-if="flow.activeTaskId.value === 'spellbook-extra'" class="spellcasting-step__hint">子职提供的额外入书名额不占升级名额；该任务可选。</p>
-        <p v-else-if="config.mode === 'spellbook' && flow.activeTaskId.value === 'spellbook'" class="spellcasting-step__hint">先把升级获得的法术写入法术书，之后再从书中准备法术。精通法术／招牌法术的预留项已计入正常学习名额，需回到对应能力节点才能更换。</p>
+        <p v-if="activeTaskKind() === 'spellbook-extra'" class="spellcasting-step__hint">子职提供的额外入书名额不占升级名额；该任务可选。</p>
+        <p v-else-if="config.mode === 'spellbook' && activeTaskKind() === 'spellbook'" class="spellcasting-step__hint">先把升级获得的法术写入法术书，之后再从书中准备法术。精通法术／招牌法术的预留项已计入正常学习名额，需回到对应能力节点才能更换。</p>
 
         <ListShell v-if="selectedSpells.length" title="当前已选" :count="selectedCountLabel">
           <ExpandableOptionCard v-for="spell in selectedSpells" :key="`selected-${spell.id}`" :title="spell.name" :description="formatSpellLabel(spell)" expanded-label="法术效果" state="selected" @select="canRemove(spell.id) && toggleForTask(spell.id)">
@@ -314,6 +406,9 @@ function lockedSelectionLabel(spellId: string): string {
   &__summary > strong { min-width: 4.5rem; padding: 0.5rem 0.7rem; border-radius: var(--radius-md); color: var(--color-primary); background: var(--color-primary-soft); text-align: center; }
   &__panel { display: grid; gap: 0.65rem; }
   &__panel > h2 { margin: 0; font-size: 1rem; outline: none; }
+  /* 名额已满提示的聚焦容器：名额满时点击候选项会聚焦到这里作为反馈 */
+  &__capacity { outline: none; }
+  &__capacity:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-md); }
   &__hint { margin: 0; color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; }
   &__inactive {
     display: grid;

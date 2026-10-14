@@ -1,5 +1,16 @@
 import type { AbilityKey, CharacterDraft, CompatibilityStatus, CurrencyWallet, DraftStep, RuleSource, RulesetId, SpellcastingMode } from '@/types/character'
 
+/** 兼职（多职业）数据类型统一登记在 `types/multiclass.ts`，此处转出以保持既有导入路径可用。 */
+export type {
+  ClassLevelEntry,
+  ClassSpellSelections,
+  MulticlassCasterWeight,
+  MulticlassDraft,
+  MulticlassPrerequisite,
+  MulticlassProficiencyGrant,
+  MulticlassState,
+} from '@/types/multiclass'
+
 export type CheckpointKind =
   | 'skills'
   | 'fighting-style'
@@ -252,6 +263,13 @@ export interface ChoiceCheckpoint {
   readonly level: number
   readonly step: DraftStep
   readonly kind: CheckpointKind
+  /**
+   * 归属职业（兼职时用于按职业分组、按职业等级取值；单职业草稿由 `buildTimeline` 注入）。
+   * 见需求 §6.3 缺口 1 与 MC-B05／MC-C01。
+   */
+  readonly classId?: string
+  /** 该检查点在**所属职业**内的等级（兼职时 `level` 仍表示角色总等级口径的解锁等级）。 */
+  readonly classLevel?: number
   readonly title: string
   readonly description: string
   readonly required: boolean
@@ -332,6 +350,26 @@ export interface SpellcastingConfig {
   readonly requiredCantripSpellIds?: readonly string[]
 }
 
+/** 戏法成长：随**角色总等级**提升的伤害骰、射线数量或骰型（MC-D05，决策 D4）。 */
+export interface CantripScalingRule {
+  readonly id: string
+  readonly name: string
+  /** 来源标注（供界面说明「数据来源」）。 */
+  readonly sourceNote: string
+  /** 成长节点（按等级升序）；每项描述该等级起生效的表达式。 */
+  readonly steps: readonly {
+    readonly level: number
+    /** 该等级起的伤害骰（如 `2d10`）。 */
+    readonly dice?: string
+    /** 该等级起的射线／光束数量（如魔能爆）。 */
+    readonly count?: number
+    /** 该等级起的骰型（如橡棍术 d8）。 */
+    readonly die?: string
+    /** 特殊分支说明（只作展示，不进入结算）。 */
+    readonly note?: string
+  }[]
+}
+
 export interface SpellRule {
   readonly id: string
   readonly ruleset: RulesetId
@@ -359,6 +397,11 @@ export interface SpellRule {
   readonly duration?: string
   /** 是否需要专注。 */
   readonly concentration?: boolean
+  /**
+   * 戏法成长规则（仅 0 环条目可能填写）；派生展示按角色总等级取值，见 MC-D05。
+   * 未登记表示没有已核验的成长数据：界面不显示成长行，也不推断数值。
+   */
+  readonly cantripScaling?: CantripScalingRule
 }
 
 export interface ClassRule {

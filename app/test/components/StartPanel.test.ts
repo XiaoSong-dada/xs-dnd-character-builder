@@ -91,11 +91,12 @@ describe('StartPanel 角色条信息展示', () => {
     expect(wrapper.text()).not.toContain('sheet')
   })
 
-  it('进行中已选职业显示"职业 · 第N步"', () => {
+  it('进行中已选职业显示"职业+职业等级 · 第N步"', () => {
     const inProgress = { ...draft, classId: 'class-2014-fighter' }
     const wrapper = mount(StartPanel, { props: { drafts: [inProgress], legacyDrafts: [] } })
 
-    expect(wrapper.text()).toContain('3级 · 战士 · 第4步')
+    // MC-E05：职业段改用统一格式「战士3」，与角色卡头部、跑团助手一致
+    expect(wrapper.text()).toContain('3级 · 战士3 · 第4步')
     expect(wrapper.text()).not.toContain('origin')
   })
 
@@ -112,6 +113,55 @@ describe('StartPanel 角色条信息展示', () => {
 
     expect(wrapper.text()).toContain('3级 · 角色完成')
     expect(wrapper.text()).not.toContain('sheet')
+    // 无法解析的职业不得把原始 id 暴露到列表
+    expect(wrapper.text()).not.toContain('class-2014-unknown')
+  })
+
+  it('兼职草稿的列表摘要显示「战士3/游荡者2 · 5级」（MC-E05）', () => {
+    const classes = [
+      { classId: 'class-2014-fighter', level: 3 },
+      { classId: 'class-2014-rogue', level: 2 },
+    ]
+    const multiclass: CharacterDraft = {
+      ...draft,
+      id: 'multiclass-draft',
+      classId: 'class-2014-fighter',
+      targetLevel: 5,
+      currentStep: 'sheet',
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-fighter',
+        classes,
+        levelOrder: [...Array(3).fill('class-2014-fighter'), ...Array(2).fill('class-2014-rogue')],
+      },
+    }
+    const wrapper = mount(StartPanel, { props: { drafts: [multiclass], legacyDrafts: [] } })
+
+    expect(wrapper.text()).toContain('战士3 / 游荡者2（5 级角色）')
+    expect(wrapper.text()).toContain('2014 · 5级')
+    expect(wrapper.text()).not.toContain('class-2014-')
+  })
+
+  it('兼职进行中的角色条同样带各职业等级', () => {
+    const multiclass: CharacterDraft = {
+      ...draft,
+      id: 'multiclass-progress',
+      classId: 'class-2014-fighter',
+      targetLevel: 5,
+      currentStep: 'origin',
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-fighter',
+        classes: [
+          { classId: 'class-2014-fighter', level: 3 },
+          { classId: 'class-2014-rogue', level: 2 },
+        ],
+        levelOrder: [...Array(3).fill('class-2014-fighter'), ...Array(2).fill('class-2014-rogue')],
+      },
+    }
+    const wrapper = mount(StartPanel, { props: { drafts: [multiclass], legacyDrafts: [] } })
+
+    expect(wrapper.text()).toContain('战士3 / 游荡者2（5 级角色） · 第4步')
   })
 
   it('仅有头像引用的角色条渲染头像，没有头像时不显示占位', () => {
