@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 import BaseButton from '@/components/ui/BaseButton.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
@@ -56,6 +56,27 @@ const primaryClassId = computed(() => getPrimaryClassId(props.draft))
 const multiclassActive = computed(() => isMulticlassActive(props.draft))
 const enabled = computed(() => Boolean(props.draft.multiclass?.enabled))
 
+/**
+ * 内联模式（第 1 步／第 3 步）：每次操作立即生效，**不保留待定状态**（需求 §4 R3／D21）。
+ * 弹窗模式（角色卡「调整等级」）：保留本地待定副本，「取消 / 确认」是确定与关闭的入口（D19）。
+ */
+const inline = computed(() => !props.compact)
+
+/**
+ * 显示与写入的基准草稿：内联用已提交的 `props.draft`，弹窗用本地待定副本。
+ * 所有写入函数都以它为输入，避免内联在「页面依赖确认被取消」后残留未生效的显示。
+ */
+const base = computed(() => (props.compact ? pending.value : props.draft))
+
+/** 「设置起始职业」只在真正有可切换对象时出现（D18）：与职业列表同一条件。 */
+const showOriginEntry = computed(() => multiclassActive.value)
+
+/** 兼职关闭但草稿仍保留多个职业时的提示（D20）：只读说明，不提供按钮。 */
+const retainedAllocation = computed(() => {
+  if (enabled.value || classes.value.length < 2) return ''
+  return classes.value.map((entry) => `${className(entry.classId)}${entry.level}`).join(' / ')
+})
+
 const prerequisiteReport = computed(() => getMulticlassPrerequisiteReport(props.draft))
 const prerequisiteByClass = computed(() => new Map(prerequisiteReport.value.results.map((item) => [item.classId, item])))
 
@@ -93,29 +114,36 @@ function onSliderInput(event: Event): void {
   sliderLevel.value = Number((event.target as HTMLInputElement).value)
 }
 
-function onSliderCommit(): void {
+async function onSliderCommit(): Promise<void> {
+  const target = sliderLevel.value
   // 尚无职业（第 1 步）：只写目标等级，不下发职业分配（页面按 target-level 路径处理）。
   if (classes.value.length === 0) {
-    if (sliderLevel.value === props.draft.targetLevel) return
-    pending.value = { ...pending.value, targetLevel: sliderLevel.value }
-    emit('applyTotalLevel', pending.value)
-    return
+    if (target === props.draft.targetLevel) return
+    const next = { ...base.value, targetLevel: target }
+    if (props.compact) pending.value = next
+    emit('applyTotalLevel', next)
+  } else {
+    const result = setTotalLevel(base.value, target)
+    if (!result.ok) {
+      sliderLevel.value = effectiveTotal.value
+      return
+    }
+    if (props.compact) pending.value = result.draft
+    emit('applyTotalLevel', result.draft)
   }
-  const result = setTotalLevel(pending.value, sliderLevel.value)
-  if (!result.ok) {
-    sliderLevel.value = effectiveTotal.value
-    return
-  }
-  pending.value = result.draft
-  emit('applyTotalLevel', result.draft)
+  if (props.compact) return
+  // 内联：提交若未被页面采纳（例如依赖确认被取消），把显示回到已提交值，不残留未生效的滑杆位置。
+  await nextTick()
+  if (sliderLevel.value !== effectiveTotal.value) sliderLevel.value = effectiveTotal.value
 }
 
-/** 待应用的草稿（本地草稿副本，确认时才提交给页面）。 */
+/** 弹窗模式的本地待定副本：内联模式不使用它（R3／D21）。 */
 const pending = ref<CharacterDraft>(props.draft)
 watch(() => props.draft, (next) => { pending.value = next })
 
 function applyDraft(next: CharacterDraft): void {
-  pending.value = next
+  // 内联（即时生效）不保留待定副本；只有弹窗需要它来支撑「取消 / 确认」。
+  if (props.compact) pending.value = next
   emit('apply', next)
 }
 
@@ -152,7 +180,7 @@ function confirmOriginPicker(): void {
   pendingEnabled.value = undefined
   // 草稿还没有职业：选中的职业同时成为第一个职业（等级 = 当前目标等级）与起始职业。
   if (classes.value.length === 0) {
-    const added = addClassEntry(pending.value, classId)
+    const added = addClassEntry(base.value, classId)
     if (!added.ok) return
     const leveled = setClassLevel(added.draft, classId, effectiveTotal.value)
     if (!leveled.ok) return
@@ -161,8 +189,8 @@ function confirmOriginPicker(): void {
     return
   }
   // 已有职业：只切换起始职业并开启兼职，不改变任何职业的等级。
-  const switched = setPrimaryClassId(pending.value, classId)
-  applyDraft(setMulticlassEnabled(switched.ok ? switched.draft : pending.value, true))
+  const switched = setPrimaryClassId(base.value, classId)
+  applyDraft(setMulticlassEnabled(switched.ok ? switched.draft : base.value, true))
 }
 
 function onToggleEnabled(value: boolean): void {
@@ -171,7 +199,7 @@ function onToggleEnabled(value: boolean): void {
     openOriginPicker()
     return
   }
-  const next = setMulticlassEnabled(pending.value, false)
+  const next = setMulticlassEnabled(base.value, false)
   // 关闭兼职（D7）：存在多个职业时必须显式选择「合并到起始职业」或取消，且不可撤销。
   if (getClassEntries(next).length > 1) {
     closeConfirmOpen.value = true
@@ -184,7 +212,7 @@ function onToggleEnabled(value: boolean): void {
 /** 手动设置起始职业（不改变兼职开关）——第 1 步／第 3 步／角色卡弹窗三处共用。 */
 function switchPrimary(classId: string): void {
   if (classId === primaryClassId.value) return
-  const result = setPrimaryClassId(pending.value, classId)
+  const result = setPrimaryClassId(base.value, classId)
   if (!result.ok) return
   applyDraft(result.draft)
 }
@@ -193,14 +221,14 @@ const closeConfirmOpen = ref(false)
 
 /** 合并到起始职业：总等级不变，其余职业的等级并入起始职业（不超过 19 级上限）。 */
 function mergeIntoPrimary(): void {
-  const entries = getClassEntries(pending.value)
-  const primaryClassId = getPrimaryClassId(pending.value)
+  const entries = getClassEntries(base.value)
+  const primaryClassId = getPrimaryClassId(base.value)
   if (!primaryClassId) return
   const total = entries.reduce((sum, entry) => sum + entry.level, 0)
   const primaryEntry = entries.find((entry) => entry.classId === primaryClassId)
   const merged = { classId: primaryClassId, level: Math.min(MAX_CLASS_LEVEL, total), ...(primaryEntry?.subclassId ? { subclassId: primaryEntry.subclassId } : {}) }
   applyDraft({
-    ...pending.value,
+    ...base.value,
     multiclass: {
       enabled: false,
       primaryClassId,
@@ -217,27 +245,27 @@ function mergeIntoPrimary(): void {
 function cancelClose(): void {
   closeConfirmOpen.value = false
   // 取消时把开关恢复为打开，避免界面状态与数据不一致
-  applyDraft(setMulticlassEnabled(pending.value, true))
+  applyDraft(setMulticlassEnabled(base.value, true))
 }
 
 function changeLevel(classId: string, delta: number): void {
-  const current = getClassLevel(pending.value, classId)
+  const current = getClassLevel(base.value, classId)
   const next = current + delta
   if (next < 0 || next > MAX_CLASS_LEVEL) return
   if (next === 0) {
     // 降到 0 = 移除该职业（D5），起始职业不可移除（D16）
-    const result = removeClassEntry(pending.value, classId)
+    const result = removeClassEntry(base.value, classId)
     if (!result.ok) return
     applyDraft(result.draft)
     return
   }
-  const result = setClassLevel(pending.value, classId, next)
+  const result = setClassLevel(base.value, classId, next)
   if (!result.ok) return
   applyDraft(result.draft)
 }
 
 function onAddClass(classId: string): void {
-  const result = addClassEntry(pending.value, classId)
+  const result = addClassEntry(base.value, classId)
   if (!result.ok) return
   applyDraft(result.draft)
   addPickerOpen.value = false
@@ -262,9 +290,9 @@ const totalWarning = computed(() => {
 /** 变更摘要（D2 第 8 条）：总等级前后、各职业等级前后、先决问题数。 */
 const changeSummary = computed(() => {
   const before = getTotalLevel(props.draft)
-  const after = getTotalLevel(pending.value)
+  const after = getTotalLevel(base.value)
   const beforeEntries = getClassEntries(props.draft)
-  const afterEntries = getClassEntries(pending.value)
+  const afterEntries = getClassEntries(base.value)
   const beforeById = new Map(beforeEntries.map((entry) => [entry.classId, entry.level]))
   const lines = afterEntries.map((entry) => {
     const previous = beforeById.get(entry.classId)
@@ -366,12 +394,17 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
 
     <div class="allocation__actions">
       <BaseButton v-if="enabled" variant="secondary" @click="addPickerOpen = true">添加职业</BaseButton>
-      <!-- 设置起始职业（需求 §4.4）：第 1 步／第 3 步／角色卡弹窗三处共用 -->
-      <BaseButton v-if="classes.length > 0" variant="secondary" @click="openOriginPicker">设置起始职业</BaseButton>
+      <!-- 设置起始职业（需求 §4.4）：只在兼职启用且有可切换对象时出现（D18） -->
+      <BaseButton v-if="showOriginEntry" variant="secondary" @click="openOriginPicker">设置起始职业</BaseButton>
     </div>
     <p v-if="!enabled" class="allocation__note">开启「启用兼职」后可以添加第二个职业。</p>
+    <!-- 兼职关闭但草稿仍保留多个职业（D20）：只读说明，避免被误认为数据丢失 -->
+    <p v-if="retainedAllocation" class="allocation__note">
+      已保留兼职分配：{{ retainedAllocation }}，重新启用后可继续编辑。
+    </p>
 
-    <section v-if="canApply" class="allocation__summary">
+    <!-- 「本次变更」只属于弹窗的待定流程：内联已即时生效，没有待定状态（D19／R3） -->
+    <section v-if="!inline && canApply" class="allocation__summary">
       <strong>本次变更</strong>
       <p>总等级 {{ changeSummary.before }} → {{ changeSummary.after }}</p>
       <ul>
@@ -379,7 +412,8 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
       </ul>
     </section>
 
-    <footer class="allocation__footer">
+    <!-- 底部「取消 / 确认」只在弹窗模式出现（D19）：内联每次操作已生效，这两个按钮没有作用 -->
+    <footer v-if="!inline" class="allocation__footer">
       <BaseButton variant="secondary" @click="emit('cancel')">取消</BaseButton>
       <BaseButton :disabled="Boolean(totalWarning)" @click="emit('apply', pending)">确认</BaseButton>
     </footer>
