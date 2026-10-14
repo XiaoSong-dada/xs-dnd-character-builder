@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
 import ClassAllocationControl from '@/views/character-builder/components/ClassAllocationControl.vue'
@@ -33,6 +33,11 @@ function mc(): CharacterDraft {
  */
 function mountControl(draft: CharacterDraft) {
   return mount(ClassAllocationControl, { props: { draft }, global: { stubs: { teleport: true } } })
+}
+
+/** 弹窗模式（角色卡「调整等级」）：保留待定状态与底部「取消 / 确认」（D19）。 */
+function mountCompact(draft: CharacterDraft) {
+  return mount(ClassAllocationControl, { props: { draft, compact: true }, global: { stubs: { teleport: true } } })
 }
 
 function appliedDraft(wrapper: ReturnType<typeof mount>): CharacterDraft {
@@ -284,9 +289,14 @@ describe('MC-E01 分配控件：关闭兼职的防误触（D7）', () => {
   })
 })
 
-describe('MC-E01 分配控件：变更摘要与确认', () => {
+/**
+ * 变更摘要与底部「取消 / 确认」只属于**弹窗模式**（D19／PC-A02）：
+ * 内联时每次操作已立即生效，没有待定状态。因此本节用例统一改用 `compact: true` 挂载
+ * （改写自原先的内联挂载——验证的本意就是弹窗的确认语义，改写后更准确）。
+ */
+describe('MC-E01 分配控件：变更摘要与确认（弹窗模式）', () => {
   it('变更摘要列出总等级前后与各职业等级变化', async () => {
-    const wrapper = mountControl(mc())
+    const wrapper = mountCompact(mc())
     const rogueRow = wrapper.findAll('.allocation__row')[1]!
     await rogueRow.findAll('button')[1]!.trigger('click')
     const summary = wrapper.get('.allocation__summary')
@@ -296,14 +306,14 @@ describe('MC-E01 分配控件：变更摘要与确认', () => {
   })
 
   it('没有变更时不显示摘要，确认按钮仍可提交当前草稿', async () => {
-    const wrapper = mountControl(mc())
+    const wrapper = mountCompact(mc())
     expect(wrapper.find('.allocation__summary').exists()).toBe(false)
     await wrapper.findAll('button').find((button) => button.text() === '确认')!.trigger('click')
     expect(getTotalLevel(appliedDraft(wrapper))).toBe(5)
   })
 
   it('取消按钮只发 cancel，不提交草稿', async () => {
-    const wrapper = mountControl(mc())
+    const wrapper = mountCompact(mc())
     await wrapper.findAll('.base-button--secondary').find((button) => button.text() === '取消')!.trigger('click')
     expect(wrapper.emitted('apply')).toBeFalsy()
     expect(wrapper.emitted('cancel')).toBeTruthy()
@@ -323,7 +333,7 @@ describe('MC-E01 分配控件：变更摘要与确认', () => {
         levelOrder: ['class-2014-rogue', 'class-2014-rogue', 'class-2014-rogue', 'class-2014-druid', 'class-2014-druid'],
       },
     })
-    const wrapper = mountControl(draft)
+    const wrapper = mountCompact(draft)
     const warn = wrapper.findAll('.allocation__warn').map((item) => item.text()).join('|')
     expect(warn).toContain('感知需提高到 13')
     // 不阻断确认
@@ -461,5 +471,131 @@ describe('SC-B03 分配控件：起始职业的说明、切换与移除路径', 
     const draft = draft2024({ ruleset: '5e-2014', classId: undefined, targetLevel: 5 })
     const wrapper = mountControl(draft)
     expect(wrapper.findAll('button').some((button) => button.text() === '设置起始职业')).toBe(false)
+  })
+})
+
+describe('PC-A 显示条件：兼职关闭时不露出兼职专属元素（D18／D19）', () => {
+  /** 兼职开启但只有一个职业（刚打开开关、还没添加第二个）。 */
+  function enabledSingleClass(): CharacterDraft {
+    return draft2024({
+      ruleset: '5e-2014',
+      baseAbilities: ABILITIES,
+      classId: 'class-2014-fighter',
+      targetLevel: 5,
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-fighter',
+        classes: [{ classId: 'class-2014-fighter', level: 5 }],
+        levelOrder: Array.from({ length: 5 }, () => 'class-2014-fighter'),
+      },
+    })
+  }
+
+  /** 兼职已关闭但草稿仍保留两个职业（例如上次关闭时取消了合并）。 */
+  function disabledWithTwoClasses(): CharacterDraft {
+    return draft2024({
+      ruleset: '5e-2014',
+      baseAbilities: ABILITIES,
+      classId: 'class-2014-fighter',
+      targetLevel: 5,
+      multiclass: {
+        enabled: false,
+        primaryClassId: 'class-2014-fighter',
+        classes: [{ classId: 'class-2014-fighter', level: 3 }, { classId: 'class-2014-rogue', level: 2 }],
+        levelOrder: ['class-2014-fighter', 'class-2014-fighter', 'class-2014-fighter', 'class-2014-rogue', 'class-2014-rogue'],
+      },
+    })
+  }
+
+  function hasButton(wrapper: ReturnType<typeof mount>, text: string): boolean {
+    return wrapper.findAll('button').some((button) => button.text() === text)
+  }
+
+  it('兼职关闭 + 单职业：不出现「设置起始职业」「取消」「确认」「本次变更」', () => {
+    const wrapper = mountControl(solo())
+    expect(hasButton(wrapper, '设置起始职业')).toBe(false)
+    expect(hasButton(wrapper, '取消')).toBe(false)
+    expect(hasButton(wrapper, '确认')).toBe(false)
+    expect(wrapper.find('.allocation__summary').exists()).toBe(false)
+    // 单职业主流程仍然完整：开关、滑杆、总等级行、说明
+    expect(wrapper.find('.allocation__switch input').exists()).toBe(true)
+    expect(wrapper.find('.allocation__slider input[type="range"]').exists()).toBe(true)
+    expect(wrapper.get('.allocation__total').text()).toContain('战士 5')
+    expect(wrapper.text()).toContain('开启兼职前')
+    expect(wrapper.text()).toContain('开启「启用兼职」后可以添加第二个职业')
+    // 职业列表与添加职业本来就隐藏
+    expect(wrapper.find('.allocation__list').exists()).toBe(false)
+    expect(hasButton(wrapper, '添加职业')).toBe(false)
+  })
+
+  it('兼职关闭 + 单职业的弹窗：保留「取消 / 确认」，但仍不出现「设置起始职业」', () => {
+    const wrapper = mountCompact(solo())
+    expect(hasButton(wrapper, '取消')).toBe(true)
+    expect(hasButton(wrapper, '确认')).toBe(true)
+    expect(hasButton(wrapper, '设置起始职业')).toBe(false)
+  })
+
+  it('兼职开启但只有 1 个职业：不出现「设置起始职业」（没有可切换对象）', () => {
+    const wrapper = mountControl(enabledSingleClass())
+    expect(hasButton(wrapper, '设置起始职业')).toBe(false)
+    expect(wrapper.find('.allocation__list').exists()).toBe(false)
+    expect(hasButton(wrapper, '添加职业')).toBe(true)
+  })
+
+  it('兼职开启 + 2 个职业：职业列表与「设置起始职业」恢复，内联仍无「取消 / 确认」', () => {
+    const wrapper = mountControl(mc())
+    expect(wrapper.find('.allocation__list').exists()).toBe(true)
+    expect(hasButton(wrapper, '设置起始职业')).toBe(true)
+    expect(hasButton(wrapper, '取消')).toBe(false)
+    expect(hasButton(wrapper, '确认')).toBe(false)
+    expect(wrapper.find('.allocation__summary').exists()).toBe(false)
+  })
+
+  it('兼职关闭但保留 2 个职业：显示保留分配提示，且不显示列表与「设置起始职业」', () => {
+    const wrapper = mountControl(disabledWithTwoClasses())
+    expect(wrapper.text()).toContain('已保留兼职分配：战士3 / 游荡者2，重新启用后可继续编辑。')
+    expect(wrapper.find('.allocation__list').exists()).toBe(false)
+    expect(hasButton(wrapper, '设置起始职业')).toBe(false)
+    // 开关仍可用来重新启用
+    expect(wrapper.find('.allocation__switch input').exists()).toBe(true)
+  })
+
+  it('保留分配提示只在「关闭 + ≥2 职业」时出现', () => {
+    expect(mountControl(solo()).text()).not.toContain('已保留兼职分配')
+    expect(mountControl(enabledSingleClass()).text()).not.toContain('已保留兼职分配')
+    expect(mountControl(mc()).text()).not.toContain('已保留兼职分配')
+  })
+})
+
+describe('PC-B 内联一致性：提交未被采纳时不残留未生效的显示（R3／D21）', () => {
+  it('滑杆提交后若页面未采纳（依赖确认被取消），显示回到已提交值', async () => {
+    const wrapper = mountControl(solo())
+    const slider = wrapper.get('.allocation__slider input[type="range"]')
+    await slider.setValue(7)
+    // 事件已发出，但本用例不更新 props —— 等价于页面弹确认后被取消
+    expect(wrapper.emitted('applyTotalLevel')).toBeTruthy()
+    await flushPromises()
+    expect(wrapper.get('.allocation__slider').text()).toContain('目标等级 5级')
+    expect(wrapper.get('.allocation__total').text()).toContain('总等级 5')
+    expect(wrapper.find('.allocation__summary').exists()).toBe(false)
+  })
+
+  it('滑杆提交被采纳后显示跟随新草稿', async () => {
+    const wrapper = mountControl(solo())
+    await wrapper.get('.allocation__slider input[type="range"]').setValue(7)
+    await flushPromises()
+    const next = appliedTotalLevel(wrapper)
+    await wrapper.setProps({ draft: next })
+    await flushPromises()
+    expect(wrapper.get('.allocation__slider').text()).toContain('目标等级 7级')
+    expect(wrapper.get('.allocation__total').text()).toContain('总等级 7')
+  })
+
+  it('内联的加减职业按钮也不残留待定摘要', async () => {
+    const wrapper = mountControl(mc())
+    const rogueRow = wrapper.findAll('.allocation__row')[1]!
+    await rogueRow.findAll('button')[1]!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.allocation__summary').exists()).toBe(false)
   })
 })
