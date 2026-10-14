@@ -2,6 +2,10 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
 import SetupStep from '@/views/character-builder/components/SetupStep.vue'
+import { draft2024 } from '../fixtures/draft-2024'
+
+/** 第一页现在由分配控件承载等级（MC-E02），测试提供一份单职业草稿。 */
+const SETUP_DRAFT = draft2024({ ruleset: '5e-2014', classId: 'class-2014-fighter', targetLevel: 3 })
 
 function standardArrayCard(wrapper: ReturnType<typeof mount>) {
   return wrapper.findAll('.option-card').find((card) => card.text().includes('标准数组'))
@@ -9,7 +13,7 @@ function standardArrayCard(wrapper: ReturnType<typeof mount>) {
 
 describe('SetupStep 属性生成方式选择', () => {
   it('选中非标准数组时，标准数组卡片不带选中/推荐样式', () => {
-    const wrapper = mount(SetupStep, { props: { targetLevel: 3, abilityMethod: 'point-buy' } })
+    const wrapper = mount(SetupStep, { props: { draft: SETUP_DRAFT, targetLevel: 3, abilityMethod: 'point-buy' } })
 
     const standard = standardArrayCard(wrapper)
     expect(standard).toBeTruthy()
@@ -22,7 +26,7 @@ describe('SetupStep 属性生成方式选择', () => {
   })
 
   it('选中标准数组时仅标准数组卡片带选中样式', () => {
-    const wrapper = mount(SetupStep, { props: { targetLevel: 3, abilityMethod: 'standard-array' } })
+    const wrapper = mount(SetupStep, { props: { draft: SETUP_DRAFT, targetLevel: 3, abilityMethod: 'standard-array' } })
 
     expect(standardArrayCard(wrapper)!.classes()).toContain('option-card--selected')
     const others = wrapper.findAll('.option-card').filter((card) => !card.text().includes('标准数组') && !card.text().includes('核心规则'))
@@ -30,7 +34,7 @@ describe('SetupStep 属性生成方式选择', () => {
   })
 
   it('点击卡片触发 method 事件', async () => {
-    const wrapper = mount(SetupStep, { props: { targetLevel: 3, abilityMethod: 'standard-array' } })
+    const wrapper = mount(SetupStep, { props: { draft: SETUP_DRAFT, targetLevel: 3, abilityMethod: 'standard-array' } })
 
     await wrapper.findAll('.option-card').find((card) => card.text().includes('自定义'))!.trigger('click')
 
@@ -44,7 +48,7 @@ describe('SetupStep 规则版本选择（B09-01）', () => {
   }
 
   it('第一页顶部展示版本、等级与属性方式两版卡片', () => {
-    const wrapper = mount(SetupStep, { props: { targetLevel: 4, abilityMethod: 'standard-array', ruleset: '5e-2024' } })
+    const wrapper = mount(SetupStep, { props: { draft: SETUP_DRAFT, targetLevel: 4, abilityMethod: 'standard-array', ruleset: '5e-2024' } })
 
     expect(rulesetCard(wrapper, '2014 核心规则')).toBeTruthy()
     expect(rulesetCard(wrapper, '2024 核心规则')!.classes()).toContain('option-card--selected')
@@ -53,7 +57,7 @@ describe('SetupStep 规则版本选择（B09-01）', () => {
   })
 
   it('选择版本触发 ruleset 事件，且不改动等级与属性方式事件', async () => {
-    const wrapper = mount(SetupStep, { props: { targetLevel: 4, abilityMethod: 'point-buy', ruleset: '5e-2014' } })
+    const wrapper = mount(SetupStep, { props: { draft: SETUP_DRAFT, targetLevel: 4, abilityMethod: 'point-buy', ruleset: '5e-2014' } })
 
     await rulesetCard(wrapper, '2024 核心规则')!.trigger('click')
 
@@ -63,7 +67,7 @@ describe('SetupStep 规则版本选择（B09-01）', () => {
   })
 
   it('已有构筑时点击另一版本触发另建（不锁定卡片）并给出说明', async () => {
-    const wrapper = mount(SetupStep, { props: { targetLevel: 4, abilityMethod: 'standard-array', ruleset: '5e-2014', rulesetLocked: true } })
+    const wrapper = mount(SetupStep, { props: { draft: SETUP_DRAFT, targetLevel: 4, abilityMethod: 'standard-array', ruleset: '5e-2014', rulesetLocked: true } })
 
     const modern = rulesetCard(wrapper, '2024 核心规则')!
     expect(modern.classes()).not.toContain('option-card--locked')
@@ -73,7 +77,7 @@ describe('SetupStep 规则版本选择（B09-01）', () => {
   })
 
   it('记忆版本未开放时给出回退说明', () => {
-    const wrapper = mount(SetupStep, { props: { targetLevel: 4, abilityMethod: 'standard-array', ruleset: '5e-2014', rulesetFallback: '5e-2024' } })
+    const wrapper = mount(SetupStep, { props: { draft: SETUP_DRAFT, targetLevel: 4, abilityMethod: 'standard-array', ruleset: '5e-2014', rulesetFallback: '5e-2024' } })
 
     expect(wrapper.text()).toContain('已改用 2014 新建')
     expect(wrapper.text()).toContain('暂未开放')

@@ -2,6 +2,9 @@ import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import ClassStep from '@/views/character-builder/components/ClassStep.vue'
+import { draft2024 } from '../fixtures/draft-2024'
+
+const DRAFT = draft2024({ ruleset: '5e-2014', classId: 'class-2014-fighter', targetLevel: 5 })
 
 afterEach(() => vi.useRealTimers())
 
@@ -13,7 +16,7 @@ describe('ClassStep 职业选择', () => {
   it('手机宽度 375px 下按稳定顺序渲染全部 13 个职业且不显示推荐', () => {
     window.innerWidth = 375
     window.dispatchEvent(new Event('resize'))
-    const wrapper = mount(ClassStep)
+    const wrapper = mount(ClassStep, { props: { draft: DRAFT } })
     const cards = wrapper.findAll('.expandable-option-card')
     expect(cards).toHaveLength(13)
     expect(cards.map((card) => card.get('strong').text())).toContain('奇械师')
@@ -21,19 +24,19 @@ describe('ClassStep 职业选择', () => {
   })
 
   it('关闭 TCoE 后隐藏奇械师但保留核心职业', () => {
-    const wrapper = mount(ClassStep, { props: { enabledSourceIds: [] } })
+    const wrapper = mount(ClassStep, { props: { draft: DRAFT, enabledSourceIds: [] } })
     expect(wrapper.findAll('.expandable-option-card')).toHaveLength(12)
     expect(wrapper.text()).not.toContain('奇械师')
     expect(wrapper.text()).toContain('战士')
   })
 
   it('选中卡片带选中样式', () => {
-    const wrapper = mount(ClassStep, { props: { selected: 'class-2014-fighter' } })
+    const wrapper = mount(ClassStep, { props: { draft: DRAFT, selected: 'class-2014-fighter' } })
     expect(wrapper.find('.expandable-option-card--selected').get('strong').text()).toBe('战士')
   })
 
   it('点击箭头展开与收起成长速览且不触发选中', async () => {
-    const wrapper = mount(ClassStep)
+    const wrapper = mount(ClassStep, { props: { draft: DRAFT } })
     const card = fighterCard(wrapper)!
     await card.find('.expandable-option-card__arrow').trigger('click')
     expect(card.text()).toContain('1级 · 生命骰 d10')
@@ -44,7 +47,7 @@ describe('ClassStep 职业选择', () => {
   })
 
   it('展开区展示职业详情（介绍 + 主要属性 + 生命骰 + 豁免）且位于职业成长之前', async () => {
-    const wrapper = mount(ClassStep)
+    const wrapper = mount(ClassStep, { props: { draft: DRAFT } })
     const card = fighterCard(wrapper)!
     await card.find('.expandable-option-card__arrow').trigger('click')
 
@@ -59,7 +62,7 @@ describe('ClassStep 职业选择', () => {
   })
 
   it('每个职业都有职业介绍（无介绍时不渲染空段落）', async () => {
-    const wrapper = mount(ClassStep)
+    const wrapper = mount(ClassStep, { props: { draft: DRAFT } })
     expect(wrapper.findAll('.class-step__intro')).toHaveLength(0)
     for (const card of wrapper.findAll('.expandable-option-card')) {
       await card.find('.expandable-option-card__arrow').trigger('click')
@@ -70,7 +73,7 @@ describe('ClassStep 职业选择', () => {
 
   it('双击卡片主体只展开成长速览', async () => {
     vi.useFakeTimers()
-    const wrapper = mount(ClassStep)
+    const wrapper = mount(ClassStep, { props: { draft: DRAFT } })
     const card = fighterCard(wrapper)!
     await card.find('.expandable-option-card__main').trigger('click')
     await card.find('.expandable-option-card__main').trigger('click')
