@@ -350,7 +350,7 @@ function openTranscribe(spellId?: string): void {
         <span class="session-panel__identity-copy">
         <strong>{{ draft.name || '未命名角色' }}</strong>
         <small>
-          {{ draft.classId ? `${draft.targetLevel}级 ${panel.className.value}` : `${draft.targetLevel}级` }}
+          {{ panel.classLabel.value || `${draft.targetLevel}级` }}
           · {{ draft.raceId ? '已选种族' : '未选种族' }}{{ draft.alignment ? ` · ${draft.alignment}` : '' }}
         </small>
         </span>
@@ -426,15 +426,23 @@ function openTranscribe(spellId?: string): void {
               撤回上次休息
             </button>
           </div>
-          <div v-if="panel.hitDice.value" class="session-panel__hit-dice">
+          <div v-if="panel.hitDiceGroups.value.length" class="session-panel__hit-dice">
             <p>
-              生命骰 d{{ panel.hitDice.value.die }}：剩余
-              <b>{{ panel.hitDice.value.remaining }}</b> / {{ panel.hitDice.value.total }} 颗
-              <small>短休可花费生命骰恢复生命（骰点＋消耗数×体质调整值）。</small>
+              生命骰共剩余
+              <b>{{ panel.hitDice.value?.remaining ?? 0 }}</b> / {{ panel.hitDice.value?.total ?? 0 }} 颗
+              <small>短休可花费生命骰恢复生命（骰点＋消耗数×体质调整值）。兼职时按骰面分别记账。</small>
             </p>
+            <div v-for="group in panel.hitDiceGroups.value" :key="group.die" class="session-panel__hit-die-group">
+              <p>
+                生命骰 d{{ group.die }}：剩余
+                <b>{{ group.remaining }}</b> / {{ group.total }} 颗
+              </p>
+              <div class="session-panel__rest-actions">
+                <button type="button" class="session-panel__rest-button" :disabled="group.remaining === 0" @click="panel.spendHitDice(1, 'roll', group.die)">掷骰消耗 1 颗 d{{ group.die }}</button>
+                <button type="button" class="session-panel__rest-button" :disabled="group.remaining === 0" @click="panel.spendHitDice(1, 'average', group.die)">直接回 1 颗（{{ group.average }}）</button>
+              </div>
+            </div>
             <div class="session-panel__rest-actions">
-              <button type="button" class="session-panel__rest-button" :disabled="panel.hitDice.value.remaining === 0" @click="panel.spendHitDice(1, 'roll')">掷骰消耗 1 颗</button>
-              <button type="button" class="session-panel__rest-button" :disabled="panel.hitDice.value.remaining === 0" @click="panel.spendHitDice(1, 'average')">直接回 1 颗（{{ panel.hitDice.value.average }}）</button>
               <button
                 v-if="panel.hitDiceSnapshotAvailable.value"
                 type="button"
@@ -480,6 +488,8 @@ function openTranscribe(spellId?: string): void {
             <span>
               {{ resource.name }}
               <small>剩余 {{ resource.remaining }} / {{ resource.max }} {{ resource.dice ? resource.unit : '次' }}</small>
+              <!-- 同名资源合并（MC-E05，R5.3）：多个职业提供同一个计数池时说明来源与上限口径 -->
+              <small v-if="resource.sharedSources">由{{ resource.sharedSources.join('、') }}共用同一计数池，上限取较高者</small>
             </span>
             <div class="session-panel__resource-actions">
               <button type="button" class="session-panel__step" :aria-label="`恢复${resource.name}`" @click="panel.changeResource(resource.id, -1)">＋</button>
@@ -677,6 +687,14 @@ function openTranscribe(spellId?: string): void {
 
     <div v-else-if="activeTab === 'spells'" class="session-panel__tab">
       <p v-if="castNotice" class="session-panel__notice" role="status">{{ castNotice }}</p>
+      <!-- 每职业施法属性（MC-D02）：兼职时各职业的法术攻击／DC 与最高环级并列展示 -->
+      <section v-if="panel.classSpellcastingProfiles.value.length > 1" class="session-panel__section">
+        <h3>各职业施法属性</h3>
+        <p v-for="profile in panel.classSpellcastingProfiles.value" :key="profile.classId">
+          {{ profile.className }}{{ profile.classLevel }} 级 · {{ ABILITY_LABELS[profile.ability] }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }} · 最高 {{ profile.maxSpellLevel }} 环
+          <template v-if="profile.pact"><br>契约魔法：法术位按{{ profile.className }}自身等级单独结算（短休恢复）。</template>
+        </p>
+      </section>
       <section v-if="speciesSpellcastingProfiles.length" class="session-panel__section">
         <h3>种族施法</h3>
         <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
@@ -1108,6 +1126,27 @@ function openTranscribe(spellId?: string): void {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
+  }
+
+  /* 生命骰按骰面分组（MC-E05）：每组各自一行剩余数与消耗按钮。 */
+  &__hit-dice {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+
+    > p { margin: 0; }
+
+    small { display: block; color: var(--color-text-muted); font-size: 0.7rem; }
+  }
+
+  &__hit-die-group {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+
+    p { margin: 0; font-size: 0.78rem; }
   }
 
   &__rest-button {

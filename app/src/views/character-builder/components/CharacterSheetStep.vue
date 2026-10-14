@@ -20,6 +20,9 @@ import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, formatFeatGrantSource, getCheckpointSelectionBounds, getFeatStructuredEffectLabels, manualFeatParentCheckpointId, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { getClassEntries, getClassLevel, getPrimaryClassId, getTotalLevel } from '@/rules/multiclass'
+import { getClassLevelLabel } from '@/rules/multiclass-session'
+import { getCantripScalingAtLevel, getClassSpellcastingProfiles } from '@/rules/spellcasting'
 import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { isSourceEnabled } from '@/rules/source-books'
 import { addAdventureItem, decreaseAdventureItem, increaseAdventureItem, removeAdventureItem, toggleInventoryEquipment } from '@/rules/starting-equipment'
@@ -114,17 +117,25 @@ function abilityNote(key: AbilityKey): string {
   const adjustment = editing.manual.value.abilityAdjustments[key]
   return `调整值 ${modifier >= 0 ? '+' : ''}${modifier}${adjustment ? ` · 人工调整 ${adjustment >= 0 ? '+' : ''}${adjustment}` : ''}`
 }
+/**
+ * 职业展示（MC-E03／MC-E05）：格式统一由 `getClassLevelLabel` 定义，与草稿列表、跑团助手、导出同一实现。
+ * 单职业为「战士5」；兼职为「战士3 / 游荡者2（5 级角色）」。
+ */
+const classLevelLabel = computed(() => getClassLevelLabel(props.draft, repository.value))
 const identityLine = computed(() => {
   const draft = props.draft
+  const entries = getClassEntries(draft)
+  const subclassNames = entries
+    .map((entry) => (entry.subclassId ? repository.value.getSubclass(entry.subclassId)?.name : undefined))
+    .filter((name): name is string => Boolean(name))
   const names = [
-    draft.classId ? repository.value.getClass(draft.classId)?.name : undefined,
-    draft.subclassId ? repository.value.getSubclass(draft.subclassId)?.name : undefined,
+    ...subclassNames,
     draft.raceId ? repository.value.getRace(draft.raceId)?.name : undefined,
     draft.subraceId ? repository.value.getRace(draft.subraceId)?.name : undefined,
     draft.backgroundId ? repository.value.getBackground(draft.backgroundId)?.name : undefined,
     draft.backgroundVariantId ? repository.value.getBackground(draft.backgroundVariantId)?.name : undefined,
   ].filter(Boolean)
-  return `${draft.targetLevel}级 · ${names.join(' · ')}`
+  return `${classLevelLabel.value} · ${names.join(' · ')}`.replace(/ · $/, '')
 })
 const spellcastingConfig = computed(() => getSpellcastingConfig(props.draft))
 const speciesSpellcastingProfiles = computed(() => getSpeciesSpellcastingProfiles(props.draft, props.derived))
@@ -135,17 +146,42 @@ const editableSpellSlots = computed(() => Array.from({ length: 9 }, (_, index) =
 })))
 const spellSlotsLabel = computed(() => {
   if (!spellSlots.value.length) return ''
-  if (spellSlots.value[0]?.pact) {
-    const slot = spellSlots.value[0]
-    return `契约法术位：${slot.count} 个 ${slot.level} 环（短休恢复）`
-  }
-  return spellSlots.value.map((slot) => `${slot.level}环×${slot.count}`).join(' · ')
+  // 兼职可能同时存在通用池与契约池（MC-D02）：两池分别展示，不能只显示第一个。
+  const parts = spellSlots.value.map((slot) => slot.pact
+    ? `契约：${slot.count} 个 ${slot.level} 环（短休恢复）`
+    : `${slot.level}环×${slot.count}`)
+  const hasPact = spellSlots.value.some((slot) => slot.pact)
+  return hasPact ? `法术位 ${parts.join(' · ')}` : parts.join(' · ')
 })
 const manualSpellIds = computed(() => new Set(editing.manual.value.addedSpells.map((item) => item.spellId)))
+/**
+ * 每职业施法属性（MC-D02）：兼职时每个施法职业各自给出法术攻击／DC 与最高环级。
+ * 单职业只有一行，与顶部「法术攻击／法术豁免 DC」重复，因此界面只在兼职时展示。
+ */
+const classSpellcastingProfiles = computed(() => getClassSpellcastingProfiles(props.draft))
 const cantripSpells = computed(() => getEffectiveSelectedSpellIds(props.draft)
   .filter((id) => !manualSpellIds.value.has(id))
   .map((id) => repository.value.getSpell(id))
   .filter((spell): spell is SpellRule => Boolean(spell) && spell?.level === 0))
+
+/**
+ * 戏法成长标注（MC-E03 接入 MC-D05）：按**角色总等级**给出当前生效的成长值。
+ * 未登记成长规则的戏法不显示成长行（决策 D12），也不写「无成长」。
+ */
+const totalLevel = computed(() => getTotalLevel(props.draft) || props.draft.targetLevel)
+const cantripScalingNotes = computed(() => new Map(
+  cantripSpells.value.flatMap((spell) => {
+    const scaling = getCantripScalingAtLevel(props.draft.ruleset, spell.id, totalLevel.value)
+    if (!scaling || scaling.isBase) return []
+    const parts = [
+      scaling.dice ? `当前 ${scaling.dice}` : '',
+      scaling.count !== undefined ? `当前 ${scaling.count} 道` : '',
+      scaling.die ? `当前 ${scaling.die}` : '',
+      scaling.note ?? '',
+    ].filter(Boolean)
+    return parts.length > 0 ? [[spell.id, `按角色总等级 ${totalLevel.value} 级：${parts.join('；')}`] as const] : []
+  }),
+))
 const preparedOrKnownSpells = computed(() => {
   return getEffectiveSelectedSpellIds(props.draft)
     .filter((id) => !manualSpellIds.value.has(id))
@@ -461,10 +497,30 @@ const classInfo = computed(() => {
   if (!classId) return undefined
   const classRule = getRulesRepository(props.draft.ruleset).getClass(classId)
   if (!classRule) return undefined
-  // 角色卡只展示当前等级已解锁的特性（更高等级的特性不显示）。
+  // 角色卡只展示**该职业自己的等级**已解锁的特性（更高等级的特性不显示）。
+  const classLevel = getClassLevel(props.draft, classId) || props.draft.targetLevel
   const features = (classRule.features ?? [])
-    .filter((feature) => feature.level <= props.draft.targetLevel)
+    .filter((feature) => feature.level <= classLevel)
   return { classRule, features }
+})
+
+/** 多职业时的逐职业信息（MC-E03）：每个职业各自显示等级、子职与已解锁特性。 */
+const classInfos = computed(() => {
+  const repository = getRulesRepository(props.draft.ruleset)
+  return getClassEntries(props.draft).flatMap((entry) => {
+    const classRule = repository.getClass(entry.classId)
+    if (!classRule) return []
+    const subclass = entry.subclassId ? repository.getSubclass(entry.subclassId) : undefined
+    return [{
+      classId: entry.classId,
+      classLevel: entry.level,
+      classRule,
+      subclass,
+      isPrimary: entry.classId === getPrimaryClassId(props.draft),
+      features: (classRule.features ?? []).filter((feature) => feature.level <= entry.level),
+      subclassFeatures: (subclass?.features ?? []).filter((feature) => feature.level <= entry.level),
+    }]
+  })
 })
 /**
  * 专长与属性提升条目（H3）：生效专长与规则层 `listFeatGrants` 同源，
@@ -658,7 +714,7 @@ function handleExportPdf(): void {
 <template>
   <section class="character-sheet">
     <UiNotice v-if="draft.ruleset === '5e-2024'" tone="info" title="2024 支持">
-      2024 车卡、跑团资源结算与导出已可用；魔法物品为自由添加、仅索引条目不可加入；生物／召唤数据与多职业不在本轮。
+      2024 车卡、跑团资源结算与导出已可用；魔法物品为自由添加、仅索引条目不可加入；兼职（多职业）已支持，生物／召唤数据不在本轮。
     </UiNotice>
     <header :class="{ 'character-sheet__header--media': draft.media?.avatar || draft.media?.portrait }">
       <div class="character-sheet__header-content" :class="{ 'character-sheet__header-content--portrait': draft.media?.portrait }">
@@ -748,16 +804,25 @@ function handleExportPdf(): void {
         <h3>被动察觉</h3>
         <div><EditableStatTile label="被动察觉" :value="derived.passivePerception.value" :edit-mode="editing.editMode.value" :note="sourceNote(derived.passivePerception.sources)" @commit="editing.commitDerived('passivePerception', $event)" /></div>
       </section>
-      <section v-if="classInfo">
-        <section v-if="classInfo.features.length" class="character-sheet__subclass-features">
+      <!-- 职业特性（MC-E03）：兼职时按职业分区，每个职业只显示**该职业等级**已解锁的特性 -->
+      <section v-if="classInfos.length">
+        <section
+          v-for="info in classInfos"
+          :key="info.classId"
+          v-show="info.features.length"
+          class="character-sheet__subclass-features"
+        >
           <header class="character-sheet__subclass-features-header">
-            <h3>职业特性 · {{ classInfo.classRule.name }}</h3>
-            <span v-if="classInfo.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
-            <span v-else-if="classInfo.features.some((feature) => feature.status === 'selectable')" class="character-sheet__subclass-features-note">可选择 · 情境效果按摘要处理</span>
+            <h3>
+              职业特性 · {{ info.classRule.name }}{{ info.classLevel }} 级
+              <template v-if="info.isPrimary">（起始职业）</template>
+            </h3>
+            <span v-if="info.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
+            <span v-else-if="info.features.some((feature) => feature.status === 'selectable')" class="character-sheet__subclass-features-note">可选择 · 情境效果按摘要处理</span>
           </header>
           <ListShell>
             <ExpandableOptionCard
-              v-for="feature in classInfo.features"
+              v-for="feature in info.features"
               :key="feature.id"
               :title="feature.name"
               :description="`${feature.level}级 · ${feature.englishName}`"
@@ -772,18 +837,19 @@ function handleExportPdf(): void {
             </ExpandableOptionCard>
           </ListShell>
         </section>
-        <p v-else class="character-sheet__empty-features">该职业在当前等级暂无已登记特性。</p>
+        <p v-if="!classInfos.some((info) => info.features.length)" class="character-sheet__empty-features">该职业在当前等级暂无已登记特性。</p>
       </section>
-      <template v-if="subclassInfo">
-        <section v-if="subclassInfo.features.length" class="character-sheet__subclass-features">
+      <!-- 子职特性（MC-E03）：兼职时每个职业各自展示自己的子职 -->
+      <template v-for="info in classInfos.filter((item) => item.subclass)" :key="`subclass-${info.classId}`">
+        <section v-if="info.subclassFeatures.length" class="character-sheet__subclass-features">
           <header class="character-sheet__subclass-features-header">
-            <h3>子职特性 · {{ subclassInfo.subclass.name }}</h3>
-            <span v-if="subclassInfo.features.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
-            <span v-else-if="subclassInfo.features.some((feature) => feature.status === 'selectable')" class="character-sheet__subclass-features-note">可选择 · 情境效果按摘要处理</span>
+            <h3>子职特性 · {{ info.subclass?.name }}（{{ info.classRule.name }}{{ info.classLevel }} 级）</h3>
+            <span v-if="info.subclassFeatures.some((feature) => feature.status === 'index-only')" class="character-sheet__subclass-features-note">仅索引 · 未核验</span>
+            <span v-else-if="info.subclassFeatures.some((feature) => feature.status === 'selectable')" class="character-sheet__subclass-features-note">可选择 · 情境效果按摘要处理</span>
           </header>
           <ListShell>
             <ExpandableOptionCard
-              v-for="feature in subclassInfo.features"
+              v-for="feature in info.subclassFeatures"
               :key="feature.id"
               :title="feature.name"
               :description="`${feature.level}级 · ${feature.englishName}`"
@@ -798,7 +864,7 @@ function handleExportPdf(): void {
         </section>
         <p v-else class="character-sheet__empty-features">该子职在当前等级暂无已登记特性。</p>
       </template>
-      <p v-else class="character-sheet__empty-features">尚未选择子职，完成时间线步骤后这里会展示子职特性。</p>
+      <p v-if="!classInfos.some((info) => info.subclass)" class="character-sheet__empty-features">尚未选择子职，完成时间线步骤后这里会展示子职特性。</p>
       <template v-if="raceInfo">
         <section v-if="raceInfo.features.length" class="character-sheet__subclass-features">
           <header class="character-sheet__subclass-features-header">
@@ -905,6 +971,14 @@ function handleExportPdf(): void {
         <EditableStatTile label="法术豁免 DC" :value="derived.spellSaveDc?.value ?? 0" :minimum="0" :edit-mode="editing.editMode.value" :note="derived.spellSaveDc ? sourceNote(derived.spellSaveDc.sources) : '当前职业无施法能力'" @commit="editing.commitDerived('spellSaveDc', $event)" />
       </div>
       <p v-if="spellSlots.length && !editing.editMode.value" class="character-sheet__spell-slots">法术位：{{ spellSlotsLabel }}</p>
+      <!-- 每职业施法属性（MC-D02）：兼职时法术攻击／DC 按归属职业分别给出 -->
+      <section v-if="classSpellcastingProfiles.length > 1" class="character-sheet__spell-section">
+        <h4>各职业施法属性</h4>
+        <p v-for="profile in classSpellcastingProfiles" :key="profile.classId">
+          {{ profile.className }}{{ profile.classLevel }} 级 · {{ abilityLabel(profile.ability) }} · 法术攻击 {{ profile.attackBonus >= 0 ? '+' : '' }}{{ profile.attackBonus }} · 法术豁免 DC {{ profile.saveDc }} · 最高 {{ profile.maxSpellLevel }} 环
+          <template v-if="profile.pact"><br>契约魔法：法术位按{{ profile.className }}自身等级单独结算（短休恢复）。</template>
+        </p>
+      </section>
       <section v-if="speciesSpellcastingProfiles.length" class="character-sheet__spell-section">
         <h4>种族施法</h4>
         <p v-for="profile in speciesSpellcastingProfiles" :key="profile.id">
@@ -944,7 +1018,7 @@ function handleExportPdf(): void {
               expanded-label="法术效果"
               :key="spell.id"
               :title="spell.name"
-              :description="spell.englishName"
+              :description="cantripScalingNotes.get(spell.id) ?? spell.englishName"
             >
               <template v-if="spell.description" #expanded>{{ spell.description }}</template>
             </ExpandableOptionCard>
