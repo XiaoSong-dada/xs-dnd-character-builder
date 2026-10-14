@@ -137,6 +137,25 @@ async function onSliderCommit(): Promise<void> {
   if (sliderLevel.value !== effectiveTotal.value) sliderLevel.value = effectiveTotal.value
 }
 
+/** 等级名的展示口径：兼职时是总等级，否则是该职业（或目标）等级。 */
+const levelLabel = computed(() => multiclassActive.value ? '总等级' : '目标等级')
+
+/** 步进按钮可用性（需求 §3.2，决策 D34）：与滑杆同一组边界，到界即禁用、不产生事件。 */
+function canStepLevel(delta: number): boolean {
+  const next = sliderLevel.value + delta
+  return next >= totalBounds.value.min && next <= totalBounds.value.max
+}
+
+/**
+ * ±1 步进（需求 §3，决策 D34／D35）：先移动本地预览值，再复用滑杆的提交通道与回滚语义——
+ * 只发 `applyTotalLevel`（轻量确认策略），不新增第二条提交实现，也不引入第二套边界判断。
+ */
+async function stepLevel(delta: -1 | 1): Promise<void> {
+  if (!canStepLevel(delta)) return
+  sliderLevel.value += delta
+  await onSliderCommit()
+}
+
 /** 弹窗模式的本地待定副本：内联模式不使用它（R3／D21）。 */
 const pending = ref<CharacterDraft>(props.draft)
 watch(() => props.draft, (next) => { pending.value = next })
@@ -324,24 +343,43 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
       </label>
     </header>
 
-    <!-- 等级滑杆（需求 §3）：单职业时即目标等级；兼职时拖动改总等级 -->
-    <label class="allocation__slider">
-      <span>{{ multiclassActive ? '总等级' : '目标等级' }} <b>{{ sliderLevel }}级</b></span>
-      <input
-        type="range"
-        :min="totalBounds.min"
-        :max="totalBounds.max"
-        :value="sliderLevel"
-        :aria-label="multiclassActive ? '总等级' : '目标等级'"
-        @input="onSliderInput"
-        @change="onSliderCommit"
-      >
-      <small v-if="classes.length === 0">等级决定需要完成多少次职业、子职和属性提升选择。</small>
-      <small v-else-if="multiclassActive">
-        拖动调整总等级：加级给列表最后一个职业，减级从末尾往前扣；单个职业最低 1 级，拖动不会移除职业。
-      </small>
-      <small v-else>等级决定需要完成多少次职业、子职和属性提升选择。</small>
-    </label>
+    <!-- 等级卡（需求 §2／§3）：滑杆 + ±1 步进；无职业、单职业与兼职三种状态共用（D34） -->
+    <div class="allocation__level">
+      <div class="allocation__level-head">
+        <span>{{ levelLabel }}</span>
+        <div class="allocation__stepper allocation__stepper--total">
+          <BaseButton
+            variant="secondary"
+            :disabled="!canStepLevel(-1)"
+            :aria-label="`${levelLabel}降一级`"
+            @click="stepLevel(-1)"
+          >−</BaseButton>
+          <b>{{ sliderLevel }}级</b>
+          <BaseButton
+            variant="secondary"
+            :disabled="!canStepLevel(1)"
+            :aria-label="`${levelLabel}升一级`"
+            @click="stepLevel(1)"
+          >＋</BaseButton>
+        </div>
+      </div>
+      <label class="allocation__slider">
+        <input
+          type="range"
+          :min="totalBounds.min"
+          :max="totalBounds.max"
+          :value="sliderLevel"
+          :aria-label="levelLabel"
+          @input="onSliderInput"
+          @change="onSliderCommit"
+        >
+        <small v-if="classes.length === 0">等级决定需要完成多少次职业、子职和属性提升选择；也可以点按 ± 逐级调整。</small>
+        <small v-else-if="multiclassActive">
+          拖动滑杆或点按 ± 调整总等级：加级给列表最后一个职业，减级从末尾往前扣；单个职业最低 1 级，调整不会移除职业。
+        </small>
+        <small v-else>等级决定需要完成多少次职业、子职和属性提升选择；也可以点按 ± 逐级调整。</small>
+      </label>
+    </div>
 
     <p class="allocation__total">
       <span>总等级 <b>{{ effectiveTotal }}</b> 级</span>
@@ -511,17 +549,29 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
     small { color: var(--color-text-muted); font-size: 0.72rem; }
   }
 
-  /* 等级滑杆（需求 §3）：与改动前的第 1 步同一形态 */
-  &__slider {
+  /* 等级卡（需求 §2）：卡片外壳 + 头部（等级名与 ±1 步进）+ 滑杆 */
+  &__level {
     display: grid;
     gap: 0.6rem;
     padding: 1rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
+  }
 
-    span { display: flex; justify-content: space-between; color: var(--color-text-muted); }
-    b { color: var(--color-primary); }
+  &__level-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--color-text-muted);
+  }
+
+  /* 等级滑杆（需求 §3）：与改动前的第 1 步同一形态 */
+  &__slider {
+    display: grid;
+    gap: 0.6rem;
+
     input { width: 100%; accent-color: var(--color-primary); }
     small { color: var(--color-text-muted); line-height: 1.6; }
   }
@@ -561,6 +611,9 @@ const canApply = computed(() => changeSummary.value.lines.some((line) => !line.i
     gap: 0.5rem;
 
     b { min-width: 1.5rem; text-align: center; font-size: 0.95rem; }
+
+    /* 总等级步进（需求 §2）：读数用主色强调，与职业行步进区分层级 */
+    &--total b { min-width: 3rem; color: var(--color-primary); font-size: 1.05rem; }
   }
 
   &__switch-primary {
