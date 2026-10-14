@@ -11,6 +11,7 @@ vi.mock('vue-router', () => ({
 
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import { RulesetPreferenceService } from '@/services/ruleset-preference'
+import { addClassEntry, setClassLevel, setPrimaryClassId } from '@/rules/multiclass'
 import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft } from '@/types/character'
 import { useCharacterBuilderPage } from '@/views/character-builder/hooks/useCharacterBuilderPage'
@@ -67,6 +68,12 @@ const level10Selections = [
   { checkpointId: 'subclass-feature-fighter-battle-master-extra-maneuvers-7', optionIds: ['maneuver-riposte', 'maneuver-menacing'], confirmedAt: '' },
   { checkpointId: 'fighter-2014-asi-8', optionIds: ['asi-dex-2'], confirmedAt: '' },
   { checkpointId: 'subclass-feature-fighter-battle-master-extra-maneuvers-10', optionIds: ['maneuver-pushing', 'maneuver-disarming'], confirmedAt: '' },
+]
+
+/** 6 级战斗大师战士：5 级检查点 + 6 级属性提升（用于「本次变更没有新增待办」的用例）。 */
+const level6Selections = [
+  ...level5Selections,
+  { checkpointId: 'fighter-2014-asi-6', optionIds: ['asi-con-2'], confirmedAt: '' },
 ]
 
 /** 从规则库取术士指定环级的法术 ID（测试使用真实注册表数据）。 */
@@ -185,12 +192,13 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     expect(store.activeDraft?.spellSelections.spellbookReservedSpellIds).toEqual(['spell-2014-shield'])
   })
 
-  it('adjustLevel 升级：始终弹确认，确认后更新等级并跳转时间线', async () => {
+  it('角色卡确认分配（升级）：弹确认、确认后更新等级并跳转时间线', async () => {
     const { page, store } = await setupPage(makeFighterDraft({ selections: level5Selections }))
+    const raised = setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 6).draft
 
-    page.adjustLevel(6)
+    page.applyClassAllocation(raised)
 
-    expect(page.pendingChange.value?.title).toBe('升级至 6 级')
+    expect(page.pendingChange.value?.title).toBe('调整职业与等级分配')
     expect(page.pendingChange.value?.impact?.added).toContainEqual({
       checkpointId: 'fighter-2014-asi-6',
       title: '6级 · 属性提升或专长',
@@ -205,12 +213,25 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     expect(page.levelAdjustNotice.value?.step).toBe('timeline')
   })
 
-  it('adjustLevel 降级：确认后作废超限选择并留在当前步骤', async () => {
+  it('角色卡滑杆升级（D29）：不弹确认、出引导条但不跳转', async () => {
+    const { page, store } = await setupPage(makeFighterDraft({ selections: level5Selections }))
+    const raised = setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 6).draft
+
+    page.applyTotalLevel(raised)
+
+    expect(page.pendingChange.value).toBeUndefined()
+    expect(store.activeDraft?.targetLevel).toBe(6)
+    expect(page.step.value).toBe('sheet')
+    expect(page.levelAdjustNotice.value?.message).toContain('请完成新增检查点')
+    expect(page.levelAdjustNotice.value?.step).toBe('timeline')
+  })
+
+  it('角色卡确认分配（降级，D28）：确认后作废超限选择、只提示复查并停留在角色卡', async () => {
     const { page, store } = await setupPage(makeFighterDraft({ targetLevel: 10, selections: level10Selections }))
+    const lowered = setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 7).draft
 
-    page.adjustLevel(7)
+    page.applyClassAllocation(lowered)
 
-    expect(page.pendingChange.value?.title).toBe('降级至 7 级')
     expect(page.pendingChange.value?.impact?.invalidatedDetails).toContainEqual({
       checkpointId: 'fighter-2014-asi-8',
       title: '8级 · 属性提升或专长',
@@ -225,18 +246,51 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     expect(page.step.value).toBe('sheet')
     expect(page.levelAdjustNotice.value?.tone).toBe('warning')
     expect(page.levelAdjustNotice.value?.message).toContain('需复查')
+    expect(page.levelAdjustNotice.value?.step).toBe('timeline')
   })
 
-  it('adjustLevel 同级或未选职业时不弹确认、不修改', async () => {
+  it('滑杆同级提交不弹确认；没有待办项时清空过期引导条', async () => {
+    const { page, store } = await setupPage(makeFighterDraft({ selections: level5Selections }))
+    const raised = setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 6).draft
+
+    page.applyTotalLevel(raised)
+    expect(page.pendingChange.value).toBeUndefined()
+    expect(page.levelAdjustNotice.value?.step).toBe('timeline')
+
+    // 用户在时间线补全 6 级检查点后再提交一次同级滑杆：没有新的待办，过期引导条被清空。
+    store.updateDraft({ selections: level6Selections })
+    page.applyTotalLevel(store.activeDraft!)
+
+    expect(page.pendingChange.value).toBeUndefined()
+    expect(page.levelAdjustNotice.value).toBeUndefined()
+    expect(page.step.value).toBe('sheet')
+  })
+
+  it('未选职业时滑杆提交走 target-level 轻量路径：不产生引导条', async () => {
     const { page, store } = await setupPage(makeFighterDraft({ selections: level5Selections }))
 
-    page.adjustLevel(5)
-    expect(page.pendingChange.value).toBeUndefined()
-
     store.updateDraft({ classId: undefined })
-    page.adjustLevel(6)
-    expect(page.pendingChange.value).toBeUndefined()
-    expect(store.activeDraft?.targetLevel).toBe(5)
+    page.applyTotalLevel({ ...store.activeDraft!, targetLevel: 6 })
+
+    expect(page.pendingChange.value?.title).toBe('修改目标等级')
+    expect(page.levelAdjustNotice.value).toBeUndefined()
+
+    page.confirmPendingChange()
+
+    expect(store.activeDraft?.targetLevel).toBe(6)
+    expect(page.levelAdjustNotice.value).toBeUndefined()
+  })
+
+  it('第 1／3 步提交分配（D30）：不产生引导条、不跳转', async () => {
+    const { page, store } = await setupPage(makeFighterDraft({ selections: level5Selections, currentStep: 'class' }))
+    const raised = setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 6).draft
+
+    page.applyClassAllocation(raised)
+    page.confirmPendingChange()
+
+    expect(store.activeDraft?.targetLevel).toBe(6)
+    expect(page.step.value).toBe('class')
+    expect(page.levelAdjustNotice.value).toBeUndefined()
   })
 
   it('startReedit 智能定位：无未完成项进入属性步骤', async () => {
@@ -268,12 +322,12 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     expect(page.step.value).toBe('setup')
   })
 
-  it('adjustLevel 升级到无新增检查点等级：确认后进入法术步骤补选', async () => {
+  it('角色卡确认分配（升级到无新增检查点的等级）：确认后进入法术步骤补选', async () => {
     const { page, store } = await setupPage(makeSorcererDraft())
+    const raised = setClassLevel(page.activeDraft.value!, 'class-2014-sorcerer', 5).draft
 
-    page.adjustLevel(5)
+    page.applyClassAllocation(raised)
 
-    expect(page.pendingChange.value?.title).toBe('升级至 5 级')
     expect(page.pendingChange.value?.impact?.added).toEqual([])
     expect(page.pendingChange.value?.impact?.spellUpdates).toEqual(['已知法术 5/6', '戏法 4/5'])
 
@@ -285,7 +339,7 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     expect(page.levelAdjustNotice.value?.step).toBe('spells')
   })
 
-  it('adjustLevel 升级到属性提升等级：新增检查点优先进入时间线', async () => {
+  it('角色卡确认分配（升级到属性提升等级）：新增检查点优先进入时间线', async () => {
     const { page, store } = await setupPage(makeSorcererDraft({
       targetLevel: 3,
       selections: [
@@ -293,8 +347,9 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
         { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
       ],
     }))
+    const raised = setClassLevel(page.activeDraft.value!, 'class-2014-sorcerer', 4).draft
 
-    page.adjustLevel(4)
+    page.applyClassAllocation(raised)
 
     expect(page.pendingChange.value?.impact?.added).toContainEqual({
       checkpointId: 'sorcerer-2014-asi-4',
@@ -308,7 +363,7 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     expect(page.levelAdjustNotice.value?.step).toBe('timeline')
   })
 
-  it('adjustLevel 升级到超魔等级：确认后进入时间线补选超魔', async () => {
+  it('角色卡确认分配（升级到超魔等级）：确认后进入时间线补选超魔', async () => {
     const { page, store } = await setupPage(makeSorcererDraft({
       targetLevel: 2,
       selections: [
@@ -316,8 +371,9 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
         { checkpointId: 'sorcerer-2014-subclass-1', optionIds: ['subclass-2014-sorcerer-draconic-bloodline'], confirmedAt: '' },
       ],
     }))
+    const raised = setClassLevel(page.activeDraft.value!, 'class-2014-sorcerer', 3).draft
 
-    page.adjustLevel(3)
+    page.applyClassAllocation(raised)
 
     expect(page.pendingChange.value?.impact?.added).toContainEqual({
       checkpointId: 'sorcerer-2014-metamagic-3',
@@ -328,6 +384,34 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
 
     expect(store.activeDraft?.targetLevel).toBe(3)
     expect(page.step.value).toBe('timeline')
+  })
+
+  it('引导条不变式（D31）：hook 产出的引导条一定带目标步骤', async () => {
+    const { page } = await setupPage(makeFighterDraft({ selections: level5Selections }))
+
+    page.applyTotalLevel(setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 6).draft)
+
+    expect(page.levelAdjustNotice.value?.message).toContain('请完成新增检查点')
+    expect(page.levelAdjustNotice.value?.step).toBe('timeline')
+  })
+
+  it('更换起始职业（D31）：引导条指向装备步骤、文案不再声称起始装备已重算', async () => {
+    const { page, store } = await setupPage(makeFighterDraft({ selections: level5Selections }))
+    const added = addClassEntry(page.activeDraft.value!, 'class-2014-rogue')
+    const switched = setPrimaryClassId(added.draft, 'class-2014-rogue')
+    expect(switched.ok).toBe(true)
+
+    page.applyClassAllocation(switched.draft)
+    page.confirmPendingChange()
+
+    expect(store.activeDraft?.classId).toBe('class-2014-rogue')
+    const notice = page.levelAdjustNotice.value
+    expect(notice?.tone).toBe('warning')
+    expect(notice?.step).toBe('equipment')
+    expect(notice?.message).toContain('已更换起始职业')
+    expect(notice?.message).toContain('起始装备')
+    expect(notice?.message).not.toContain('起始装备与豁免熟练已按新起始职业重算')
+    expect(page.step.value).toBe('equipment')
   })
 })
 

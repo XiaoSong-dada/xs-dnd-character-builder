@@ -393,6 +393,37 @@ describe('CharacterSheetStep 升级降级与重新编辑入口', () => {
     })
     expect(complete.text()).not.toContain('待补全')
   })
+
+  it('缺口只来自非起始职业时仍显示待补全徽标（D32 兼职口径）', () => {
+    const multiclassDraft: CharacterDraft = {
+      ...draft,
+      targetLevel: 5,
+      subclassId: 'subclass-2014-fighter-battle-master',
+      selections: completeSelections,
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-fighter',
+        classes: [
+          { classId: 'class-2014-fighter', level: 4, subclassId: 'subclass-2014-fighter-battle-master' },
+          { classId: 'class-2014-rogue', level: 1 },
+        ],
+        levelOrder: [
+          'class-2014-fighter',
+          'class-2014-fighter',
+          'class-2014-fighter',
+          'class-2014-fighter',
+          'class-2014-rogue',
+        ],
+      },
+    }
+    const wrapper = mount(CharacterSheetStep, {
+      props: { draft: multiclassDraft, derived: deriveCharacter(multiclassDraft) },
+    })
+
+    // 起始职业（战士 4 级）的检查点全部完成且无失效选择，
+    // 缺口只来自新增的游荡者 1 级（4 项技能 + 2 项专精）——按单职业口径会漏报。
+    expect(wrapper.text()).toContain('待补全')
+  })
 })
 
 describe('CharacterSheetStep 头部按钮布局（编辑模式收纳）', () => {
