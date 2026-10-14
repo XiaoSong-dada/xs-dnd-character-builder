@@ -1,8 +1,8 @@
-﻿import { computed, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 
 import { deriveCharacter, deriveCharacterSummary } from '@/rules/derive'
-import { buildTimeline } from '@/rules/timeline'
+import { buildTimelineForDraft } from '@/rules/timeline'
 import { validateDraft } from '@/rules/validate'
 import { validateSpellSelections } from '@/rules/spellcasting'
 import { EMPTY_CURRENCY, isStartingEquipmentComplete } from '@/rules/starting-equipment'
@@ -42,7 +42,7 @@ function newId(): string {
 function createCharacterDraft(ruleset: RulesetId): CharacterDraft {
   const now = new Date().toISOString()
   return {
-    schemaVersion: 9,
+    schemaVersion: 10,
     id: newId(),
     ruleset,
     createdAt: now,
@@ -91,7 +91,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
   const completion = computed(() => {
     const draft = activeDraft.value
     if (!draft) return 0
-    const timeline = draft.classId ? buildTimeline(draft.classId, draft.targetLevel, { subraceId: draft.subraceId, subclassId: draft.subclassId, enabledSourceIds: draft.enabledSourceIds, selections: draft.selections, ruleset: draft.ruleset, raceId: draft.raceId, backgroundId: draft.backgroundId }) : []
+    const timeline = draft.classId ? buildTimelineForDraft(draft) : []
     const timelineComplete = timeline.length > 0 && timeline.every((checkpoint) => {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
       const count = selection?.optionIds.length ?? 0

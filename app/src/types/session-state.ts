@@ -36,10 +36,21 @@ export const EXHAUSTION_MAX_LEVEL = 6
 export const EXHAUSTION_DESCRIPTION =
   '每叠 1 层力竭承受对应层级的负面效果：1 层感知检定劣势；2 层速度减半；3 层攻击检定与豁免劣势；4 层生命值上限减半；5 层速度降为 0；6 层死亡。'
 
-/** 生命骰池：总数＝职业等级；spent = 已花费数量（B10-01，仅 2024 角色使用）。 */
+/** 单个骰面的生命骰组。 */
+export interface HitDiceGroup {
+  readonly total: number
+  readonly spent: number
+}
+
+/**
+ * 生命骰池：`total` 与 `spent` 是各骰面组的汇总值（单职业即全部骰子同面）；
+ * `byDie` 按骰面分别记账，兼职角色（如圣武士5/牧师5 = 5d10 + 5d8）按组消耗（MC-A03）。
+ * 旧状态对象只有 `total`／`spent` 时必须仍可读取：`byDie` 缺省表示骰面未知，按单组处理。
+ */
 export interface HitDicePool {
   readonly total: number
   readonly spent: number
+  readonly byDie?: Readonly<Record<number, HitDiceGroup>>
 }
 
 /** 休息前状态快照（撤回上次休息用，仅保留最近一次）。 */

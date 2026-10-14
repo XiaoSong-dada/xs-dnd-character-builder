@@ -1,5 +1,5 @@
 import { EXHAUSTION_MAX_LEVEL } from '@/types/session-state'
-import type { HitDicePool, SessionRestSnapshot, SessionState } from '@/types/session-state'
+import type { HitDiceGroup, HitDicePool, SessionRestSnapshot, SessionState } from '@/types/session-state'
 import type { RulesetId } from '@/types/character'
 
 /**
@@ -15,26 +15,132 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
 
-/** 首次进入：HP = 最大 HP，法术位全 0，力竭 0，无 debuff，无快照；提供生命骰总数时初始化骰池。 */
-export function createInitialSessionState(draftId: string, maxHp: number, hitDiceTotal?: number): SessionState {
+/**
+ * 生命骰池的骰面分组（MC-A03）：兼职角色按骰面分别记账。
+ * 旧状态只有 total／spent 时返回空数组，调用方按单组处理。
+ */
+export function getHitDicePoolEntries(pool: HitDicePool | undefined): readonly { readonly die: number; readonly total: number; readonly spent: number }[] {
+  if (!pool?.byDie) return []
+  return Object.entries(pool.byDie)
+    .map(([die, group]) => ({ die: Number(die), total: Math.max(0, group.total), spent: Math.max(0, group.spent) }))
+    .filter((entry) => Number.isFinite(entry.die) && entry.die > 0 && entry.total > 0)
+    .sort((left, right) => left.die - right.die)
+}
+
+/**
+ * 归一化骰面分组并重算汇总值；spent 钳制在 [0, total]。
+ * 没有任何分组时退回 `fallback` 的单组形态（旧状态兼容）。
+ */
+export function normalizeHitDicePool(
+  byDie: Readonly<Record<number, HitDiceGroup>> | undefined,
+  fallback?: HitDicePool,
+): HitDicePool | undefined {
+  const groups: Record<number, HitDiceGroup> = {}
+  for (const [die, group] of Object.entries(byDie ?? {})) {
+    const faces = Number(die)
+    if (!Number.isFinite(faces) || faces <= 0) continue
+    const total = Math.max(0, Math.trunc(group.total))
+    if (total === 0) continue
+    groups[faces] = { total, spent: clamp(Math.trunc(group.spent), 0, total) }
+  }
+  const entries = Object.values(groups)
+  if (entries.length === 0) {
+    if (!fallback) return undefined
+    const total = Math.max(0, Math.trunc(fallback.total))
+    const spent = clamp(Math.trunc(fallback.spent), 0, total)
+    return { total, spent }
+  }
   return {
+    total: entries.reduce((sum, group) => sum + group.total, 0),
+    spent: entries.reduce((sum, group) => sum + group.spent, 0),
+    byDie: groups,
+  }
+}
+
+/** 剩余生命骰汇总（按骰面分组时求和，否则用旧字段）。 */
+export function getHitDiceRemaining(pool: HitDicePool | undefined): number {
+  if (!pool) return 0
+  return Math.max(0, pool.total - pool.spent)
+}
+
+/** 按骰面花费生命骰：只扣指定骰面组，返回新池；无该骰面或已耗尽时返回原引用。 */
+export function spendHitDiceDie(pool: HitDicePool | undefined, die: number, count: number): HitDicePool | undefined {
+  const entries = getHitDicePoolEntries(pool)
+  const target = entries.find((entry) => entry.die === die)
+  if (!pool || !target) return pool
+  const spendCount = Math.max(0, Math.min(Math.trunc(count), target.total - target.spent))
+  if (spendCount === 0) return pool
+  const byDie: Record<number, HitDiceGroup> = Object.fromEntries(entries.map((entry) => [entry.die, { total: entry.total, spent: entry.spent }]))
+  byDie[die] = { total: target.total, spent: target.spent + spendCount }
+  return normalizeHitDicePool(byDie, pool)
+}
+
+/**
+ * 首次进入：HP = 最大 HP，法术位全 0，力竭 0，无 debuff，无快照。
+ * `hitDiceTotal` 传数字时建立单组骰池（旧签名）；传骰面数组时按骰面分组（MC-A03）。
+ */
+export function createInitialSessionState(draftId: string, maxHp: number, hitDiceTotal?: number | readonly number[]): SessionState {
+  const base: SessionState = {
     draftId,
     currentHp: maxHp,
     usedSpellSlots: {},
     exhaustionLevel: 0,
     debuffs: [],
-    ...(hitDiceTotal !== undefined ? { hitDice: { total: Math.max(0, hitDiceTotal), spent: 0 } } : {}),
     updatedAt: new Date().toISOString(),
   }
+  if (hitDiceTotal === undefined) return base
+  if (Array.isArray(hitDiceTotal)) {
+    const byDie: Record<number, HitDiceGroup> = {}
+    for (const die of hitDiceTotal as readonly number[]) {
+      if (!Number.isFinite(die) || die <= 0) continue
+      byDie[die] = { total: (byDie[die]?.total ?? 0) + 1, spent: 0 }
+    }
+    const pool = normalizeHitDicePool(byDie)
+    return pool ? { ...base, hitDice: pool } : base
+  }
+  return { ...base, hitDice: { total: Math.max(0, hitDiceTotal as number), spent: 0 } }
 }
 
-/** 补全/同步生命骰总数（旧状态迁移与升级后调用）；花费数按新总数钳制。 */
-export function ensureHitDicePool(state: SessionState, total: number): SessionState {
-  const safeTotal = Math.max(0, total)
+/**
+ * 补全/同步生命骰池（旧状态迁移与升级后调用）；花费数按新上限钳制。
+ * `total` 传数字时按单组处理（旧签名，骰面未知）；传入骰面数组时建立分组（MC-A03）。
+ */
+export function ensureHitDicePool(state: SessionState, total: number | readonly number[]): SessionState {
+  if (Array.isArray(total)) {
+    const dice = total as readonly number[]
+    const byDie: Record<number, HitDiceGroup> = {}
+    for (const die of dice) {
+      if (!Number.isFinite(die) || die <= 0) continue
+      byDie[die] = { total: (byDie[die]?.total ?? 0) + 1, spent: 0 }
+    }
+    const next = normalizeHitDicePool(byDie)
+    if (!next) return state
+    const entries = getHitDicePoolEntries(next)
+    const previous = getHitDicePoolEntries(state.hitDice)
+    const byDieWithSpent: Record<number, HitDiceGroup> = Object.fromEntries(entries.map((entry) => [
+      entry.die,
+      { total: entry.total, spent: clamp(previous.find((item) => item.die === entry.die)?.spent ?? 0, 0, entry.total) },
+    ]))
+    const normalized = normalizeHitDicePool(byDieWithSpent) ?? next
+    if (state.hitDice && samePool(state.hitDice, normalized)) return state
+    return { ...state, hitDice: normalized }
+  }
+  const safeTotal = Math.max(0, total as number)
   const priorTotal = state.hitDice?.total ?? safeTotal
   const spent = clamp(state.hitDice?.spent ?? 0, 0, Math.min(priorTotal, safeTotal))
   if (state.hitDice && state.hitDice.total === safeTotal && state.hitDice.spent === spent) return state
   return { ...state, hitDice: { total: safeTotal, spent } }
+}
+
+function samePool(left: HitDicePool, right: HitDicePool): boolean {
+  if (left.total !== right.total || left.spent !== right.spent) return false
+  const leftEntries = getHitDicePoolEntries(left)
+  const rightEntries = getHitDicePoolEntries(right)
+  if (leftEntries.length !== rightEntries.length) return false
+  return leftEntries.every((entry, index) => {
+    const other = rightEntries[index]
+    return Boolean(other) && entry.die === other?.die && entry.total === other.total && entry.spent === other.spent
+  })
 }
 
 /** 直接恢复口径的骰面平均值（d6→4、d8→5、d10→6、d12→7）。 */
@@ -45,23 +151,32 @@ export function averageHitDieValue(die: number): number {
 /**
  * 短休花费生命骰：消耗 count 颗（不得超过剩余），按 outcomes 骰点合计 + 消耗数×体质调整值恢复生命（至少 1）。
  * 记录 lastHitDiceSnapshot 以支持撤回。
+ * 提供 `die` 时只扣该骰面组（兼职角色按骰面记账，MC-A03）；省略时保持从总量扣减的既有行为。
  */
 export function spendHitDice(
   state: SessionState,
-  options: { readonly count: number; readonly outcomes: readonly number[]; readonly conModifier: number; readonly maxHp: number },
+  options: { readonly count: number; readonly outcomes: readonly number[]; readonly conModifier: number; readonly maxHp: number; readonly die?: number },
 ): SessionState {
   const pool = state.hitDice
   const count = Math.max(0, Math.floor(options.count))
   if (!pool || count === 0) return state
-  const remaining = Math.max(0, pool.total - pool.spent)
-  const spentCount = Math.min(count, remaining, options.outcomes.length || count)
+  // 只有按骰面分组的池才能按骰面扣减；旧状态（只有 total／spent）回退到总量扣减。
+  const byDie = options.die !== undefined && getHitDicePoolEntries(pool).length > 0
+  const grouped = byDie ? spendHitDiceDie(pool, options.die as number, count) : undefined
+  if (byDie && grouped === pool) return state
+  const available = grouped ? getHitDiceRemaining(grouped) : getHitDiceRemaining(pool)
+  const spentCount = Math.min(count, available, options.outcomes.length || count)
   if (spentCount === 0) return state
+  const nextPool = byDie
+    ? spendHitDiceDie(pool, options.die as number, spentCount)
+    : { ...pool, spent: pool.spent + spentCount }
+  if (!nextPool) return state
   const total = options.outcomes.slice(0, spentCount).reduce((sum, value) => sum + value, 0) + spentCount * options.conModifier
   const currentHp = clamp(state.currentHp + Math.max(1, total), 0, options.maxHp)
   return {
     ...state,
     currentHp,
-    hitDice: { ...pool, spent: pool.spent + spentCount },
+    hitDice: nextPool,
     lastHitDiceSnapshot: snapshot(state),
     updatedAt: new Date().toISOString(),
   }
@@ -119,6 +234,14 @@ export function toggleDebuff(state: SessionState, debuffId: string): SessionStat
     ? state.debuffs.filter((id) => id !== debuffId)
     : [...state.debuffs, debuffId]
   return { ...state, debuffs, updatedAt: new Date().toISOString() }
+}
+
+/** 长休恢复全部骰面组：按骰面把 spent 清零，并重算汇总值（MC-A03）。 */
+function refreshHitDicePool(pool: HitDicePool | undefined): HitDicePool | undefined {
+  if (!pool) return undefined
+  const entries = getHitDicePoolEntries(pool)
+  if (entries.length === 0) return { ...pool, spent: 0 }
+  return normalizeHitDicePool(Object.fromEntries(entries.map((entry) => [entry.die, { total: entry.total, spent: 0 }])), pool)
 }
 
 function snapshot(state: SessionState): SessionRestSnapshot {
@@ -182,7 +305,7 @@ export function applyLongRest(
       currentHp: maxHp,
       usedSpellSlots: {},
       exhaustionLevel: Math.max(0, state.exhaustionLevel - 1),
-      hitDice: state.hitDice ? { ...state.hitDice, spent: 0 } : undefined,
+      hitDice: refreshHitDicePool(state.hitDice),
       lastRestSnapshot: snapshot(state),
       updatedAt: new Date().toISOString(),
     }
@@ -248,7 +371,7 @@ export function reconcileSessionLimits(
   oldMaxHp: number,
   newMaxHp: number,
   newSlots: readonly { level: number; count: number }[],
-  hitDiceTotal?: number,
+  hitDiceTotal?: number | readonly number[],
   resources?: readonly { readonly id: string; readonly max: number }[],
 ): SessionState {
   const preserveDamage = (currentHp: number): number => clamp(newMaxHp - Math.max(0, oldMaxHp - currentHp), 0, newMaxHp)
@@ -262,7 +385,34 @@ export function reconcileSessionLimits(
   )
   const reconcileHitDice = (pool: HitDicePool | undefined): HitDicePool | undefined => {
     if (!pool) return undefined
-    const total = Math.max(0, hitDiceTotal ?? pool.total)
+    // 骰面数组：按骰面重建分组，已花数量按同骰面保留并钳制（MC-A03）。
+    if (Array.isArray(hitDiceTotal)) {
+      const dice = hitDiceTotal as readonly number[]
+      const byDie: Record<number, HitDiceGroup> = {}
+      for (const die of dice) {
+        if (!Number.isFinite(die) || die <= 0) continue
+        byDie[die] = { total: (byDie[die]?.total ?? 0) + 1, spent: 0 }
+      }
+      const previous = getHitDicePoolEntries(pool)
+      const withSpent: Record<number, HitDiceGroup> = Object.fromEntries(Object.entries(byDie).map(([die, group]) => [
+        Number(die),
+        { total: group.total, spent: clamp(previous.find((entry) => entry.die === Number(die))?.spent ?? 0, 0, group.total) },
+      ]))
+      return normalizeHitDicePool(withSpent, pool)
+    }
+    const total = Math.max(0, (hitDiceTotal as number | undefined) ?? pool.total)
+    if (pool.byDie) {
+      const entries = getHitDicePoolEntries(pool)
+      const scale = pool.total > 0 ? total / pool.total : 1
+      const rebuilt: Record<number, HitDiceGroup> = {}
+      let assigned = 0
+      entries.forEach((entry, index) => {
+        const nextTotal = index === entries.length - 1 ? Math.max(0, total - assigned) : Math.max(0, Math.round(entry.total * scale))
+        assigned += nextTotal
+        rebuilt[entry.die] = { total: nextTotal, spent: clamp(entry.spent, 0, nextTotal) }
+      })
+      return normalizeHitDicePool(rebuilt, pool)
+    }
     return { total, spent: clamp(pool.spent, 0, total) }
   }
   const resourceMax = new Map((resources ?? []).map((resource) => [resource.id, resource.max]))
