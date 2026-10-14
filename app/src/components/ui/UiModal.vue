@@ -1,11 +1,18 @@
 <script setup lang="ts">
-defineProps<{ open: boolean; title: string }>()
+import { toRef } from 'vue'
+
+import { useModalLayer } from '@/components/ui/modal-layer'
+
+const props = defineProps<{ open: boolean; title: string }>()
 defineEmits<{ close: [] }>()
+
+// 层级由打开顺序决定（决策 D37）：后打开的弹窗在上层，不再受挂载顺序影响。
+const layerStyle = useModalLayer(toRef(props, 'open'))
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="ui-modal" role="presentation" @click.self="$emit('close')">
+    <div v-if="open" class="ui-modal" role="presentation" :style="layerStyle" @click.self="$emit('close')">
       <section role="dialog" aria-modal="true" :aria-label="title">
         <header><h2>{{ title }}</h2><button type="button" aria-label="关闭" @click="$emit('close')">×</button></header>
         <div class="ui-modal__body"><slot /></div>
@@ -18,7 +25,6 @@ defineEmits<{ close: [] }>()
 <style scoped lang="scss">
 .ui-modal {
   position: fixed;
-  z-index: 100;
   inset: 0;
   display: grid;
   place-items: end center;

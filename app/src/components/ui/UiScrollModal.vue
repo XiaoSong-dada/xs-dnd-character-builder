@@ -1,5 +1,9 @@
 <script setup lang="ts">
-withDefaults(defineProps<{
+import { toRef } from 'vue'
+
+import { useModalLayer } from '@/components/ui/modal-layer'
+
+const props = withDefaults(defineProps<{
   open: boolean
   title: string
   bodyScroll?: boolean
@@ -10,11 +14,14 @@ withDefaults(defineProps<{
   maxHeight: 'min(80dvh, 42rem)',
 })
 defineEmits<{ close: [] }>()
+
+// 层级由打开顺序决定（决策 D37）：与 UiModal 共用同一套自增层级。
+const layerStyle = useModalLayer(toRef(props, 'open'))
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="ui-scroll-modal" role="presentation" @click.self="$emit('close')">
+    <div v-if="open" class="ui-scroll-modal" role="presentation" :style="layerStyle" @click.self="$emit('close')">
       <section role="dialog" aria-modal="true" :aria-label="title" :style="{ maxHeight }">
         <header><h2>{{ title }}</h2><button type="button" aria-label="关闭" @click="$emit('close')">×</button></header>
         <div class="ui-scroll-modal__body" :class="{ 'ui-scroll-modal__body--contained': !bodyScroll }"><slot /></div>
@@ -29,7 +36,6 @@ defineEmits<{ close: [] }>()
 // 与 UiModal 的差异：section 为 flex column，header/footer 不随内容滚动。
 .ui-scroll-modal {
   position: fixed;
-  z-index: 100;
   inset: 0;
   display: grid;
   place-items: end center;
