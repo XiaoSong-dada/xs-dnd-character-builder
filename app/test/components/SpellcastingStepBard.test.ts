@@ -66,9 +66,9 @@ describe('吟游诗人法术步骤(回归:法术池充足且可在手机宽度�
     expect(level1.length).toBeGreaterThanOrEqual(4)
 
     const wrapper = mount(SpellcastingStep, { props: { draft } })
-    expect(wrapper.find('[data-task-id="cantrips"]').exists()).toBe(true)
-    expect(wrapper.find('[data-task-id="spells"]').exists()).toBe(true)
-    expect(wrapper.get('[data-task-id="cantrips"]').attributes('aria-selected')).toBe('true')
+    expect(wrapper.find('[data-task-id$=":cantrips"]').exists()).toBe(true)
+    expect(wrapper.find('[data-task-id$=":spells"]').exists()).toBe(true)
+    expect(wrapper.get('[data-task-id$=":cantrips"]').attributes('aria-selected')).toBe('true')
     expect(wrapper.findAll('.expandable-option-card').length).toBeGreaterThanOrEqual(2)
     expect(wrapper.text()).not.toContain('1环 ·')
   })
@@ -120,7 +120,7 @@ describe('吟游诗人法术步骤(回归:法术池充足且可在手机宽度�
     const draft = { ...base, spellSelections: { ...base.spellSelections, knownSpellIds: ['spell-2014-not-available'] } }
     const wrapper = mount(SpellcastingStep, { props: { draft } })
     expect(wrapper.text()).toContain('保留了需要重新确认的旧选择')
-    expect(wrapper.get('[data-task-id="spells"]').text()).toContain('需修正')
+    expect(wrapper.get('[data-task-id$=":spells"]').text()).toContain('需修正')
     expect(draft.spellSelections.knownSpellIds).toEqual(['spell-2014-not-available'])
   })
 })

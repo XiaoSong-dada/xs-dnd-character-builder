@@ -7,10 +7,11 @@ import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
 import { getRulesRepository } from '@/rules/repositories'
+import { getClassEntries } from '@/rules/multiclass'
 import { abilityModifier, deriveAbilities } from '@/rules/derive'
 import { formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
 import { formatResourceText } from '@/rules/resources'
-import { buildTimeline } from '@/rules/timeline'
+import { buildTimelineForDraft } from '@/rules/timeline'
 import { getValidSpeciesChoice } from '@/rules/origins'
 import { getCheckpointCandidates, isSpellbookReservationCheckpoint } from '@/rules/spellcasting'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
@@ -31,7 +32,21 @@ const expandedCheckpointId = ref<string>()
 /** 当前草稿规则版本的仓库：职业、子职、专长与装备名称一律由它解析。 */
 const rulesRepository = computed(() => getRulesRepository(props.draft.ruleset))
 
-const checkpoints = computed(() => buildTimeline(props.classId, props.targetLevel, { subraceId: props.subraceId, subclassId: props.draft.subclassId, enabledSourceIds: props.draft.enabledSourceIds, selections: props.draft.selections, ruleset: props.draft.ruleset, raceId: props.draft.raceId, backgroundId: props.draft.backgroundId }))
+/** 时间线（MC-E04）：由草稿统一入口构建，自动带上兼职职业集合、各职业子职与来源开关。 */
+const checkpoints = computed(() => buildTimelineForDraft(props.draft))
+
+/**
+ * 检查点头部标签：有归属职业的显示「职业 + 该职业等级」，其余（起源／专长等）显示角色等级。
+ * 兼职时「3 级」不再歧义于总等级还是职业等级。
+ */
+function checkpointLevelLabel(checkpoint: ChoiceCheckpoint): string {
+  if (checkpoint.classId) {
+    const name = rulesRepository.value.getClass(checkpoint.classId)?.name ?? checkpoint.classId
+    const level = checkpoint.classLevel ?? checkpoint.level
+    return `${name} ${level} 级`
+  }
+  return `${checkpoint.level} 级`
+}
 
 /** 当前已熟练的技能与盗贼工具：职业技能选择 + 背景技能。与 validate.ts 的专精校验口径一致。 */
 const proficientSkillIds = computed(() => {
@@ -47,7 +62,14 @@ const selectedSubclassId = computed(() => {
 })
 const subclassFeatures = computed(() => selectedSubclassId.value ? rulesRepository.value.getSubclass(selectedSubclassId.value)?.features ?? [] : [])
 /** 职业基础特性（只读展示）：只列自动获得项，需玩家选择的特性已在对应检查点提供选择入口。 */
-const classFeatures = computed(() => (rulesRepository.value.getClass(props.classId)?.features ?? []).filter((feature) => !feature.requiresChoice))
+/** 职业基础特性（只读展示）：兼职时列出**全部职业**的自动获得项，并标注归属职业。 */
+const classFeatures = computed(() => getClassEntries(props.draft).flatMap((entry) => {
+  const classRule = rulesRepository.value.getClass(entry.classId)
+  if (!classRule) return []
+  return (classRule.features ?? [])
+    .filter((feature) => !feature.requiresChoice && feature.level <= entry.level)
+    .map((feature) => ({ feature, className: classRule.name, classLevel: entry.level, classId: entry.classId }))
+}))
 const firstClassCheckpointId = computed(() => checkpoints.value.find((checkpoint) => checkpoint.kind !== 'subclass-feature')?.id)
 const featureByCheckpointId = computed(() => {
   const map = new Map<string, SubclassFeature>()
@@ -280,7 +302,7 @@ function spellCandidateDescription(spell: SpellRule): string {
         :aria-expanded="currentCheckpointId === checkpoint.id"
         @click="toggleCheckpoint(checkpoint.id)"
       >
-        <span>{{ checkpoint.level }}级</span>
+        <span>{{ checkpointLevelLabel(checkpoint) }}</span>
         <div><strong>{{ checkpoint.title }}</strong><small>{{ checkpoint.description }}</small></div>
         <UiBadge :tone="selectedIds(checkpoint.id).length >= checkpointBounds(checkpoint).min ? 'success' : 'warning'">
           {{ selectedIds(checkpoint.id).length }}/{{ checkpointBounds(checkpoint).max }}
@@ -401,19 +423,19 @@ function spellCandidateDescription(spell: SpellRule): string {
           </ExpandableOptionCard>
         </div>
         <div v-if="checkpoint.id === firstClassCheckpointId && classFeatures.length" class="timeline-step__subclass-features">
-          <h4>职业特性 · {{ rulesRepository.getClass(classId)?.name ?? '' }}</h4>
+          <h4>职业特性 · {{ classFeatures.map((item) => item.className).filter((name, index, all) => all.indexOf(name) === index).join(' / ') }}</h4>
           <ExpandableOptionCard
-            v-for="feature in classFeatures"
-            :key="feature.id"
-            :title="feature.name"
-            :description="[`${feature.level}级 · ${feature.englishName}`, featureResourceText(feature)].filter(Boolean).join(' · ')"
+            v-for="item in classFeatures"
+            :key="item.feature.id"
+            :title="item.feature.name"
+            :description="[`${item.className} ${item.feature.level}级 · ${item.feature.englishName}`, featureResourceText(item.feature)].filter(Boolean).join(' · ')"
             expanded-label="特性详情"
           >
             <template #suffix>
-              <UiBadge v-if="feature.status === 'index-only'" tone="warning">仅索引</UiBadge>
-              <UiBadge v-else-if="feature.status === 'selectable'" tone="warning">可选择 · 情境效果</UiBadge>
+              <UiBadge v-if="item.feature.status === 'index-only'" tone="warning">仅索引</UiBadge>
+              <UiBadge v-else-if="item.feature.status === 'selectable'" tone="warning">可选择 · 情境效果</UiBadge>
             </template>
-            <template #expanded>{{ feature.description }}</template>
+            <template #expanded>{{ item.feature.description }}</template>
           </ExpandableOptionCard>
         </div>
       </div>

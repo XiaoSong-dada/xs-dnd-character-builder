@@ -60,9 +60,9 @@ describe('牧师法术步骤（缺陷回归：1 级可选 3 个职业戏法）',
     expect(cantrips.length).toBeGreaterThanOrEqual(3)
 
     const wrapper = mount(SpellcastingStep, { props: { draft } })
-    expect(wrapper.get('[data-task-id="cantrips"]').text()).toContain('0/3')
-    expect(wrapper.get('[data-task-id="spells"]').text()).toContain('0/2')
-    expect(wrapper.get('[data-task-id="cantrips"]').attributes('aria-selected')).toBe('true')
+    expect(wrapper.get('[data-task-id$=":cantrips"]').text()).toContain('0/3')
+    expect(wrapper.get('[data-task-id$=":spells"]').text()).toContain('0/2')
+    expect(wrapper.get('[data-task-id$=":cantrips"]').attributes('aria-selected')).toBe('true')
   })
 
   it('选择 3 个戏法与 2 个准备法术后计数与校验均通过', async () => {
@@ -80,11 +80,10 @@ describe('牧师法术步骤（缺陷回归：1 级可选 3 个职业戏法）',
       draft = { ...draft, spellSelections: latest }
       await wrapper.setProps({ draft })
     }
-
     expect(draft.spellSelections.cantripIds.length).toBe(3)
     expect(draft.spellSelections.preparedSpellIds.length).toBe(2)
     expect(validateSpellSelections(draft)).toBe(true)
-    expect(wrapper.get('[data-task-id="cantrips"]').text()).toContain('3/3')
+    expect(wrapper.get('[data-task-id$=":cantrips"]').text()).toContain('3/3')
   })
 
   it('戏法已满（3/3）时再点击第 4 个候选不会增加选择', async () => {
@@ -103,7 +102,7 @@ describe('牧师法术步骤（缺陷回归：1 级可选 3 个职业戏法）',
     expect(draft.spellSelections.cantripIds.length).toBe(3)
 
     // 已满状态下点击第 4 个戏法候选（第 4 张卡片，1 环区块之前）不产生新选择
-    await wrapper.get('[data-task-id="cantrips"]').trigger('click')
+    await wrapper.get('[data-task-id$=":cantrips"]').trigger('click')
     expect(wrapper.text()).toContain('当前名额已选满')
     // 满额提示改为就地取消口径，且已选戏法仍留在候选列表中（v1.9.1 追加）
     expect(wrapper.text()).toContain('请先取消一项已选法术')
@@ -149,7 +148,7 @@ describe('戏法候选保留已选项与就地取消（v1.9.1 追加）', () => 
     const selected = candidateCards(wrapper).find((card) => titleOf(card) === name)!
     expect(selected, '已选戏法应留在候选列表中').toBeTruthy()
     expect(badgeOf(selected)).toBe('已选')
-    expect(wrapper.get('[data-task-id="cantrips"]').text()).toContain('1/3')
+    expect(wrapper.get('[data-task-id$=":cantrips"]').text()).toContain('1/3')
 
     await selected.get('button[aria-pressed]').trigger('click')
     await vi.advanceTimersByTimeAsync(260)
@@ -176,7 +175,7 @@ describe('法术列表排序与默认页签（v1.9.1 追加）', () => {
 
   it('切换任务后环级页签默认「全部」，并展示多个环级的有序候选', async () => {
     const wrapper = mount(SpellcastingStep, { props: { draft: clericDraft(3) } })
-    await wrapper.get('[data-task-id="spells"]').trigger('click')
+    await wrapper.get('[data-task-id$=":spells"]').trigger('click')
 
     expect(activeTab(wrapper)?.text()).toBe('全部')
     const levels = candidateCards(wrapper).map((card) => levelOf(titleOf(card)))
@@ -186,7 +185,7 @@ describe('法术列表排序与默认页签（v1.9.1 追加）', () => {
 
   it('点击单环级页签仍可过滤', async () => {
     const wrapper = mount(SpellcastingStep, { props: { draft: clericDraft(3) } })
-    await wrapper.get('[data-task-id="spells"]').trigger('click')
+    await wrapper.get('[data-task-id$=":spells"]').trigger('click')
     const levelOneTab = wrapper.findAll('.ui-tabs button').find((button) => button.text() === '1环')!
     await levelOneTab.trigger('click')
 

@@ -136,8 +136,8 @@ describe('法师法术步骤（2024 塑能学者额外入书）', () => {
   it('显示子职额外入书区与名额，选择同时写入法术书', async () => {
     const wrapper = mount(SpellcastingStep, { props: { draft: evoker2024Draft() } })
     expect(wrapper.text()).toContain('子职额外入书')
-    expect(wrapper.get('[data-task-id="spellbook-extra"]').text()).toContain('0/2')
-    await wrapper.get('[data-task-id="spellbook-extra"]').trigger('click')
+    expect(wrapper.get('[data-task-id$=":spellbook-extra"]').text()).toContain('0/2')
+    await wrapper.get('[data-task-id$=":spellbook-extra"]').trigger('click')
     await wrapper.findAll('button').find((button) => button.text() === '2环')!.trigger('click')
 
     const extraCard = wrapper.findAll('.expandable-option-card')
@@ -163,12 +163,12 @@ describe('法术步骤去完成聚焦出口（v1.9.1 R3-6）', () => {
 
   it('切到首个未完成任务并聚焦该任务标题', async () => {
     const wrapper = mountAttached(wizardDraft())
-    await wrapper.get('[data-task-id="cantrips"]').trigger('click')
-    expect(wrapper.get('[data-task-id="cantrips"]').attributes('aria-selected')).toBe('true')
+    await wrapper.get('[data-task-id$=":cantrips"]').trigger('click')
+    expect(wrapper.get('[data-task-id$=":cantrips"]').attributes('aria-selected')).toBe('true')
 
     await handleOf(wrapper).focusFirstIncomplete()
 
-    expect(wrapper.get('[data-task-id="spellbook"]').attributes('aria-selected')).toBe('true')
+    expect(wrapper.get('[data-task-id$=":spellbook"]').attributes('aria-selected')).toBe('true')
     expect(document.activeElement).toBe(wrapper.get('.spellcasting-step__panel h2').element)
   })
 
@@ -209,7 +209,7 @@ describe('法术候选保留已选项与就地取消（v1.9.1 追加）', () => 
 
   it('准备法术任务：已准备法术留在候选中并可就地取消', async () => {
     const wrapper = mount(SpellcastingStep, { props: { draft: wizardDraft() } })
-    await wrapper.get('[data-task-id="spells"]').trigger('click')
+    await wrapper.get('[data-task-id$=":spells"]').trigger('click')
 
     const magicMissile = rulesRepository.getSpell('spell-2014-magic-missile')!.name
     const card = candidateCards(wrapper).find((item) => titleOf(item) === magicMissile)
@@ -224,7 +224,7 @@ describe('法术候选保留已选项与就地取消（v1.9.1 追加）', () => 
 
   it('写入法术书任务：抄录法术在候选中标注不可移除且点击不产生变更', async () => {
     const wrapper = mount(SpellcastingStep, { props: { draft: wizardDraft() } })
-    expect(wrapper.get('[data-task-id="spellbook"]').attributes('aria-selected')).toBe('true')
+    expect(wrapper.get('[data-task-id$=":spellbook"]').attributes('aria-selected')).toBe('true')
     expectAllLevels(wrapper)
 
     const scorching = rulesRepository.getSpell('spell-2014-scorching-ray')!.name
@@ -240,7 +240,7 @@ describe('法术候选保留已选项与就地取消（v1.9.1 追加）', () => 
   it('子职额外入书任务：已在书中的候选说明原因，额外名额项可就地移除', async () => {
     let draft = evoker2024Draft()
     const wrapper = mount(SpellcastingStep, { props: { draft } })
-    await wrapper.get('[data-task-id="spellbook-extra"]').trigger('click')
+    await wrapper.get('[data-task-id$=":spellbook-extra"]').trigger('click')
     expectAllLevels(wrapper)
 
     const burningHands = rulesRepository2024.getSpell('spell-2024-burning-hands')!.name
@@ -298,7 +298,7 @@ describe('法术列表按环级升序（v1.9.1 追加）', () => {
     const preparedSpellIds = ['spell-2014-scorching-ray', 'spell-2014-magic-missile', 'spell-2014-shield']
     const draft: CharacterDraft = { ...base, spellSelections: { ...base.spellSelections, preparedSpellIds } }
     const wrapper = mount(SpellcastingStep, { props: { draft } })
-    await wrapper.get('[data-task-id="spells"]').trigger('click')
+    await wrapper.get('[data-task-id$=":spells"]').trigger('click')
 
     const selectedCards = wrapper.findAll('.list-shell')[0]!.findAll('.expandable-option-card')
     expect(selectedCards).toHaveLength(3)
