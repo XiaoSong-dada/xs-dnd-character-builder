@@ -213,17 +213,63 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     expect(page.levelAdjustNotice.value?.step).toBe('timeline')
   })
 
-  it('角色卡滑杆升级（D29）：不弹确认、出引导条但不跳转', async () => {
+  it('角色卡滑杆升级（D37）：弹确认，确认后出引导条但不跳转', async () => {
     const { page, store } = await setupPage(makeFighterDraft({ selections: level5Selections }))
     const raised = setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 6).draft
 
     page.applyTotalLevel(raised)
 
-    expect(page.pendingChange.value).toBeUndefined()
+    // 等级类变更同样先经「调整职业与等级分配」确认（决策 D37／D39）
+    expect(page.pendingChange.value?.title).toBe('调整职业与等级分配')
+    expect(page.pendingChange.value?.summary).toEqual(['总等级 5 → 6', '战士 5 → 6 级'])
+    expect(page.pendingChange.value?.stagedDraft).toEqual(raised)
+    expect(store.activeDraft?.targetLevel).toBe(5)
+
+    page.confirmPendingChange()
+
     expect(store.activeDraft?.targetLevel).toBe(6)
     expect(page.step.value).toBe('sheet')
     expect(page.levelAdjustNotice.value?.message).toContain('请完成新增检查点')
     expect(page.levelAdjustNotice.value?.step).toBe('timeline')
+  })
+
+  it('确认弹窗内可继续 ±1：连续调整共用一个待定变更（D43）', async () => {
+    const { page, store } = await setupPage(makeFighterDraft({ selections: level5Selections }))
+    const raised = setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 6).draft
+
+    page.applyTotalLevel(raised)
+    expect(page.stagedLevelAdjust.value?.level).toBe(6)
+
+    // 弹窗内继续 +1：重建同一个待定变更，弹窗不关闭、不写库
+    page.adjustStagedLevel(1)
+    expect(page.stagedLevelAdjust.value?.level).toBe(7)
+    expect(page.pendingChange.value?.summary).toEqual(['总等级 5 → 7', '战士 5 → 7 级'])
+    expect(store.activeDraft?.targetLevel).toBe(5)
+
+    page.adjustStagedLevel(-1)
+    expect(page.stagedLevelAdjust.value?.level).toBe(6)
+
+    page.confirmPendingChange()
+    expect(store.activeDraft?.targetLevel).toBe(6)
+  })
+
+  it('确认弹窗内的 ±1 到边界时不再变化，调回已提交值即关闭弹窗', async () => {
+    const { page, store } = await setupPage(makeFighterDraft({ targetLevel: 19, selections: level5Selections }))
+    const raised = setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 20).draft
+
+    page.applyTotalLevel(raised)
+    expect(page.stagedLevelAdjust.value?.level).toBe(20)
+    expect(page.stagedLevelAdjust.value?.max).toBe(20)
+
+    // 已到 20 级上限：再加不生效，弹窗与待定值保持
+    page.adjustStagedLevel(1)
+    expect(page.stagedLevelAdjust.value?.level).toBe(20)
+    expect(page.pendingChange.value?.title).toBe('调整职业与等级分配')
+
+    // 调回 19 = 已提交值：没有实际变更 → 直接生效并关闭弹窗（不留过期待定）
+    page.adjustStagedLevel(-1)
+    expect(page.pendingChange.value).toBeUndefined()
+    expect(store.activeDraft?.targetLevel).toBe(19)
   })
 
   it('角色卡确认分配（降级，D28）：确认后作废超限选择、只提示复查并停留在角色卡', async () => {
@@ -254,10 +300,11 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     const raised = setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 6).draft
 
     page.applyTotalLevel(raised)
-    expect(page.pendingChange.value).toBeUndefined()
+    page.confirmPendingChange()
     expect(page.levelAdjustNotice.value?.step).toBe('timeline')
 
-    // 用户在时间线补全 6 级检查点后再提交一次同级滑杆：没有新的待办，过期引导条被清空。
+    // 用户在时间线补全 6 级检查点后再提交一次同级滑杆：没有实际变化 → 不弹确认，
+    // 且没有新的待办项，过期引导条被清空。
     store.updateDraft({ selections: level6Selections })
     page.applyTotalLevel(store.activeDraft!)
 
@@ -390,6 +437,7 @@ describe('useCharacterBuilderPage 升级降级与重新编辑流程', () => {
     const { page } = await setupPage(makeFighterDraft({ selections: level5Selections }))
 
     page.applyTotalLevel(setClassLevel(page.activeDraft.value!, 'class-2014-fighter', 6).draft)
+    page.confirmPendingChange()
 
     expect(page.levelAdjustNotice.value?.message).toContain('请完成新增检查点')
     expect(page.levelAdjustNotice.value?.step).toBe('timeline')

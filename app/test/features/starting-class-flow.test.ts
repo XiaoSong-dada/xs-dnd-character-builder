@@ -141,7 +141,7 @@ describe('SC-D01 起始职业的完整流程', () => {
     expect(getClassEntries(activeDraft(store))).toHaveLength(2)
     expect(getTotalLevel(activeDraft(store))).toBe(6)
 
-    // 滑杆加 2 级 → 加给列表最后一个职业（游荡者 1 → 3）
+    // 滑杆加 2 级 → 加给列表最后一个职业（游荡者 1 → 3）；等级类变更同样先确认（D37）
     page.applyTotalLevel({
       ...activeDraft(store),
       multiclass: {
@@ -150,6 +150,9 @@ describe('SC-D01 起始职业的完整流程', () => {
       },
       targetLevel: 8,
     })
+    await nextTick()
+    expect(page.pendingChange.value?.title).toBe('调整职业与等级分配')
+    page.confirmPendingChange()
     await nextTick()
     expect(getTotalLevel(activeDraft(store))).toBe(8)
     expect(getClassEntries(activeDraft(store))).toEqual([
@@ -255,14 +258,22 @@ describe('SC-D01 三处入口一致（需求 §6 验收标准 6）', () => {
   const entries: readonly (readonly [string, () => ReturnType<typeof mount>])[] = [
     ['第 1 步 SetupStep', () => mount(SetupStep, { props: { draft: multiDraft(), abilityMethod: 'standard-array' } })],
     ['第 3 步 ClassStep', () => mount(ClassStep, { props: { draft: multiDraft() } })],
-    ['角色卡调整等级弹窗', () => mount(LevelAdjustModal, { props: { open: true, draft: multiDraft() }, global: { stubs: { teleport: true } } })],
   ]
 
-  it.each(entries)('%s 同时提供等级滑杆与「设置起始职业」入口', (_label, factory) => {
+  it.each(entries)('%s 同时提供等级滑杆、等级表格与「设置起始职业」入口', (_label, factory) => {
     const wrapper = factory()
     expect(wrapper.find('.allocation__slider input[type="range"]').exists()).toBe(true)
+    expect(wrapper.findAll('button').some((button) => /^(展开|收起)等级列表/.test(button.text()))).toBe(true)
     expect(wrapper.findAll('button').some((button) => button.text() === '设置起始职业')).toBe(true)
     // 起始职业的移除路径写在同一处
     expect(wrapper.text()).toContain('切换到其他职业后')
+  })
+
+  it('角色卡调整等级弹窗：不渲染滑杆，改用等级表格 + ±1（D38／Q1）', () => {
+    const wrapper = mount(LevelAdjustModal, { props: { open: true, draft: multiDraft() }, global: { stubs: { teleport: true } } })
+    expect(wrapper.find('.allocation__slider').exists()).toBe(false)
+    expect(wrapper.findAll('button').some((button) => /^(展开|收起)等级列表/.test(button.text()))).toBe(true)
+    expect(wrapper.find('.allocation__stepper--total').exists()).toBe(true)
+    expect(wrapper.findAll('button').some((button) => button.text() === '设置起始职业')).toBe(true)
   })
 })

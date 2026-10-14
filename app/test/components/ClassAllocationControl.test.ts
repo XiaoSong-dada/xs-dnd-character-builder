@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
 import ClassAllocationControl from '@/views/character-builder/components/ClassAllocationControl.vue'
-import { getClassEntries, getPrimaryClassId, getTotalLevel } from '@/rules/multiclass'
+import { getClassEntries, getPrimaryClassId, getTotalLevel, rebuildLevelOrder } from '@/rules/multiclass'
 import { draft2024 } from '../fixtures/draft-2024'
 import type { AbilityScores, CharacterDraft } from '@/types/character'
 
@@ -245,38 +245,43 @@ describe('MC-E01 分配控件：添加职业', () => {
   })
 })
 
-describe('MC-E01 分配控件：关闭兼职的防误触（D7）', () => {
-  it('关闭开关时弹出确认，明细列出将被合并的职业与等级', async () => {
+describe('MC-E01 分配控件：关闭兼职 = 合并到起始职业（D41）', () => {
+  it('关闭开关直接提交合并草稿：总等级不变、只保留起始职业、开关关闭', async () => {
     const wrapper = mountControl(mc())
-    await wrapper.get('.allocation__switch input').setValue(false)
-    expect(wrapper.text()).toContain('关闭兼职')
-    expect(wrapper.text()).toContain('不可撤销')
-    expect(wrapper.text()).toContain('将合并：游荡者 2 级')
-    // 取消为主操作，破坏性按钮为警示样式
-    expect(wrapper.find('.base-button--danger').exists()).toBe(true)
-  })
+    expect(wrapper.text()).toContain('关闭兼职会把其他职业的等级并入起始职业')
 
-  it('确认合并且总等级不变、只保留起始职业', async () => {
-    const wrapper = mountControl(mc())
     await wrapper.get('.allocation__switch input').setValue(false)
-    await wrapper.get('.base-button--danger').trigger('click')
+
     const draft = appliedDraft(wrapper)
     expect(getClassEntries(draft)).toEqual([{ classId: 'class-2014-fighter', level: 5 }])
     expect(getTotalLevel(draft)).toBe(5)
     expect(draft.multiclass?.enabled).toBe(false)
+    expect(draft.classId).toBe('class-2014-fighter')
   })
 
-  it('取消关闭会恢复开关状态，不改动职业集合', async () => {
-    const wrapper = mountControl(mc())
+  it('总等级 20 的兼职合并后起始职业仍为 20 级（D42，不再掉到 19）', async () => {
+    const draft = draft2024({
+      ruleset: '5e-2014',
+      baseAbilities: ABILITIES,
+      classId: 'class-2014-fighter',
+      targetLevel: 20,
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-fighter',
+        classes: [{ classId: 'class-2014-fighter', level: 10 }, { classId: 'class-2014-rogue', level: 10 }],
+        levelOrder: rebuildLevelOrder([{ classId: 'class-2014-fighter', level: 10 }, { classId: 'class-2014-rogue', level: 10 }]),
+      },
+    })
+    const wrapper = mountControl(draft)
     await wrapper.get('.allocation__switch input').setValue(false)
-    const keep = wrapper.findAll('.base-button--secondary').find((button) => button.text() === '保留兼职')!
-    await keep.trigger('click')
-    const draft = appliedDraft(wrapper)
-    expect(draft.multiclass?.enabled).toBe(true)
-    expect(getClassEntries(draft)).toHaveLength(2)
+
+    const applied = appliedDraft(wrapper)
+    expect(getClassEntries(applied)).toEqual([{ classId: 'class-2014-fighter', level: 20 }])
+    expect(getTotalLevel(applied)).toBe(20)
+    expect(applied.targetLevel).toBe(20)
   })
 
-  it('只有一个职业时关闭开关不弹确认', async () => {
+  it('只有一个职业时关闭开关只切开关，不合并不报错', async () => {
     const single = draft2024({
       ruleset: '5e-2014',
       baseAbilities: ABILITIES,
@@ -286,39 +291,31 @@ describe('MC-E01 分配控件：关闭兼职的防误触（D7）', () => {
     })
     const wrapper = mountControl(single)
     await wrapper.get('.allocation__switch input').setValue(false)
-    expect(wrapper.text()).not.toContain('不可撤销')
-    expect(appliedDraft(wrapper).multiclass?.enabled).toBe(false)
+    const draft = appliedDraft(wrapper)
+    expect(draft.multiclass?.enabled).toBe(false)
+    expect(getClassEntries(draft)).toEqual([{ classId: 'class-2014-fighter', level: 5 }])
   })
 })
 
 /**
- * 变更摘要与底部「取消 / 确认」只属于**弹窗模式**（D19／PC-A02）：
- * 内联时每次操作已立即生效，没有待定状态。因此本节用例统一改用 `compact: true` 挂载
- * （改写自原先的内联挂载——验证的本意就是弹窗的确认语义，改写后更准确）。
+ * 待定摘要与「本次变更」已移到页面的「调整职业与等级分配」确认弹窗（需求 §3／D37）：
+ * 控件不再持有待定副本，`compact` 形态只保留底部「关闭」。
  */
-describe('MC-E01 分配控件：变更摘要与确认（弹窗模式）', () => {
-  it('变更摘要列出总等级前后与各职业等级变化', async () => {
+describe('MC-E01 分配控件：弹窗形态（D37／Q2）', () => {
+  it('弹窗形态不渲染滑杆，但保留等级表格入口与 ±1', () => {
     const wrapper = mountCompact(mc())
-    const rogueRow = wrapper.findAll('.allocation__row')[1]!
-    await rogueRow.findAll('button')[1]!.trigger('click')
-    const summary = wrapper.get('.allocation__summary')
-    expect(summary.text()).toContain('总等级 5 → 6')
-    expect(summary.text()).toContain('游荡者 2 → 3 级')
-    expect(summary.text()).toContain('战士 保持 3 级')
+    expect(wrapper.find('.allocation__slider').exists()).toBe(false)
+    expect(wrapper.findAll('button').some((button) => button.text().startsWith('展开等级列表'))).toBe(true)
+    expect(wrapper.find('.allocation__stepper--total').exists()).toBe(true)
   })
 
-  it('没有变更时不显示摘要，确认按钮仍可提交当前草稿', async () => {
+  it('底部只提供「关闭」，不再有「取消 / 确认」', async () => {
     const wrapper = mountCompact(mc())
-    expect(wrapper.find('.allocation__summary').exists()).toBe(false)
-    await wrapper.findAll('button').find((button) => button.text() === '确认')!.trigger('click')
-    expect(getTotalLevel(appliedDraft(wrapper))).toBe(5)
-  })
-
-  it('取消按钮只发 cancel，不提交草稿', async () => {
-    const wrapper = mountCompact(mc())
-    await wrapper.findAll('.base-button--secondary').find((button) => button.text() === '取消')!.trigger('click')
-    expect(wrapper.emitted('apply')).toBeFalsy()
+    const footerButtons = wrapper.get('.allocation__footer').findAll('button')
+    expect(footerButtons.map((button) => button.text())).toEqual(['关闭'])
+    await footerButtons[0]!.trigger('click')
     expect(wrapper.emitted('cancel')).toBeTruthy()
+    expect(wrapper.emitted('apply')).toBeFalsy()
   })
 
   it('先决不满足时在对应职业行给出中文原因', () => {
@@ -338,8 +335,6 @@ describe('MC-E01 分配控件：变更摘要与确认（弹窗模式）', () => 
     const wrapper = mountCompact(draft)
     const warn = wrapper.findAll('.allocation__warn').map((item) => item.text()).join('|')
     expect(warn).toContain('感知需提高到 13')
-    // 不阻断确认
-    expect(wrapper.findAll('button').find((button) => button.text() === '确认')!.attributes('disabled')).toBeUndefined()
   })
 })
 
@@ -530,10 +525,11 @@ describe('PC-A 显示条件：兼职关闭时不露出兼职专属元素（D18�
     expect(hasButton(wrapper, '添加职业')).toBe(false)
   })
 
-  it('兼职关闭 + 单职业的弹窗：保留「取消 / 确认」，但仍不出现「设置起始职业」', () => {
+  it('兼职关闭 + 单职业的弹窗：底部只保留「关闭」，仍不出现「设置起始职业」', () => {
     const wrapper = mountCompact(solo())
-    expect(hasButton(wrapper, '取消')).toBe(true)
-    expect(hasButton(wrapper, '确认')).toBe(true)
+    expect(hasButton(wrapper, '关闭')).toBe(true)
+    expect(hasButton(wrapper, '取消')).toBe(false)
+    expect(hasButton(wrapper, '确认')).toBe(false)
     expect(hasButton(wrapper, '设置起始职业')).toBe(false)
   })
 
@@ -699,17 +695,20 @@ describe('LV 等级卡 ±1 步进（D34—D36）', () => {
     expect(getClassEntries(next)).toHaveLength(2)
   })
 
-  it('弹窗模式：步进进入本地待定摘要，确认才提交步进后的草稿', async () => {
+  it('弹窗模式：步进只提交待定草稿，页面采纳后显示跟随（不再有本地摘要）', async () => {
     const wrapper = mountCompact(mc())
     await stepButtons(wrapper).plus.trigger('click')
 
-    expect(wrapper.get('.allocation__level-head').text()).toContain('6级')
-    expect(wrapper.get('.allocation__summary').text()).toContain('总等级 5 → 6')
-
-    await wrapper.findAll('.allocation__footer button')[1]!.trigger('click')
-    const applied = appliedDraft(wrapper)
+    // 控件不再持有待定副本：只发事件，显示仍来自传入的 draft
+    const applied = appliedTotalLevel(wrapper)
     expect(getTotalLevel(applied)).toBe(6)
     expect(getClassEntries(applied).find((entry) => entry.classId === 'class-2014-rogue')?.level).toBe(3)
+    expect(wrapper.find('.allocation__summary').exists()).toBe(false)
+
+    // 页面把待定草稿传回来时，读数跟随
+    await wrapper.setProps({ draft: applied })
+    await flushPromises()
+    expect(wrapper.get('.allocation__level-head').text()).toContain('6级')
   })
 
   it('内联：页面未采纳时显示回到已提交值（与滑杆同一不变式）', async () => {
@@ -731,6 +730,9 @@ describe('LV 等级卡 ±1 步进（D34—D36）', () => {
     await stepButtons(wrapper).plus.trigger('click')
     const events = wrapper.emitted('applyTotalLevel')!
     expect(getTotalLevel(events[events.length - 1]![0] as CharacterDraft)).toBe(7)
+
+    await wrapper.setProps({ draft: events[events.length - 1]![0] as CharacterDraft })
+    await flushPromises()
     expect(wrapper.get('.allocation__level-head').text()).toContain('7级')
   })
 
@@ -744,5 +746,74 @@ describe('LV 等级卡 ±1 步进（D34—D36）', () => {
 
     expect(wrapper.get('.allocation__level-head').text()).toContain('6级')
     expect((wrapper.get('.allocation__slider input[type="range"]').element as HTMLInputElement).value).toBe('6')
+  })
+})
+
+describe('D38／D40 等级表格：展开、选级与单行展开', () => {
+  /** 等级卡上的「展开／收起等级列表」入口。 */
+  function toggleTotalGrid(wrapper: ReturnType<typeof mount>): Promise<void> {
+    const button = wrapper.findAll('button').find((item) => /^(展开|收起)等级列表/.test(item.text()))!
+    return button.trigger('click')
+  }
+
+  it('内联：展开后点单元格按所选等级提交（等级类通道），可收起', async () => {
+    const wrapper = mountControl(solo())
+    expect(wrapper.find('.level-grid').exists()).toBe(false)
+
+    await toggleTotalGrid(wrapper)
+    const grid = wrapper.get('.level-grid')
+    expect(grid.findAll('.level-grid__cell')).toHaveLength(20)
+    expect(grid.get('.level-grid__cell--current').text()).toBe('5')
+
+    await wrapper.get('[aria-label="目标等级 8 级"]').trigger('click')
+    expect(getClassEntries(appliedTotalLevel(wrapper))).toEqual([{ classId: 'class-2014-fighter', level: 8 }])
+    expect(wrapper.emitted('apply')).toBeFalsy()
+
+    await toggleTotalGrid(wrapper)
+    expect(wrapper.find('.level-grid').exists()).toBe(false)
+  })
+
+  it('没有职业时表格调整目标等级', async () => {
+    const wrapper = mountControl(draft2024({ ruleset: '5e-2014', classId: undefined, targetLevel: 5 }))
+    await toggleTotalGrid(wrapper)
+    await wrapper.get('[aria-label="目标等级 3 级"]').trigger('click')
+
+    const next = appliedTotalLevel(wrapper)
+    expect(next.targetLevel).toBe(3)
+    expect(next.multiclass).toBeUndefined()
+  })
+
+  it('弹窗形态：展开表格与 ±1 并存，点单元格同样走等级类通道', async () => {
+    const wrapper = mountCompact(solo())
+    await toggleTotalGrid(wrapper)
+    await wrapper.get('[aria-label="目标等级 6 级"]').trigger('click')
+    expect(getClassEntries(appliedTotalLevel(wrapper))).toEqual([{ classId: 'class-2014-fighter', level: 6 }])
+    // 滑杆不在弹窗形态里
+    expect(wrapper.find('.allocation__slider').exists()).toBe(false)
+  })
+
+  it('兼职：职业行展开该职业等级表格，单行展开，选级走结构类通道', async () => {
+    const wrapper = mountControl(mc())
+    const rogueRow = wrapper.findAll('.allocation__row')[1]!
+    await rogueRow.findAll('button').find((button) => button.text().startsWith('展开'))!.trigger('click')
+
+    expect(wrapper.findAll('.level-grid')).toHaveLength(1)
+    expect(wrapper.findAll('.allocation__row')[1]!.find('.level-grid').exists()).toBe(true)
+    // 职业表格上限收在 19（D42）
+    expect(wrapper.get('[aria-label="游荡者等级 20 级"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="游荡者等级 19 级"]').attributes('disabled')).toBeUndefined()
+
+    await wrapper.get('[aria-label="游荡者等级 4 级"]').trigger('click')
+    const applied = appliedDraft(wrapper)
+    expect(getClassEntries(applied)).toEqual([
+      { classId: 'class-2014-fighter', level: 3 },
+      { classId: 'class-2014-rogue', level: 4 },
+    ])
+    expect(getTotalLevel(applied)).toBe(7)
+
+    // 展开另一行时自动收起上一行（单行展开）
+    await wrapper.findAll('.allocation__row')[0]!.findAll('button').find((button) => button.text().startsWith('展开'))!.trigger('click')
+    expect(wrapper.findAll('.level-grid')).toHaveLength(1)
+    expect(wrapper.findAll('.allocation__row')[0]!.find('.level-grid').exists()).toBe(true)
   })
 })
