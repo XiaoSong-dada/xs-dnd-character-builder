@@ -408,7 +408,7 @@ src/views/character-builder/hooks/useCharacterSheetEditing.ts
 src/views/character-builder/components/*
   -> src/views/character-builder/components/SelectionTaskNavigator.vue（OriginStep／SpellcastingStep 共用的页面私有任务导航与键盘操作）
   -> src/views/character-builder/hooks/{useSelectionTaskFlow,useSpellcastingStepFlow}.ts
-  -> src/views/character-builder/components/{EditableStatTile,AddManualSpellModal}（双击/键盘数值编辑与完整系统法术库选择）
+  -> src/views/character-builder/components/{EditableStatTile,AddManualSpellModal}（双击/键盘数值编辑与完整系统法术库选择；说明区由 components/ui/StatNote 承担两行截断与明细弹窗）
   -> src/views/character-builder/components/{FeatChoicePanel}（页面内复用）
   -> src/features/spellbook-transcription（CharacterSheetStep 抄录弹层：同一草稿的 spellSelections 与 adventureGold）
   -> src/components/ui/*
@@ -447,6 +447,13 @@ src/features/character-media（身份步骤、角色卡、车卡首页与跑团�
     -> hooks/useCharacterMediaUrl.ts（客户端对象 URL、加载失败隐藏与释放）
   -> src/services/{character-image,character-media-storage}
   -> src/types/character
+
+src/components/ui/StatTile.vue
+  -> src/components/ui/StatNote.vue（说明区：两行截断 + 溢出检测 + 明细弹窗；跑团助手为只读视图，说明始终可交互）
+
+src/components/ui/StatNote.vue
+  -> src/components/ui/UiModal.vue（明细弹窗）
+  （无业务、stores、rules 依赖；截断与明细来自同一个 items 数组，保证显示与弹窗同源）
 
 src/features/quick-build/components/CharacterDrawer.vue
   -> src/components/ui/{StatTile,UiDrawer}
