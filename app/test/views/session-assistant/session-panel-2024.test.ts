@@ -54,8 +54,8 @@ describe('SessionPanel 按草稿版本解析显示数据', () => {
     const wrapper = mount(SessionPanel, { props: { draft } })
     const store = useSessionAssistantStore()
 
-    // 头部职业名
-    expect(wrapper.text()).toContain('3级 牧师')
+    // 头部职业段（MC-E05 统一格式：职业 + 职业等级）
+    expect(wrapper.text()).toContain('牧师3')
 
     // 能力页签：职业特性 / 子职特性
     store.setActiveTab('features')
@@ -98,7 +98,9 @@ describe('SessionPanel 按草稿版本解析显示数据', () => {
     const wrapper = mount(SessionPanel, { props: { draft } })
     const store = useSessionAssistantStore()
 
-    expect(wrapper.text()).toContain('2级 战士')
+    // 单职业仍为「职业 + 该职业等级」，不出现总等级括注（MC-E05）
+    expect(wrapper.text()).toContain('战士2')
+    expect(wrapper.text()).not.toContain('级角色）')
 
     store.setActiveTab('features')
     await nextTick()

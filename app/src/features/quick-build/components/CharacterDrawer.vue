@@ -7,9 +7,10 @@ import type { DerivedCharacterSummary } from '@/types/character'
 
 const props = defineProps<{ summary: DerivedCharacterSummary; completion: number }>()
 const expanded = ref(false)
+/** 职业行（MC-E05）：摘要已带统一格式标签（单职业「战士5」／兼职「战士3 / 游荡者2（5 级角色）」）。 */
 const characterLabel = computed(() =>
-  props.summary.className
-    ? `${props.summary.level}级 ${props.summary.className}`
+  props.summary.classLabel
+    ? props.summary.classLabel
     : `${props.summary.level}级 · 尚未选择职业`,
 )
 </script>

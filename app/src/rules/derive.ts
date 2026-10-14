@@ -5,6 +5,8 @@ import { canBenefitFromShield, getActiveEquippedEquipment } from '@/rules/equipm
 import { applyAbilityImprovement, collectFeatSkillSelections, decodeAbilityImprovement, getFeatAbilityCap, isFeatGrantParentActive, isSelectionCheckpointActive, listActiveFeats } from '@/rules/feats'
 import { getBackgroundAbilityBonuses, getDraftSpeciesRules, getSpeciesHitPointBonus, getValidSpeciesChoice } from '@/rules/origins'
 import { getSubclassDerivedEffects } from '@/rules/subclass-effects'
+import { getPrimaryClassId, getTotalLevel } from '@/rules/multiclass'
+import { deriveMulticlassHitPoints, getClassLevelLabel, getHitDiceFaces } from '@/rules/multiclass-session'
 import { isSourceEnabled } from '@/rules/source-books'
 import { artificerInfusions2014 } from '@/rules/data/artificer-2014'
 import { getSpellcastingConfig } from '@/rules/spellcasting'
@@ -231,7 +233,7 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
   const abilityKeys: readonly AbilityKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
   const abilities = Object.fromEntries(abilityKeys.map((key) => [key, systemAbilities[key] + (manual.abilityAdjustments[key] ?? 0)])) as unknown as AbilityScores
   const modifiers = Object.fromEntries(abilityKeys.map((key) => [key, abilityModifier(abilities[key])])) as Record<AbilityKey, number>
-  const systemProficiency = proficiencyBonus(draft.targetLevel)
+  const systemProficiency = proficiencyBonus(getTotalLevel(draft) || draft.targetLevel)
   const proficiency = systemProficiency + manual.proficiencyBonusAdjustment
   const selectedClass = draft.classId ? repository.getClass(draft.classId) : undefined
   const classRule = selectedClass && isSourceEnabled(selectedClass.sourceIds, draft.enabledSourceIds, repository) ? selectedClass : undefined
@@ -250,9 +252,9 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     .map((feat) => feat.name)
   const featSpeedBonus = activeFeats.reduce((sum, feat) => sum + (feat.speedBonus ?? 0), 0)
   const featSpeedNames = activeFeats.filter((feat) => (feat.speedBonus ?? 0) > 0).map((feat) => feat.name)
-  const hitDie = classRule?.hitDie ?? 8
-  const hp = hitDie + modifiers.con
-    + Math.max(0, draft.targetLevel - 1) * Math.max(1, Math.floor(hitDie / 2) + 1 + modifiers.con)
+  // 兼职口径（MC-B03）：起始职业 1 级最大值只算一次，后续每级按**所升职业**的后续升级生命值。
+  const hitPointDetail = deriveMulticlassHitPoints(draft, abilities.con)
+  const hp = hitPointDetail.total
     + subclassEffects.hitPointBonus
     + featHitPointBonus
     + speciesHitPointBonus
@@ -377,12 +379,17 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     'skill-stealth': 'dex',
     'skill-survival': 'wis',
   }
+  // 兼职口径（MC-B02）：豁免熟练只来自**起始职业**——兼职条目不含任何豁免熟练。
+  const primaryClassId = getPrimaryClassId(draft)
+  const primaryClassRule = primaryClassId ? repository.getClass(primaryClassId) : undefined
+  const primarySavingThrowAbilities = primaryClassRule?.savingThrowAbilities ?? []
+  const savingThrowClassName = primaryClassRule?.name ?? classRule?.name ?? ''
   const savingThrows = Object.fromEntries(abilityKeys.map((key) => {
     const featSavingName = featSavingThrowAbilities[key]
-    const proficient = (classRule?.savingThrowAbilities.includes(key) ?? false) || Boolean(featSavingName)
+    const proficient = primarySavingThrowAbilities.includes(key) || Boolean(featSavingName)
     return [key, withManualAdjustment(derived(modifiers[key] + (proficient ? proficiency : 0), [
       { id: `${key}-save-ability`, label: '属性调整值', value: modifiers[key], detail: `${ABILITY_LABELS[key]} ${abilities[key]}` },
-      ...(classRule?.savingThrowAbilities.includes(key) ? [{ id: `${key}-save-proficiency`, label: '职业豁免熟练', value: proficiency, detail: classRule?.name ?? '' }] : []),
+      ...(primarySavingThrowAbilities.includes(key) ? [{ id: `${key}-save-proficiency`, label: '职业豁免熟练', value: proficiency, detail: savingThrowClassName ? `起始职业：${savingThrowClassName}` : '' }] : []),
       ...(featSavingName ? [{ id: `${key}-save-feat-proficiency`, label: '专长豁免熟练', value: proficiency, detail: featSavingName }] : []),
     ]), manual.savingThrowAdjustments[key], `save-${key}`)]
   })) as Record<AbilityKey, DerivedValue<number>>
@@ -421,8 +428,18 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
     'proficiency',
   )
   const hitPoints = withManualAdjustment(derived(hp, [
-    { id: 'class-hit-die', label: '职业生命骰', value: hitDie, detail: classRule?.name ?? '未选择职业' },
-    { id: 'constitution', label: '体质调整值', value: modifiers.con * draft.targetLevel, detail: `体质 ${abilities.con}` },
+    {
+      id: 'class-hit-die',
+      label: '起始职业 1 级生命值',
+      value: hitPointDetail.firstLevel,
+      detail: `${getPrimaryClassId(draft) ? repository.getClass(getPrimaryClassId(draft) as string)?.name ?? '起始职业' : '未选择职业'} d${hitPointDetail.firstLevel - modifiers.con} 最大值 + 体质调整值`,
+    },
+    ...hitPointDetail.perLevel.map((fixed, index) => ({
+      id: `class-hit-die-level-${index + 2}`,
+      label: `第 ${index + 2} 级生命值`,
+      value: fixed + modifiers.con,
+      detail: `${repository.getClass(hitPointDetail.levelClassIds[index + 1] ?? '')?.name ?? '职业'} d${getHitDiceFaces(draft)[index + 1] ?? 8} 后续升级生命值（${fixed}） + 体质调整值`,
+    })),
     ...(subclassEffects.hitPointBonus !== 0 ? [{ id: 'subclass-hit-points', label: '子职生命加成', value: subclassEffects.hitPointBonus, detail: draft.subclassId ? `${repository.getSubclass(draft.subclassId)?.name ?? '子职'}特性` : '来自子职特性' }] : []),
     ...(featHitPointBonus !== 0 ? [{ id: 'feat-hit-points', label: '专长生命加成', value: featHitPointBonus, detail: featHitPointNames.join('、') }] : []),
     ...(speciesHitPointBonus !== 0 ? [{ id: 'species-hit-points', label: '物种生命加成', value: speciesHitPointBonus, detail: '每级最大生命值增加' }] : []),
@@ -515,9 +532,11 @@ export function deriveCharacter(draft: CharacterDraft): DerivedCharacter {
 export function deriveCharacterSummary(draft: CharacterDraft): DerivedCharacterSummary {
   const repository = getRulesRepository(draft.ruleset)
   const values = deriveCharacter(draft)
+  const classLabel = getClassLevelLabel(draft, repository)
   return {
     level: draft.targetLevel,
     className: draft.classId ? repository.getClass(draft.classId)?.name : undefined,
+    ...(classLabel ? { classLabel } : {}),
     proficiencyBonus: `+${values.proficiencyBonus.value}`,
     hitPoints: values.hitPoints.value,
     armorClass: values.armorClass.value,

@@ -1,7 +1,9 @@
 import { getRulesRepository } from '@/rules/repositories'
+import { getClassLevel } from '@/rules/multiclass'
 import { getDicePoolCount, getDicePoolDie, getResourceMax, getResourceRecovery } from '@/rules/resources'
 import { getSpellFreeCastings } from '@/rules/spellcasting'
 import { getEffectiveSpeciesFeatures } from '@/rules/origins'
+import { listCharacterFeatures } from '@/rules/multiclass-features'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
 import type { ClassFeature, ClassResource, RulesRepository, SubclassFeature } from '@/types/rules'
 import type { SessionState } from '@/types/session-state'
@@ -26,18 +28,57 @@ export interface SessionResource {
   /** 免费施法条目对应的法术 id（用于施法弹窗绑定免费施放按钮）。 */
   readonly spellId?: string
   readonly castingLevel?: number
+  /**
+   * 合并来源（MC-E05，R5.3）：同名资源来自多个职业时列出各来源特性名。
+   * 只有 1 个来源时不提供该字段。
+   */
+  readonly sharedSources?: readonly string[]
 }
 
 function abilityModifierOf(modifiers: Partial<Record<AbilityKey, number>>, ability: AbilityKey): number {
   return modifiers[ability] ?? 0
 }
 
-/** 收集草稿已获得的职业与子职特性（按目标等级过滤）。 */
+/** 收集草稿已获得的职业与子职特性（按**各职业自己的等级**过滤，MC-C02）。 */
 function grantedFeatures(draft: CharacterDraft, repository: RulesRepository): readonly (ClassFeature | SubclassFeature)[] {
-  return [
-    ...(draft.classId ? repository.getClass(draft.classId)?.features ?? [] : []),
-    ...(draft.subclassId ? repository.getSubclass(draft.subclassId)?.features ?? [] : []),
-  ].filter((feature) => feature.level <= draft.targetLevel)
+  return listCharacterFeatures(draft, repository)
+}
+
+/**
+ * 特性归属的职业 id（MC-E05）：职业特性自带 `classId`；子职特性经其子职反查。
+ * 种族特性两者皆无 → 返回空串，调用方按角色总等级取值。
+ * 由调用方用 `in` 收窄后传入字段：种族特性类型与两个特性类型无公共属性，无法用联合类型直接接收。
+ */
+function resolveOwningClassId(
+  classId: string | undefined,
+  subclassId: string | undefined,
+  repository: RulesRepository,
+): string {
+  if (classId) return classId
+  return subclassId ? repository.getSubclass(subclassId)?.classId ?? '' : ''
+}
+
+/**
+ * 同名资源合并为一个计数池（R5.3「同名资源的已用量在跑团状态中合并为一个计数池」）。
+ * `max` 取各来源在**各自等级**下的最大值；`id` 取首个来源，保证单职业结果与既有记录完全一致。
+ * `source` 是归属名（职业名／种族名），仅在确实来自 2 个以上来源时才输出 `sharedSources`。
+ */
+function mergeSameNameResources(entries: readonly { readonly resource: SessionResource; readonly source?: string }[]): readonly SessionResource[] {
+  const merged = new Map<string, { resource: SessionResource; sources: string[] }>()
+  for (const { resource, source } of entries) {
+    const previous = merged.get(resource.name)
+    if (!previous) {
+      merged.set(resource.name, { resource, sources: source ? [source] : [] })
+      continue
+    }
+    if (source && !previous.sources.includes(source)) previous.sources.push(source)
+    if (resource.max > previous.resource.max) {
+      const { max, recovery, shortRestRecovery } = resource
+      previous.resource = { ...previous.resource, max, recovery, ...(shortRestRecovery === undefined ? {} : { shortRestRecovery }) }
+    }
+  }
+  return [...merged.values()].map(({ resource, sources }) =>
+    sources.length > 1 ? { ...resource, sharedSources: sources } : resource)
 }
 
 /** 短休额外降低的力竭层数（如 2024 游侠·不知疲倦）；多个来源取最大值，2014 无登记时为 0。 */
@@ -59,17 +100,24 @@ export function listSessionResources(
     .map((feature) => ({ ...feature, dicePool: undefined }))
   const features = [...grantedFeatures(draft, repository), ...speciesFeatures]
 
-  const resources: SessionResource[] = []
+  const resources: { resource: SessionResource; source?: string }[] = []
   const seen = new Set<string>()
   for (const feature of features) {
     if (seen.has(feature.id)) continue
+    // 等级口径（MC-E05）：职业／子职特性按所属职业等级；种族特性按角色总等级。
+    const classId = resolveOwningClassId(
+      'classId' in feature ? feature.classId : undefined,
+      'subclassId' in feature ? feature.subclassId : undefined,
+      repository,
+    )
+    const level = classId ? getClassLevel(draft, classId) || draft.targetLevel : draft.targetLevel
     const count = feature.resource
-      ? getResourceMax(feature.resource, draft.targetLevel, feature.resource.maxFromAbility
+      ? getResourceMax(feature.resource, level, feature.resource.maxFromAbility
         ? abilityModifierOf(modifiers, feature.resource.maxFromAbility.ability)
         : feature.resource.abilityBonus ? abilityModifierOf(modifiers, feature.resource.abilityBonus) : 0)
       : 0
-    const poolCount = feature.dicePool ? getDicePoolCount(feature.dicePool, draft.targetLevel) : 0
-    const poolDie = feature.dicePool ? getDicePoolDie(feature.dicePool, draft.targetLevel) : ''
+    const poolCount = feature.dicePool ? getDicePoolCount(feature.dicePool, level) : 0
+    const poolDie = feature.dicePool ? getDicePoolDie(feature.dicePool, level) : ''
     // 只把「可消耗」的条目纳入结算：资源本身，或 recovery 不为 none 的骰池。
     const isConsumablePool = Boolean(feature.dicePool && feature.dicePool.recovery && feature.dicePool.recovery !== 'none')
     if (!feature.resource && !isConsumablePool) continue
@@ -78,15 +126,18 @@ export function listSessionResources(
     seen.add(feature.id)
     const shortRestRecovery = feature.resource?.shortRestRecovery ?? feature.dicePool?.shortRestRecovery
     resources.push({
-      id: feature.id,
-      name: feature.name,
-      max,
-      recovery: feature.resource
-        ? getResourceRecovery(feature.resource, draft.targetLevel)
-        : feature.dicePool?.recovery ?? 'none',
-      unit: feature.resource?.unit ?? (poolDie || '次'),
-      dice: Boolean(feature.dicePool && !feature.resource),
-      ...(shortRestRecovery !== undefined ? { shortRestRecovery } : {}),
+      resource: {
+        id: feature.id,
+        name: feature.name,
+        max,
+        recovery: feature.resource
+          ? getResourceRecovery(feature.resource, level)
+          : feature.dicePool?.recovery ?? 'none',
+        unit: feature.resource?.unit ?? (poolDie || '次'),
+        dice: Boolean(feature.dicePool && !feature.resource),
+        ...(shortRestRecovery !== undefined ? { shortRestRecovery } : {}),
+      },
+      source: classId ? repository.getClass(classId)?.name : undefined,
     })
   }
   // 免费施法（专长／物种／职业与子职特性／选项）：复用同一已用计数与休息回充管道。
@@ -97,17 +148,20 @@ export function listSessionResources(
     if (!spell || grant.count <= 0) continue
     seen.add(key)
     resources.push({
-      id: key,
-      name: `${spell.name}（${grant.sourceName}）`,
-      max: grant.count,
-      recovery: grant.recovery,
-      unit: '次',
-      dice: false,
-      spellId: grant.spellId,
-      ...(grant.castingLevel === undefined ? {} : { castingLevel: grant.castingLevel }),
+      resource: {
+        id: key,
+        name: `${spell.name}（${grant.sourceName}）`,
+        max: grant.count,
+        recovery: grant.recovery,
+        unit: '次',
+        dice: false,
+        spellId: grant.spellId,
+        ...(grant.castingLevel === undefined ? {} : { castingLevel: grant.castingLevel }),
+      },
     })
   }
-  return resources
+  // 同名资源合并（R5.3）。免费施法的名称已带来源后缀，不会与其他条目同名。
+  return mergeSameNameResources(resources)
 }
 
 /** 已用数量（未记录视为 0）。 */
