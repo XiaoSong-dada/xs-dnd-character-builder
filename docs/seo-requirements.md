@@ -180,3 +180,12 @@
 1. `/assistant` 跑团助手页已随 v0.6.0 实施独立 description、sitemap 与预渲染。
 2. `/about` 关于本站页已随 v0.8.0 实施独立 description、canonical、sitemap 与预渲染。
 3. 未来新增公开页面时，必须在功能完成时同步评估收录策略；账号或个人数据页面默认不收录。
+
+## 21. 跑团助手子路由的 SEO 口径（v1.14.0）
+
+跑团助手改为父级 + 子路由后，SEO 结论如下（对应《内容工坊需求》Q3）：
+
+- `/assistant` 仍是公开入口：保留前端重定向到 `/assistant/session`、保留预渲染（产物含外壳 h1 与局内模式正文）、保留 sitemap 收录；
+- `/assistant/session`、`/assistant/workshop`、`/assistant/workshop/:kind/:entryId` **不预渲染、不进 sitemap**：内容工坊展示的是玩家本机内容库，预渲染只能得到空状态，收录没有价值；
+- 三个子路由仍提供独立 `meta.title`（跑团助手 / 内容工坊 / 编辑自定义内容），刷新与直接访问由 SPA History 回退兜底；
+- 新增子路由不改变 `vite.config.ts` 的 `INCLUDED_ROUTES` 与 `public/sitemap.xml`。

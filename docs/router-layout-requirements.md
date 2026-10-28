@@ -672,3 +672,14 @@ app/src/views/HomeView.vue
 - 页面目录由 `src/views/profile/` 调整为 `src/views/about/`，入口继续只负责调用页面 Hook 与组装页面私有组件；
 - 浏览器标题改为“关于本站 | D&D车卡辅助”，页面加入独立 description、sitemap 与预渲染；
 - 页面展示项目简介、永久免费声明、B站、GitHub、QQ 交流群和可选“请杯咖啡”收款码，不实现账号、作者介绍、赞助名单或友情链接。
+
+## 21. 后续变更：跑团助手改为父级 + 子路由（v1.14.0）
+
+以下结论由《内容工坊需求》确认（Q2／Q3，2026-10-19），在原有四个一级路由之上**只增加层级、不改变一级导航**：
+
+- `/assistant` 改为父级路由（外壳 `views/assistant/index.vue`：唯一 h1 + 一级分段控件 + `RouterView`），`path: ''` 重定向到 `/assistant/session`；
+- 子路由：`/assistant/session`（name 沿用 `session-assistant`，复用 `views/session-assistant/index.vue`）、`/assistant/workshop`（name `workshop`）、`/assistant/workshop/:kind/:entryId`（name `workshop-editor`）；
+- **不重命名**既有路由名 `session-assistant`，也不改动 pinia id 与 localStorage 键（被导航配置、8 个测试与玩家已保存状态引用）；
+- 底部导航激活判定从 `router-link-exact-active` 改为按路径前缀（`/assistant`），因此子路由上「跑团助手」仍然高亮；当前项重复点击仍不触发导航；
+- 子路由只提供 `meta.title`，**不写** `meta.description`、不进 sitemap、不预渲染（见《SEO 需求》§21）；
+- 局内模式页面删除重复的 `<h1>跑团助手</h1>`，页面标题由外壳统一提供；其余交互与状态保持完全不变。

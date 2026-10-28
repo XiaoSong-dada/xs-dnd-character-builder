@@ -338,6 +338,52 @@ src/views/session-assistant/components/SessionPanel.vue
   -> src/utils/format-spell-label.ts（法术环位、英文名与仪式标签）
 ```
 
+跑团助手自 v1.14.0 起为**父级 + 子路由**结构：「局内模式」沿用原 `views/session-assistant` 目录，「内容工坊」为新增页面区；两段共用一个外壳（标题 + 分段控件）：
+
+```text
+src/views/assistant/index.vue（外壳：h1 + 分段控件 + RouterView）
+  -> src/views/assistant/hooks/useAssistantShell.ts（分段配置与路由归属判定）
+
+src/views/session-assistant/index.vue（/assistant/session，行为不变）
+
+src/views/workshop/index.vue（/assistant/workshop，列表页）
+  -> src/views/workshop/hooks/useWorkshopPage.ts
+  -> src/views/workshop/components/{WorkshopEntryCard,WorkshopExpansionCard,WorkshopKindPicker,WorkshopDeleteDialog,WorkshopImportDialog}
+  -> src/features/custom-content/{dictionary,labels}
+  -> src/features/custom-content/hooks/useCustomEntryReferences.ts
+  -> src/rules/{custom-content,custom-content-references,repositories}
+  -> src/services/custom-content-files.ts
+  -> src/stores/custom-content.ts
+
+src/views/workshop/edit/index.vue（/assistant/workshop/:kind/:entryId，编辑器）
+  -> src/views/workshop/edit/hooks/useWorkshopEditor.ts
+  -> src/views/workshop/edit/components/{ExpansionForm,RaceForm,FeatForm,SpellForm,ClassForm}
+  -> src/features/custom-content/components/{CustomFormSection,CustomField,CustomTraitList,CustomPreview}
+  -> src/hooks/useRulesRepository.ts
+  -> src/components/ui/StickyActionBar.vue（自 quick-build 上提，车卡与工坊共用）
+```
+
+内容工坊的规则叠加层拓扑（单向，无反向依赖）：
+
+```text
+src/App.vue（setup 阶段实例化 store，早于任何页面渲染）
+  -> src/stores/custom-content.ts（内容库唯一事实源；模块级 customContentVersion）
+      -> src/services/custom-content-storage.ts（localStorage 读写、归一化、导入导出 JSON）
+      -> src/rules/repositories.ts#registerCustomContent（注册 + 重建合并仓库 + 版本号）
+          -> src/rules/custom-content-merge.ts（先注入自定义法术，再派生自定义职业施法）
+              -> src/rules/custom-content.ts（ID 规则、类型投影、校验、摘要）
+              -> src/rules/repository-builder.ts
+
+src/hooks/useRulesRepository.ts（组件层响应式入口）
+  -> 读取 stores/custom-content 的模块级版本号
+  -> src/rules/repositories.ts#getRulesRepository
+车卡 14 个组件与跑团面板改用该 hook；纯规则函数仍直接调用 `getRulesRepository(draft.ruleset)`。
+```
+
+- `src/rules/custom-content*` 必须保持框架无关（不 import Vue/Pinia/存储/页面），由 `test/architecture/custom-content-boundaries.test.ts` 守卫。
+- 归档条目的"退出候选池"落在三处守卫：`ClassStep`、`OriginStep`、`getAvailableSpells`；`getFeatPool` 原本已排除 `unavailable`。
+- 子路由不预渲染、不进 sitemap（`/assistant` 仍重定向并预渲染）。
+
 赛博骰娘页面为独立的页面内聚模块：
 
 ```text
