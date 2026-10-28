@@ -24,7 +24,7 @@ import {
   setTotalLevel,
 } from '@/rules/multiclass'
 import { getMulticlassPrerequisiteReport } from '@/rules/multiclass-prerequisites'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { CharacterDraft } from '@/types/character'
 
@@ -54,7 +54,7 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const repository = useRulesRepository(() => props.draft.ruleset)
 const classes = computed(() => getClassEntries(props.draft))
 const totalLevel = computed(() => getTotalLevel(props.draft))
 const primaryClassId = computed(() => getPrimaryClassId(props.draft))

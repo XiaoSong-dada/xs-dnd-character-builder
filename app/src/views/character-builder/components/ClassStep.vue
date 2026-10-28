@@ -2,20 +2,22 @@
 import { computed } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
+import CustomContentBadge from '@/features/custom-content/components/CustomContentBadge.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import ClassAllocationControl from '@/views/character-builder/components/ClassAllocationControl.vue'
 import { getClassDetailSummary, getClassGrowthSummary } from '@/rules/recommend'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { CharacterDraft, RulesetId } from '@/types/character'
 
 const props = withDefaults(defineProps<{ draft: CharacterDraft; selected?: string; enabledSourceIds?: readonly string[]; ruleset?: RulesetId }>(), { ruleset: '5e-2014' })
 const emit = defineEmits<{ select: [id: string]; allocation: [draft: CharacterDraft]; totalLevel: [draft: CharacterDraft] }>()
 
-const repository = computed(() => getRulesRepository(props.ruleset))
+const repository = useRulesRepository(() => props.ruleset)
 const visibleClasses = computed(() => repository.value.classes
-  .filter((classRule) => isSourceEnabled(classRule.sourceIds, props.enabledSourceIds, repository.value))
+  // 归档的自定义职业保留解析能力，但不再出现在新建候选里。
+  .filter((classRule) => classRule.status !== 'unavailable' && isSourceEnabled(classRule.sourceIds, props.enabledSourceIds, repository.value))
   .map((classRule) => ({
     classRule,
     detail: getClassDetailSummary(classRule),
@@ -44,6 +46,7 @@ const visibleClasses = computed(() => repository.value.classes
         @select="$emit('select', classRule.id)"
       >
         <template #suffix>
+          <CustomContentBadge :source-ids="classRule.sourceIds" />
           <UiBadge v-if="classRule.status !== 'implemented'" tone="warning">{{ classRule.status === 'selectable' ? '可选择 · 部分效果需手动处理' : '资料索引' }}</UiBadge>
         </template>
         <template #expanded>

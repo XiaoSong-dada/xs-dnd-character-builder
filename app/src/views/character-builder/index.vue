@@ -7,7 +7,7 @@ import UiNotice from '@/components/ui/UiNotice.vue'
 import CharacterDrawer from '@/features/quick-build/components/CharacterDrawer.vue'
 import QuickBuildShell from '@/features/quick-build/components/QuickBuildShell.vue'
 import StepHeader from '@/features/quick-build/components/StepHeader.vue'
-import StickyActionBar from '@/features/quick-build/components/StickyActionBar.vue'
+import StickyActionBar from '@/components/ui/StickyActionBar.vue'
 import AbilitiesStep from '@/views/character-builder/components/AbilitiesStep.vue'
 import CharacterSheetStep from '@/views/character-builder/components/CharacterSheetStep.vue'
 import ClassStep from '@/views/character-builder/components/ClassStep.vue'
@@ -42,6 +42,7 @@ const {
   validationIssues,
   completion,
   importError,
+  importNotice,
   exportingFormat,
   exportNotice,
   pendingChange,
@@ -70,6 +71,7 @@ const {
   applyAllocationFromSetup: applyAllocationFromSetupAction,
   applyTotalLevel: applyTotalLevelAction,
   updateSources,
+  openWorkshop,
   selectClass,
   selectRace,
   selectSubrace,
@@ -207,6 +209,7 @@ function updateMethod(value: AbilityMethod): void {
     </template>
 
     <UiNotice v-if="importError" tone="error" title="导入失败">{{ importError }}</UiNotice>
+    <UiNotice v-if="importNotice" tone="warning" title="缺少自定义内容">{{ importNotice }}</UiNotice>
     <div
       v-if="levelAdjustNotice"
       class="builder-level-notice"
@@ -228,7 +231,7 @@ function updateMethod(value: AbilityMethod): void {
       @total-level="applyTotalLevelFromSetup"
       @ruleset="updateRuleset"
     />
-    <SourcesStep v-else-if="step === 'sources'" :selected="activeDraft.enabledSourceIds" :ruleset="activeDraft.ruleset" @change="updateSources" />
+    <SourcesStep v-else-if="step === 'sources'" :selected="activeDraft.enabledSourceIds" :ruleset="activeDraft.ruleset" @change="updateSources" @open-workshop="openWorkshop" />
     <ClassStep
       v-else-if="step === 'class'"
       :draft="activeDraft"

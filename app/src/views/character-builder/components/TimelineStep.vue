@@ -6,7 +6,7 @@ import OptionCard from '@/components/ui/OptionCard.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import FeatChoicePanel from '@/views/character-builder/components/FeatChoicePanel.vue'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { getClassEntries } from '@/rules/multiclass'
 import { abilityModifier, deriveAbilities } from '@/rules/derive'
 import { formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
@@ -30,7 +30,7 @@ const emit = defineEmits<{ select: [checkpointId: string, optionIds: readonly st
 const expandedCheckpointId = ref<string>()
 
 /** 当前草稿规则版本的仓库：职业、子职、专长与装备名称一律由它解析。 */
-const rulesRepository = computed(() => getRulesRepository(props.draft.ruleset))
+const rulesRepository = useRulesRepository(() => props.draft.ruleset)
 
 /** 时间线（MC-E04）：由草稿统一入口构建，自动带上兼职职业集合、各职业子职与来源开关。 */
 const checkpoints = computed(() => buildTimelineForDraft(props.draft))

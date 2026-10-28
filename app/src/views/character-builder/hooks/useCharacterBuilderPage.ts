@@ -5,6 +5,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { deriveCharacter, getFlexibleBonusGroups, getFlexibleBonusRule, getRaceAbilityBonuses } from '@/rules/derive'
 import { getBackgroundAbilityBonuses, getOriginStepBlockers, isOriginStepComplete } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
+import { isCustomSourceId } from '@/rules/custom-content'
+import { describeMissingCustomContent } from '@/features/custom-content/missing-content'
+import { useCustomContentStore } from '@/stores/custom-content'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, clampDestinyCount, rollAbilityScoreSets, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
@@ -77,6 +80,8 @@ export function useCharacterBuilderPage() {
   const { drafts, legacyDrafts, activeDraft, derivedSummary, validationIssues, completion } = storeToRefs(store)
   const lineageTransformation = useLineageTransformation(activeDraft, store.updateDraft)
   const importError = ref('')
+  const importNotice = ref('')
+  const customContentStore = useCustomContentStore()
   /** 新建默认版本（按本设备偏好解析，B00-02）；起点页 hero 与第一页共用。 */
   const defaultRuleset = ref<RulesetId>(resolveInitialRuleset().ruleset)
   /** 记忆版本尚未开放时的回退说明（Q-B09-1：第一页内联提示）。 */
@@ -85,6 +90,22 @@ export function useCharacterBuilderPage() {
   const rulesetRebuild = ref<RulesetId>()
   /** 按草稿版本取仓库（B09-02）：绑定、名称与校验均不得使用固定 2014 仓库。 */
   const repositoryFor = (draft: { readonly ruleset: RulesetId } | undefined) => getRulesRepository(draft?.ruleset ?? defaultRuleset.value)
+
+  /**
+   * 从内容工坊返回（`?enableSource=<id>`）：把刚保存的自定义扩展并入当前草稿的来源，
+   * 让玩家回到第 2 步就能直接看到新内容（需求 Q14）。只加不删，不触发确认弹窗。
+   */
+  const pendingCustomSourceId = typeof route.query.enableSource === 'string' ? route.query.enableSource : ''
+  if (pendingCustomSourceId && isCustomSourceId(pendingCustomSourceId) && activeDraft.value) {
+    const draft = activeDraft.value
+    if (!draft.enabledSourceIds.includes(pendingCustomSourceId)) {
+      store.updateDraft({
+        enabledSourceIds: normalizeEnabledSourceIds([...draft.enabledSourceIds, pendingCustomSourceId], draft.ruleset),
+      })
+    }
+    const { enableSource: _enableSource, ...query } = route.query
+    void router.replace({ query })
+  }
   const exportingFormat = ref<'pdf' | 'xlsx' | 'zip'>()
   const exportNotice = ref<{ readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }>()
   const pendingChange = ref<PendingChange>()
@@ -245,10 +266,18 @@ export function useCharacterBuilderPage() {
     if (deletingActiveDraft) void router.replace({ name: 'character-builder' })
   }
 
+  /** 导入成功后：角色引用了本机不存在的自定义内容时给出提示（需求 R9）。 */
+  function missingNoticeOf(draft: NonNullable<typeof store.activeDraft>): string {
+    return describeMissingCustomContent(draft, (id) => Boolean(customContentStore.findEntry(draft.ruleset, id))).message
+  }
+
   function importDraft(raw: string): void {
     try {
       importError.value = ''
-      syncRoute(store.importDraft(raw))
+      importNotice.value = ''
+      const draft = store.importDraft(raw)
+      syncRoute(draft)
+      importNotice.value = missingNoticeOf(draft)
     } catch (error) {
       importError.value = error instanceof CharacterImportError ? error.message : '无法导入角色文件。'
     }
@@ -733,6 +762,14 @@ export function useCharacterBuilderPage() {
     return [...new Set(affected.filter((item) => !item.endsWith('：')))]
   }
 
+  /** 跳转到内容工坊：带上来源步骤的规则集与返回标记（保存扩展后自动回到这里）。 */
+  function openWorkshop(): void {
+    void router.push({
+      name: 'workshop',
+      query: { from: 'character-builder', ruleset: activeDraft.value?.ruleset ?? defaultRuleset.value },
+    })
+  }
+
   function updateSources(sourceIds: readonly string[]): void {
     const draft = activeDraft.value
     if (!draft) return
@@ -871,7 +908,10 @@ export function useCharacterBuilderPage() {
   async function importPackage(file: File): Promise<void> {
     try {
       importError.value = ''
-      syncRoute(await store.importPackage(file))
+      importNotice.value = ''
+      const draft = await store.importPackage(file)
+      syncRoute(draft)
+      importNotice.value = missingNoticeOf(draft)
     } catch (error) {
       importError.value = error instanceof Error ? error.message : '无法导入完整角色包。'
     }
@@ -1054,6 +1094,7 @@ export function useCharacterBuilderPage() {
     validationIssues,
     completion,
     importError,
+    importNotice,
     exportingFormat,
     exportNotice,
     pendingChange,
@@ -1083,6 +1124,7 @@ export function useCharacterBuilderPage() {
     applyAllocationFromSetup,
     applyTotalLevel,
     updateSources,
+    openWorkshop,
     selectClass,
     selectRace,
     selectSubrace,

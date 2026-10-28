@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
+import CustomContentBadge from '@/features/custom-content/components/CustomContentBadge.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import { ABILITY_KEYS, ABILITY_LABELS } from '@/rules/data/feats-2014'
@@ -14,7 +15,7 @@ import {
   type AbilityImprovementMode,
 } from '@/rules/feats'
 import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { AbilityKey, CharacterDraft } from '@/types/character'
 
@@ -28,7 +29,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [optionId?: string] }>()
 /** 专长候选按草稿版本解析（B09-02）：不得固定 2014 仓库。 */
-const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const repository = useRulesRepository(() => props.draft.ruleset)
 const selectedImprovement = computed(() => props.selectedOptionId
   ? decodeAbilityImprovement(props.selectedOptionId)
   : undefined)
@@ -206,6 +207,7 @@ function selectFeat(featId: string, available: boolean): void {
         >
           <template #expanded>{{ feat.detail }}</template>
           <template #suffix>
+            <CustomContentBadge :source-ids="feat.sourceIds" />
             <UiBadge v-if="!eligibility.available" tone="error">不可选</UiBadge>
           </template>
         </ExpandableOptionCard>

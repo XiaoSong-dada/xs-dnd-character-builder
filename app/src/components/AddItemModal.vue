@@ -14,7 +14,7 @@ import {
 } from '@/rules/equipment-filter'
 import { loadItemCatalog } from '@/rules/item-catalog-loader'
 import type { RulesetId } from '@/types/character'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { EquipmentRule } from '@/types/rules'
 
@@ -87,7 +87,7 @@ const visibleLimit = ref(80)
 const catalogState = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
 const catalogItems = ref<readonly EquipmentRule[]>([])
 /** 来源与物品解析按草稿版本（B09-06）：2024 草稿不得使用 2014 静态仓库。 */
-const repository = computed(() => getRulesRepository(props.ruleset))
+const repository = useRulesRepository(() => props.ruleset)
 
 const sourceOptions = computed(() => [
   ...repository.value.sources

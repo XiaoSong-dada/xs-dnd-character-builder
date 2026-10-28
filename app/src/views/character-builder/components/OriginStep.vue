@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 
 import BaseButton from '@/components/ui/BaseButton.vue'
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
+import CustomContentBadge from '@/features/custom-content/components/CustomContentBadge.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
@@ -10,7 +11,7 @@ import { SKILL_IDS } from '@/rules/derive'
 import { getFeatPool } from '@/rules/feats'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
 import { getBackgroundRecommendationReason, getRaceRecommendationReason, sortByClassRecommendation } from '@/rules/recommend'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { isSourceEnabled } from '@/rules/source-books'
 import { getSpeciesLegacyBenefits } from '@/rules/species-legacy'
 import type { AbilityKey, ChoiceSelection, LineageHistoryEntry, RulesetId } from '@/types/character'
@@ -56,7 +57,7 @@ const emit = defineEmits<{
   backgroundFeat: [checkpointId: string, optionIds: readonly string[]]
 }>()
 
-const repository = computed(() => getRulesRepository(props.ruleset))
+const repository = useRulesRepository(() => props.ruleset)
 const classRule = computed(() => props.classId ? repository.value.getClass(props.classId) : undefined)
 const raceSearch = ref('')
 const backgroundSearch = ref('')
@@ -71,7 +72,8 @@ const sourceOptions = computed(() => [
     .filter((source) => source.category === 'core' || (props.enabledSourceIds ?? []).includes(source.id))
     .map((source) => ({ id: source.id, label: source.shortTitle })),
 ])
-const availableBaseRaces = computed(() => repository.value.races.filter((item) => !item.parentRaceId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)))
+// 归档的自定义种族/血统保留解析能力，但不再出现在新建候选里。
+const availableBaseRaces = computed(() => repository.value.races.filter((item) => !item.parentRaceId && item.status !== 'unavailable' && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)))
 const selectedRace = computed(() => props.raceId ? repository.value.getRace(props.raceId) : undefined)
 const filteredRaces = computed(() => {
   const query = raceSearch.value.trim().toLocaleLowerCase('zh-CN')
@@ -85,7 +87,7 @@ const visibleRaces = computed(() => {
   // 已选种族保留在候选目录中并显示已选态（v1.9.1 追加），不再把当前选择从候选里移除。
   return full ? orderedRaces.value : recommendedRaces.value.length ? recommendedRaces.value : orderedRaces.value.slice(0, 6)
 })
-const subraces = computed(() => props.raceId ? repository.value.races.filter((item) => item.parentRaceId === props.raceId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)) : [])
+const subraces = computed(() => props.raceId ? repository.value.races.filter((item) => item.parentRaceId === props.raceId && item.status !== 'unavailable' && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)) : [])
 
 const availableBaseBackgrounds = computed(() => repository.value.backgrounds.filter((item) => !item.parentBackgroundId && isSourceEnabled(item.sourceIds, props.enabledSourceIds, repository.value)))
 const selectedBackground = computed(() => props.backgroundId ? repository.value.getBackground(props.backgroundId) : undefined)
@@ -240,7 +242,7 @@ function selectBackgroundFeat(featId: string): void { const checkpointId = backg
             :state="race.id === raceId ? 'selected' : 'default'"
             @select="race.id !== raceId && $emit('race', race.id)"
           >
-            <template #suffix><UiBadge v-if="race.id === raceId" tone="success">已选</UiBadge><UiBadge v-if="race.status === 'dm-only'" tone="warning">可选规则</UiBadge><UiBadge v-else-if="race.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
+            <template #suffix><UiBadge v-if="race.id === raceId" tone="success">已选</UiBadge><CustomContentBadge :source-ids="race.sourceIds" /><UiBadge v-if="race.status === 'dm-only'" tone="warning">可选规则</UiBadge><UiBadge v-else-if="race.recommendedClassIds.includes(classId ?? '')" tone="primary">推荐</UiBadge></template>
             <template #expanded>{{ race.description }}</template>
           </ExpandableOptionCard>
         </ListShell>
