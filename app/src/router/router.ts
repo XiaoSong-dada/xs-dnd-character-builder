@@ -22,12 +22,44 @@ export const routes: RouteRecordRaw[] = [
         },
       },
       {
+        // 跑团助手：外壳（标题 + 一级分段）下挂「局内模式」与「内容工坊」两个子功能。
+        // 父级不具名：`path: ''` 的子路由是重定向项，给父级命名会触发 vue-router 告警。
         path: 'assistant',
-        name: 'session-assistant',
-        component: () => import('@/views/session-assistant/index.vue'),
+        component: () => import('@/views/assistant/index.vue'),
         meta: {
           title: '跑团助手 | D&D车卡辅助',
         },
+        children: [
+          {
+            path: '',
+            redirect: { name: 'session-assistant' },
+          },
+          {
+            // 路由名与页面目录沿用改造前的 `session-assistant`，避免牵连导航配置与已保存状态。
+            path: 'session',
+            name: 'session-assistant',
+            component: () => import('@/views/session-assistant/index.vue'),
+            meta: {
+              title: '跑团助手 | D&D车卡辅助',
+            },
+          },
+          {
+            path: 'workshop',
+            name: 'workshop',
+            component: () => import('@/views/workshop/index.vue'),
+            meta: {
+              title: '内容工坊 | D&D车卡辅助',
+            },
+          },
+          {
+            path: 'workshop/:kind/:entryId',
+            name: 'workshop-editor',
+            component: () => import('@/views/workshop/edit/index.vue'),
+            meta: {
+              title: '编辑自定义内容 | D&D车卡辅助',
+            },
+          },
+        ],
       },
       {
         path: 'dice',

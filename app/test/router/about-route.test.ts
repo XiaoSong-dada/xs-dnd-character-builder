@@ -29,6 +29,7 @@ describe('关于本站路由与导航', () => {
       routeName: 'about',
       label: '关于本站',
       iconId: 'navigation-about',
+      pathPrefix: '/about',
     })
     expect(navigationSprite).toContain('id="navigation-about"')
     expect(navigationSprite).not.toContain('id="navigation-profile"')
