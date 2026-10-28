@@ -7,7 +7,7 @@ withDefaults(
     secondaryLabel?: string
     primaryDisabled?: boolean
     helperText?: string
-    /** 提示行是否需要「去完成」动作；动作本身由页面接线到当前步骤（v1.9.1 R3-6）。 */
+    /** 提示行是否需要「去完成」动作；动作本身由页面接线到当前流程。 */
     helperAction?: boolean
   }>(),
   {
