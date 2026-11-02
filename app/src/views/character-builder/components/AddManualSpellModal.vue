@@ -1,20 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
+import SpellPickerList from '@/components/spell/SpellPickerList.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
-import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
-import ListShell from '@/components/ui/ListShell.vue'
 import UiScrollModal from '@/components/ui/UiScrollModal.vue'
 import { useRulesRepository } from '@/hooks/useRulesRepository'
 import type { RulesetId } from '@/types/character'
 import type { ManualAddedSpell, ManualSpellDestination, SpellcastingMode } from '@/types/character'
-import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = withDefaults(defineProps<{ open: boolean; mode?: SpellcastingMode; existingIds: readonly string[]; ruleset?: RulesetId }>(), { ruleset: '5e-2014' })
 /** 人工添加法术的候选按草稿版本解析（B09-02）。 */
 const repository = useRulesRepository(() => props.ruleset)
 const emit = defineEmits<{ close: []; add: [spell: ManualAddedSpell] }>()
-const search = ref('')
 const selectedId = ref('')
 const destination = ref<ManualSpellDestination>('granted')
 const prepared = ref(false)
@@ -33,18 +30,18 @@ const options = computed(() => {
 })
 watch(() => props.open, (open) => {
   if (!open) return
-  search.value = ''
   selectedId.value = ''
   destination.value = options.value[0]?.value ?? 'granted'
   prepared.value = false
 })
-const filtered = computed(() => {
-  const query = search.value.trim().toLocaleLowerCase()
-  return repository.value.spells.filter((spell) => !props.existingIds.includes(spell.id)
-    && (!query || `${spell.name} ${spell.englishName} ${spell.id}`.toLocaleLowerCase().includes(query)))
-})
+const availableSpells = computed(() =>
+  repository.value.spells.filter((spell) => !props.existingIds.includes(spell.id)),
+)
+function onToggle(spellId: string): void {
+  selectedId.value = selectedId.value === spellId ? '' : spellId
+}
 function submit(): void {
-  if (!selectedId.value) return
+  if (!selectedId.value || !repository.value.getSpell(selectedId.value)) return
   emit('add', { spellId: selectedId.value, destination: destination.value, prepared: prepared.value })
   emit('close')
 }
@@ -54,27 +51,20 @@ function submit(): void {
   <UiScrollModal :open="open" title="添加系统法术" :body-scroll="false" @close="$emit('close')">
     <div class="manual-spell-modal">
       <div class="manual-spell-modal__controls">
-        <input v-model="search" type="search" placeholder="搜索中英文法术名" aria-label="搜索系统法术">
         <select v-model="destination" aria-label="法术加入方式">
           <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
         <label><input v-model="prepared" type="checkbox"> 加入后标记为已准备</label>
       </div>
       <div class="manual-spell-modal__result-area">
-        <ListShell>
-          <ExpandableOptionCard
-            v-for="spell in filtered"
-            :key="spell.id"
-            :title="spell.name"
-            :description="formatSpellLabel(spell)"
-            :state="selectedId === spell.id ? 'selected' : 'default'"
-            expanded-label="法术效果"
-            @select="selectedId = spell.id"
-          >
-            <template #expanded>{{ spell.description }}</template>
-          </ExpandableOptionCard>
-        </ListShell>
-        <p v-if="filtered.length === 0">没有可添加的匹配法术。</p>
+        <SpellPickerList
+          :spells="availableSpells"
+          :selected-ids="selectedId ? [selectedId] : []"
+          :multiple="false"
+          search-label="搜索系统法术"
+          empty-hint="没有可添加的匹配法术。"
+          @toggle="onToggle"
+        />
       </div>
     </div>
     <template #footer>
@@ -99,7 +89,6 @@ function submit(): void {
     flex-shrink: 0;
     gap: 0.75rem;
 
-    > input,
     > select {
       min-height: 2.75rem;
       padding: 0.65rem;
@@ -116,14 +105,10 @@ function submit(): void {
   }
 
   &__result-area {
+    display: flex;
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-
-    p {
-      color: var(--color-text-muted);
-    }
+    flex-direction: column;
   }
 
   &__actions {
