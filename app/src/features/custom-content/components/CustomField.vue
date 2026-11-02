@@ -37,6 +37,8 @@ const props = withDefaults(
 <style scoped lang="scss">
 .custom-field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 0.35rem;
 
   &__label {
@@ -64,9 +66,12 @@ const props = withDefaults(
     font-size: 0.75rem;
   }
 
-  :deep(input),
+  :deep(input:not([type='checkbox']):not([type='radio'])),
   :deep(select),
   :deep(textarea) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     min-height: 2.75rem;
     padding: 0.65rem;
     border: 1px solid var(--color-border);

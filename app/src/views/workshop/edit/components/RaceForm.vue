@@ -352,11 +352,15 @@ function submit(): void {
 
   &__ability {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
     gap: 0.25rem;
     color: var(--color-text-muted);
     font-size: 0.75rem;
 
     input {
+      width: 100%;
+      min-width: 0;
       min-height: 2.5rem;
       padding: 0.5rem;
       border: 1px solid var(--color-border);
