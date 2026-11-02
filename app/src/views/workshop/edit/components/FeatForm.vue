@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 
+import { isSpellArchived, spellMetaLabel } from '@/components/spell/spell-picker'
+import SpellPickerModal from '@/components/spell/SpellPickerModal.vue'
 import StickyActionBar from '@/components/ui/StickyActionBar.vue'
+import UiBadge from '@/components/ui/UiBadge.vue'
 import CustomField from '@/features/custom-content/components/CustomField.vue'
 import CustomFormSection from '@/features/custom-content/components/CustomFormSection.vue'
 import CustomPreview from '@/features/custom-content/components/CustomPreview.vue'
@@ -67,7 +70,6 @@ const model = reactive({
   speedBonus: toText(props.entry?.speedBonus),
   armorTraining: [...(props.entry?.armorTraining ?? [])] as ArmorTraining[],
   grantedSpellIds: [...(props.entry?.grantedSpellIds ?? [])] as string[],
-  spellQuery: '',
 })
 
 const touched = ref(false)
@@ -75,15 +77,41 @@ watch(model, () => emit('dirty', true), { deep: true })
 
 const is2014 = computed(() => props.ruleset === '5e-2014')
 
-const spellOptions = computed(() => {
-  const keyword = model.spellQuery.trim().toLocaleLowerCase('zh-CN')
-  return repository.value.spells
-    .filter((spell) => !model.grantedSpellIds.includes(spell.id))
-    .filter((spell) => !keyword || `${spell.name} ${spell.englishName}`.toLocaleLowerCase('zh-CN').includes(keyword))
-    .slice(0, 20)
-})
+const pickerOpen = ref(false)
+const expandedGrantIds = ref<readonly string[]>([])
 
-const grantedSpellNames = computed(() => model.grantedSpellIds.map((id) => repository.value.getSpell(id)?.name ?? id))
+interface GrantedRow {
+  readonly id: string
+  readonly name: string
+  readonly meta: string
+  readonly description: string
+  readonly archived: boolean
+  readonly unknown: boolean
+}
+
+const grantedRows = computed<GrantedRow[]>(() =>
+  model.grantedSpellIds.map((id) => {
+    const spell = repository.value.getSpell(id)
+    if (!spell) {
+      return {
+        id,
+        name: `未知法术（${id}）`,
+        meta: '',
+        description: '',
+        archived: false,
+        unknown: true,
+      }
+    }
+    return {
+      id,
+      name: spell.name,
+      meta: spellMetaLabel(spell),
+      description: spell.description,
+      archived: isSpellArchived(spell),
+      unknown: false,
+    }
+  }),
+)
 
 function toggleAbility(key: AbilityKey): void {
   model.abilityAnyOf = model.abilityAnyOf.includes(key)
@@ -97,13 +125,23 @@ function toggleArmor(value: ArmorTraining): void {
     : [...model.armorTraining, value]
 }
 
-function addGrantedSpell(spellId: string): void {
-  model.grantedSpellIds = [...model.grantedSpellIds, spellId]
-  model.spellQuery = ''
+function addGrantedSpells(spellIds: readonly string[]): void {
+  const additions = spellIds.filter((id) => !model.grantedSpellIds.includes(id))
+  if (additions.length === 0) {
+    return
+  }
+  model.grantedSpellIds = [...model.grantedSpellIds, ...additions]
 }
 
 function removeGrantedSpell(spellId: string): void {
   model.grantedSpellIds = model.grantedSpellIds.filter((id) => id !== spellId)
+  expandedGrantIds.value = expandedGrantIds.value.filter((id) => id !== spellId)
+}
+
+function toggleGrantDetail(spellId: string): void {
+  expandedGrantIds.value = expandedGrantIds.value.includes(spellId)
+    ? expandedGrantIds.value.filter((id) => id !== spellId)
+    : [...expandedGrantIds.value, spellId]
 }
 
 function buildEntry(): CustomFeatEntry {
@@ -254,29 +292,47 @@ function submit(): void {
       </fieldset>
 
       <div class="feat-form__group">
-        <p class="feat-form__group-title">固定授予的法术 <span class="feat-form__legend-note">会影响自动计算</span></p>
-        <div v-if="grantedSpellNames.length > 0" class="feat-form__chips">
-          <button
-            v-for="(name, index) in grantedSpellNames"
-            :key="`${model.grantedSpellIds[index]}-${name}`"
-            type="button"
-            class="feat-form__chip feat-form__chip--active"
-            @click="removeGrantedSpell(model.grantedSpellIds[index] ?? '')"
-          >
-            {{ name }} ×
-          </button>
+        <div class="feat-form__grant-head">
+          <p class="feat-form__group-title">固定授予的法术 <span class="feat-form__legend-note">会影响自动计算</span></p>
+          <span class="feat-form__grant-count">已授予 {{ grantedRows.length }} 个</span>
         </div>
-        <CustomField label="搜索法术并添加" :for-id="'feat-spell-search'">
-          <input id="feat-spell-search" v-model="model.spellQuery" type="search" placeholder="搜索中英文法术名">
-        </CustomField>
-        <ul v-if="spellOptions.length > 0" class="feat-form__options">
-          <li v-for="spell in spellOptions" :key="spell.id">
-            <button type="button" class="feat-form__option" @click="addGrantedSpell(spell.id)">
-              {{ spell.name }} · {{ spell.level === 0 ? '戏法' : `${spell.level} 环` }}
-            </button>
+        <p class="feat-form__hint">授予后会进入角色卡的恒备清单，不产生额外施法次数。</p>
+        <ul v-if="grantedRows.length > 0" class="feat-form__grants">
+          <li v-for="row in grantedRows" :key="row.id" class="feat-form__grant">
+            <div class="feat-form__grant-row">
+              <button
+                type="button"
+                class="feat-form__grant-main"
+                :aria-expanded="expandedGrantIds.includes(row.id)"
+                :aria-controls="expandedGrantIds.includes(row.id) ? `feat-grant-detail-${row.id}` : undefined"
+                @click="toggleGrantDetail(row.id)"
+              >
+                <span class="feat-form__grant-name">{{ row.name }}</span>
+                <span v-if="row.meta" class="feat-form__grant-meta">{{ row.meta }}</span>
+                <span v-if="row.archived || row.unknown" class="feat-form__grant-badges">
+                  <UiBadge :tone="row.archived ? 'warning' : 'neutral'">{{ row.archived ? '已归档' : '未知法术' }}</UiBadge>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="feat-form__grant-remove"
+                :aria-label="`移除授予法术 ${row.name}`"
+                @click="removeGrantedSpell(row.id)"
+              >
+                移除
+              </button>
+            </div>
+            <p
+              v-if="expandedGrantIds.includes(row.id)"
+              :id="`feat-grant-detail-${row.id}`"
+              class="feat-form__grant-detail"
+            >
+              {{ row.description || '暂无效果描述。' }}
+            </p>
           </li>
         </ul>
-        <p v-else-if="model.spellQuery" class="feat-form__hint">没有匹配的法术。</p>
+        <p v-else class="feat-form__hint">尚未授予法术。</p>
+        <button type="button" class="feat-form__add-spell" @click="pickerOpen = true">＋ 添加法术</button>
       </div>
     </CustomFormSection>
 
@@ -293,6 +349,15 @@ function submit(): void {
       :primary-disabled="touched && issues.length > 0"
       @primary="submit"
       @secondary="emit('cancel')"
+    />
+
+    <SpellPickerModal
+      :open="pickerOpen"
+      :ruleset="ruleset"
+      :existing-ids="model.grantedSpellIds"
+      title="选择授予的法术"
+      @close="pickerOpen = false"
+      @pick="addGrantedSpells"
     />
   </form>
 </template>
@@ -376,23 +441,99 @@ function submit(): void {
     font-size: 0.85rem;
   }
 
-  &__options {
+  &__grant-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  &__grant-count {
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  &__grants {
     display: grid;
-    gap: 0.3rem;
+    gap: 0.4rem;
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  &__option {
-    width: 100%;
-    min-height: 2.5rem;
-    padding: 0 0.6rem;
+  &__grant {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-surface);
-    font-size: 0.8rem;
+    overflow: hidden;
+  }
+
+  &__grant-row {
+    display: flex;
+    align-items: stretch;
+  }
+
+  &__grant-main {
+    display: flex;
+    flex: 1;
+    min-height: 2.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.45rem 0.6rem;
+    border: 0;
+    background: transparent;
     text-align: left;
+  }
+
+  &__grant-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  &__grant-meta {
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+  }
+
+  &__grant-badges {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 0.15rem;
+  }
+
+  &__grant-remove {
+    flex-shrink: 0;
+    min-width: 3.5rem;
+    min-height: 2.75rem;
+    padding: 0 0.6rem;
+    border: 0;
+    border-left: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    background: transparent;
+    font-size: 0.75rem;
+  }
+
+  &__grant-detail {
+    margin: 0;
+    padding: 0.5rem 0.6rem;
+    border-top: 1px dashed var(--color-border);
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    line-height: 1.55;
+  }
+
+  &__add-spell {
+    width: 100%;
+    min-height: 2.75rem;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-primary);
+    background: var(--color-surface);
+    font-size: 0.82rem;
+    font-weight: 700;
   }
 
   &__issues {
