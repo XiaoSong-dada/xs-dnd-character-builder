@@ -155,6 +155,7 @@ function isExpertiseLocked(checkpointId: string, optionId: string): boolean {
 /** 静态选项卡片的标题（兼容专长属性提升与子职特性选项标签回退）。 */
 function optionTitle(checkpointId: string, optionId: string): string {
   return candidateRule(optionId)?.name
+    ?? rulesRepository.value.getSubclass(optionId)?.name
     ?? formatFeatBonusOption(rulesRepository.value, optionId)
     ?? featureOptionLabel(checkpointId, optionId)
     ?? optionId
@@ -167,6 +168,11 @@ function candidateRule(optionId: string): RuleOption | undefined {
   return rulesRepository.value.getFeat(optionId) ?? rulesRepository.value.getOption(optionId) ?? rulesRepository.value.getSpell(optionId) ?? rulesRepository.value.getEquipment(optionId)
 }
 
+/** 候选状态：内置子职同时登记在 options，自定义子职只在 subclasses，需要单独回退。 */
+function optionStatus(optionId: string) {
+  return candidateRule(optionId)?.status ?? rulesRepository.value.getSubclass(optionId)?.status
+}
+
 /** 专长候选的完整效果（`detail`）：候选卡摘要只放一行，展开区补足完整效果。 */
 function candidateFeatDetail(optionId: string): string | undefined {
   return rulesRepository.value.getFeat(optionId)?.detail
@@ -175,7 +181,7 @@ function candidateFeatDetail(optionId: string): string | undefined {
 function optionState(checkpointId: string, optionId: string): OptionCardState {
   if (selectedIds(checkpointId).includes(optionId)) return 'selected'
   if (isUniqueOptionUsedElsewhere(checkpointId, optionId) || isBackgroundSkill(checkpointId, optionId) || isExpertiseLocked(checkpointId, optionId)) return 'locked'
-  return candidateRule(optionId)?.status === 'index-only' ? 'incompatible' : 'default'
+  return optionStatus(optionId) === 'index-only' ? 'incompatible' : 'default'
 }
 
 function optionDisabledReason(checkpointId: string, optionId: string): string {
@@ -353,8 +359,8 @@ function spellCandidateDescription(spell: SpellRule): string {
             @select="toggle(checkpoint.id, optionId, checkpointBounds(checkpoint).max)"
           >
             <template #suffix>
-              <UiBadge v-if="candidateRule(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
-              <UiBadge v-else-if="candidateRule(optionId)?.status === 'selectable'" tone="warning">可选择 · 部分效果需手动处理</UiBadge>
+              <UiBadge v-if="optionStatus(optionId) === 'index-only'" tone="warning">仅索引</UiBadge>
+              <UiBadge v-else-if="optionStatus(optionId) === 'selectable'" tone="warning">可选择 · 部分效果需手动处理</UiBadge>
             </template>
             <template #expanded>
               <div class="timeline-step__option-detail">
@@ -380,8 +386,8 @@ function spellCandidateDescription(spell: SpellRule): string {
             @select="toggle(checkpoint.id, optionId, checkpointBounds(checkpoint).max)"
           >
             <template #suffix>
-              <UiBadge v-if="candidateRule(optionId)?.status === 'index-only'" tone="warning">仅索引</UiBadge>
-              <UiBadge v-else-if="candidateRule(optionId)?.status === 'selectable'" tone="warning">可选择 · 部分效果需手动处理</UiBadge>
+              <UiBadge v-if="optionStatus(optionId) === 'index-only'" tone="warning">仅索引</UiBadge>
+              <UiBadge v-else-if="optionStatus(optionId) === 'selectable'" tone="warning">可选择 · 部分效果需手动处理</UiBadge>
             </template>
           </OptionCard>
         </ListShell>
