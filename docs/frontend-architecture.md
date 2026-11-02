@@ -529,6 +529,21 @@ src/components/AddItemModal.vue（自 views/character-builder/components 抽象�
 src/components/AdjustItemModal.vue（自 views/character-builder/components 抽象迁移，跨功能复用）
   -> src/components/ui/UiModal
 
+src/components/spell（跨功能法术选择器：内容工坊授予法术 + 角色卡人工添加法术）
+  spell-picker.ts（无 Vue 依赖：环级 Tab、搜索/环级/学派筛选、排序、归档判定、副标题）
+    -> src/types/rules（type-only）
+  SpellPickerList.vue
+    -> src/components/ui/{ExpandableOptionCard,ListShell,UiBadge,UiTabs}
+    -> src/components/spell/spell-picker.ts
+    -> src/types/rules
+  SpellPickerModal.vue
+    -> src/components/ui/{BaseButton,UiScrollModal}
+    -> src/components/spell/SpellPickerList.vue
+    -> src/hooks/useRulesRepository.ts
+    -> src/types/{character,rules}
+  调用方：src/views/workshop/edit/components/FeatForm.vue、src/views/character-builder/components/AddManualSpellModal.vue
+  （FeatForm 以多选授予、SpellPickerModal 汇总确认；AddManualSpellModal 以单选复用同一列表，保留加入方式与已准备选项）
+
 src/utils/format-spell-label.ts（无状态法术列表副标题格式化）
   -> src/types/rules（type-only）
 ```
