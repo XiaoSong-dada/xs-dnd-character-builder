@@ -348,6 +348,7 @@ TODO：TCoE 自定义起源、既有 12 职业的整套可选职业特性。
 - 错误必须给出中文原因和返回步骤；选中、错误和禁用状态不能只依赖颜色。
 - 所有主要点击目标至少 44 px。
 - 固定宽度单列容器（车卡外壳 `QuickBuildShell` 恒为 `min(100%, 32rem)`）内的多控件筛选行必须按**容器宽度**自适应，使用 `repeat(auto-fit, minmax(min(100%, 9rem), 1fr))` 一类可收缩列定义：禁止以视口 `max-width` 断点切换列数，也禁止用固定 rem 最小列宽把筛选行撑出容器（v1.9.1 R2；容器不随视口加宽）。
+- 内容工坊表单的控件必须约束在字段列内：`CustomField` 内部使用 `grid-template-columns: minmax(0, 1fr)`，非 checkbox/radio 的 `input/select/textarea` 使用 `width: 100%; min-width: 0`；法术表单的施法信息在窄屏（≤32rem）降为单列。
 
 ## 赛博骰娘
 
