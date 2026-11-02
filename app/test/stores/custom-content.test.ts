@@ -5,6 +5,7 @@ import { getCustomContentRevision, getRulesRepository, resetCustomContent } from
 import { CustomContentStorageError } from '@/services/custom-content-storage'
 import { useCustomContentStore } from '@/stores/custom-content'
 import type { CustomEntryInput } from '@/stores/custom-content'
+import type { CustomClassEntry, CustomSubclassEntry } from '@/types/custom-content'
 
 function raceInput(overrides: Partial<Extract<CustomEntryInput, { kind: 'race' }>> = {}): CustomEntryInput {
   return {
@@ -16,6 +17,40 @@ function raceInput(overrides: Partial<Extract<CustomEntryInput, { kind: 'race' }
     summary: '自制种族',
     description: '自制种族说明',
     speed: 30,
+    ...overrides,
+  }
+}
+
+function classInput(overrides: Partial<Omit<CustomClassEntry, 'id' | 'createdAt' | 'updatedAt'>> = {}): CustomEntryInput {
+  return {
+    kind: 'class',
+    expansionId: 'source-custom-store',
+    ruleset: '5e-2014',
+    name: '工坊职业',
+    englishName: 'Workshop Class',
+    summary: '自制职业',
+    description: '说明',
+    hitDie: 10,
+    primaryAbilities: ['力量'],
+    savingThrowAbilities: ['str', 'con'],
+    ...overrides,
+  }
+}
+
+function subclassInput(
+  classId: string,
+  overrides: Partial<Omit<CustomSubclassEntry, 'id' | 'createdAt' | 'updatedAt'>> = {},
+): CustomEntryInput {
+  return {
+    kind: 'subclass',
+    expansionId: 'source-custom-store',
+    ruleset: '5e-2014',
+    name: '工坊子职',
+    englishName: 'Workshop Subclass',
+    summary: '自制子职',
+    description: '说明',
+    classId,
+    selectionLevel: 3,
     ...overrides,
   }
 }
@@ -113,6 +148,30 @@ describe('内容工坊 store', () => {
     expect(store.entriesOf('5e-2014')).toHaveLength(0)
     store.replaceState(imported.state)
     expect(getRulesRepository('5e-2014').getRace(entry.id)?.name).toBe('工坊精灵')
+  })
+
+  it('自定义子职进入仓库，并阻止同职业子职改动选择等级', () => {
+    const { store, expansionId } = createStoreWithExpansion()
+    const classEntry = store.createEntry(classInput({ expansionId }))
+    const first = store.createEntry(subclassInput(classEntry.id, { expansionId, selectionLevel: 3 }))
+
+    expect(getRulesRepository('5e-2014').getSubclass(first.id)?.classId).toBe(classEntry.id)
+    expect(store.subclassesOfClass('5e-2014', classEntry.id)).toHaveLength(1)
+    expect(() => store.createEntry(subclassInput(classEntry.id, { expansionId, name: '另一个子职', selectionLevel: 6 })))
+      .toThrow(/固定为 3 级/)
+    expect(() => store.updateEntry({ ...first, selectionLevel: 5 }))
+      .toThrow(/固定为 3 级/)
+  })
+
+  it('仍有子职时拒绝删除父职业，删除子职后才允许', () => {
+    const { store, expansionId } = createStoreWithExpansion()
+    const classEntry = store.createEntry(classInput({ expansionId }))
+    const first = store.createEntry(subclassInput(classEntry.id, { expansionId }))
+
+    expect(() => store.deleteEntry('5e-2014', classEntry.id))
+      .toThrow(/还有 1 个自定义子职/)
+    store.deleteEntry('5e-2014', first.id)
+    expect(() => store.deleteEntry('5e-2014', classEntry.id)).not.toThrow()
   })
 
   it('存储写入被拒绝时回滚状态并给出中文提示', () => {

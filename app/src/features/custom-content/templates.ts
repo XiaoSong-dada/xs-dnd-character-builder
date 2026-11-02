@@ -7,6 +7,7 @@ import type {
   CustomFeatEntry,
   CustomRaceEntry,
   CustomSpellEntry,
+  CustomSubclassEntry,
 } from '@/types/custom-content'
 
 /** 模板候选：只提供列表展示所需的字段。 */
@@ -52,6 +53,18 @@ export function listCustomTemplateOptions(
     return repository.classes
       .filter((classRule) => classRule.status !== 'unavailable')
       .map((classRule) => ({ id: classRule.id, name: classRule.name, summary: classRule.summary }))
+  }
+  if (kind === 'subclass') {
+    return repository.subclasses
+      .filter((subclass) => subclass.status !== 'unavailable')
+      .map((subclass) => {
+        const classRule = repository.getClass(subclass.classId)
+        return {
+          id: subclass.id,
+          name: subclass.name,
+          summary: `${classRule?.name ?? subclass.classId} · ${subclass.selectionLevel} 级`,
+        }
+      })
   }
   if (kind === 'feat') {
     return repository.feats
@@ -141,6 +154,33 @@ function toClassTemplate(repository: RulesRepository, id: string, defaults: Cust
   }
 }
 
+function toSubclassTemplate(repository: RulesRepository, id: string, defaults: CustomTemplateDefaults): CustomSubclassEntry | undefined {
+  const subclass = repository.getSubclass(id)
+  if (!subclass) return undefined
+  const features = (subclass.features ?? []).map((feature) => ({
+    id: `feature-${feature.id}`,
+    name: feature.name,
+    level: feature.level,
+    summary: feature.summary,
+    description: feature.description,
+  }))
+  return {
+    kind: 'subclass',
+    id: '',
+    expansionId: defaults.expansionId,
+    ruleset: defaults.ruleset,
+    name: `${subclass.name}（自制）`,
+    englishName: subclass.englishName,
+    summary: subclass.summary,
+    description: subclass.summary,
+    createdAt: '',
+    updatedAt: '',
+    classId: subclass.classId,
+    selectionLevel: subclass.selectionLevel,
+    ...(features.length > 0 ? { features } : {}),
+  }
+}
+
 function toFeatTemplate(repository: RulesRepository, id: string, defaults: CustomTemplateDefaults): CustomFeatEntry | undefined {
   const feat = repository.getFeat(id)
   if (!feat) return undefined
@@ -219,6 +259,7 @@ export function buildTemplateEntry(
 ): CustomEntry | undefined {
   if (kind === 'race') return toRaceTemplate(repository, id, defaults)
   if (kind === 'class') return toClassTemplate(repository, id, defaults)
+  if (kind === 'subclass') return toSubclassTemplate(repository, id, defaults)
   if (kind === 'feat') return toFeatTemplate(repository, id, defaults)
   return toSpellTemplate(repository, id, defaults)
 }

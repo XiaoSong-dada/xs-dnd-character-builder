@@ -23,6 +23,8 @@ export interface PendingCustomDeletion {
   readonly name: string
   readonly referenceCount: number
   readonly references: readonly CustomReferenceOwner[]
+  /** 引用该职业的自定义子职名称；非空时禁止删除父职业。 */
+  readonly blockedSubclasses: readonly string[]
 }
 
 /** 导入预览（确认后才写入内容库）。 */
@@ -80,9 +82,11 @@ export function useWorkshopPage() {
     expansion: bundle.value.expansions.length,
     race: bundle.value.races.length,
     class: bundle.value.classes.length,
+    subclass: bundle.value.subclasses.length,
     feat: bundle.value.feats.length,
     spell: bundle.value.spells.length,
-    total: bundle.value.races.length + bundle.value.classes.length + bundle.value.feats.length + bundle.value.spells.length,
+    total: bundle.value.races.length + bundle.value.classes.length + bundle.value.subclasses.length
+      + bundle.value.feats.length + bundle.value.spells.length,
   }))
 
   /** 类型筛选 chip：没有该类内容时置灰（除「全部」）。 */
@@ -121,6 +125,7 @@ export function useWorkshopPage() {
       note: expansion.note,
       entryCount: bundle.value.races.filter((entry) => entry.expansionId === expansion.id).length
         + bundle.value.classes.filter((entry) => entry.expansionId === expansion.id).length
+        + bundle.value.subclasses.filter((entry) => entry.expansionId === expansion.id).length
         + bundle.value.feats.filter((entry) => entry.expansionId === expansion.id).length
         + bundle.value.spells.filter((entry) => entry.expansionId === expansion.id).length,
       defaultEnabled: expansion.defaultEnabled,
@@ -128,6 +133,7 @@ export function useWorkshopPage() {
     const entries: WorkshopEntryItem[] = [
       ...bundle.value.races,
       ...bundle.value.classes,
+      ...bundle.value.subclasses,
       ...bundle.value.feats,
       ...bundle.value.spells,
     ]
@@ -201,6 +207,7 @@ export function useWorkshopPage() {
   /* ---------------- 归档 / 删除（CW-G01） ---------------- */
 
   const pendingDeletion = ref<PendingCustomDeletion | null>(null)
+  const deleteError = ref('')
 
   function archiveEntry(entryId: string): void {
     store.archiveEntry(store.activeRuleset, entryId)
@@ -215,19 +222,29 @@ export function useWorkshopPage() {
     const entry = store.findEntry(store.activeRuleset, entryId)
     if (!entry) return
     const references = referencesOf(entryId)
+    const blockedSubclasses = entry.kind === 'class'
+      ? store.subclassesOfClass(store.activeRuleset, entry.id).map((subclass) => subclass.name)
+      : []
+    deleteError.value = ''
     pendingDeletion.value = {
       entryId,
       name: entry.name,
       referenceCount: references.length,
       references,
+      blockedSubclasses,
     }
   }
 
   function confirmDelete(): void {
     const pending = pendingDeletion.value
-    if (!pending) return
-    store.deleteEntry(store.activeRuleset, pending.entryId)
-    pendingDeletion.value = null
+    if (!pending || pending.blockedSubclasses.length > 0) return
+    try {
+      store.deleteEntry(store.activeRuleset, pending.entryId)
+      pendingDeletion.value = null
+      deleteError.value = ''
+    } catch (cause) {
+      deleteError.value = cause instanceof Error ? cause.message : '删除失败，请稍后重试。'
+    }
   }
 
   /** 引用中的条目改为归档（保留已选角色的解析能力）。 */
@@ -261,6 +278,7 @@ export function useWorkshopPage() {
         ...local.expansions.map((item) => item.id),
         ...local.races.map((item) => item.id),
         ...local.classes.map((item) => item.id),
+        ...local.subclasses.map((item) => item.id),
         ...local.feats.map((item) => item.id),
         ...local.spells.map((item) => item.id),
       ])
@@ -269,6 +287,7 @@ export function useWorkshopPage() {
         ...incoming.expansions.map((item) => item.id),
         ...incoming.races.map((item) => item.id),
         ...incoming.classes.map((item) => item.id),
+        ...incoming.subclasses.map((item) => item.id),
         ...incoming.feats.map((item) => item.id),
         ...incoming.spells.map((item) => item.id),
       ]
@@ -335,6 +354,7 @@ export function useWorkshopPage() {
     openEntry,
     copyEntry,
     pendingDeletion,
+    deleteError,
     archiveEntry,
     restoreEntry,
     requestDelete,

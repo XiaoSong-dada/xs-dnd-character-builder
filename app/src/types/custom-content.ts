@@ -16,7 +16,7 @@ import type {
  * - ID 使用固定前缀 `custom-` / `source-custom-`，永不与内置 ID 冲突；
  * - 类型是内置规则类型的**子集投影**，由 `rules/custom-content` 转成 `RaceRule` 等内置类型。
  */
-export type CustomContentKind = 'expansion' | 'race' | 'class' | 'feat' | 'spell'
+export type CustomContentKind = 'expansion' | 'race' | 'class' | 'subclass' | 'feat' | 'spell'
 
 /** 玩家录入的特性/职业特性条目（仅展示，不参与自动计算）。 */
 export interface CustomTrait {
@@ -111,6 +111,17 @@ export interface CustomClassEntry extends CustomEntryBase {
   readonly features?: readonly CustomClassFeature[]
 }
 
+/** 自定义子职。挂在某个内置或自定义职业下；v1 只展示特性，不自动结算。 */
+export interface CustomSubclassEntry extends CustomEntryBase {
+  readonly kind: 'subclass'
+  /** 父职业 ID（内置或自定义，完整 ID）。 */
+  readonly classId: string
+  /** 选择等级；由父职业已有子职锁定，首个自定义子职可选择。 */
+  readonly selectionLevel: number
+  /** 子职特性（仅展示）。 */
+  readonly features?: readonly CustomClassFeature[]
+}
+
 /** 自定义专长。 */
 export interface CustomFeatEntry extends CustomEntryBase {
   readonly kind: 'feat'
@@ -147,7 +158,7 @@ export interface CustomSpellEntry extends CustomEntryBase {
 }
 
 /** 可编辑条目联合类型（扩展单独管理）。 */
-export type CustomEntry = CustomRaceEntry | CustomClassEntry | CustomFeatEntry | CustomSpellEntry
+export type CustomEntry = CustomRaceEntry | CustomClassEntry | CustomSubclassEntry | CustomFeatEntry | CustomSpellEntry
 
 /** 可编辑条目的种类（不含 expansion）。 */
 export type CustomEntryKind = CustomEntry['kind']
@@ -158,6 +169,7 @@ export interface CustomContentBundle {
   readonly expansions: readonly CustomExpansion[]
   readonly races: readonly CustomRaceEntry[]
   readonly classes: readonly CustomClassEntry[]
+  readonly subclasses: readonly CustomSubclassEntry[]
   readonly feats: readonly CustomFeatEntry[]
   readonly spells: readonly CustomSpellEntry[]
 }

@@ -357,7 +357,7 @@ src/views/workshop/index.vue（/assistant/workshop，列表页）
 
 src/views/workshop/edit/index.vue（/assistant/workshop/:kind/:entryId，编辑器）
   -> src/views/workshop/edit/hooks/useWorkshopEditor.ts
-  -> src/views/workshop/edit/components/{ExpansionForm,RaceForm,FeatForm,SpellForm,ClassForm}
+  -> src/views/workshop/edit/components/{ExpansionForm,RaceForm,FeatForm,SpellForm,ClassForm,SubclassForm}
   -> src/features/custom-content/components/{CustomFormSection,CustomField,CustomTraitList,CustomPreview}
   -> src/hooks/useRulesRepository.ts
   -> src/components/ui/StickyActionBar.vue（自 quick-build 上提，车卡与工坊共用）
@@ -370,7 +370,7 @@ src/App.vue（setup 阶段实例化 store，早于任何页面渲染）
   -> src/stores/custom-content.ts（内容库唯一事实源；模块级 customContentVersion）
       -> src/services/custom-content-storage.ts（localStorage 读写、归一化、导入导出 JSON）
       -> src/rules/repositories.ts#registerCustomContent（注册 + 重建合并仓库 + 版本号）
-          -> src/rules/custom-content-merge.ts（先注入自定义法术，再派生自定义职业施法）
+          -> src/rules/custom-content-merge.ts（先注入自定义法术，再派生自定义职业施法，最后追加自定义子职）
               -> src/rules/custom-content.ts（ID 规则、类型投影、校验、摘要）
               -> src/rules/repository-builder.ts
 
@@ -381,7 +381,9 @@ src/hooks/useRulesRepository.ts（组件层响应式入口）
 ```
 
 - `src/rules/custom-content*` 必须保持框架无关（不 import Vue/Pinia/存储/页面），由 `test/architecture/custom-content-boundaries.test.ts` 守卫。
-- 归档条目的"退出候选池"落在三处守卫：`ClassStep`、`OriginStep`、`getAvailableSpells`；`getFeatPool` 原本已排除 `unavailable`。
+- 归档条目的"退出候选池"落在四处守卫：`ClassStep`、`OriginStep`、`getAvailableSpells`、`buildSubclassCheckpoint`；`getFeatPool` 原本已排除 `unavailable`。
+- 自定义子职不新增仓库查询路径：`toSubclassRule` 投影后直接进入 `repository.subclasses`，时间线由既有 `buildSubclassCheckpoint` 动态生成选择节点；`ClassRule.checkpoints` 保持为空，避免把子职写进职业快照。
+- 父职业删除保护是内容→内容引用：`stores/custom-content.ts#deleteEntry` 检查同规则集自定义子职的 `classId`；角色草稿引用仍由 `custom-content-references.ts` 统计。
 - 子路由不预渲染、不进 sitemap（`/assistant` 仍重定向并预渲染）。
 
 赛博骰娘页面为独立的页面内聚模块：

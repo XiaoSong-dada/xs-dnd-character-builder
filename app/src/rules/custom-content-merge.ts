@@ -1,4 +1,4 @@
-import { isCustomEntryId, isCustomSourceId, toClassRule, toFeatRule, toRaceFeatures, toRaceRule, toRuleSource, toSpellRule } from '@/rules/custom-content'
+import { isCustomEntryId, isCustomSourceId, toClassRule, toFeatRule, toRaceFeatures, toRaceRule, toRuleSource, toSpellRule, toSubclassRule } from '@/rules/custom-content'
 import { createRulesRepository } from '@/rules/repository-builder'
 import type { ClassRule, RulesRepository } from '@/types/rules'
 import type { CustomContentBundle } from '@/types/custom-content'
@@ -28,7 +28,7 @@ export function mergeCustomContent(base: RulesRepository, bundle: CustomContentB
     }
   }
 
-  const entries = [...bundle.races, ...bundle.classes, ...bundle.feats, ...bundle.spells]
+  const entries = [...bundle.races, ...bundle.classes, ...bundle.subclasses, ...bundle.feats, ...bundle.spells]
   const builtInIds = new Set<string>([
     ...base.classes.map((item) => item.id),
     ...base.subclasses.map((item) => item.id),
@@ -96,7 +96,7 @@ export function mergeCustomContent(base: RulesRepository, bundle: CustomContentB
   return createRulesRepository(base.ruleset, {
     sources,
     classes,
-    subclasses: base.subclasses,
+    subclasses: [...base.subclasses, ...bundle.subclasses.map(toSubclassRule)],
     races,
     backgrounds: base.backgrounds,
     raceFeatures,

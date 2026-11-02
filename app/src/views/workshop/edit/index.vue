@@ -6,6 +6,7 @@ import ExpansionForm from '@/views/workshop/edit/components/ExpansionForm.vue'
 import FeatForm from '@/views/workshop/edit/components/FeatForm.vue'
 import RaceForm from '@/views/workshop/edit/components/RaceForm.vue'
 import SpellForm from '@/views/workshop/edit/components/SpellForm.vue'
+import SubclassForm from '@/views/workshop/edit/components/SubclassForm.vue'
 import WorkshopTemplatePicker from '@/views/workshop/edit/components/WorkshopTemplatePicker.vue'
 import { useWorkshopEditor } from '@/views/workshop/edit/hooks/useWorkshopEditor'
 
@@ -130,6 +131,23 @@ const {
           :expansion-id="expansionId"
           :expansions="expansions"
           :entry="existingEntry?.kind === 'class' ? existingEntry : templateEntry?.kind === 'class' ? templateEntry : undefined"
+          @save="saveEntry"
+          @cancel="backToList"
+          @dirty="setDirty"
+        />
+      </template>
+
+      <template v-else-if="kind === 'subclass'">
+        <p v-if="expansions.length === 0" class="workshop-editor__notice">
+          还没有自定义扩展。子职必须归入一本自制扩展——请先返回工坊新建「自定义扩展」。
+        </p>
+        <SubclassForm
+          v-else
+          :key="`${isNew}-${expansionId}-${templateEntry?.name ?? ''}`"
+          :ruleset="ruleset"
+          :expansion-id="expansionId"
+          :expansions="expansions"
+          :entry="existingEntry?.kind === 'subclass' ? existingEntry : templateEntry?.kind === 'subclass' ? templateEntry : undefined"
           @save="saveEntry"
           @cancel="backToList"
           @dirty="setDirty"

@@ -10,7 +10,7 @@ import {
   validateCustomEntry,
   validateCustomExpansion,
 } from '@/rules/custom-content'
-import { getCustomContentRevision, registerCustomContent, resetCustomContent } from '@/rules/repositories'
+import { getCustomContentRevision, getRulesRepository, registerCustomContent, resetCustomContent } from '@/rules/repositories'
 import { CustomContentStorageError, CustomContentStorageService, clearStoredCustomContent } from '@/services/custom-content-storage'
 import { resolveInitialRuleset } from '@/services/ruleset-preference'
 import type { RulesetId } from '@/types/character'
@@ -23,7 +23,9 @@ import type {
   CustomFeatEntry,
   CustomRaceEntry,
   CustomSpellEntry,
+  CustomSubclassEntry,
 } from '@/types/custom-content'
+import type { CustomEntryValidationOptions } from '@/rules/custom-content'
 
 const RULESETS: readonly RulesetId[] = ['5e-2014', '5e-2024']
 
@@ -47,6 +49,7 @@ type CustomEntryManagedKeys = 'id' | 'createdAt' | 'updatedAt'
 export type CustomEntryInput =
   | Omit<CustomRaceEntry, CustomEntryManagedKeys>
   | Omit<CustomClassEntry, CustomEntryManagedKeys>
+  | Omit<CustomSubclassEntry, CustomEntryManagedKeys>
   | Omit<CustomFeatEntry, CustomEntryManagedKeys>
   | Omit<CustomSpellEntry, CustomEntryManagedKeys>
 
@@ -75,6 +78,8 @@ function withEntry(bundle: CustomContentBundle, entry: CustomEntry): CustomConte
       return { ...bundle, races: [...bundle.races.filter((item) => item.id !== entry.id), entry] }
     case 'class':
       return { ...bundle, classes: [...bundle.classes.filter((item) => item.id !== entry.id), entry] }
+    case 'subclass':
+      return { ...bundle, subclasses: [...bundle.subclasses.filter((item) => item.id !== entry.id), entry] }
     case 'feat':
       return { ...bundle, feats: [...bundle.feats.filter((item) => item.id !== entry.id), entry] }
     case 'spell':
@@ -88,6 +93,8 @@ function withoutEntry(bundle: CustomContentBundle, entry: CustomEntry): CustomCo
       return { ...bundle, races: bundle.races.filter((item) => item.id !== entry.id) }
     case 'class':
       return { ...bundle, classes: bundle.classes.filter((item) => item.id !== entry.id) }
+    case 'subclass':
+      return { ...bundle, subclasses: bundle.subclasses.filter((item) => item.id !== entry.id) }
     case 'feat':
       return { ...bundle, feats: bundle.feats.filter((item) => item.id !== entry.id) }
     case 'spell':
@@ -96,7 +103,7 @@ function withoutEntry(bundle: CustomContentBundle, entry: CustomEntry): CustomCo
 }
 
 function flattenEntries(bundle: CustomContentBundle): readonly CustomEntry[] {
-  return [...bundle.races, ...bundle.classes, ...bundle.feats, ...bundle.spells]
+  return [...bundle.races, ...bundle.classes, ...bundle.subclasses, ...bundle.feats, ...bundle.spells]
 }
 
 /** 只替换一个规则集的分包，另一套原样保留（避免用计算属性键导致的类型退化）。 */
@@ -195,6 +202,25 @@ export const useCustomContentStore = defineStore('custom-content', () => {
     return state.value[ruleset].expansions.find((expansion) => expansion.id === expansionId)
   }
 
+  /** 某个职业下的全部自定义子职（含归档），用于删除保护与表单锁定等级。 */
+  function subclassesOfClass(ruleset: RulesetId, classId: string): readonly CustomSubclassEntry[] {
+    return state.value[ruleset].subclasses.filter((entry) => entry.classId === classId)
+  }
+
+  /** 子职校验需要父职业与已锁定等级；其余类型的校验口径保持不变。 */
+  function validationOptionsFor(entry: CustomEntry): CustomEntryValidationOptions {
+    if (entry.kind !== 'subclass') return {}
+    const repository = getRulesRepository(entry.ruleset)
+    const classIds = repository.classes
+      .filter((classRule) => classRule.status !== 'unavailable')
+      .map((classRule) => classRule.id)
+    const levels: Record<string, number> = {}
+    for (const subclass of repository.subclasses) {
+      if (levels[subclass.classId] === undefined) levels[subclass.classId] = subclass.selectionLevel
+    }
+    return { classIds, subclassLevelsByClass: levels }
+  }
+
   /** 新建或更新一本自定义扩展；返回保存后的扩展。 */
   function saveExpansion(input: SaveExpansionInput): CustomExpansion {
     const existing = input.id ? expansionOf(input.ruleset, input.id) : undefined
@@ -243,6 +269,9 @@ export const useCustomContentStore = defineStore('custom-content', () => {
       case 'class':
         draftEntry = { ...input, ...managed }
         break
+      case 'subclass':
+        draftEntry = { ...input, ...managed }
+        break
       case 'feat':
         draftEntry = { ...input, ...managed }
         break
@@ -251,7 +280,7 @@ export const useCustomContentStore = defineStore('custom-content', () => {
         break
     }
     const ruleset = draftEntry.ruleset
-    const issues = validateCustomEntry(draftEntry)
+    const issues = validateCustomEntry(draftEntry, validationOptionsFor(draftEntry))
     if (issues.length > 0) throw new CustomContentStorageError(issues[0] ?? '内容信息不完整。')
     commit(withBundle(state.value, ruleset, withEntry(state.value[ruleset], draftEntry)))
     return draftEntry
@@ -262,7 +291,7 @@ export const useCustomContentStore = defineStore('custom-content', () => {
     const existing = findEntry(entry.ruleset, entry.id)
     if (!existing) throw new CustomContentStorageError('该自定义内容不存在，可能已被删除。')
     const nextEntry: CustomEntry = { ...entry, createdAt: existing.createdAt, updatedAt: now() }
-    const issues = validateCustomEntry(nextEntry)
+    const issues = validateCustomEntry(nextEntry, validationOptionsFor(nextEntry))
     if (issues.length > 0) throw new CustomContentStorageError(issues[0] ?? '内容信息不完整。')
     commit(withBundle(state.value, entry.ruleset, withEntry(state.value[entry.ruleset], nextEntry)))
     return nextEntry
@@ -287,6 +316,12 @@ export const useCustomContentStore = defineStore('custom-content', () => {
   function deleteEntry(ruleset: RulesetId, entryId: string): void {
     const existing = findEntry(ruleset, entryId)
     if (!existing) return
+    if (existing.kind === 'class') {
+      const dependents = state.value[ruleset].subclasses.filter((entry) => entry.classId === existing.id)
+      if (dependents.length > 0) {
+        throw new CustomContentStorageError(`该职业下还有 ${dependents.length} 个自定义子职，请先删除或改挂子职。`)
+      }
+    }
     commit(withBundle(state.value, ruleset, withoutEntry(state.value[ruleset], existing)))
   }
 
@@ -327,6 +362,7 @@ export const useCustomContentStore = defineStore('custom-content', () => {
       expansions: mergeList(target.expansions, source.expansions),
       races: mergeList(target.races, source.races),
       classes: mergeList(target.classes, source.classes),
+      subclasses: mergeList(target.subclasses, source.subclasses),
       feats: mergeList(target.feats, source.feats),
       spells: mergeList(target.spells, source.spells),
     })
@@ -369,6 +405,7 @@ export const useCustomContentStore = defineStore('custom-content', () => {
     bundleOf,
     findEntry,
     expansionOf,
+    subclassesOfClass,
     saveExpansion,
     deleteExpansion,
     createEntry,

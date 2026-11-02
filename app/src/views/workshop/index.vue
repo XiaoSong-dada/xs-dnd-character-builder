@@ -27,6 +27,7 @@ const {
   openEntry,
   copyEntry,
   pendingDeletion,
+  deleteError,
   archiveEntry,
   restoreEntry,
   requestDelete,
@@ -117,6 +118,8 @@ function openItem(item: WorkshopItem): void {
 
     <p v-if="visibleItems.length === 0" class="workshop__empty">{{ emptyMessage }}</p>
 
+    <p v-if="deleteError" class="workshop__notice workshop__notice--error">{{ deleteError }}</p>
+
     <p v-if="importError" class="workshop__notice workshop__notice--error">{{ importError }}</p>
 
     <div class="workshop__transfer">
@@ -139,6 +142,7 @@ function openItem(item: WorkshopItem): void {
       :name="pendingDeletion?.name ?? ''"
       :reference-count="pendingDeletion?.referenceCount ?? 0"
       :references="pendingDeletion?.references ?? []"
+      :blocked-subclasses="pendingDeletion?.blockedSubclasses ?? []"
       @close="cancelDelete"
       @archive="archiveInsteadOfDelete"
       @remove="confirmDelete"

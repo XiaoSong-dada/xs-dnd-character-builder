@@ -139,7 +139,7 @@ function submit(): void {
 
 <template>
   <form class="class-form" @submit.prevent="submit">
-    <CustomFormSection title="基础信息" hint="带 * 的字段为必填。自定义职业不生成子职与额外选择节点。">
+    <CustomFormSection title="基础信息" hint="带 * 的字段为必填。子职请另建「自定义子职」；未创建时时间线不会出现子职节点。">
       <CustomField label="职业名称" required :for-id="'class-name'" :error="nameError">
         <input id="class-name" v-model="model.name" placeholder="例如：烈焰骑士">
       </CustomField>

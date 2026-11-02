@@ -7,6 +7,7 @@ const props = defineProps<{
   name: string
   referenceCount: number
   references: readonly CustomReferenceOwner[]
+  blockedSubclasses: readonly string[]
 }>()
 const emit = defineEmits<{ close: []; archive: []; remove: [] }>()
 </script>
@@ -16,6 +17,15 @@ const emit = defineEmits<{ close: []; archive: []; remove: [] }>()
     <p class="custom-delete__lead">
       即将删除「{{ props.name }}」。
     </p>
+
+    <template v-if="props.blockedSubclasses.length > 0">
+      <p class="custom-delete__warning">
+        该职业下还有 {{ props.blockedSubclasses.length }} 个自定义子职，不能直接删除。请先删除或改挂这些子职，或改为归档职业。
+      </p>
+      <ul class="custom-delete__list">
+        <li v-for="name in props.blockedSubclasses" :key="name">{{ name }}</li>
+      </ul>
+    </template>
 
     <template v-if="props.referenceCount > 0">
       <p class="custom-delete__warning">
@@ -32,7 +42,7 @@ const emit = defineEmits<{ close: []; archive: []; remove: [] }>()
       <div class="custom-delete__actions">
         <button type="button" class="custom-delete__button" @click="emit('close')">取消</button>
         <button
-          v-if="props.referenceCount > 0"
+          v-if="props.referenceCount > 0 || props.blockedSubclasses.length > 0"
           type="button"
           class="custom-delete__button custom-delete__button--primary"
           @click="emit('archive')"
@@ -40,6 +50,7 @@ const emit = defineEmits<{ close: []; archive: []; remove: [] }>()
           改为归档
         </button>
         <button
+          v-if="props.blockedSubclasses.length === 0"
           type="button"
           class="custom-delete__button custom-delete__button--danger"
           @click="emit('remove')"

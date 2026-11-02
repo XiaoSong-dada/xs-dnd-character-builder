@@ -24,6 +24,11 @@ export const CUSTOM_KIND_OPTIONS: readonly CustomKindOption[] = [
     description: '生命骰、豁免熟练、护甲训练与职业特性；施法可引用已有职业的法术表。',
   },
   {
+    kind: 'subclass',
+    label: '自定义子职',
+    description: '挂在某个职业下的子职；选择等级由该职业已有子职锁定，特性仅展示。',
+  },
+  {
     kind: 'feat',
     label: '自定义专长',
     description: '类别、前置与少量可自动结算的效果（生命/速度/护甲/授予法术）。',
@@ -39,6 +44,7 @@ const KIND_LABELS: Readonly<Record<CustomContentKind, string>> = {
   expansion: '自定义扩展',
   race: '自定义种族',
   class: '自定义职业',
+  subclass: '自定义子职',
   feat: '自定义专长',
   spell: '自定义法术',
 }
@@ -55,11 +61,11 @@ export const CUSTOM_KIND_FILTERS: readonly CustomKindFilter[] = [
 ]
 
 export function isCustomContentKind(value: string | undefined): value is CustomContentKind {
-  return value === 'expansion' || value === 'race' || value === 'class' || value === 'feat' || value === 'spell'
+  return value === 'expansion' || value === 'race' || value === 'class' || value === 'subclass' || value === 'feat' || value === 'spell'
 }
 
 export function isCustomEntryKind(value: string | undefined): value is CustomEntryKind {
-  return value === 'race' || value === 'class' || value === 'feat' || value === 'spell'
+  return value === 'race' || value === 'class' || value === 'subclass' || value === 'feat' || value === 'spell'
 }
 
 export function customKindLabel(kind: CustomContentKind): string {

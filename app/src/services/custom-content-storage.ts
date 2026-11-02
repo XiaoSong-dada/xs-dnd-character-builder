@@ -10,6 +10,7 @@ import type {
   CustomFeatEntry,
   CustomRaceEntry,
   CustomSpellEntry,
+  CustomSubclassEntry,
   CustomTrait,
 } from '@/types/custom-content'
 
@@ -193,6 +194,24 @@ function normalizeClass(raw: unknown, ruleset: RulesetId, expansionIds: Readonly
   }
 }
 
+function normalizeSubclass(raw: unknown, ruleset: RulesetId, expansionIds: ReadonlySet<string>): CustomSubclassEntry | undefined {
+  const base = readEntryBase(raw, 'subclass', expansionIds)
+  if (!base || !isRecord(raw)) return undefined
+  const classId = optionalText(raw.classId)
+  const selectionLevel = numberValue(raw.selectionLevel)
+  if (!classId || selectionLevel === undefined || !Number.isInteger(selectionLevel) || selectionLevel < 1 || selectionLevel > 20) {
+    return undefined
+  }
+  return {
+    kind: 'subclass',
+    ruleset,
+    ...base,
+    classId,
+    selectionLevel,
+    features: normalizeClassFeatures(raw.features),
+  }
+}
+
 function normalizeFeat(raw: unknown, ruleset: RulesetId, expansionIds: ReadonlySet<string>): CustomFeatEntry | undefined {
   const base = readEntryBase(raw, 'feat', expansionIds)
   if (!base || !isRecord(raw)) return undefined
@@ -276,6 +295,7 @@ function normalizeBundle(raw: unknown, ruleset: RulesetId): NormalizedBundle {
       expansions,
       races: pick(raw.races, normalizeRace),
       classes: pick(raw.classes, normalizeClass),
+      subclasses: pick(raw.subclasses, normalizeSubclass),
       feats: pick(raw.feats, normalizeFeat),
       spells: pick(raw.spells, normalizeSpell),
     },
@@ -362,7 +382,7 @@ export const CustomContentStorageService = {
     const empty = RULESETS.every((ruleset) => {
       const bundle = state[ruleset]
       return bundle.expansions.length === 0 && bundle.races.length === 0 && bundle.classes.length === 0
-        && bundle.feats.length === 0 && bundle.spells.length === 0
+        && bundle.subclasses.length === 0 && bundle.feats.length === 0 && bundle.spells.length === 0
     })
     if (empty) throw new CustomContentStorageError('该文件里没有可导入的自定义内容。')
     return { state, skipped }

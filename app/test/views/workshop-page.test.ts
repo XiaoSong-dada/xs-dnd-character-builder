@@ -52,6 +52,39 @@ function seedExpansionAndRace(store: ReturnType<typeof useCustomContentStore>) {
   return { expansion, race }
 }
 
+function seedClassAndSubclass(store: ReturnType<typeof useCustomContentStore>) {
+  const expansion = store.saveExpansion({
+    ruleset: '5e-2014',
+    title: '子职测试书',
+    shortTitle: '子职',
+    defaultEnabled: true,
+  })
+  const classEntry = store.createEntry({
+    kind: 'class',
+    expansionId: expansion.id,
+    ruleset: '5e-2014',
+    name: '工坊职业',
+    englishName: 'Workshop Class',
+    summary: '自制职业',
+    description: '说明',
+    hitDie: 10,
+    primaryAbilities: ['力量'],
+    savingThrowAbilities: ['str', 'con'],
+  })
+  const subclass = store.createEntry({
+    kind: 'subclass',
+    expansionId: expansion.id,
+    ruleset: '5e-2014',
+    name: '工坊子职',
+    englishName: 'Workshop Subclass',
+    summary: '自制子职',
+    description: '说明',
+    classId: classEntry.id,
+    selectionLevel: 3,
+  })
+  return { expansion, classEntry, subclass }
+}
+
 describe('内容工坊列表页', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -158,6 +191,36 @@ describe('内容工坊列表页', () => {
 
     expect(store.findEntry('5e-2014', race.id)?.archived).toBe(true)
     expect(wrapper.text()).toContain('已归档')
+  })
+
+  it('第六类「自定义子职」在计数与筛选中可用', async () => {
+    const { pinia, store } = setupWorkshop()
+    seedClassAndSubclass(store)
+    const { wrapper } = await mountPage(pinia)
+
+    const subclassChip = wrapper.findAll('button').find((button) => button.text().startsWith('自定义子职'))
+    expect(subclassChip).toBeTruthy()
+    expect(subclassChip?.attributes('disabled')).toBeUndefined()
+    expect(subclassChip?.text()).toContain('1')
+    expect(wrapper.text()).toContain('工坊子职')
+  })
+
+  it('父职业仍有子职时阻止删除，并提示先处理子职', async () => {
+    const { pinia, store } = setupWorkshop()
+    const { classEntry } = seedClassAndSubclass(store)
+    const { wrapper } = await mountPage(pinia)
+
+    const classCard = wrapper.findAll('article').find((article) => article.text().includes('工坊职业'))
+    expect(classCard).toBeTruthy()
+    const removeButton = classCard?.findAll('button').find((button) => button.text() === '删除')
+    await removeButton?.trigger('click')
+    await flushPromises()
+
+    expect(document.body.textContent).toContain('不能直接删除')
+    expect(document.body.textContent).toContain('工坊子职')
+    expect(document.body.textContent).not.toContain('确认删除')
+    expect(document.body.textContent).not.toContain('仍然删除')
+    expect(store.findEntry('5e-2014', classEntry.id)).toBeTruthy()
   })
 
   it('导入内容包先预览新增/覆盖数量，确认后写入内容库', async () => {

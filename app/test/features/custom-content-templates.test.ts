@@ -66,6 +66,21 @@ describe('内容工坊：从内置条目复制为模板', () => {
     expect(entry?.id).toBe('')
   })
 
+  it('子职模板保留父职业、选择等级与特性', () => {
+    const repository = getRulesRepository('5e-2014')
+    const options = listCustomTemplateOptions(repository, 'subclass')
+    expect(options.length).toBeGreaterThan(0)
+    const first = options[0]
+    if (!first) throw new Error('subclass template missing')
+
+    const entry = buildTemplateEntry(repository, 'subclass', first.id, DEFAULTS)
+    expect(entry?.kind).toBe('subclass')
+    expect(entry?.classId).toBe(repository.getSubclass(first.id)?.classId)
+    expect(entry?.selectionLevel).toBeGreaterThan(0)
+    expect(entry?.features?.length ?? 0).toBeGreaterThan(0)
+    expect(entry?.name).toContain('（自制）')
+  })
+
   it('模板候选排除子种族，且不包含归档条目', () => {
     const repository = getRulesRepository('5e-2014')
     const options = listCustomTemplateOptions(repository, 'race')

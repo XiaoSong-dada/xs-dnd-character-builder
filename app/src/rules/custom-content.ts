@@ -7,6 +7,8 @@ import type {
   RaceFeature,
   RaceRule,
   SpellRule,
+  SubclassFeature,
+  SubclassRule,
 } from '@/types/rules'
 import type {
   CustomClassEntry,
@@ -16,6 +18,7 @@ import type {
   CustomFeatEntry,
   CustomRaceEntry,
   CustomSpellEntry,
+  CustomSubclassEntry,
 } from '@/types/custom-content'
 
 /** 自定义扩展 ID 前缀：映射为 `RuleSource.id`。 */
@@ -44,7 +47,7 @@ export function buildCustomExpansionId(token: string): string {
 }
 
 export function emptyBundle(): CustomContentBundle {
-  return { version: 1, expansions: [], races: [], classes: [], feats: [], spells: [] }
+  return { version: 1, expansions: [], races: [], classes: [], subclasses: [], feats: [], spells: [] }
 }
 
 export function emptyCustomContentState(): Readonly<Record<RulesetId, CustomContentBundle>> {
@@ -56,6 +59,7 @@ export function isEmptyBundle(bundle: CustomContentBundle): boolean {
   return bundle.expansions.length === 0
     && bundle.races.length === 0
     && bundle.classes.length === 0
+    && bundle.subclasses.length === 0
     && bundle.feats.length === 0
     && bundle.spells.length === 0
 }
@@ -171,6 +175,36 @@ export function toClassFeatures(entry: CustomClassEntry): readonly ClassFeature[
   }))
 }
 
+export function toSubclassRule(entry: CustomSubclassEntry): SubclassRule {
+  return {
+    id: entry.id,
+    classId: entry.classId,
+    ruleset: entry.ruleset,
+    name: entry.name,
+    englishName: entry.englishName,
+    selectionLevel: entry.selectionLevel,
+    summary: entry.summary,
+    status: entryStatus(entry),
+    sourceIds: [entry.expansionId],
+    features: toSubclassFeatures(entry),
+  }
+}
+
+export function toSubclassFeatures(entry: CustomSubclassEntry): readonly SubclassFeature[] {
+  return (entry.features ?? []).map((feature) => ({
+    id: feature.id,
+    subclassId: entry.id,
+    name: feature.name,
+    englishName: feature.name,
+    level: feature.level,
+    summary: feature.summary,
+    description: feature.description,
+    kind: feature.kind ?? 'passive',
+    status: 'selectable',
+    sourceIds: [entry.expansionId],
+  }))
+}
+
 export function toFeatRule(entry: CustomFeatEntry): FeatRule {
   const category = entry.category ?? (entry.ruleset === '5e-2014' ? undefined : 'general')
   return {
@@ -230,6 +264,8 @@ export function toSpellRule(entry: CustomSpellEntry): SpellRule {
 export interface CustomEntryValidationOptions {
   readonly classIds?: readonly string[]
   readonly spellIds?: readonly string[]
+  /** 父职业 ID → 已锁定选择等级；用于自定义子职。 */
+  readonly subclassLevelsByClass?: Readonly<Record<string, number>>
 }
 
 const FEAT_CATEGORIES_2024: readonly string[] = ['origin', 'general', 'fighting-style', 'epic-boon', 'dragonmark', 'wild-talent', 'dark-gift', 'bloodline']
@@ -298,6 +334,24 @@ export function validateCustomEntry(
       if (!Number.isInteger(feature.level) || feature.level < 1 || feature.level > 20) issues.push('职业特性的等级必须是 1—20。')
     }
   }
+  if (entry.kind === 'subclass') {
+    if (!isNonEmpty(entry.classId)) {
+      issues.push('请选择所属职业。')
+    } else if (knownClasses && !knownClasses.includes(entry.classId)) {
+      issues.push('所属职业不存在或已被归档，请重新选择。')
+    }
+    if (!Number.isInteger(entry.selectionLevel) || entry.selectionLevel < 1 || entry.selectionLevel > 20) {
+      issues.push('子职选择等级必须是 1—20 的整数。')
+    }
+    const lockedLevel = entry.classId ? options.subclassLevelsByClass?.[entry.classId] : undefined
+    if (lockedLevel !== undefined && entry.selectionLevel !== lockedLevel) {
+      issues.push(`该职业的子职选择等级固定为 ${lockedLevel} 级，不能修改。`)
+    }
+    for (const feature of entry.features ?? []) {
+      if (!isNonEmpty(feature.name)) issues.push('子职特性的名称不能为空。')
+      if (!Number.isInteger(feature.level) || feature.level < 1 || feature.level > 20) issues.push('子职特性的等级必须是 1—20。')
+    }
+  }
   if (entry.kind === 'feat') {
     if (entry.ruleset === '5e-2024' && !entry.category) issues.push('2024 专长必须选择类别。')
     if (entry.category && !FEAT_CATEGORIES_2024.includes(entry.category)) issues.push('专长类别不合法。')
@@ -336,6 +390,7 @@ export type CustomEntryAutomationLevel = 'computed' | 'display'
  * 只按已登记字段判断，不做规则推演。
  */
 export function getCustomEntryAutomationLevel(entry: CustomEntry): CustomEntryAutomationLevel {
+  if (entry.kind === 'subclass') return 'display'
   if (entry.kind === 'class' || entry.kind === 'spell') return 'computed'
   if (entry.kind === 'race') {
     const mechanical = entry.speed !== undefined
@@ -411,7 +466,13 @@ export function summarizeCustomEntry(
       ? `施法：复用「${label(entry.spellcastingSourceClassId)}」的法术表与数量表`
       : '施法：非施法职业')
     if (entry.features?.length) lines.push(`职业特性（仅展示）：${entry.features.length} 条`)
-    lines.push('不生成子职与额外选择节点。')
+    lines.push('子职由「自定义子职」单独创建；未创建时时间线不出现子职节点。')
+  }
+  if (entry.kind === 'subclass') {
+    lines.push(`所属职业：${label(entry.classId)}`)
+    lines.push(`选择等级：${entry.selectionLevel} 级`)
+    if (entry.features?.length) lines.push(`子职特性（仅展示）：${entry.features.length} 条`)
+    lines.push('特性仅展示，不自动授予法术/资源/AC/HP。')
   }
   if (entry.kind === 'feat') {
     if (entry.category) lines.push(`类别：${entry.category}`)
