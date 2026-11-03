@@ -33,6 +33,7 @@ const {
   legacyDrafts,
   activeDraft,
   derived,
+  selectedClassId,
   raceAbilityBonuses,
   raceFlexibleCount,
   raceFlexibleGroups,
@@ -235,7 +236,7 @@ function updateMethod(value: AbilityMethod): void {
     <ClassStep
       v-else-if="step === 'class'"
       :draft="activeDraft"
-      :selected="activeDraft.classId"
+      :selected="selectedClassId"
       :enabled-source-ids="activeDraft.enabledSourceIds"
       :ruleset="activeDraft.ruleset"
       @select="selectClass"

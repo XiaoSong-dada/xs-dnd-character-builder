@@ -394,6 +394,43 @@ export function setPrimaryClassId(draft: CharacterDraft, classId: string): Multi
 }
 
 /**
+ * 换职业（需求 §6.2）：**整体替换**为所选职业，并承载原总等级。
+ *
+ * 语义：
+ * - 职业集合重建为单一职业，等级取当前总等级（无职业时取 `targetLevel`，钳制到 1—20）；
+ * - 该职业同时成为起始职业：`classId`／`primaryClassId`／`classes[0]` 三者保持一致；
+ * - 旧子职随旧职业一起清除（`subclassId` 与条目内 `subclassId` 都不保留）；
+ * - 兼职开关 `enabled` 原样保留——开关与职业分配是两个独立动作（R1.7），这里不偷偷改它。
+ *
+ * 与 `setPrimaryClassId` 的区别：后者只切换起始职业、保留其他职业与其等级；
+ * 换职业会把其他职业整体作废（由调用方走「更换职业」依赖确认）。
+ */
+export function replaceClass(draft: CharacterDraft, classId: string): MulticlassWriteResult {
+  const nextClassId = classId.trim()
+  if (!nextClassId) return { draft, ok: false, error: 'class-unknown' }
+  const currentTotal = getTotalLevel(draft)
+  const total = clampClassLevel(
+    currentTotal > 0 ? currentTotal : (draft.targetLevel ?? MIN_CHARACTER_LEVEL),
+    MAX_CHARACTER_LEVEL,
+  )
+  const { subclassId: _previousSubclassId, ...restDraft } = draft
+  return {
+    draft: {
+      ...restDraft,
+      classId: nextClassId,
+      targetLevel: total,
+      multiclass: {
+        enabled: draft.multiclass?.enabled ?? false,
+        primaryClassId: nextClassId,
+        classes: [{ classId: nextClassId, level: total }],
+        levelOrder: rebuildLevelOrder([{ classId: nextClassId, level: total }]),
+      },
+    },
+    ok: true,
+  }
+}
+
+/**
  * 归一化兼职状态：修正非法等级、补齐/校验起始职业、同步总等级与升级顺序。
  * 没有任何职业信息时返回 undefined（旧草稿只有等级没有职业，无法推断职业集合）。
  */

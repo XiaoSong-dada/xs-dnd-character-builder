@@ -20,7 +20,7 @@ import {
   reconcileSpellSelections,
   restoreInactiveSpellSelection,
 } from '@/rules/spell-selection-reconciliation'
-import { getClassEntries, getPrimaryClassId, getTotalLevel, getTotalLevelBounds, setTotalLevel } from '@/rules/multiclass'
+import { getClassEntries, getPrimaryClassId, getTotalLevel, getTotalLevelBounds, replaceClass, setTotalLevel } from '@/rules/multiclass'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { useLineageTransformation } from '@/views/character-builder/hooks/useLineageTransformation'
@@ -110,6 +110,16 @@ export function useCharacterBuilderPage() {
   const exportNotice = ref<{ readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }>()
   const pendingChange = ref<PendingChange>()
   const derived = computed(() => activeDraft.value ? deriveCharacter(activeDraft.value) : undefined)
+  /**
+   * 第 3 步职业卡高亮：以职业分配解析出的**起始职业**为准。
+   *
+   * 不能直接用 `activeDraft.classId`：历史卡片可能已被旧缺陷写成「`classId` 与职业分配不一致」的
+   * 撕裂态，此时高亮会与等级卡读数分叉（见 docs/rules.md 的职业字段一致性约定）。
+   */
+  const selectedClassId = computed(() => {
+    const draft = activeDraft.value
+    return draft ? getPrimaryClassId(draft) : undefined
+  })
   const raceAbilityBonuses = computed(() => {
     const draft = activeDraft.value
     if (!draft) return {}
@@ -699,25 +709,41 @@ export function useCharacterBuilderPage() {
     applyClassAllocation(nextDraft)
   }
 
+  /**
+   * 换职业（第 3 步职业卡点选）。
+   *
+   * 语义（归档需求 §6.2）：**整体替换**——所选职业承载原总等级并成为起始职业，旧职业作废、
+   * 职业分配（`multiclass`）同步重建为单一条目，装备按新起始职业重建，法术整体移入停用记录。
+   *
+   * 守卫用 `getPrimaryClassId` 而不是 `draft.classId`：历史卡片可能存在「`classId` 与分配不一致」的
+   * 撕裂态（旧实现只写 `classId`），按分配解析才能保证点选当前起始职业时不被误判为「无变化」。
+   */
   function selectClass(classId: string): void {
     const draft = activeDraft.value
-    if (!draft || draft.classId === classId) return
+    if (!draft || getPrimaryClassId(draft) === classId) return
+    const next = replaceClass(draft, classId)
+    if (!next.ok) return
     const change = { kind: 'class', value: classId } as const
+    const previousClasses = getClassEntries(draft)
+    const total = getTotalLevel(next.draft)
     const hadSpells = Object.values(draft.spellSelections).some((ids) => ids.length > 0)
+    const nextClassName = repositoryFor(draft).getClass(classId)?.name ?? classId
     requestChange(change, '更换职业', () => {
       const impact = getDependencyImpact(draft, change)
       const spellReconciliation = reconcileSpellSelections(draft, {
         nextClassId: classId,
         nextSubclassId: undefined,
-        nextTargetLevel: draft.targetLevel,
+        nextTargetLevel: total,
+        // 兼职口径（MC-D04）：被作废的职业按各自作用域归档法术，停用记录能看出是哪个职业丢的。
+        nextMulticlass: next.draft.multiclass,
+        removedClassIds: previousClasses.map((entry) => entry.classId).filter((id) => id !== classId),
         reason: 'class-changed',
         invalidatedAt: new Date().toISOString(),
       })
-      store.invalidateSelections(impact.invalidated, '更换职业后需要重新确认')
-      const equipmentDraft = { ...draft, classId, startingEquipmentSelections: [] }
-      const equipment = buildStartingEquipmentState(equipmentDraft)
-      store.updateDraft({
-        classId,
+      const equipment = buildStartingEquipmentState({ ...next.draft, startingEquipmentSelections: [] })
+      const stored: CharacterDraft = {
+        ...next.draft,
+        // `updateDraft` 是浅合并：`replaceClass` 用解构移除了 `subclassId`，不显式写回就不会被清掉。
         subclassId: undefined,
         startingEquipmentSelections: [],
         inventory: equipment.inventory,
@@ -725,8 +751,15 @@ export function useCharacterBuilderPage() {
         equipmentNeedsReview: false,
         spellSelections: spellReconciliation.spellSelections,
         inactiveSpellSelections: spellReconciliation.inactiveSpellSelections,
-      })
+      }
+      // 先写入（`stored` 携带变更前的 selections 快照）、再标记失效：顺序反了会把
+      // `invalidateSelections` 刚写下的 `invalidatedAt` 覆盖掉（与 `applyClassAllocation` 同一原因）。
+      store.updateDraft({ ...stored, spellSelections: normalizeSpellSelectionBuckets(stored) })
+      store.invalidateSelections(impact.invalidated, '更换职业后需要重新确认')
     }, [
+      ...(previousClasses.length > 1
+        ? [`职业与等级分配（将重建为单一职业：${nextClassName} ${total} 级）`]
+        : []),
       ...(draft.inventory.some((entry) => entry.sourceKind === 'class') ? ['职业起始装备'] : []),
       ...(hadSpells ? ['法术选择（将移入停用记录，可在法术步骤查看）'] : []),
     ])
@@ -1085,6 +1118,7 @@ export function useCharacterBuilderPage() {
     legacyDrafts,
     activeDraft,
     derived,
+    selectedClassId,
     raceAbilityBonuses,
     raceFlexibleCount,
     raceFlexibleGroups,

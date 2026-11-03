@@ -11,7 +11,7 @@ vi.mock('vue-router', () => ({
 
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import { RulesetPreferenceService } from '@/services/ruleset-preference'
-import { addClassEntry, setClassLevel, setPrimaryClassId } from '@/rules/multiclass'
+import { addClassEntry, getClassEntries, setClassLevel, setPrimaryClassId } from '@/rules/multiclass'
 import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft } from '@/types/character'
 import { useCharacterBuilderPage } from '@/views/character-builder/hooks/useCharacterBuilderPage'
@@ -559,6 +559,72 @@ describe('useCharacterBuilderPage 改版与改职业的数据保护（B09-03）'
     page.cancelPendingChange()
 
     expect(JSON.stringify(store.activeDraft)).toBe(before)
+  })
+
+  it('旧卡（含职业分配）换职业后分配同步重建，等级卡不再停留在旧职业', async () => {
+    const { page, store } = await setupPage(makeSorcererDraft({
+      subclassId: 'subclass-2014-sorcerer-draconic-bloodline',
+      multiclass: {
+        enabled: false,
+        primaryClassId: 'class-2014-sorcerer',
+        classes: [{ classId: 'class-2014-sorcerer', level: 4, subclassId: 'subclass-2014-sorcerer-draconic-bloodline' }],
+        levelOrder: Array.from({ length: 4 }, () => 'class-2014-sorcerer'),
+      },
+    }))
+
+    page.selectClass('class-2014-wizard')
+    page.confirmPendingChange()
+
+    expect(store.activeDraft?.classId).toBe('class-2014-wizard')
+    // 关键回归：读取入口（等级卡／时间线／派生）以职业分配为准，必须一起改到新职业
+    expect(getClassEntries(store.activeDraft!)).toEqual([{ classId: 'class-2014-wizard', level: 4 }])
+    expect(store.activeDraft?.multiclass?.primaryClassId).toBe('class-2014-wizard')
+    expect(store.activeDraft?.targetLevel).toBe(4)
+    // 子职随旧职业清除（`updateDraft` 是浅合并，必须显式写回）
+    expect(store.activeDraft?.subclassId).toBeUndefined()
+  })
+
+  it('兼职角色点选职业会在确认中说明重建为单一职业，并按总等级重建', async () => {
+    const { page, store } = await setupPage(makeSorcererDraft({
+      targetLevel: 4,
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-sorcerer',
+        classes: [
+          { classId: 'class-2014-sorcerer', level: 2 },
+          { classId: 'class-2014-fighter', level: 2 },
+        ],
+        levelOrder: ['class-2014-sorcerer', 'class-2014-fighter', 'class-2014-sorcerer', 'class-2014-fighter'],
+      },
+    }))
+
+    page.selectClass('class-2014-wizard')
+
+    expect(page.pendingChange.value?.affected.some((item) => item.includes('职业与等级分配'))).toBe(true)
+    page.confirmPendingChange()
+
+    expect(getClassEntries(store.activeDraft!)).toEqual([{ classId: 'class-2014-wizard', level: 4 }])
+    expect(store.activeDraft?.multiclass?.enabled).toBe(true)
+    expect(store.activeDraft?.targetLevel).toBe(4)
+  })
+
+  it('职业卡高亮以起始职业为准：撕裂卡点选新职业仍生效', async () => {
+    const { page, store } = await setupPage(makeSorcererDraft({
+      classId: 'class-2014-barbarian',
+      multiclass: {
+        enabled: false,
+        primaryClassId: 'class-2014-sorcerer',
+        classes: [{ classId: 'class-2014-sorcerer', level: 4 }],
+        levelOrder: Array.from({ length: 4 }, () => 'class-2014-sorcerer'),
+      },
+    }))
+
+    expect(page.selectedClassId.value).toBe('class-2014-sorcerer')
+    page.selectClass('class-2014-wizard')
+    page.confirmPendingChange()
+
+    expect(store.activeDraft?.classId).toBe('class-2014-wizard')
+    expect(getClassEntries(store.activeDraft!)).toEqual([{ classId: 'class-2014-wizard', level: 4 }])
   })
 })
 

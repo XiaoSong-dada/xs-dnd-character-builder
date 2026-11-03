@@ -15,7 +15,7 @@ import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source
 import { rulesRepository } from '@/rules/repository'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { normalizeAbilityDestiny } from '@/rules/abilities'
-import { normalizeMulticlass, rebuildLevelOrder } from '@/rules/multiclass'
+import { getClassSubclassId, getPrimaryClassId, normalizeMulticlass, rebuildLevelOrder } from '@/rules/multiclass'
 import { normalizeSpellSelectionBuckets } from '@/rules/spellcasting'
 import { isRulesetId } from '@/rules/repositories'
 
@@ -178,8 +178,16 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
   const targetLevel = multiclass
     ? multiclass.classes.reduce((sum, entry) => sum + entry.level, 0)
     : draft.targetLevel
+  // 兼容字段归一化：`multiclass` 是职业分配的事实源，`classId`／`subclassId` 必须与**起始职业**一致。
+  // 旧版换职业只写 `classId` 不写分配，会留下「高亮是 A、等级卡／时间线是 B」的撕裂卡；
+  // 这里在加载时自动修复（与分桶卫生同一思路），否则同一张卡在不同步骤读到不同职业。
+  const allocationDraft: CharacterDraft = { ...draft, targetLevel, ...(multiclass ? { multiclass } : {}) }
+  const primaryClassId = getPrimaryClassId(allocationDraft)
+  const primarySubclassId = primaryClassId ? getClassSubclassId(allocationDraft, primaryClassId) : undefined
   const normalized: CharacterDraft = {
     ...draft,
+    classId: primaryClassId,
+    subclassId: primarySubclassId,
     targetLevel,
     ...(multiclass ? { multiclass } : {}),
     enabledSourceIds: normalizeDraftSourceIds(draft),
