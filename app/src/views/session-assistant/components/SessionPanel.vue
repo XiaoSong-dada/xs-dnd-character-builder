@@ -18,6 +18,7 @@ import { SpellbookTranscriptionModal } from '@/features/spellbook-transcription'
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatGrantSource, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { deriveWeaponAttack } from '@/rules/weapon-attacks'
 import { getAvailableSlotLevels } from '@/rules/session-state'
@@ -35,7 +36,7 @@ import { useSessionPanel } from '../hooks/useSessionPanel'
 const props = defineProps<{ draft: CharacterDraft }>()
 
 /** 名称与条目解析按草稿版本（2024 草稿不得使用 2014 静态仓库）。 */
-const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const repository = useRulesRepository(() => props.draft.ruleset)
 const equipmentWarnings = computed(() => getEquipmentWarnings(props.draft, repository.value))
 
 const panel = useSessionPanel(computed(() => props.draft))

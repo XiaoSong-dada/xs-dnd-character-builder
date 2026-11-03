@@ -15,9 +15,9 @@ import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source
 import { rulesRepository } from '@/rules/repository'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { normalizeAbilityDestiny } from '@/rules/abilities'
-import { normalizeMulticlass, rebuildLevelOrder } from '@/rules/multiclass'
+import { getClassSubclassId, getPrimaryClassId, normalizeMulticlass, rebuildLevelOrder, setClassSubclassId } from '@/rules/multiclass'
 import { normalizeSpellSelectionBuckets } from '@/rules/spellcasting'
-import { isRulesetId } from '@/rules/repositories'
+import { getRulesRepository, isRulesetId } from '@/rules/repositories'
 
 const STORAGE_KEY = 'dnd-character-builder:drafts:v10'
 /** 无法解析的当前键条目隔离区；与草稿键分开，避免被 saveAll 覆盖。 */
@@ -178,10 +178,46 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
   const targetLevel = multiclass
     ? multiclass.classes.reduce((sum, entry) => sum + entry.level, 0)
     : draft.targetLevel
+  // 子职兼容字段同样以职业分配为准，但旧版选子职只写顶层 `subclassId`：条目存在后若直接回填，
+  // 会把顶层子职清空（刷新即丢子职，施法步骤与时间线一起失效）。这里先把「确实属于起始职业」
+  // 的顶层子职认领回条目，再回填；归属校验避免把别的职业的子职串过来。
+  let healedMulticlass = multiclass
+  let topSubclassId: string | undefined = draft.subclassId
+  if (multiclass) {
+    const primaryEntry = multiclass.classes.find((entry) => entry.classId === multiclass.primaryClassId)
+    const topSubclassBelongsToPrimary = Boolean(topSubclassId)
+      && getRulesRepository(draft.ruleset).getSubclass(topSubclassId ?? '')?.classId === multiclass.primaryClassId
+    if (!topSubclassBelongsToPrimary) {
+      // 顶层子职属于别的职业：按分配为准丢弃，避免回落读侧把它当成起始职业子职。
+      topSubclassId = undefined
+    }
+    const adoptsTopSubclass =
+      Boolean(primaryEntry) &&
+      !primaryEntry?.subclassId &&
+      draft.classId === multiclass.primaryClassId &&
+      Boolean(topSubclassId)
+    if (adoptsTopSubclass) {
+      const adopted = setClassSubclassId({ ...draft, targetLevel, multiclass }, multiclass.primaryClassId, topSubclassId)
+      if (adopted.ok) healedMulticlass = adopted.draft.multiclass ?? multiclass
+    }
+  }
+  // 兼容字段归一化：`multiclass` 是职业分配的事实源，`classId`／`subclassId` 必须与**起始职业**一致。
+  // 旧版换职业只写 `classId` 不写分配，会留下「高亮是 A、等级卡／时间线是 B」的撕裂卡；
+  // 这里在加载时自动修复（与分桶卫生同一思路），否则同一张卡在不同步骤读到不同职业。
+  const allocationDraft: CharacterDraft = {
+    ...draft,
+    subclassId: topSubclassId,
+    targetLevel,
+    ...(healedMulticlass ? { multiclass: healedMulticlass } : {}),
+  }
+  const primaryClassId = getPrimaryClassId(allocationDraft)
+  const primarySubclassId = primaryClassId ? getClassSubclassId(allocationDraft, primaryClassId) : undefined
   const normalized: CharacterDraft = {
     ...draft,
+    classId: primaryClassId,
+    subclassId: primarySubclassId,
     targetLevel,
-    ...(multiclass ? { multiclass } : {}),
+    ...(healedMulticlass ? { multiclass: healedMulticlass } : {}),
     enabledSourceIds: normalizeDraftSourceIds(draft),
     backgroundAbilityAllocation: normalizeBackgroundAbilityAllocation(draft.backgroundAbilityAllocation),
     speciesSizeChoice: draft.speciesSizeChoice === 'small' || draft.speciesSizeChoice === 'medium' ? draft.speciesSizeChoice : undefined,

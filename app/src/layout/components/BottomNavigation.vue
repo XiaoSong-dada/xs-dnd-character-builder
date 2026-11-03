@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 import navigationSprite from '@/assets/icons/navigation.svg?raw'
 import { useBottomNavigation } from '@/layout/hooks/useBottomNavigation'
 
-const { navigationItems, onNavigationClick } = useBottomNavigation()
+const { navigationItems, isActive, onNavigationClick } = useBottomNavigation()
 </script>
 
 <template>
@@ -18,8 +18,10 @@ const { navigationItems, onNavigationClick } = useBottomNavigation()
       v-for="item in navigationItems"
       :key="item.routeName"
       class="bottom-navigation__link"
+      :class="{ 'bottom-navigation__link--active': isActive(item) }"
       :to="{ name: item.routeName }"
-      @click="onNavigationClick($event, item.routeName)"
+      :aria-current="isActive(item) ? 'page' : undefined"
+      @click="onNavigationClick($event, item)"
     >
       <svg
         class="bottom-navigation__icon"
@@ -76,7 +78,8 @@ const { navigationItems, onNavigationClick } = useBottomNavigation()
       outline-offset: 0.1rem;
     }
 
-    &.router-link-exact-active {
+    &.router-link-exact-active,
+    &--active {
       color: var(--color-primary);
       background: var(--color-primary-soft);
       font-weight: 700;

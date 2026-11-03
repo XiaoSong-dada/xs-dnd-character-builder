@@ -6,10 +6,13 @@ import { defineComponent, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { deriveCharacter } from '@/rules/derive'
+import { emptyBundle } from '@/rules/custom-content'
+import { registerCustomContent, resetCustomContent } from '@/rules/repositories'
 import { getClassSpellSelections } from '@/rules/spellcasting'
 import { rulesRepository2014 } from '@/rules/repository'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft, SpellSelections } from '@/types/character'
+import type { CustomExpansion, CustomSubclassEntry } from '@/types/custom-content'
 import CharacterSheetStep from '@/views/character-builder/components/CharacterSheetStep.vue'
 
 // 与 AddItemModal.test.ts 相同原因：fake timers 拦截动态 import()，
@@ -56,6 +59,54 @@ const draft: CharacterDraft = {
 describe('CharacterSheetStep', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    resetCustomContent()
+  })
+
+  it('自定义子职的特性在特性页展示', async () => {
+    const now = '2026-11-02T00:00:00.000Z'
+    const expansion: CustomExpansion = {
+      id: 'source-custom-test',
+      ruleset: '5e-2014',
+      title: '子职测试书',
+      shortTitle: '子职',
+      defaultEnabled: true,
+      createdAt: now,
+      updatedAt: now,
+    }
+    const subclass: CustomSubclassEntry = {
+      kind: 'subclass',
+      id: 'custom-subclass-1',
+      expansionId: expansion.id,
+      ruleset: '5e-2014',
+      name: '工坊子职',
+      englishName: 'Workshop Subclass',
+      summary: '自制子职',
+      description: '说明',
+      createdAt: now,
+      updatedAt: now,
+      classId: 'class-2014-fighter',
+      selectionLevel: 3,
+      features: [{ id: 'feature-1', name: '工坊特性', level: 3, summary: '摘要', description: '说明' }],
+    }
+    registerCustomContent('5e-2014', {
+      ...emptyBundle(),
+      expansions: [expansion],
+      subclasses: [subclass],
+    })
+    const customDraft: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-fighter',
+      subclassId: subclass.id,
+      targetLevel: 3,
+    }
+    const wrapper = mount(CharacterSheetStep, { props: { draft: customDraft, derived: deriveCharacter(customDraft) } })
+
+    await wrapper.get('[role="tab"]:nth-child(3)').trigger('click')
+    expect(wrapper.text()).toContain('子职特性 · 工坊子职')
+    expect(wrapper.text()).toContain('工坊特性')
   })
 
   it('2024 专长自带属性提升在特性列表显示中文标签（B09-09）', async () => {

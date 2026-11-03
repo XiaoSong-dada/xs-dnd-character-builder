@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import AddManualSpellModal from '@/views/character-builder/components/AddManualSpellModal.vue'
@@ -10,7 +11,7 @@ afterEach(() => {
 })
 
 describe('AddManualSpellModal', () => {
-  it('固定搜索控制区和页脚，仅让法术结果区滚动', () => {
+  it('固定加入方式控制区和页脚，法术列表在结果区内独立滚动', () => {
     const wrapper = mount(AddManualSpellModal, {
       props: { open: true, mode: 'spellbook', existingIds: [] },
       attachTo: document.body,
@@ -20,11 +21,12 @@ describe('AddManualSpellModal', () => {
     const controls = document.body.querySelector('.manual-spell-modal__controls')
     const results = document.body.querySelector('.manual-spell-modal__result-area')
     expect(modalBody?.classList.contains('ui-scroll-modal__body--contained')).toBe(true)
-    expect(controls?.querySelector('[aria-label="搜索系统法术"]')).not.toBeNull()
     expect(controls?.querySelector('[aria-label="法术加入方式"]')).not.toBeNull()
     expect(controls?.querySelector('input[type="checkbox"]')).not.toBeNull()
+    expect(controls?.querySelector('[aria-label="搜索系统法术"]')).toBeNull()
+    expect(results?.querySelector('.spell-picker')).not.toBeNull()
+    expect(results?.querySelector('[aria-label="搜索系统法术"]')).not.toBeNull()
     expect(results?.querySelector('.expandable-option-card')).not.toBeNull()
-    expect(results?.querySelector('[aria-label="搜索系统法术"]')).toBeNull()
 
     wrapper.unmount()
   })
@@ -46,6 +48,7 @@ describe('AddManualSpellModal', () => {
 
     document.body.querySelector<HTMLButtonElement>('.expandable-option-card__main')?.click()
     await vi.advanceTimersByTimeAsync(300)
+    await nextTick()
     expect(submit?.disabled).toBe(false)
     submit?.click()
     expect(wrapper.emitted('add')).toHaveLength(1)

@@ -4,21 +4,23 @@ import { computed } from 'vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiChip from '@/components/ui/UiChip.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { getSelectableSources } from '@/rules/source-books'
 import type { RulesetId } from '@/types/character'
 
 const props = withDefaults(defineProps<{ selected: readonly string[]; ruleset?: RulesetId }>(), { ruleset: '5e-2014' })
-const emit = defineEmits<{ change: [value: readonly string[]] }>()
+const emit = defineEmits<{ change: [value: readonly string[]]; 'open-workshop': [] }>()
 
-const repository = computed(() => getRulesRepository(props.ruleset))
+const repository = useRulesRepository(() => props.ruleset)
 const coreSources = computed(() => repository.value.sources.filter((source) => source.category === 'core'))
 /** 按草稿规则集提供可切换来源；2024 当前全部为破解奥秘（UA）游玩测试来源。 */
 const selectableSources = computed(() => getSelectableSources(props.ruleset))
-const officialSources = computed(() => selectableSources.value.filter((source) => source.contentKind !== 'playtest' && source.contentKind !== 'third-party' && source.contentKind !== 'legacy'))
+const officialSources = computed(() => selectableSources.value.filter((source) => (source.contentKind ?? 'official') === 'official'))
 const playtestSources = computed(() => selectableSources.value.filter((source) => source.contentKind === 'playtest'))
 const thirdPartySources = computed(() => selectableSources.value.filter((source) => source.contentKind === 'third-party'))
 const legacySources = computed(() => selectableSources.value.filter((source) => source.contentKind === 'legacy'))
+/** 内容工坊的自定义扩展：默认启用，单独成组并标注"未经规则核验"。 */
+const customSources = computed(() => selectableSources.value.filter((source) => source.contentKind === 'custom'))
 
 function toggle(id: string): void {
   emit('change', props.selected.includes(id)
@@ -40,6 +42,9 @@ function toggle(id: string): void {
     </UiNotice>
     <UiNotice v-if="legacySources.length > 0" tone="info" title="旧扩展法术默认关闭">
       以下 2014 扩展法术未在 PHB 2024 重印；启用后可在 2024 车卡中使用，条目会显示「旧扩展」标记。
+    </UiNotice>
+    <UiNotice v-if="customSources.length > 0" tone="info" title="自定义内容由你自行录入">
+      以下扩展来自内容工坊，未经规则核验；条目会显示「自定义」标记，使用前请与 DM 确认。
     </UiNotice>
     <template v-if="selectableSources.length > 0">
       <div class="sources-step__toolbar">
@@ -90,7 +95,24 @@ function toggle(id: string): void {
           <span class="sources-step__legacy-label"><UiBadge tone="neutral">旧扩展</UiBadge> {{ source.shortTitle }} · {{ source.title }}</span>
         </UiChip>
       </div>
+      <div v-if="customSources.length > 0" class="sources-step__list" aria-label="自定义内容来源">
+        <UiChip
+          v-for="source in customSources"
+          :key="source.id"
+          :selected="selected.includes(source.id)"
+          :title="source.title"
+          @toggle="toggle(source.id)"
+        >
+          <span class="sources-step__custom-label"><UiBadge tone="primary">自定义</UiBadge> {{ source.shortTitle }} · {{ source.title }}</span>
+        </UiChip>
+      </div>
       <p class="sources-step__summary">已启用 {{ selected.length }} / {{ selectableSources.length }} 本扩展资料。关闭来源不会删除已选内容，但相关选择会暂时失效。</p>
+      <p class="sources-step__workshop">
+        想加入自己的种族、职业、专长或法术？
+        <button type="button" class="sources-step__workshop-link" @click="emit('open-workshop')">
+          去内容工坊新建
+        </button>
+      </p>
     </template>
   </section>
 </template>
@@ -126,6 +148,37 @@ function toggle(id: string): void {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+  }
+
+  &__custom-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  &__workshop {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+
+  &__workshop-link {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-primary);
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
   }
 
   &__summary {

@@ -5,7 +5,7 @@ import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { getClassEntries } from '@/rules/multiclass'
 import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
@@ -24,7 +24,7 @@ import type {
 } from '@/types/character'
 
 const props = defineProps<{ draft: CharacterDraft }>()
-const rulesRepository = computed(() => getRulesRepository(props.draft.ruleset))
+const rulesRepository = useRulesRepository(() => props.draft.ruleset)
 const equipmentWarnings = computed(() => getEquipmentWarnings(props.draft, rulesRepository.value))
 const emit = defineEmits<{
   change: [

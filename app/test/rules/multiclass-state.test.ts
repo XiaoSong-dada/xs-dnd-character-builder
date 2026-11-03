@@ -5,6 +5,7 @@ import {
   getClassEntries,
   getClassLevel,
   getClassSubclassId,
+  getClassSubclassIds,
   getLastLevelClassIds,
   getMulticlassState,
   getPrimaryClassId,
@@ -13,6 +14,7 @@ import {
   normalizeMulticlass,
   rebuildLevelOrder,
   removeClassEntry,
+  replaceClass,
   setClassLevel,
   setClassSubclassId,
   setMulticlassEnabled,
@@ -297,5 +299,90 @@ describe('MC-A01 升级顺序重建', () => {
 
   it('空集合返回空数组', () => {
     expect(rebuildLevelOrder([])).toEqual([])
+  })
+})
+
+describe('SC-A04 换职业：整体替换为单一职业', () => {
+  it('未选职业时承载目标等级', () => {
+    const draft = draft2024({ classId: undefined, subclassId: undefined, targetLevel: 10 })
+    const result = replaceClass(draft, 'class-2024-wizard')
+    expect(result.ok).toBe(true)
+    expect(result.draft.multiclass).toEqual({
+      enabled: false,
+      primaryClassId: 'class-2024-wizard',
+      classes: [{ classId: 'class-2024-wizard', level: 10 }],
+      levelOrder: Array.from({ length: 10 }, () => 'class-2024-wizard'),
+    })
+    expect(result.draft.classId).toBe('class-2024-wizard')
+    expect(result.draft.targetLevel).toBe(10)
+  })
+
+  it('单职业旧卡换职业：等级保留、旧子职清除、不擅自打开兼职', () => {
+    const draft = multiclassDraft(
+      { classId: 'class-2014-fighter', subclassId: 'subclass-2014-fighter-champion' },
+      { enabled: false, classes: [{ classId: 'class-2014-fighter', level: 6, subclassId: 'subclass-2014-fighter-champion' }] },
+    )
+    const result = replaceClass(draft, 'class-2014-barbarian')
+    expect(result.ok).toBe(true)
+    expect(getClassEntries(result.draft)).toEqual([{ classId: 'class-2014-barbarian', level: 6 }])
+    expect(getPrimaryClassId(result.draft)).toBe('class-2014-barbarian')
+    expect(result.draft.subclassId).toBeUndefined()
+    expect(result.draft.targetLevel).toBe(6)
+    expect(result.draft.multiclass?.enabled).toBe(false)
+  })
+
+  it('兼职换职业：其他职业作废、总等级不变、开关保持', () => {
+    const draft = multiclassDraft()
+    expect(getTotalLevel(draft)).toBe(5)
+    const result = replaceClass(draft, 'class-2014-wizard')
+    expect(getClassEntries(result.draft)).toEqual([{ classId: 'class-2014-wizard', level: 5 }])
+    expect(getTotalLevel(result.draft)).toBe(5)
+    expect(result.draft.multiclass?.enabled).toBe(true)
+    expect(result.draft.multiclass?.levelOrder).toEqual(Array.from({ length: 5 }, () => 'class-2014-wizard'))
+  })
+
+  it('空职业 id 返回 class-unknown 且不修改草稿', () => {
+    const draft = multiclassDraft()
+    const result = replaceClass(draft, '   ')
+    expect(result).toMatchObject({ ok: false, error: 'class-unknown' })
+    expect(result.draft).toBe(draft)
+  })
+
+  it('总等级超界时钳制到 20', () => {
+    const draft = draft2024({ classId: undefined, subclassId: undefined, targetLevel: 25 })
+    const result = replaceClass(draft, 'class-2024-fighter')
+    expect(result.ok).toBe(true)
+    expect(getTotalLevel(result.draft)).toBe(20)
+    expect(result.draft.targetLevel).toBe(20)
+  })
+})
+
+describe('SC-A05 子职字段一致性：起始职业回退顶层兼容字段', () => {
+  it('条目缺子职时按起始职业回退顶层 subclassId', () => {
+    // 旧版选子职只写顶层，条目存在后第 8 步按条目读不到子职（奥法骑士被误判无施法）。
+    const draft = multiclassDraft(
+      { classId: 'class-2014-fighter', subclassId: 'subclass-2014-fighter-eldritch-knight' },
+      { enabled: false, classes: [{ classId: 'class-2014-fighter', level: 6 }] },
+    )
+    expect(getClassSubclassId(draft, 'class-2014-fighter')).toBe('subclass-2014-fighter-eldritch-knight')
+    expect(getClassSubclassIds(draft)).toEqual({ 'class-2014-fighter': 'subclass-2014-fighter-eldritch-knight' })
+  })
+
+  it('兼职第二职业不回退顶层，避免把起始职业子职串过去', () => {
+    const draft = multiclassDraft(
+      { classId: 'class-2014-fighter', subclassId: 'subclass-2014-fighter-champion' },
+      {
+        enabled: true,
+        classes: [
+          { classId: 'class-2014-fighter', level: 3, subclassId: 'subclass-2014-fighter-champion' },
+          { classId: 'class-2014-rogue', level: 2 },
+        ],
+      },
+    )
+    expect(getClassSubclassId(draft, 'class-2014-rogue')).toBeUndefined()
+    expect(getClassSubclassIds(draft)).toEqual({
+      'class-2014-fighter': 'subclass-2014-fighter-champion',
+      'class-2014-rogue': undefined,
+    })
   })
 })

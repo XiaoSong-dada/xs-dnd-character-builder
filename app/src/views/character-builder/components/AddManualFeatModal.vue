@@ -8,7 +8,7 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiScrollModal from '@/components/ui/UiScrollModal.vue'
 import { getFeatEligibility, getFeatStructuredEffectLabels, listFeatGrants } from '@/rules/feats'
 import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { isSourceEnabled } from '@/rules/source-books'
 import type { CharacterDraft } from '@/types/character'
 import type { FeatCategory, FeatRule } from '@/types/rules'
@@ -19,7 +19,7 @@ const search = ref('')
 const sourceId = ref('all')
 const category = ref<FeatCategory | 'all'>('all')
 const selectedId = ref('')
-const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const repository = useRulesRepository(() => props.draft.ruleset)
 
 const categoryLabels: Readonly<Partial<Record<FeatCategory, string>>> = {
   origin: '起源', general: '通用', 'epic-boon': '传奇恩惠', 'fighting-style': '战斗风格',

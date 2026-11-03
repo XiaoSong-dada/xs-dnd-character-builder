@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import UiNotice from '@/components/ui/UiNotice.vue'
+
 import { deriveCharacterSummary } from '@/rules/derive'
 import { CharacterMediaImage } from '@/features/character-media'
 import SessionPanel from './components/SessionPanel.vue'
 import { useSessionAssistantPage } from './hooks/useSessionAssistantPage'
 
-const { drafts, selectedDraft, selectDraft, backToList, importError, readImportFile } = useSessionAssistantPage()
+const { drafts, selectedDraft, selectDraft, backToList, importError, importNotice, readImportFile } = useSessionAssistantPage()
 
 const summaries = computed(() =>
   drafts.value.map((draft) => ({ draft, summary: deriveCharacterSummary(draft) })),
@@ -15,11 +17,14 @@ const summaries = computed(() =>
 
 <template>
   <main class="session-assistant touch-manipulation">
+    <!-- 导入结果提示放在两个视图之外：导入后会自动进入局内面板，玩家仍需要看到它。 -->
+    <UiNotice v-if="importNotice" tone="warning" title="缺少自定义内容">{{ importNotice }}</UiNotice>
+
     <SessionPanel v-if="selectedDraft" :draft="selectedDraft" @back="backToList" />
 
     <div v-else class="session-assistant__list">
       <header class="session-assistant__header">
-        <h1>跑团助手</h1>
+        <!-- 页面级标题由跑团助手外壳统一提供，这里只保留说明，避免出现两个 h1。 -->
         <p>选择角色进入局内面板：调整生命值、金币、法术位，挂载状态，短/长休息。</p>
       </header>
 

@@ -2,11 +2,12 @@
 import { computed, ref, toRef, watch } from 'vue'
 
 import ExpandableOptionCard from '@/components/ui/ExpandableOptionCard.vue'
+import CustomContentBadge from '@/features/custom-content/components/CustomContentBadge.vue'
 import ListShell from '@/components/ui/ListShell.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import { ABILITY_LABELS } from '@/rules/data/ability-labels'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { getInactiveSpellRestoreStatus } from '@/rules/spell-selection-reconciliation'
 import {
   applyClassSpellSelections,
@@ -36,7 +37,7 @@ const draft = toRef(() => props.draft)
 const headingEl = ref<HTMLElement>()
 const stepFlow = useSpellcastingStepFlow(draft, headingEl)
 const { scopes, activeScopeData, invalidSpellSelectionCount, tasks, flow } = stepFlow
-const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const repository = useRulesRepository(() => props.draft.ruleset)
 
 /**
  * 当前任务所属的施法职业（MC-D03）：所有数量、候选与写回目标都取自该职业自己的作用域。
@@ -368,7 +369,7 @@ function lockedSelectionLabel(spellId: string): string {
 
         <ListShell :empty="filteredCandidates.length === 0" empty-text="没有匹配的法术。">
           <ExpandableOptionCard v-for="spell in filteredCandidates" :key="`${flow.activeTaskId.value}-${spell.id}`" :title="spell.name" :description="`${formatSpellLabel(spell)}${spell.summary ? ` · ${spell.summary}` : ''}`" expanded-label="法术效果" :state="taskSelectedIds.includes(spell.id) ? 'selected' : 'default'" @select="toggleForTask(spell.id)">
-            <template #suffix><span>{{ candidateBadge(spell) }}</span></template>
+            <template #suffix><CustomContentBadge :source-ids="spell.sourceIds" /><span>{{ candidateBadge(spell) }}</span></template>
             <template v-if="spell.description" #expanded>{{ spell.description }}</template>
           </ExpandableOptionCard>
         </ListShell>

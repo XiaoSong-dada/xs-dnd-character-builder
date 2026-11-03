@@ -1,4 +1,5 @@
 import { getRulesRepository } from '@/rules/repositories'
+import { isCustomEntryId } from '@/rules/custom-content'
 import { deriveAbilities } from '@/rules/derive'
 import { getEquipmentWarnings } from '@/rules/equipment-state'
 import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
@@ -27,10 +28,88 @@ import { getMulticlassPrerequisiteReport } from '@/rules/multiclass-prerequisite
 import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/data/artificer-2014'
 import { artificerReplicatePlans2024, getArtificerReplicatedItemLimit2024 } from '@/rules/data/ua-artificer-2024'
 import type { AbilityKey, CharacterDraft, ValidationIssue } from '@/types/character'
+import type { RulesRepository } from '@/types/rules'
+
+/**
+ * 自定义内容缺失/归档的提示级问题（需求 R6）：不阻断导出与非自定义角色，
+ * 只告诉玩家"这个选择目前不生效"，并给出处理建议。
+ *
+ * 缺失时没有名称可查（内容库是 UI 层状态，`rules` 不能反向依赖），因此用记录 ID 指代。
+ */
+function getCustomContentIssues(draft: CharacterDraft, repository: RulesRepository): readonly ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+  const visited = new Set<string>()
+
+  const check = (id: string | undefined, kind: 'race' | 'class' | 'subclass' | 'feat' | 'spell' | 'option'): void => {
+    if (!id || !isCustomEntryId(id) || visited.has(id)) return
+    visited.add(id)
+    const rule = kind === 'race'
+      ? repository.getRace(id)
+      : kind === 'class'
+        ? repository.getClass(id)
+        : kind === 'subclass'
+          ? repository.getSubclass(id)
+          : kind === 'spell'
+            ? repository.getSpell(id)
+            : (repository.getOption(id) ?? repository.getFeat(id))
+    if (!rule) {
+      issues.push({
+        id: `custom-content-missing-${id}`,
+        step: 'validation',
+        severity: 'warning',
+        message: `自定义内容「${id}」在本机内容库中不存在。`,
+        resolution: '到内容工坊导入或重新创建该内容；该选择目前保留但不会生效。',
+      })
+      return
+    }
+    if (rule.status === 'unavailable') {
+      issues.push({
+        id: `custom-content-archived-${id}`,
+        step: 'validation',
+        severity: 'warning',
+        message: `自定义内容「${rule.name}」已归档，选择保留但不再生效。`,
+        resolution: '在内容工坊恢复该内容，或更换这一项选择。',
+      })
+    }
+  }
+
+  check(draft.raceId, 'race')
+  check(draft.subraceId, 'race')
+  check(draft.classId, 'class')
+  check(draft.subclassId, 'subclass')
+  for (const entry of draft.multiclass?.classes ?? []) {
+    check(entry.classId, 'class')
+    check(entry.subclassId, 'subclass')
+  }
+  for (const selection of draft.selections ?? []) {
+    for (const optionId of selection.optionIds) check(optionId, 'option')
+  }
+  // 旧草稿与测试夹具可能缺少部分字段，这里按"缺失即空"处理，避免校验器自身抛错。
+  const spellSelections = draft.spellSelections
+  const spellIdBuckets: readonly (readonly string[])[] = [
+    spellSelections?.cantripIds ?? [],
+    spellSelections?.knownSpellIds ?? [],
+    spellSelections?.preparedSpellIds ?? [],
+    spellSelections?.spellbookSpellIds ?? [],
+    ...(spellSelections?.classSpellSelections ?? []).flatMap((entry) => [
+      entry.cantripIds,
+      entry.knownSpellIds,
+      entry.preparedSpellIds,
+      entry.spellbookSpellIds,
+    ]),
+  ]
+  for (const bucket of spellIdBuckets) {
+    for (const spellId of bucket) check(spellId, 'spell')
+  }
+  for (const inactive of draft.inactiveSpellSelections ?? []) check(inactive.spellId, 'spell')
+  for (const grant of draft.manualEdits?.addedFeats ?? []) check(grant.featId, 'feat')
+  for (const spell of draft.manualEdits?.addedSpells ?? []) check(spell.spellId, 'spell')
+  return issues
+}
 
 export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[] {
   const repository = getRulesRepository(draft.ruleset)
-  const issues: ValidationIssue[] = [...getEquipmentWarnings(draft, repository)]
+  const issues: ValidationIssue[] = [...getEquipmentWarnings(draft, repository), ...getCustomContentIssues(draft, repository)]
   const lineageRecord = getActiveLineageRecord(draft, repository)
   if (lineageRecord && getSpeciesLegacyBenefits(draft, repository).length !== lineageRecord.retainedKeys.length) issues.push({ id: 'lineage-legacy-inactive', step: 'origin', severity: 'warning', message: '部分先祖遗产缺少有效资料或来源已停用，原选择保留但不生效。', resolution: '启用原种族来源；没有有效遗产时请补选两项技能。' })
   if (lineageRecord) {

@@ -9,7 +9,7 @@ import { getCantripScaling2024 } from '@/rules/data/cantrip-scaling-2024'
 import { getFeatChosenAbility, isFeatGrantParentActive, isSelectionCheckpointActive, listActiveFeats, listFeatGrants } from '@/rules/feats'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getDraftSpeciesRules, getValidSpeciesChoice } from '@/rules/origins'
-import { getRulesRepository } from '@/rules/repositories'
+import { getCustomContentRevision, getRulesRepository } from '@/rules/repositories'
 import { getWeaponMasteryCandidates } from '@/rules/weapon-mastery'
 import { isWeaponTrainingCovered } from '@/rules/weapon-training'
 import { abilityFromSpeciesSpellAbilityOption } from '@/rules/data/spell-lists-2024'
@@ -591,6 +591,8 @@ export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingCo
     .filter((spell): spell is NonNullable<typeof spell> => Boolean(
       spell
       && spell.level <= maximumLevel
+      // 归档的自定义法术仍可解析（已选角色不崩），但不再进入新建候选池。
+      && spell.status !== 'unavailable'
       && isSourceEnabled(spell.sourceIds, draft.enabledSourceIds, repository),
     ))
 }
@@ -601,14 +603,18 @@ export interface SpellLevelGroup {
   readonly spells: readonly SpellRule[]
 }
 
-/** 规则表登记下标（按规则集缓存）；数据为静态注册表，解析后不变。 */
-const spellOrderIndexes = new Map<RulesetId, ReadonlyMap<string, number>>()
+/**
+ * 规则表登记下标（按"规则集 + 内容版本"缓存）：内容工坊注册新法术或清空内容后必须重建，
+ * 否则新增法术的展示顺序会停留在旧索引（落到末尾或乱序）。
+ */
+const spellOrderIndexes = new Map<string, ReadonlyMap<string, number>>()
 
 function getSpellOrderIndex(ruleset: RulesetId): ReadonlyMap<string, number> {
-  const cached = spellOrderIndexes.get(ruleset)
+  const key = `${ruleset}:${getCustomContentRevision()}`
+  const cached = spellOrderIndexes.get(key)
   if (cached) return cached
   const index = new Map(getRulesRepository(ruleset).spells.map((spell, position) => [spell.id, position]))
-  spellOrderIndexes.set(ruleset, index)
+  spellOrderIndexes.set(key, index)
   return index
 }
 

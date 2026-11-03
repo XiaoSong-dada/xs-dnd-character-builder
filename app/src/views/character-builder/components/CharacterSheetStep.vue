@@ -20,6 +20,7 @@ import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, formatFeatGrantSource, getCheckpointSelectionBounds, getFeatStructuredEffectLabels, manualFeatParentCheckpointId, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { getClassEntries, getClassLevel, getPrimaryClassId, getTotalLevel } from '@/rules/multiclass'
 import { getClassLevelLabel } from '@/rules/multiclass-session'
 import { getCantripScalingAtLevel, getClassSpellcastingProfiles } from '@/rules/spellcasting'
@@ -55,7 +56,7 @@ const emit = defineEmits<{
   changeMedia: [media: CharacterMedia | undefined]
 }>()
 /** 角色卡解析与名称一律使用草稿版本仓库（B09-02）。 */
-const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const repository = useRulesRepository(() => props.draft.ruleset)
 const equipmentWarnings = computed(() => getEquipmentWarnings(props.draft, repository.value))
 const showMediaEditor = ref(false)
 const showAddFeatModal = ref(false)

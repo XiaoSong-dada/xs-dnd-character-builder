@@ -108,17 +108,24 @@ export function getClassLevel(draft: MulticlassDraft, classId: string | undefine
   return getClassEntries(draft).find((entry) => entry.classId === classId)?.level ?? 0
 }
 
-/** 某职业的子职；未选取该职业时返回 undefined（旧草稿回退到 `draft.subclassId`）。 */
+/**
+ * 某职业的子职；未选取该职业时返回 undefined。
+ *
+ * 职业分配条目是事实源，但**起始职业**允许回退到顶层兼容字段 `draft.subclassId`：
+ * 旧版选子职只写顶层，条目存在后会让「施法步骤／时间线按条目读子职」与顶层撕裂，
+ * 表现为奥法骑士等子职级施法被判定为「无需配置法术」。只对起始职业回退，
+ * 兼职的第二职业仍严格以条目为准，不会串到别的职业。
+ */
 export function getClassSubclassId(draft: MulticlassDraft, classId: string | undefined): string | undefined {
   if (!classId) return undefined
   const entry = getClassEntries(draft).find((item) => item.classId === classId)
-  if (entry) return entry.subclassId
+  if (entry) return entry.subclassId ?? (draft.classId === classId ? draft.subclassId : undefined)
   return draft.classId === classId ? draft.subclassId : undefined
 }
 
 /** 各职业子职的映射（键为职业 id）；供时间线按职业展开子职特性检查点。 */
 export function getClassSubclassIds(draft: MulticlassDraft): Readonly<Record<string, string | undefined>> {
-  return Object.fromEntries(getClassEntries(draft).map((entry) => [entry.classId, entry.subclassId]))
+  return Object.fromEntries(getClassEntries(draft).map((entry) => [entry.classId, getClassSubclassId(draft, entry.classId)]))
 }
 
 /** 是否已启用兼职（开关打开**且**至少两个职业）。 */
@@ -388,6 +395,43 @@ export function setPrimaryClassId(draft: CharacterDraft, classId: string): Multi
       classId,
       targetLevel: total,
       ...(primaryEntry?.subclassId ? { subclassId: primaryEntry.subclassId } : {}),
+    },
+    ok: true,
+  }
+}
+
+/**
+ * 换职业（需求 §6.2）：**整体替换**为所选职业，并承载原总等级。
+ *
+ * 语义：
+ * - 职业集合重建为单一职业，等级取当前总等级（无职业时取 `targetLevel`，钳制到 1—20）；
+ * - 该职业同时成为起始职业：`classId`／`primaryClassId`／`classes[0]` 三者保持一致；
+ * - 旧子职随旧职业一起清除（`subclassId` 与条目内 `subclassId` 都不保留）；
+ * - 兼职开关 `enabled` 原样保留——开关与职业分配是两个独立动作（R1.7），这里不偷偷改它。
+ *
+ * 与 `setPrimaryClassId` 的区别：后者只切换起始职业、保留其他职业与其等级；
+ * 换职业会把其他职业整体作废（由调用方走「更换职业」依赖确认）。
+ */
+export function replaceClass(draft: CharacterDraft, classId: string): MulticlassWriteResult {
+  const nextClassId = classId.trim()
+  if (!nextClassId) return { draft, ok: false, error: 'class-unknown' }
+  const currentTotal = getTotalLevel(draft)
+  const total = clampClassLevel(
+    currentTotal > 0 ? currentTotal : (draft.targetLevel ?? MIN_CHARACTER_LEVEL),
+    MAX_CHARACTER_LEVEL,
+  )
+  const { subclassId: _previousSubclassId, ...restDraft } = draft
+  return {
+    draft: {
+      ...restDraft,
+      classId: nextClassId,
+      targetLevel: total,
+      multiclass: {
+        enabled: draft.multiclass?.enabled ?? false,
+        primaryClassId: nextClassId,
+        classes: [{ classId: nextClassId, level: total }],
+        levelOrder: rebuildLevelOrder([{ classId: nextClassId, level: total }]),
+      },
     },
     ok: true,
   }

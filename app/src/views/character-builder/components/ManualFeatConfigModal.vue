@@ -8,7 +8,7 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import UiScrollModal from '@/components/ui/UiScrollModal.vue'
 import { buildManualFeatChoiceCheckpoints, getCheckpointSelectionBounds } from '@/rules/feats'
-import { getRulesRepository } from '@/rules/repositories'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { getCheckpointCandidates } from '@/rules/spellcasting'
 import type { CharacterDraft, ManualFeatGrant } from '@/types/character'
 import type { ChoiceCheckpoint } from '@/types/rules'
@@ -16,7 +16,7 @@ import { formatSpellLabel } from '@/utils/format-spell-label'
 
 const props = defineProps<{ open: boolean; draft: CharacterDraft; grant?: ManualFeatGrant }>()
 const emit = defineEmits<{ close: []; select: [checkpointId: string, optionIds: readonly string[]] }>()
-const repository = computed(() => getRulesRepository(props.draft.ruleset))
+const repository = useRulesRepository(() => props.draft.ruleset)
 const feat = computed(() => props.grant ? repository.value.getFeat(props.grant.featId) : undefined)
 const checkpoints = computed(() => props.grant
   ? buildManualFeatChoiceCheckpoints([props.grant], repository.value, props.draft.targetLevel)

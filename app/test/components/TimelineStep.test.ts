@@ -1,6 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { emptyBundle } from '@/rules/custom-content'
+import { registerCustomContent, resetCustomContent } from '@/rules/repositories'
+import type { CustomSubclassEntry } from '@/types/custom-content'
 import TimelineStep from '@/views/character-builder/components/TimelineStep.vue'
 import type { CharacterDraft } from '@/types/character'
 import { draft2024, selection } from '../fixtures/draft-2024'
@@ -230,6 +233,10 @@ describe('TimelineStep 超魔选择', () => {
 })
 
 describe('TimelineStep 子职与子职特性选项', () => {
+  afterEach(() => {
+    resetCustomContent()
+  })
+
   /** 展开指定检查点（时间线默认只展开首个未完成检查点）。 */
   async function openCheckpoint(wrapper: ReturnType<typeof mountStep>, titleFragment: string) {
     const article = wrapper.findAll('article').find((item) => item.find('.timeline-step__header').text().includes(titleFragment))
@@ -271,6 +278,49 @@ describe('TimelineStep 子职与子职特性选项', () => {
     await card?.find('.expandable-option-card__arrow').trigger('click')
     expect(card?.find('.expandable-option-card__growth').exists()).toBe(true)
     expect(card?.find('.expandable-option-card__growth').text()).toContain('优势骰')
+  })
+
+  it('自定义子职候选显示名称而非内部 ID', async () => {
+    const subclass: CustomSubclassEntry = {
+      kind: 'subclass',
+      id: 'custom-subclass-label-test',
+      expansionId: 'source-custom-subclass-label-test',
+      ruleset: '5e-2014',
+      name: '工坊子职',
+      englishName: 'Workshop Subclass',
+      summary: '自制子职',
+      description: '用于验证候选卡片标题。',
+      createdAt: '',
+      updatedAt: '',
+      classId: 'class-2014-fighter',
+      selectionLevel: 3,
+    }
+    registerCustomContent('5e-2014', {
+      ...emptyBundle(),
+      expansions: [{
+        id: 'source-custom-subclass-label-test',
+        ruleset: '5e-2014',
+        title: '子职标签测试',
+        shortTitle: '标签',
+        defaultEnabled: true,
+        createdAt: '',
+        updatedAt: '',
+      }],
+      subclasses: [subclass],
+    })
+    const draft = bardDraft()
+    draft.classId = 'class-2014-fighter'
+    draft.targetLevel = 3
+    draft.selections = []
+    const wrapper = mountStep(draft)
+    const article = await openCheckpoint(wrapper, '选择武术范型')
+
+    const card = article?.findAll('.timeline-step__options .expandable-option-card').find((item) => item.text().includes('工坊子职'))
+    expect(card).toBeDefined()
+    expect(card?.text()).toContain('工坊子职')
+    expect(wrapper.text()).not.toContain('custom-subclass-label-test')
+    expect(card?.text()).toContain('可选择 · 部分效果需手动处理')
+    wrapper.unmount()
   })
 })
 

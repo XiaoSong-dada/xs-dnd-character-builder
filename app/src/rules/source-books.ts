@@ -1,5 +1,6 @@
 import { CORE_SOURCE_IDS, SELECTABLE_SOURCE_IDS, sources2014 } from '@/rules/data/sources-2014'
 import { sources2024 } from '@/rules/data/sources-2024'
+import { getCustomSources } from '@/rules/repositories'
 import type { CharacterDraft, RuleSource, RulesetId } from '@/types/character'
 import type { RulesRepository } from '@/types/rules'
 
@@ -42,18 +43,26 @@ export function isSourceEnabled(
   return sourceIds.some((id) => enabled.has(id))
 }
 
-/** 按规则集返回可切换的来源；缺省 2014，保持既有调用行为。 */
+/** 按规则集返回可切换的来源；缺省 2014，保持既有调用行为。内含内容工坊的自定义扩展。 */
 export function getSelectableSources(ruleset: RulesetId = '5e-2014'): readonly RuleSource[] {
-  return sourcesByRuleset[ruleset].filter((item) => item.selectable)
+  return [...sourcesByRuleset[ruleset].filter((item) => item.selectable), ...getCustomSources(ruleset)]
 }
 
 /**
  * 新草稿默认启用的来源：2014 保持默认全选；2024 的破解奥秘（UA）为
  * 游玩测试内容，默认全关（D-02），由玩家在来源步骤显式开启。
+ *
+ * 内容工坊的自定义扩展按各自的 `defaultEnabled` 追加（默认启用），
+ * 否则玩家保存内容后在车卡里看不到任何新条目（需求 §6.4）。
  */
 export function getDefaultEnabledSourceIds(ruleset: RulesetId = '5e-2014'): readonly string[] {
-  if (ruleset === '5e-2024') return []
-  return sources2014.filter((source) => source.selectable && source.defaultEnabled !== false).map((source) => source.id)
+  const builtIn = ruleset === '5e-2024'
+    ? []
+    : sources2014.filter((source) => source.selectable && source.defaultEnabled !== false).map((source) => source.id)
+  const custom = getCustomSources(ruleset)
+    .filter((source) => source.defaultEnabled !== false)
+    .map((source) => source.id)
+  return [...builtIn, ...custom]
 }
 
 /** 按规则集白名单过滤未知或已移除的来源 ID；缺省 2014，保持既有调用行为。 */
@@ -63,7 +72,14 @@ export function normalizeEnabledSourceIds(
 ): readonly string[] {
   if (!ids) return []
   const whitelist = selectableIdsByRuleset[ruleset]
-  return [...new Set(ids.filter((id) => whitelist.has(id)))]
+  const custom = customSourceIdsByRuleset(ruleset)
+  if (custom.size === 0) return [...new Set(ids.filter((id) => whitelist.has(id)))]
+  // 内容工坊注册过自定义来源时，白名单必须包含它们，否则草稿读写会静默丢弃这些 ID。
+  return [...new Set(ids.filter((id) => whitelist.has(id) || custom.has(id)))]
+}
+
+function customSourceIdsByRuleset(ruleset: RulesetId): ReadonlySet<string> {
+  return new Set(getCustomSources(ruleset).map((source) => source.id))
 }
 
 function addSources(target: Set<string>, sourceIds: readonly string[] | undefined): void {

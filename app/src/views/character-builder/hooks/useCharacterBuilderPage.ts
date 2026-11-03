@@ -5,6 +5,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { deriveCharacter, getFlexibleBonusGroups, getFlexibleBonusRule, getRaceAbilityBonuses } from '@/rules/derive'
 import { getBackgroundAbilityBonuses, getOriginStepBlockers, isOriginStepComplete } from '@/rules/origins'
 import { getRulesRepository } from '@/rules/repositories'
+import { isCustomSourceId } from '@/rules/custom-content'
+import { describeMissingCustomContent } from '@/features/custom-content/missing-content'
+import { useCustomContentStore } from '@/stores/custom-content'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, clampDestinyCount, rollAbilityScoreSets, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
 import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
@@ -17,7 +20,16 @@ import {
   reconcileSpellSelections,
   restoreInactiveSpellSelection,
 } from '@/rules/spell-selection-reconciliation'
-import { getClassEntries, getPrimaryClassId, getTotalLevel, getTotalLevelBounds, setTotalLevel } from '@/rules/multiclass'
+import {
+  getClassEntries,
+  getClassSubclassId,
+  getPrimaryClassId,
+  getTotalLevel,
+  getTotalLevelBounds,
+  replaceClass,
+  setClassSubclassId,
+  setTotalLevel,
+} from '@/rules/multiclass'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { useLineageTransformation } from '@/views/character-builder/hooks/useLineageTransformation'
@@ -77,6 +89,8 @@ export function useCharacterBuilderPage() {
   const { drafts, legacyDrafts, activeDraft, derivedSummary, validationIssues, completion } = storeToRefs(store)
   const lineageTransformation = useLineageTransformation(activeDraft, store.updateDraft)
   const importError = ref('')
+  const importNotice = ref('')
+  const customContentStore = useCustomContentStore()
   /** 新建默认版本（按本设备偏好解析，B00-02）；起点页 hero 与第一页共用。 */
   const defaultRuleset = ref<RulesetId>(resolveInitialRuleset().ruleset)
   /** 记忆版本尚未开放时的回退说明（Q-B09-1：第一页内联提示）。 */
@@ -85,10 +99,36 @@ export function useCharacterBuilderPage() {
   const rulesetRebuild = ref<RulesetId>()
   /** 按草稿版本取仓库（B09-02）：绑定、名称与校验均不得使用固定 2014 仓库。 */
   const repositoryFor = (draft: { readonly ruleset: RulesetId } | undefined) => getRulesRepository(draft?.ruleset ?? defaultRuleset.value)
+
+  /**
+   * 从内容工坊返回（`?enableSource=<id>`）：把刚保存的自定义扩展并入当前草稿的来源，
+   * 让玩家回到第 2 步就能直接看到新内容（需求 Q14）。只加不删，不触发确认弹窗。
+   */
+  const pendingCustomSourceId = typeof route.query.enableSource === 'string' ? route.query.enableSource : ''
+  if (pendingCustomSourceId && isCustomSourceId(pendingCustomSourceId) && activeDraft.value) {
+    const draft = activeDraft.value
+    if (!draft.enabledSourceIds.includes(pendingCustomSourceId)) {
+      store.updateDraft({
+        enabledSourceIds: normalizeEnabledSourceIds([...draft.enabledSourceIds, pendingCustomSourceId], draft.ruleset),
+      })
+    }
+    const { enableSource: _enableSource, ...query } = route.query
+    void router.replace({ query })
+  }
   const exportingFormat = ref<'pdf' | 'xlsx' | 'zip'>()
   const exportNotice = ref<{ readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }>()
   const pendingChange = ref<PendingChange>()
   const derived = computed(() => activeDraft.value ? deriveCharacter(activeDraft.value) : undefined)
+  /**
+   * 第 3 步职业卡高亮：以职业分配解析出的**起始职业**为准。
+   *
+   * 不能直接用 `activeDraft.classId`：历史卡片可能已被旧缺陷写成「`classId` 与职业分配不一致」的
+   * 撕裂态，此时高亮会与等级卡读数分叉（见 docs/rules.md 的职业字段一致性约定）。
+   */
+  const selectedClassId = computed(() => {
+    const draft = activeDraft.value
+    return draft ? getPrimaryClassId(draft) : undefined
+  })
   const raceAbilityBonuses = computed(() => {
     const draft = activeDraft.value
     if (!draft) return {}
@@ -245,10 +285,18 @@ export function useCharacterBuilderPage() {
     if (deletingActiveDraft) void router.replace({ name: 'character-builder' })
   }
 
+  /** 导入成功后：角色引用了本机不存在的自定义内容时给出提示（需求 R9）。 */
+  function missingNoticeOf(draft: NonNullable<typeof store.activeDraft>): string {
+    return describeMissingCustomContent(draft, (id) => Boolean(customContentStore.findEntry(draft.ruleset, id))).message
+  }
+
   function importDraft(raw: string): void {
     try {
       importError.value = ''
-      syncRoute(store.importDraft(raw))
+      importNotice.value = ''
+      const draft = store.importDraft(raw)
+      syncRoute(draft)
+      importNotice.value = missingNoticeOf(draft)
     } catch (error) {
       importError.value = error instanceof CharacterImportError ? error.message : '无法导入角色文件。'
     }
@@ -670,25 +718,41 @@ export function useCharacterBuilderPage() {
     applyClassAllocation(nextDraft)
   }
 
+  /**
+   * 换职业（第 3 步职业卡点选）。
+   *
+   * 语义（归档需求 §6.2）：**整体替换**——所选职业承载原总等级并成为起始职业，旧职业作废、
+   * 职业分配（`multiclass`）同步重建为单一条目，装备按新起始职业重建，法术整体移入停用记录。
+   *
+   * 守卫用 `getPrimaryClassId` 而不是 `draft.classId`：历史卡片可能存在「`classId` 与分配不一致」的
+   * 撕裂态（旧实现只写 `classId`），按分配解析才能保证点选当前起始职业时不被误判为「无变化」。
+   */
   function selectClass(classId: string): void {
     const draft = activeDraft.value
-    if (!draft || draft.classId === classId) return
+    if (!draft || getPrimaryClassId(draft) === classId) return
+    const next = replaceClass(draft, classId)
+    if (!next.ok) return
     const change = { kind: 'class', value: classId } as const
+    const previousClasses = getClassEntries(draft)
+    const total = getTotalLevel(next.draft)
     const hadSpells = Object.values(draft.spellSelections).some((ids) => ids.length > 0)
+    const nextClassName = repositoryFor(draft).getClass(classId)?.name ?? classId
     requestChange(change, '更换职业', () => {
       const impact = getDependencyImpact(draft, change)
       const spellReconciliation = reconcileSpellSelections(draft, {
         nextClassId: classId,
         nextSubclassId: undefined,
-        nextTargetLevel: draft.targetLevel,
+        nextTargetLevel: total,
+        // 兼职口径（MC-D04）：被作废的职业按各自作用域归档法术，停用记录能看出是哪个职业丢的。
+        nextMulticlass: next.draft.multiclass,
+        removedClassIds: previousClasses.map((entry) => entry.classId).filter((id) => id !== classId),
         reason: 'class-changed',
         invalidatedAt: new Date().toISOString(),
       })
-      store.invalidateSelections(impact.invalidated, '更换职业后需要重新确认')
-      const equipmentDraft = { ...draft, classId, startingEquipmentSelections: [] }
-      const equipment = buildStartingEquipmentState(equipmentDraft)
-      store.updateDraft({
-        classId,
+      const equipment = buildStartingEquipmentState({ ...next.draft, startingEquipmentSelections: [] })
+      const stored: CharacterDraft = {
+        ...next.draft,
+        // `updateDraft` 是浅合并：`replaceClass` 用解构移除了 `subclassId`，不显式写回就不会被清掉。
         subclassId: undefined,
         startingEquipmentSelections: [],
         inventory: equipment.inventory,
@@ -696,8 +760,15 @@ export function useCharacterBuilderPage() {
         equipmentNeedsReview: false,
         spellSelections: spellReconciliation.spellSelections,
         inactiveSpellSelections: spellReconciliation.inactiveSpellSelections,
-      })
+      }
+      // 先写入（`stored` 携带变更前的 selections 快照）、再标记失效：顺序反了会把
+      // `invalidateSelections` 刚写下的 `invalidatedAt` 覆盖掉（与 `applyClassAllocation` 同一原因）。
+      store.updateDraft({ ...stored, spellSelections: normalizeSpellSelectionBuckets(stored) })
+      store.invalidateSelections(impact.invalidated, '更换职业后需要重新确认')
     }, [
+      ...(previousClasses.length > 1
+        ? [`职业与等级分配（将重建为单一职业：${nextClassName} ${total} 级）`]
+        : []),
       ...(draft.inventory.some((entry) => entry.sourceKind === 'class') ? ['职业起始装备'] : []),
       ...(hadSpells ? ['法术选择（将移入停用记录，可在法术步骤查看）'] : []),
     ])
@@ -731,6 +802,14 @@ export function useCharacterBuilderPage() {
       add(`物品：${item?.name ?? entry.itemId}`, item)
     }
     return [...new Set(affected.filter((item) => !item.endsWith('：')))]
+  }
+
+  /** 跳转到内容工坊：带上来源步骤的规则集与返回标记（保存扩展后自动回到这里）。 */
+  function openWorkshop(): void {
+    void router.push({
+      name: 'workshop',
+      query: { from: 'character-builder', ruleset: activeDraft.value?.ruleset ?? defaultRuleset.value },
+    })
   }
 
   function updateSources(sourceIds: readonly string[]): void {
@@ -821,9 +900,18 @@ export function useCharacterBuilderPage() {
     if (!draft?.classId) return
     const checkpoint = buildTimelineForDraft(draft)
       .find((item) => item.id === checkpointId)
-    if (checkpoint?.kind === 'subclass') {
-      store.updateDraft({ subclassId: optionIds[0] })
-    }
+    if (checkpoint?.kind !== 'subclass') return
+    // 子职必须同时写「职业分配条目」与「起始职业兼容字段」：第 8 步施法作用域、时间线子职特性
+    // 都按条目读，只写顶层会让奥法骑士等子职级施法被判为「无需配置法术」（rules.md 字段一致性）。
+    const classId = checkpoint.classId ?? draft.classId
+    const next = setClassSubclassId(draft, classId, optionIds[0])
+    if (!next.ok) return
+    const primaryClassId = getPrimaryClassId(next.draft)
+    store.updateDraft({
+      ...next.draft,
+      classId: primaryClassId,
+      subclassId: primaryClassId ? getClassSubclassId(next.draft, primaryClassId) : undefined,
+    })
   }
 
   function updateEquipment(
@@ -871,7 +959,10 @@ export function useCharacterBuilderPage() {
   async function importPackage(file: File): Promise<void> {
     try {
       importError.value = ''
-      syncRoute(await store.importPackage(file))
+      importNotice.value = ''
+      const draft = await store.importPackage(file)
+      syncRoute(draft)
+      importNotice.value = missingNoticeOf(draft)
     } catch (error) {
       importError.value = error instanceof Error ? error.message : '无法导入完整角色包。'
     }
@@ -1045,6 +1136,7 @@ export function useCharacterBuilderPage() {
     legacyDrafts,
     activeDraft,
     derived,
+    selectedClassId,
     raceAbilityBonuses,
     raceFlexibleCount,
     raceFlexibleGroups,
@@ -1054,6 +1146,7 @@ export function useCharacterBuilderPage() {
     validationIssues,
     completion,
     importError,
+    importNotice,
     exportingFormat,
     exportNotice,
     pendingChange,
@@ -1083,6 +1176,7 @@ export function useCharacterBuilderPage() {
     applyAllocationFromSetup,
     applyTotalLevel,
     updateSources,
+    openWorkshop,
     selectClass,
     selectRace,
     selectSubrace,

@@ -5,14 +5,14 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
 import QuickBuildShell from '@/features/quick-build/components/QuickBuildShell.vue'
-import StickyActionBar from '@/features/quick-build/components/StickyActionBar.vue'
+import StickyActionBar from '@/components/ui/StickyActionBar.vue'
 
 const shellSource = readFileSync(
   resolve(process.cwd(), 'src/features/quick-build/components/QuickBuildShell.vue'),
   'utf8',
 )
 const barSource = readFileSync(
-  resolve(process.cwd(), 'src/features/quick-build/components/StickyActionBar.vue'),
+  resolve(process.cwd(), 'src/components/ui/StickyActionBar.vue'),
   'utf8',
 )
 

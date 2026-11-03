@@ -179,8 +179,9 @@ describe('MC-A02 schema v10 迁移', () => {
         levelOrder: [],
       },
     })
+    // 顶层 `subclassId` 是战士子职且归一化后起始职业也是战士：加载时认领回分配条目。
     expect(parsed?.multiclass?.classes).toEqual([
-      { classId: 'class-2014-fighter', level: 3 },
+      { classId: 'class-2014-fighter', level: 3, subclassId: 'subclass-2014-fighter-champion' },
       { classId: 'class-2014-rogue', level: 1 },
     ])
     expect(parsed?.multiclass?.primaryClassId).toBe('class-2014-fighter')
@@ -229,5 +230,81 @@ describe('MC-A02 schema v10 迁移', () => {
     expect(migrateDraftToV10({ ...v9Draft(), schemaVersion: 99 })).toBeUndefined()
     expect(migrateDraftToV10({ ...v9Draft(), id: undefined })).toBeUndefined()
     expect(migrateDraftToV10(null)).toBeUndefined()
+  })
+})
+
+describe('v10 加载归一化：兼容字段与职业分配对齐', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('以职业分配为准回填 classId／subclassId（修复旧版换职业留下的撕裂卡）', () => {
+    const torn = v9Draft({
+      schemaVersion: 10,
+      // 旧缺陷的产物：`classId` 已被改成新职业，职业分配仍是旧职业
+      classId: 'class-2014-barbarian',
+      multiclass: {
+        enabled: false,
+        primaryClassId: 'class-2014-fighter',
+        classes: [{ classId: 'class-2014-fighter', level: 7, subclassId: 'subclass-2014-fighter-champion' }],
+        levelOrder: Array.from({ length: 7 }, () => 'class-2014-fighter'),
+      },
+    })
+    const parsed = parseCharacterDraft(torn)
+    expect(parsed?.classId).toBe('class-2014-fighter')
+    expect(parsed?.subclassId).toBe('subclass-2014-fighter-champion')
+    expect(parsed?.targetLevel).toBe(7)
+    expect(parsed?.multiclass?.primaryClassId).toBe('class-2014-fighter')
+  })
+
+  it('分配里没有子职时清掉残留的旧子职', () => {
+    const torn = v9Draft({
+      schemaVersion: 10,
+      classId: 'class-2014-barbarian',
+      multiclass: {
+        enabled: false,
+        primaryClassId: 'class-2014-barbarian',
+        classes: [{ classId: 'class-2014-barbarian', level: 7 }],
+        levelOrder: Array.from({ length: 7 }, () => 'class-2014-barbarian'),
+      },
+    })
+    expect(parseCharacterDraft(torn)?.subclassId).toBeUndefined()
+  })
+
+  it('顶层子职属于起始职业但条目缺失时认领回条目（修复选子职只写顶层的撕裂卡）', () => {
+    const torn = v9Draft({
+      schemaVersion: 10,
+      classId: 'class-2014-fighter',
+      subclassId: 'subclass-2014-fighter-eldritch-knight',
+      multiclass: {
+        enabled: false,
+        primaryClassId: 'class-2014-fighter',
+        classes: [{ classId: 'class-2014-fighter', level: 6 }],
+        levelOrder: Array.from({ length: 6 }, () => 'class-2014-fighter'),
+      },
+    })
+    const parsed = parseCharacterDraft(torn)
+    expect(parsed?.classId).toBe('class-2014-fighter')
+    expect(parsed?.subclassId).toBe('subclass-2014-fighter-eldritch-knight')
+    expect(parsed?.multiclass?.classes).toEqual([
+      { classId: 'class-2014-fighter', level: 6, subclassId: 'subclass-2014-fighter-eldritch-knight' },
+    ])
+  })
+
+  it('顶层子职不属于起始职业时不认领，避免串到别的职业', () => {
+    const torn = v9Draft({
+      schemaVersion: 10,
+      classId: 'class-2014-barbarian',
+      subclassId: 'subclass-2014-fighter-eldritch-knight',
+      multiclass: {
+        enabled: false,
+        primaryClassId: 'class-2014-barbarian',
+        classes: [{ classId: 'class-2014-barbarian', level: 7 }],
+        levelOrder: Array.from({ length: 7 }, () => 'class-2014-barbarian'),
+      },
+    })
+    const parsed = parseCharacterDraft(torn)
+    expect(parsed?.subclassId).toBeUndefined()
+    expect(parsed?.multiclass?.classes).toEqual([{ classId: 'class-2014-barbarian', level: 7 }])
   })
 })
