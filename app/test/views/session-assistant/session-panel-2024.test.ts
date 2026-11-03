@@ -166,4 +166,46 @@ describe('SessionPanel 按草稿版本解析显示数据', () => {
     expect(chosen.text()).toContain('薄血')
     expect(chosen.text()).toContain('起源专长 · 仪式专家')
   })
+
+  /** 跑团助手局内模式的法术页签与辅助车卡口径一致：法术攻击加值与法术豁免 DC 各有一张数值卡。 */
+  it('法术页签展示法术攻击加值与法术豁免 DC 数值卡', async () => {
+    const draft = draft2024({
+      id: 'session-spell-dc-cards',
+      classId: 'class-2024-cleric',
+      targetLevel: 3,
+      baseAbilities: { str: 10, dex: 12, con: 12, int: 10, wis: 16, cha: 10 },
+    })
+    const wrapper = mount(SessionPanel, { props: { draft } })
+    useSessionAssistantStore().setActiveTab('spells')
+    await nextTick()
+
+    const tiles = wrapper.findAll('.session-panel__spell-stats .stat-tile')
+    expect(tiles).toHaveLength(2)
+    expect(tiles[0].text()).toContain('法术攻击')
+    expect(tiles[0].text()).toContain('+5')
+    expect(tiles[0].text()).toContain('感知调整值')
+    expect(tiles[1].text()).toContain('法术豁免 DC')
+    expect(tiles[1].text()).toContain('13')
+    expect(tiles[1].text()).toContain('法术豁免基础')
+    wrapper.unmount()
+  })
+
+  it('无施法能力时数值卡提示「当前职业无施法能力」', async () => {
+    const draft = draft2024({
+      id: 'session-spell-dc-cards-fighter',
+      classId: 'class-2024-fighter',
+      targetLevel: 3,
+    })
+    const wrapper = mount(SessionPanel, { props: { draft } })
+    useSessionAssistantStore().setActiveTab('spells')
+    await nextTick()
+
+    const tiles = wrapper.findAll('.session-panel__spell-stats .stat-tile')
+    expect(tiles).toHaveLength(2)
+    expect(tiles[0].text()).toContain('法术攻击')
+    expect(tiles[0].text()).toContain('当前职业无施法能力')
+    expect(tiles[1].text()).toContain('法术豁免 DC')
+    expect(tiles[1].text()).toContain('当前职业无施法能力')
+    wrapper.unmount()
+  })
 })

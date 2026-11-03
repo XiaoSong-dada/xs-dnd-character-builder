@@ -28,7 +28,7 @@ import { getEffectiveSelectedSpellIds, getSpeciesSpellcastingProfiles, getSpellc
 import { buildTimeline } from '@/rules/timeline'
 import { useSessionAssistantStore } from '@/stores/session-assistant'
 import { DEBUFF_STATUSES, EXHAUSTION_DESCRIPTION } from '@/types/session-state'
-import type { AbilityKey, CharacterDraft, InventoryEntry } from '@/types/character'
+import type { AbilityKey, CharacterDraft, InventoryEntry, ValueSource } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
 import { useSessionPanel } from '../hooks/useSessionPanel'
@@ -324,6 +324,23 @@ function confirmSpeciesSlotCast(level: number, sourceName: string, note: string)
   confirmCast(level)
   castNotice.value = `${sourceName}：已使用 ${level} 环法术位${note ? `；${note}` : ''}`
 }
+
+// ---- 法术页签：法术攻击加值与法术豁免 DC（与辅助车卡法术页签同口径，只读展示）----
+/** 逐条来源说明：与总览数值卡同一格式，界面可解释数值由来。 */
+function sourceDetails(sources: readonly ValueSource[]): string[] {
+  return sources.map((source) => `${source.label} ${source.value >= 0 ? '+' : ''}${source.value}${source.detail ? ` · ${source.detail}` : ''}`)
+}
+const spellAttack = computed(() => panel.derived.value.spellAttackBonus)
+const spellSaveDc = computed(() => panel.derived.value.spellSaveDc)
+/** 法术攻击是加值，带正负号展示；无施法能力时按角色卡口径显示 0。 */
+const spellAttackLabel = computed(() => {
+  const value = spellAttack.value?.value
+  if (value === undefined) return '0'
+  return value >= 0 ? `+${value}` : `${value}`
+})
+const spellAttackDetails = computed(() => spellAttack.value ? sourceDetails(spellAttack.value.sources) : ['当前职业无施法能力'])
+const spellSaveDcValue = computed(() => spellSaveDc.value?.value ?? 0)
+const spellSaveDcDetails = computed(() => spellSaveDc.value ? sourceDetails(spellSaveDc.value.sources) : ['当前职业无施法能力'])
 
 // ---- 抄录法术书（仅 spellbook 模式，与角色卡共享同一草稿数据）----
 const showTranscribeModal = ref(false)
@@ -688,6 +705,11 @@ function openTranscribe(spellId?: string): void {
 
     <div v-else-if="activeTab === 'spells'" class="session-panel__tab">
       <p v-if="castNotice" class="session-panel__notice" role="status">{{ castNotice }}</p>
+      <!-- 法术攻击加值与法术豁免 DC（与辅助车卡法术页签同口径） -->
+      <div class="session-panel__spell-stats">
+        <StatTile label="法术攻击" :value="spellAttackLabel" :details="spellAttackDetails" />
+        <StatTile label="法术豁免 DC" :value="spellSaveDcValue" :details="spellSaveDcDetails" />
+      </div>
       <!-- 每职业施法属性（MC-D02）：兼职时各职业的法术攻击／DC 与最高环级并列展示 -->
       <section v-if="panel.classSpellcastingProfiles.value.length > 1" class="session-panel__section">
         <h3>各职业施法属性</h3>
@@ -1189,6 +1211,14 @@ function openTranscribe(spellId?: string): void {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
     gap: 0.5rem;
+  }
+
+  // 法术攻击／法术豁免 DC：与角色卡法术页签相同两列数值卡
+  &__spell-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
   }
 
   &__section {
