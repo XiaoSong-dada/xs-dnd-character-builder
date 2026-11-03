@@ -5,6 +5,7 @@ import {
   getClassEntries,
   getClassLevel,
   getClassSubclassId,
+  getClassSubclassIds,
   getLastLevelClassIds,
   getMulticlassState,
   getPrimaryClassId,
@@ -353,5 +354,35 @@ describe('SC-A04 换职业：整体替换为单一职业', () => {
     expect(result.ok).toBe(true)
     expect(getTotalLevel(result.draft)).toBe(20)
     expect(result.draft.targetLevel).toBe(20)
+  })
+})
+
+describe('SC-A05 子职字段一致性：起始职业回退顶层兼容字段', () => {
+  it('条目缺子职时按起始职业回退顶层 subclassId', () => {
+    // 旧版选子职只写顶层，条目存在后第 8 步按条目读不到子职（奥法骑士被误判无施法）。
+    const draft = multiclassDraft(
+      { classId: 'class-2014-fighter', subclassId: 'subclass-2014-fighter-eldritch-knight' },
+      { enabled: false, classes: [{ classId: 'class-2014-fighter', level: 6 }] },
+    )
+    expect(getClassSubclassId(draft, 'class-2014-fighter')).toBe('subclass-2014-fighter-eldritch-knight')
+    expect(getClassSubclassIds(draft)).toEqual({ 'class-2014-fighter': 'subclass-2014-fighter-eldritch-knight' })
+  })
+
+  it('兼职第二职业不回退顶层，避免把起始职业子职串过去', () => {
+    const draft = multiclassDraft(
+      { classId: 'class-2014-fighter', subclassId: 'subclass-2014-fighter-champion' },
+      {
+        enabled: true,
+        classes: [
+          { classId: 'class-2014-fighter', level: 3, subclassId: 'subclass-2014-fighter-champion' },
+          { classId: 'class-2014-rogue', level: 2 },
+        ],
+      },
+    )
+    expect(getClassSubclassId(draft, 'class-2014-rogue')).toBeUndefined()
+    expect(getClassSubclassIds(draft)).toEqual({
+      'class-2014-fighter': 'subclass-2014-fighter-champion',
+      'class-2014-rogue': undefined,
+    })
   })
 })

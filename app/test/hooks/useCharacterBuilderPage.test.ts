@@ -12,6 +12,7 @@ vi.mock('vue-router', () => ({
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import { RulesetPreferenceService } from '@/services/ruleset-preference'
 import { addClassEntry, getClassEntries, setClassLevel, setPrimaryClassId } from '@/rules/multiclass'
+import { listSpellcastingScopes } from '@/rules/spellcasting'
 import { rulesRepository } from '@/rules/repository'
 import type { CharacterDraft } from '@/types/character'
 import { useCharacterBuilderPage } from '@/views/character-builder/hooks/useCharacterBuilderPage'
@@ -625,6 +626,73 @@ describe('useCharacterBuilderPage 改版与改职业的数据保护（B09-03）'
 
     expect(store.activeDraft?.classId).toBe('class-2014-wizard')
     expect(getClassEntries(store.activeDraft!)).toEqual([{ classId: 'class-2014-wizard', level: 4 }])
+  })
+})
+
+describe('useCharacterBuilderPage 选子职写回职业分配（SC-A05）', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    routerReplace.mockClear()
+  })
+
+  /** 6 级战士：分配条目已在 v10 下存在，但子职尚未选择（复现「条目存在、顶层无子职」）。 */
+  function makeUnassignedFighterDraft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
+    return makeFighterDraft({
+      targetLevel: 6,
+      subclassId: undefined,
+      selections: [],
+      multiclass: {
+        enabled: false,
+        primaryClassId: 'class-2014-fighter',
+        classes: [{ classId: 'class-2014-fighter', level: 6 }],
+        levelOrder: Array.from({ length: 6 }, () => 'class-2014-fighter'),
+      },
+      ...overrides,
+    })
+  }
+
+  it('选择奥法骑士后分配条目与顶层兼容字段同时更新，施法作用域恢复', async () => {
+    const { page, store } = await setupPage(makeUnassignedFighterDraft())
+
+    page.saveTimelineSelection('fighter-2014-subclass-3', ['subclass-2014-fighter-eldritch-knight'])
+
+    const draft = store.activeDraft
+    if (!draft) throw new Error('缺少激活草稿')
+    expect(getClassEntries(draft)).toEqual([
+      { classId: 'class-2014-fighter', level: 6, subclassId: 'subclass-2014-fighter-eldritch-knight' },
+    ])
+    expect(draft.classId).toBe('class-2014-fighter')
+    expect(draft.subclassId).toBe('subclass-2014-fighter-eldritch-knight')
+    expect(listSpellcastingScopes(draft).map((scope) => scope.classId)).toEqual(['class-2014-fighter'])
+  })
+
+  it('兼职角色的第二职业子职只写自身条目，不污染起始职业顶层字段', async () => {
+    const { page, store } = await setupPage(makeUnassignedFighterDraft({
+      targetLevel: 6,
+      classId: 'class-2014-fighter',
+      subclassId: 'subclass-2014-fighter-battle-master',
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-fighter',
+        classes: [
+          { classId: 'class-2014-fighter', level: 3, subclassId: 'subclass-2014-fighter-battle-master' },
+          { classId: 'class-2014-rogue', level: 3 },
+        ],
+        levelOrder: ['class-2014-fighter', 'class-2014-rogue', 'class-2014-fighter', 'class-2014-rogue', 'class-2014-fighter', 'class-2014-rogue'],
+      },
+    }))
+
+    page.saveTimelineSelection('rogue-2014-subclass-3', ['subclass-2014-rogue-assassin'])
+
+    const draft = store.activeDraft
+    if (!draft) throw new Error('缺少激活草稿')
+    expect(getClassEntries(draft)).toEqual([
+      { classId: 'class-2014-fighter', level: 3, subclassId: 'subclass-2014-fighter-battle-master' },
+      { classId: 'class-2014-rogue', level: 3, subclassId: 'subclass-2014-rogue-assassin' },
+    ])
+    expect(draft.classId).toBe('class-2014-fighter')
+    expect(draft.subclassId).toBe('subclass-2014-fighter-battle-master')
   })
 })
 

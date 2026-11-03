@@ -20,7 +20,16 @@ import {
   reconcileSpellSelections,
   restoreInactiveSpellSelection,
 } from '@/rules/spell-selection-reconciliation'
-import { getClassEntries, getPrimaryClassId, getTotalLevel, getTotalLevelBounds, replaceClass, setTotalLevel } from '@/rules/multiclass'
+import {
+  getClassEntries,
+  getClassSubclassId,
+  getPrimaryClassId,
+  getTotalLevel,
+  getTotalLevelBounds,
+  replaceClass,
+  setClassSubclassId,
+  setTotalLevel,
+} from '@/rules/multiclass'
 import { buildStartingEquipmentState, isStartingEquipmentComplete } from '@/rules/starting-equipment'
 import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { useLineageTransformation } from '@/views/character-builder/hooks/useLineageTransformation'
@@ -891,9 +900,18 @@ export function useCharacterBuilderPage() {
     if (!draft?.classId) return
     const checkpoint = buildTimelineForDraft(draft)
       .find((item) => item.id === checkpointId)
-    if (checkpoint?.kind === 'subclass') {
-      store.updateDraft({ subclassId: optionIds[0] })
-    }
+    if (checkpoint?.kind !== 'subclass') return
+    // 子职必须同时写「职业分配条目」与「起始职业兼容字段」：第 8 步施法作用域、时间线子职特性
+    // 都按条目读，只写顶层会让奥法骑士等子职级施法被判为「无需配置法术」（rules.md 字段一致性）。
+    const classId = checkpoint.classId ?? draft.classId
+    const next = setClassSubclassId(draft, classId, optionIds[0])
+    if (!next.ok) return
+    const primaryClassId = getPrimaryClassId(next.draft)
+    store.updateDraft({
+      ...next.draft,
+      classId: primaryClassId,
+      subclassId: primaryClassId ? getClassSubclassId(next.draft, primaryClassId) : undefined,
+    })
   }
 
   function updateEquipment(

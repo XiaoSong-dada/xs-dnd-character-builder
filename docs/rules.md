@@ -224,7 +224,9 @@ TODO：TCoE 自定义起源、既有 12 职业的整套可选职业特性。
 - **等级变更一律「选值 → 确认 → 应用」**（2026-10-14，决策 D37／D39／D43；**修订 D14／D35 的轻量确认策略**）：滑杆、`＋/－` 步进与等级表格选值都先进入页面的「调整职业与等级分配」确认弹窗（`pendingChange`，恒 `alwaysConfirm`），确认后才写库；弹窗内可直接继续 `±1`（连续调整共用一个待定变更）。完全没有变化时（松手回原位、重复点选当前值）不弹确认。逐职业步进、增删职业、切换起始职业与关闭兼职同走这一确认流程，逐职业步进／移除职业的 D7 防误触语义保持不变。
 - **换职业（第 3 步职业卡点选）＝重建职业分配**（2026-11-03）：所选职业承载**原总等级**并成为起始职业，职业集合重建为单一职业（`multiclass.classes` 同步重建、旧子职清空、`levelOrder` 按新职业重建）；兼职开关 `enabled` 原样保留——开关与职业分配是两个独立动作（R1.7）。该动作沿用 `class` 依赖确认：全部选择作废、起始装备按新职业重建、法术整体移入停用记录。实现入口 `replaceClass(draft, classId)`；**兼容字段 `classId`／`subclassId` 必须与分配在同一次写入中同步**，加载时（`normalizeDraft`）也以职业分配为准回填，修复旧版只写 `classId` 留下的「高亮与等级卡不一致」撕裂卡。
 - 第 1 步在**尚未选职业**时也能设定目标等级（滑杆写 `targetLevel`，不产生职业分配）；该路径仍按 `target-level` 的轻量策略处理（此时没有职业分配可确认）；开启兼职时先弹出「选择起始职业」。
-- 实现入口：`rules/multiclass.ts` 的 `getTotalLevelBounds`／`setTotalLevel`／`setPrimaryClassId`／`replaceClass`。
+- 实现入口：`rules/multiclass.ts` 的 `getTotalLevelBounds`／`setTotalLevel`／`setPrimaryClassId`／`replaceClass`。子职写入入口为 `setClassSubclassId`，兼容读取为 `getClassSubclassId`。
+
+- **子职字段一致性与加载自愈**（2026-11-03）：选子职必须**同时**写职业分配条目（`multiclass.classes[i].subclassId`）与起始职业兼容字段（`subclassId`），写入入口 `useCharacterBuilderPage.ts` 的 `saveTimelineSelection` → `setClassSubclassId`，并按起始职业回填兼容字段。读取侧 `getClassSubclassId` 在条目缺子职时**只对起始职业**回退顶层字段，兼职的第二职业仍严格以条目为准；`getClassSubclassIds` 同口径，保证时间线子职特性与第 8 步施法作用域读到同一个子职。加载时 `normalizeDraft` 先按 `SubclassRule.classId` 校验归属、把确实属于起始职业的顶层子职认领回条目，再以分配为准回填兼容字段——修复旧版只写顶层导致奥法骑士等 1/3 施法子职被判「无需配置法术」以及刷新丢子职的问题。
 
 ### 职业等级上限与关闭兼职（2026-10-14，决策 D41／D42）
 

@@ -263,3 +263,20 @@ describe('MC-D02 每职业施法属性', () => {
     expect(getClassSpellcastingProfiles(draft).map((profile) => profile.maxSpellLevel)).toEqual([1, 1])
   })
 })
+
+describe('SC-A05 子职字段一致性：撕裂卡恢复子职级施法', () => {
+  it('战士 6 的分配条目缺子职、顶层是奥法骑士时仍解析出施法作用域', () => {
+    // 旧版选子职只写顶层 `subclassId`：条目存在后第 8 步读到「无子职」，被误判为无需配置法术。
+    const draft = mc([{ classId: 'class-2014-fighter', level: 6 }])
+    const torn: CharacterDraft = {
+      ...draft,
+      classId: 'class-2014-fighter',
+      subclassId: 'subclass-2014-fighter-eldritch-knight',
+    }
+    const scope = scopeOf(torn, 'class-2014-fighter')
+    expect(scope.config.mode).toBe('known')
+    expect(scope.classLevel).toBe(6)
+    expect(getRequiredSpellCount(torn, scope.config, scope)).toBeGreaterThan(0)
+    expect(listSpellcastingScopes(torn).map((item) => item.classId)).toEqual(['class-2014-fighter'])
+  })
+})
