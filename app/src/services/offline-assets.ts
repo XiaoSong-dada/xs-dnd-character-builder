@@ -28,7 +28,7 @@ export const offlineAssets: readonly OfflineAsset[] = [
     label: 'PDF 角色卡模板',
     description: '导出 PDF 角色卡使用',
     url: CHARACTER_SHEET_PDF_TEMPLATE_URL,
-    approximateKb: 1277,
+    approximateKb: 1504,
   },
   {
     id: 'xlsx-template-2014',

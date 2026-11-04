@@ -99,6 +99,16 @@ describe('export-xlsx 自动卡模板契约 v4', () => {
     expect(strFromU8(unzipSync(out)['xl/workbook.xml'])).toMatch(/<calcPr\b[^>]*fullCalcOnLoad="1"/)
   })
 
+  it('2014 法师写入法术位与法术名称', () => {
+    const result = fillCharacterSheetTemplate(template('2014'), wizardExportModel(), '2014')
+    expect(result.diagnostics.filter((item) => item.severity === 'error')).toEqual([])
+    const out = result.bytes
+    expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'AN58')).toBe(4)
+    expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'AN59')).toBe(2)
+    expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'C72')).toBe('火焰箭')
+    expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'C74')).toBe('魔法飞弹')
+  })
+
   it('2024 游侠写入真实 2024 自动卡，且输出为无宏 xlsx', () => {
     const model = model2024()
     const result = fillCharacterSheetTemplate(template('2024'), model, '2024')
