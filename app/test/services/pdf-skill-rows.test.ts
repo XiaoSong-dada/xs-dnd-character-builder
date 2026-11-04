@@ -13,15 +13,15 @@ import { inspectGeneratedPdfFont } from '../fixtures/pdf-font'
 // Independently transcribed from the visible Chinese labels and measured widget coordinates.
 // Never derive this oracle from the exporter's internal English field mapping.
 const ROWS = [
-  ['athletics', '运动', 461.664, 0], ['sleight-of-hand', '巧手', 448.128, 3],
-  ['stealth', '隐匿', 434.592, 3], ['acrobatics', '体操', 421.128, 3],
-  ['investigation', '调查', 407.592, 8], ['history', '历史', 394.056, 8],
-  ['arcana', '奥秘', 380.592, 8], ['nature', '自然', 367.128, 4],
-  ['religion', '宗教', 353.52, 4], ['animal-handling', '驯兽', 340.128, 3],
-  ['insight', '洞悉', 326.52, 3], ['medicine', '医药', 313.056, 3],
-  ['perception', '观察', 299.592, 7], ['survival', '求生', 286.056, 3],
-  ['deception', '欺瞒', 272.592, 0], ['intimidation', '威吓', 259.128, 0],
-  ['performance', '表演', 245.52, 0], ['persuasion', '游说', 232.056, 4],
+  ['acrobatics', '体操', 461.664, 3], ['animal-handling', '驯兽', 448.128, 3],
+  ['arcana', '奥秘', 434.592, 8], ['athletics', '运动', 421.128, 0],
+  ['deception', '欺瞒', 407.592, 0], ['history', '历史', 394.056, 8],
+  ['insight', '洞察', 380.592, 3], ['intimidation', '威吓', 367.128, 0],
+  ['investigation', '调查', 353.52, 8], ['medicine', '医药', 340.128, 3],
+  ['nature', '自然', 326.52, 4], ['perception', '察觉', 313.056, 7],
+  ['performance', '表演', 299.592, 0], ['persuasion', '说服', 286.056, 4],
+  ['religion', '宗教', 272.592, 4], ['sleight-of-hand', '巧手', 259.128, 3],
+  ['stealth', '隐匿', 245.52, 3], ['survival', '生存', 232.056, 3],
 ] as const
 const PROFICIENT = new Set(['investigation', 'history', 'arcana', 'perception', 'persuasion'])
 const template = readFileSync(resolve(__dirname, '../../public/templates/character-sheet-zh-plus.pdf'))
@@ -125,7 +125,7 @@ describe('PDF Chinese skill rows', () => {
     })
     expect(model.skills.find((s) => s.id === 'skill-stealth')).toMatchObject({ value: 11, proficiency: 'expertise' })
     await inspectBeforeFlatten(model, (form) => {
-      const row = fieldsAtRow(form, 434.592, 112.003)
+      const row = fieldsAtRow(form, 245.52, 112.003)
       expect(row.value.getText()).toBe('+11')
       expect(row.check.isChecked()).toBe(true)
     })
@@ -139,8 +139,8 @@ describe('PDF Chinese skill rows', () => {
     } })
     expect(model.skills.find((s) => s.id === 'skill-arcana')?.value).toBe(-3)
     await inspectBeforeFlatten(model, (form) => {
-      expect(fieldsAtRow(form, 380.592, 112.003).value.getText()).toBe('-3')
-      expect(fieldsAtRow(form, 380.592, 112.003).check.isChecked()).toBe(true)
+      expect(fieldsAtRow(form, 434.592, 112.003).value.getText()).toBe('-3')
+      expect(fieldsAtRow(form, 434.592, 112.003).check.isChecked()).toBe(true)
       expect(fieldsAtRow(form, 576.817, 112.723).value.getText()).toBe('-2')
     })
   })
