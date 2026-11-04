@@ -105,8 +105,9 @@ describe('export-xlsx 自动卡模板契约 v4', () => {
     const out = result.bytes
     expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'AN58')).toBe(4)
     expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'AN59')).toBe(2)
-    expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'C72')).toBe('火焰箭')
-    expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'C74')).toBe('魔法飞弹')
+    const spells = wizardExportModel().spellcasting?.spells ?? []
+    expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'C72')).toBe(spells[0]?.name)
+    expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'C74')).toBe(spells[2]?.name)
   })
 
   it('2024 游侠写入真实 2024 自动卡，且输出为无宏 xlsx', () => {
