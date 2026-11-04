@@ -1,13 +1,13 @@
 import {
   CHARACTER_SHEET_FONT_URL,
   CHARACTER_SHEET_PDF_TEMPLATE_URL,
-  CHARACTER_SHEET_XLSX_TEMPLATE_URL,
+  CHARACTER_SHEET_XLSX_TEMPLATE_URLS,
 } from '@/services/character-sheet-templates'
 
 /**
  * 离线资源清单：导出角色卡时按需 fetch 的模板文件。
  *
- * 这些文件不进 Service Worker 预缓存（合计约 2.5 MB，会明显拖慢首次安装），
+ * 这些文件不进 Service Worker 预缓存（合计约 4.4 MB，会明显拖慢首次安装），
  * 改为运行时按需缓存：正常导出过一次就会留在本地，也可以在「关于本站 → 离线使用」里一键下载。
  *
  * 与 `vite.config.ts` 的 workbox 规则通过 `/templates/` 前缀耦合：
@@ -15,7 +15,7 @@ import {
  * `approximateKb` 为 `app/public/templates/` 下的实测体积，仅用于界面说明，不参与逻辑。
  */
 export interface OfflineAsset {
-  readonly id: 'pdf-template' | 'xlsx-template' | 'font'
+  readonly id: 'pdf-template' | 'xlsx-template-2014' | 'xlsx-template-2024' | 'font'
   readonly label: string
   readonly description: string
   readonly url: string
@@ -31,11 +31,18 @@ export const offlineAssets: readonly OfflineAsset[] = [
     approximateKb: 1277,
   },
   {
-    id: 'xlsx-template',
-    label: 'Excel 角色卡模板',
-    description: '导出 XLSX 表格使用',
-    url: CHARACTER_SHEET_XLSX_TEMPLATE_URL,
-    approximateKb: 50,
+    id: 'xlsx-template-2014',
+    label: 'Excel 角色卡模板（2014）',
+    description: '导出 2014 自动计算卡使用',
+    url: CHARACTER_SHEET_XLSX_TEMPLATE_URLS['2014'],
+    approximateKb: 1055,
+  },
+  {
+    id: 'xlsx-template-2024',
+    label: 'Excel 角色卡模板（2024）',
+    description: '导出 2024 自动计算卡使用',
+    url: CHARACTER_SHEET_XLSX_TEMPLATE_URLS['2024'],
+    approximateKb: 719,
   },
   {
     id: 'font',

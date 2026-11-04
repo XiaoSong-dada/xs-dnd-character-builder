@@ -1,0 +1,894 @@
+{
+  "version": 4,
+  "title": "2024 自动卡字段映射",
+  "entries": [
+    {
+      "key": "character_name",
+      "sheet": "角色",
+      "address": "E3",
+      "kind": "input",
+      "requirement": "required",
+      "description": "角色名"
+    },
+    {
+      "key": "player_name",
+      "sheet": "角色",
+      "address": "E4",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "玩家名"
+    },
+    {
+      "key": "race",
+      "sheet": "角色",
+      "address": "E6",
+      "kind": "input",
+      "requirement": "required",
+      "description": "种族"
+    },
+    {
+      "key": "background",
+      "sheet": "角色",
+      "address": "E10",
+      "kind": "input",
+      "requirement": "required",
+      "description": "背景"
+    },
+    {
+      "key": "alignment",
+      "sheet": "角色",
+      "address": "M6",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "阵营"
+    },
+    {
+      "key": "backstory",
+      "sheet": "角色",
+      "address": "R20",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "背景故事"
+    },
+    {
+      "key": "class_name",
+      "sheet": "主要情况",
+      "address": "S3",
+      "kind": "input",
+      "requirement": "required",
+      "description": "主职业"
+    },
+    {
+      "key": "level",
+      "sheet": "主要情况",
+      "address": "W3",
+      "kind": "input",
+      "requirement": "required",
+      "description": "等级"
+    },
+    {
+      "key": "str_score",
+      "sheet": "属性计算器&自定义调整栏",
+      "address": "F2",
+      "kind": "input",
+      "requirement": "required",
+      "description": "str 属性值"
+    },
+    {
+      "key": "dex_score",
+      "sheet": "属性计算器&自定义调整栏",
+      "address": "F3",
+      "kind": "input",
+      "requirement": "required",
+      "description": "dex 属性值"
+    },
+    {
+      "key": "con_score",
+      "sheet": "属性计算器&自定义调整栏",
+      "address": "F4",
+      "kind": "input",
+      "requirement": "required",
+      "description": "con 属性值"
+    },
+    {
+      "key": "int_score",
+      "sheet": "属性计算器&自定义调整栏",
+      "address": "F5",
+      "kind": "input",
+      "requirement": "required",
+      "description": "int 属性值"
+    },
+    {
+      "key": "wis_score",
+      "sheet": "属性计算器&自定义调整栏",
+      "address": "F6",
+      "kind": "input",
+      "requirement": "required",
+      "description": "wis 属性值"
+    },
+    {
+      "key": "cha_score",
+      "sheet": "属性计算器&自定义调整栏",
+      "address": "F7",
+      "kind": "input",
+      "requirement": "required",
+      "description": "cha 属性值"
+    },
+    {
+      "key": "save_str_prof",
+      "sheet": "主要情况",
+      "address": "B8",
+      "kind": "value",
+      "requirement": "required",
+      "description": "str 豁免熟练"
+    },
+    {
+      "key": "save_str_misc",
+      "sheet": "主要情况",
+      "address": "I8",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "str 豁免修正"
+    },
+    {
+      "key": "save_dex_prof",
+      "sheet": "主要情况",
+      "address": "B10",
+      "kind": "value",
+      "requirement": "required",
+      "description": "dex 豁免熟练"
+    },
+    {
+      "key": "save_dex_misc",
+      "sheet": "主要情况",
+      "address": "I10",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "dex 豁免修正"
+    },
+    {
+      "key": "save_con_prof",
+      "sheet": "主要情况",
+      "address": "B12",
+      "kind": "value",
+      "requirement": "required",
+      "description": "con 豁免熟练"
+    },
+    {
+      "key": "save_con_misc",
+      "sheet": "主要情况",
+      "address": "I12",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "con 豁免修正"
+    },
+    {
+      "key": "save_int_prof",
+      "sheet": "主要情况",
+      "address": "B14",
+      "kind": "value",
+      "requirement": "required",
+      "description": "int 豁免熟练"
+    },
+    {
+      "key": "save_int_misc",
+      "sheet": "主要情况",
+      "address": "I14",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "int 豁免修正"
+    },
+    {
+      "key": "save_wis_prof",
+      "sheet": "主要情况",
+      "address": "B16",
+      "kind": "value",
+      "requirement": "required",
+      "description": "wis 豁免熟练"
+    },
+    {
+      "key": "save_wis_misc",
+      "sheet": "主要情况",
+      "address": "I16",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "wis 豁免修正"
+    },
+    {
+      "key": "save_cha_prof",
+      "sheet": "主要情况",
+      "address": "B18",
+      "kind": "value",
+      "requirement": "required",
+      "description": "cha 豁免熟练"
+    },
+    {
+      "key": "save_cha_misc",
+      "sheet": "主要情况",
+      "address": "I18",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "cha 豁免修正"
+    },
+    {
+      "key": "skill_athletics_prof",
+      "sheet": "主要情况",
+      "address": "B23",
+      "kind": "value",
+      "requirement": "required",
+      "description": "athletics 熟练"
+    },
+    {
+      "key": "skill_athletics_misc",
+      "sheet": "主要情况",
+      "address": "F23",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "athletics 修正"
+    },
+    {
+      "key": "skill_acrobatics_prof",
+      "sheet": "主要情况",
+      "address": "B25",
+      "kind": "value",
+      "requirement": "required",
+      "description": "acrobatics 熟练"
+    },
+    {
+      "key": "skill_acrobatics_misc",
+      "sheet": "主要情况",
+      "address": "F25",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "acrobatics 修正"
+    },
+    {
+      "key": "skill_sleight_of_hand_prof",
+      "sheet": "主要情况",
+      "address": "B26",
+      "kind": "value",
+      "requirement": "required",
+      "description": "sleight_of_hand 熟练"
+    },
+    {
+      "key": "skill_sleight_of_hand_misc",
+      "sheet": "主要情况",
+      "address": "F26",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "sleight_of_hand 修正"
+    },
+    {
+      "key": "skill_stealth_prof",
+      "sheet": "主要情况",
+      "address": "B27",
+      "kind": "value",
+      "requirement": "required",
+      "description": "stealth 熟练"
+    },
+    {
+      "key": "skill_stealth_misc",
+      "sheet": "主要情况",
+      "address": "F27",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "stealth 修正"
+    },
+    {
+      "key": "skill_investigation_prof",
+      "sheet": "主要情况",
+      "address": "B29",
+      "kind": "value",
+      "requirement": "required",
+      "description": "investigation 熟练"
+    },
+    {
+      "key": "skill_investigation_misc",
+      "sheet": "主要情况",
+      "address": "F29",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "investigation 修正"
+    },
+    {
+      "key": "skill_arcana_prof",
+      "sheet": "主要情况",
+      "address": "B30",
+      "kind": "value",
+      "requirement": "required",
+      "description": "arcana 熟练"
+    },
+    {
+      "key": "skill_arcana_misc",
+      "sheet": "主要情况",
+      "address": "F30",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "arcana 修正"
+    },
+    {
+      "key": "skill_history_prof",
+      "sheet": "主要情况",
+      "address": "B31",
+      "kind": "value",
+      "requirement": "required",
+      "description": "history 熟练"
+    },
+    {
+      "key": "skill_history_misc",
+      "sheet": "主要情况",
+      "address": "F31",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "history 修正"
+    },
+    {
+      "key": "skill_nature_prof",
+      "sheet": "主要情况",
+      "address": "B32",
+      "kind": "value",
+      "requirement": "required",
+      "description": "nature 熟练"
+    },
+    {
+      "key": "skill_nature_misc",
+      "sheet": "主要情况",
+      "address": "F32",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "nature 修正"
+    },
+    {
+      "key": "skill_religion_prof",
+      "sheet": "主要情况",
+      "address": "B33",
+      "kind": "value",
+      "requirement": "required",
+      "description": "religion 熟练"
+    },
+    {
+      "key": "skill_religion_misc",
+      "sheet": "主要情况",
+      "address": "F33",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "religion 修正"
+    },
+    {
+      "key": "skill_perception_prof",
+      "sheet": "主要情况",
+      "address": "B35",
+      "kind": "value",
+      "requirement": "required",
+      "description": "perception 熟练"
+    },
+    {
+      "key": "skill_perception_misc",
+      "sheet": "主要情况",
+      "address": "F35",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "perception 修正"
+    },
+    {
+      "key": "skill_insight_prof",
+      "sheet": "主要情况",
+      "address": "B36",
+      "kind": "value",
+      "requirement": "required",
+      "description": "insight 熟练"
+    },
+    {
+      "key": "skill_insight_misc",
+      "sheet": "主要情况",
+      "address": "F36",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "insight 修正"
+    },
+    {
+      "key": "skill_animal_handling_prof",
+      "sheet": "主要情况",
+      "address": "B37",
+      "kind": "value",
+      "requirement": "required",
+      "description": "animal_handling 熟练"
+    },
+    {
+      "key": "skill_animal_handling_misc",
+      "sheet": "主要情况",
+      "address": "F37",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "animal_handling 修正"
+    },
+    {
+      "key": "skill_medicine_prof",
+      "sheet": "主要情况",
+      "address": "B38",
+      "kind": "value",
+      "requirement": "required",
+      "description": "medicine 熟练"
+    },
+    {
+      "key": "skill_medicine_misc",
+      "sheet": "主要情况",
+      "address": "F38",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "medicine 修正"
+    },
+    {
+      "key": "skill_survival_prof",
+      "sheet": "主要情况",
+      "address": "B39",
+      "kind": "value",
+      "requirement": "required",
+      "description": "survival 熟练"
+    },
+    {
+      "key": "skill_survival_misc",
+      "sheet": "主要情况",
+      "address": "F39",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "survival 修正"
+    },
+    {
+      "key": "skill_persuasion_prof",
+      "sheet": "主要情况",
+      "address": "B41",
+      "kind": "value",
+      "requirement": "required",
+      "description": "persuasion 熟练"
+    },
+    {
+      "key": "skill_persuasion_misc",
+      "sheet": "主要情况",
+      "address": "F41",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "persuasion 修正"
+    },
+    {
+      "key": "skill_deception_prof",
+      "sheet": "主要情况",
+      "address": "B42",
+      "kind": "value",
+      "requirement": "required",
+      "description": "deception 熟练"
+    },
+    {
+      "key": "skill_deception_misc",
+      "sheet": "主要情况",
+      "address": "F42",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "deception 修正"
+    },
+    {
+      "key": "skill_intimidation_prof",
+      "sheet": "主要情况",
+      "address": "B43",
+      "kind": "value",
+      "requirement": "required",
+      "description": "intimidation 熟练"
+    },
+    {
+      "key": "skill_intimidation_misc",
+      "sheet": "主要情况",
+      "address": "F43",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "intimidation 修正"
+    },
+    {
+      "key": "skill_performance_prof",
+      "sheet": "主要情况",
+      "address": "B44",
+      "kind": "value",
+      "requirement": "required",
+      "description": "performance 熟练"
+    },
+    {
+      "key": "skill_performance_misc",
+      "sheet": "主要情况",
+      "address": "F44",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "performance 修正"
+    },
+    {
+      "key": "ac_misc",
+      "sheet": "主要情况",
+      "address": "S10",
+      "kind": "input",
+      "requirement": "required",
+      "description": "AC 其他加值"
+    },
+    {
+      "key": "initiative",
+      "sheet": "主要情况",
+      "address": "P8",
+      "kind": "value",
+      "requirement": "required",
+      "description": "先攻"
+    },
+    {
+      "key": "hp_max",
+      "sheet": "主要情况",
+      "address": "AC8",
+      "kind": "value",
+      "requirement": "required",
+      "description": "最大生命值"
+    },
+    {
+      "key": "hp_current",
+      "sheet": "主要情况",
+      "address": "Y8",
+      "kind": "input",
+      "requirement": "required",
+      "description": "当前生命值"
+    },
+    {
+      "key": "hp_temp",
+      "sheet": "主要情况",
+      "address": "AD14",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "临时生命值"
+    },
+    {
+      "key": "speed",
+      "sheet": "主要情况",
+      "address": "AD17",
+      "kind": "value",
+      "requirement": "required",
+      "description": "速度"
+    },
+    {
+      "key": "hit_dice_total",
+      "sheet": "主要情况",
+      "address": "Y11",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "生命骰数量"
+    },
+    {
+      "key": "feature_1_level",
+      "sheet": "主要情况",
+      "address": "BM25",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性1等级"
+    },
+    {
+      "key": "feature_1_name",
+      "sheet": "主要情况",
+      "address": "BN25",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性1名称"
+    },
+    {
+      "key": "feature_1_desc",
+      "sheet": "主要情况",
+      "address": "BS25",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性1描述"
+    },
+    {
+      "key": "feature_2_level",
+      "sheet": "主要情况",
+      "address": "BM26",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性2等级"
+    },
+    {
+      "key": "feature_2_name",
+      "sheet": "主要情况",
+      "address": "BN26",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性2名称"
+    },
+    {
+      "key": "feature_2_desc",
+      "sheet": "主要情况",
+      "address": "BS26",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性2描述"
+    },
+    {
+      "key": "feature_3_level",
+      "sheet": "主要情况",
+      "address": "BM27",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性3等级"
+    },
+    {
+      "key": "feature_3_name",
+      "sheet": "主要情况",
+      "address": "BN27",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性3名称"
+    },
+    {
+      "key": "feature_3_desc",
+      "sheet": "主要情况",
+      "address": "BS27",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性3描述"
+    },
+    {
+      "key": "feature_4_level",
+      "sheet": "主要情况",
+      "address": "BM28",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性4等级"
+    },
+    {
+      "key": "feature_4_name",
+      "sheet": "主要情况",
+      "address": "BN28",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性4名称"
+    },
+    {
+      "key": "feature_4_desc",
+      "sheet": "主要情况",
+      "address": "BS28",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性4描述"
+    },
+    {
+      "key": "feature_5_level",
+      "sheet": "主要情况",
+      "address": "BM29",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性5等级"
+    },
+    {
+      "key": "feature_5_name",
+      "sheet": "主要情况",
+      "address": "BN29",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性5名称"
+    },
+    {
+      "key": "feature_5_desc",
+      "sheet": "主要情况",
+      "address": "BS29",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性5描述"
+    },
+    {
+      "key": "item_1",
+      "sheet": "主要情况",
+      "address": "O31",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品1"
+    },
+    {
+      "key": "item_2",
+      "sheet": "主要情况",
+      "address": "O32",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品2"
+    },
+    {
+      "key": "item_3",
+      "sheet": "主要情况",
+      "address": "O33",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品3"
+    },
+    {
+      "key": "item_4",
+      "sheet": "主要情况",
+      "address": "O34",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品4"
+    },
+    {
+      "key": "item_5",
+      "sheet": "主要情况",
+      "address": "O35",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品5"
+    },
+    {
+      "key": "item_6",
+      "sheet": "主要情况",
+      "address": "O36",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品6"
+    },
+    {
+      "key": "item_7",
+      "sheet": "主要情况",
+      "address": "O37",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品7"
+    },
+    {
+      "key": "item_8",
+      "sheet": "主要情况",
+      "address": "O38",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品8"
+    },
+    {
+      "key": "item_9",
+      "sheet": "主要情况",
+      "address": "O39",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品9"
+    },
+    {
+      "key": "item_10",
+      "sheet": "主要情况",
+      "address": "O40",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品10"
+    },
+    {
+      "key": "attack_1_name",
+      "sheet": "主要情况",
+      "address": "O25",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击1名称"
+    },
+    {
+      "key": "attack_1_bonus",
+      "sheet": "主要情况",
+      "address": "AD25",
+      "kind": "value",
+      "requirement": "optional",
+      "description": "攻击1加值"
+    },
+    {
+      "key": "attack_1_damage",
+      "sheet": "主要情况",
+      "address": "AI25",
+      "kind": "value",
+      "requirement": "optional",
+      "description": "攻击1伤害"
+    },
+    {
+      "key": "attack_1_type",
+      "sheet": "主要情况",
+      "address": "AM25",
+      "kind": "value",
+      "requirement": "optional",
+      "description": "攻击1类型"
+    },
+    {
+      "key": "attack_2_name",
+      "sheet": "主要情况",
+      "address": "O26",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击2名称"
+    },
+    {
+      "key": "attack_2_bonus",
+      "sheet": "主要情况",
+      "address": "AD26",
+      "kind": "value",
+      "requirement": "optional",
+      "description": "攻击2加值"
+    },
+    {
+      "key": "attack_2_damage",
+      "sheet": "主要情况",
+      "address": "AI26",
+      "kind": "value",
+      "requirement": "optional",
+      "description": "攻击2伤害"
+    },
+    {
+      "key": "attack_2_type",
+      "sheet": "主要情况",
+      "address": "AM26",
+      "kind": "value",
+      "requirement": "optional",
+      "description": "攻击2类型"
+    },
+    {
+      "key": "attack_3_name",
+      "sheet": "主要情况",
+      "address": "O27",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击3名称"
+    },
+    {
+      "key": "attack_3_bonus",
+      "sheet": "主要情况",
+      "address": "AD27",
+      "kind": "value",
+      "requirement": "optional",
+      "description": "攻击3加值"
+    },
+    {
+      "key": "attack_3_damage",
+      "sheet": "主要情况",
+      "address": "AI27",
+      "kind": "value",
+      "requirement": "optional",
+      "description": "攻击3伤害"
+    },
+    {
+      "key": "attack_3_type",
+      "sheet": "主要情况",
+      "address": "AM27",
+      "kind": "value",
+      "requirement": "optional",
+      "description": "攻击3类型"
+    },
+    {
+      "key": "pp",
+      "sheet": "主要情况",
+      "address": "AG40",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "pp 钱币"
+    },
+    {
+      "key": "gp",
+      "sheet": "主要情况",
+      "address": "AG41",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "gp 钱币"
+    },
+    {
+      "key": "ep",
+      "sheet": "主要情况",
+      "address": "AG42",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "ep 钱币"
+    },
+    {
+      "key": "sp",
+      "sheet": "主要情况",
+      "address": "AG43",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "sp 钱币"
+    },
+    {
+      "key": "cp",
+      "sheet": "主要情况",
+      "address": "AG44",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "cp 钱币"
+    }
+  ]
+}

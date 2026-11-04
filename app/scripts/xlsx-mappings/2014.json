@@ -1,0 +1,1358 @@
+{
+  "version": 4,
+  "title": "2014 自动卡字段映射",
+  "entries": [
+    {
+      "key": "character_name",
+      "sheet": "主要",
+      "address": "E3",
+      "kind": "input",
+      "requirement": "required",
+      "description": "角色名"
+    },
+    {
+      "key": "player_name",
+      "sheet": "主要",
+      "address": "E4",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "玩家名"
+    },
+    {
+      "key": "class_name",
+      "sheet": "主要",
+      "address": "S3",
+      "kind": "input",
+      "requirement": "required",
+      "description": "职业"
+    },
+    {
+      "key": "experience",
+      "sheet": "主要",
+      "address": "S4",
+      "kind": "input",
+      "requirement": "required",
+      "description": "经验值"
+    },
+    {
+      "key": "race",
+      "sheet": "主要",
+      "address": "E6",
+      "kind": "input",
+      "requirement": "required",
+      "description": "种族"
+    },
+    {
+      "key": "alignment",
+      "sheet": "主要",
+      "address": "L9",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "阵营"
+    },
+    {
+      "key": "level",
+      "sheet": "主要",
+      "address": "Y3",
+      "kind": "input",
+      "requirement": "required",
+      "description": "等级"
+    },
+    {
+      "key": "other_proficiencies_languages",
+      "sheet": "主要",
+      "address": "S9",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "熟练与语言"
+    },
+    {
+      "key": "str_score",
+      "sheet": "主要",
+      "address": "I14",
+      "kind": "input",
+      "requirement": "required",
+      "description": "str 属性值"
+    },
+    {
+      "key": "dex_score",
+      "sheet": "主要",
+      "address": "I16",
+      "kind": "input",
+      "requirement": "required",
+      "description": "dex 属性值"
+    },
+    {
+      "key": "con_score",
+      "sheet": "主要",
+      "address": "I18",
+      "kind": "input",
+      "requirement": "required",
+      "description": "con 属性值"
+    },
+    {
+      "key": "int_score",
+      "sheet": "主要",
+      "address": "I20",
+      "kind": "input",
+      "requirement": "required",
+      "description": "int 属性值"
+    },
+    {
+      "key": "wis_score",
+      "sheet": "主要",
+      "address": "I22",
+      "kind": "input",
+      "requirement": "required",
+      "description": "wis 属性值"
+    },
+    {
+      "key": "cha_score",
+      "sheet": "主要",
+      "address": "I24",
+      "kind": "input",
+      "requirement": "required",
+      "description": "cha 属性值"
+    },
+    {
+      "key": "save_str_prof",
+      "sheet": "主要",
+      "address": "A14",
+      "kind": "input",
+      "requirement": "required",
+      "description": "str 豁免熟练"
+    },
+    {
+      "key": "save_str_misc",
+      "sheet": "主要",
+      "address": "W14",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "str 豁免修正"
+    },
+    {
+      "key": "save_dex_prof",
+      "sheet": "主要",
+      "address": "A16",
+      "kind": "input",
+      "requirement": "required",
+      "description": "dex 豁免熟练"
+    },
+    {
+      "key": "save_dex_misc",
+      "sheet": "主要",
+      "address": "W16",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "dex 豁免修正"
+    },
+    {
+      "key": "save_con_prof",
+      "sheet": "主要",
+      "address": "A18",
+      "kind": "input",
+      "requirement": "required",
+      "description": "con 豁免熟练"
+    },
+    {
+      "key": "save_con_misc",
+      "sheet": "主要",
+      "address": "W18",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "con 豁免修正"
+    },
+    {
+      "key": "save_int_prof",
+      "sheet": "主要",
+      "address": "A20",
+      "kind": "input",
+      "requirement": "required",
+      "description": "int 豁免熟练"
+    },
+    {
+      "key": "save_int_misc",
+      "sheet": "主要",
+      "address": "W20",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "int 豁免修正"
+    },
+    {
+      "key": "save_wis_prof",
+      "sheet": "主要",
+      "address": "A22",
+      "kind": "input",
+      "requirement": "required",
+      "description": "wis 豁免熟练"
+    },
+    {
+      "key": "save_wis_misc",
+      "sheet": "主要",
+      "address": "W22",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "wis 豁免修正"
+    },
+    {
+      "key": "save_cha_prof",
+      "sheet": "主要",
+      "address": "A24",
+      "kind": "input",
+      "requirement": "required",
+      "description": "cha 豁免熟练"
+    },
+    {
+      "key": "save_cha_misc",
+      "sheet": "主要",
+      "address": "W24",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "cha 豁免修正"
+    },
+    {
+      "key": "skill_athletics_prof",
+      "sheet": "主要",
+      "address": "A45",
+      "kind": "input",
+      "requirement": "required",
+      "description": "athletics 熟练"
+    },
+    {
+      "key": "skill_athletics_misc",
+      "sheet": "主要",
+      "address": "F45",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "athletics 修正"
+    },
+    {
+      "key": "skill_acrobatics_prof",
+      "sheet": "主要",
+      "address": "A47",
+      "kind": "input",
+      "requirement": "required",
+      "description": "acrobatics 熟练"
+    },
+    {
+      "key": "skill_acrobatics_misc",
+      "sheet": "主要",
+      "address": "F47",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "acrobatics 修正"
+    },
+    {
+      "key": "skill_sleight_of_hand_prof",
+      "sheet": "主要",
+      "address": "A48",
+      "kind": "input",
+      "requirement": "required",
+      "description": "sleight_of_hand 熟练"
+    },
+    {
+      "key": "skill_sleight_of_hand_misc",
+      "sheet": "主要",
+      "address": "F48",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "sleight_of_hand 修正"
+    },
+    {
+      "key": "skill_stealth_prof",
+      "sheet": "主要",
+      "address": "A49",
+      "kind": "input",
+      "requirement": "required",
+      "description": "stealth 熟练"
+    },
+    {
+      "key": "skill_stealth_misc",
+      "sheet": "主要",
+      "address": "F49",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "stealth 修正"
+    },
+    {
+      "key": "skill_investigation_prof",
+      "sheet": "主要",
+      "address": "A51",
+      "kind": "input",
+      "requirement": "required",
+      "description": "investigation 熟练"
+    },
+    {
+      "key": "skill_investigation_misc",
+      "sheet": "主要",
+      "address": "F51",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "investigation 修正"
+    },
+    {
+      "key": "skill_arcana_prof",
+      "sheet": "主要",
+      "address": "A52",
+      "kind": "input",
+      "requirement": "required",
+      "description": "arcana 熟练"
+    },
+    {
+      "key": "skill_arcana_misc",
+      "sheet": "主要",
+      "address": "F52",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "arcana 修正"
+    },
+    {
+      "key": "skill_history_prof",
+      "sheet": "主要",
+      "address": "A53",
+      "kind": "input",
+      "requirement": "required",
+      "description": "history 熟练"
+    },
+    {
+      "key": "skill_history_misc",
+      "sheet": "主要",
+      "address": "F53",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "history 修正"
+    },
+    {
+      "key": "skill_nature_prof",
+      "sheet": "主要",
+      "address": "A54",
+      "kind": "input",
+      "requirement": "required",
+      "description": "nature 熟练"
+    },
+    {
+      "key": "skill_nature_misc",
+      "sheet": "主要",
+      "address": "F54",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "nature 修正"
+    },
+    {
+      "key": "skill_religion_prof",
+      "sheet": "主要",
+      "address": "A55",
+      "kind": "input",
+      "requirement": "required",
+      "description": "religion 熟练"
+    },
+    {
+      "key": "skill_religion_misc",
+      "sheet": "主要",
+      "address": "F55",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "religion 修正"
+    },
+    {
+      "key": "skill_perception_prof",
+      "sheet": "主要",
+      "address": "A57",
+      "kind": "input",
+      "requirement": "required",
+      "description": "perception 熟练"
+    },
+    {
+      "key": "skill_perception_misc",
+      "sheet": "主要",
+      "address": "F57",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "perception 修正"
+    },
+    {
+      "key": "skill_insight_prof",
+      "sheet": "主要",
+      "address": "A58",
+      "kind": "input",
+      "requirement": "required",
+      "description": "insight 熟练"
+    },
+    {
+      "key": "skill_insight_misc",
+      "sheet": "主要",
+      "address": "F58",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "insight 修正"
+    },
+    {
+      "key": "skill_animal_handling_prof",
+      "sheet": "主要",
+      "address": "A59",
+      "kind": "input",
+      "requirement": "required",
+      "description": "animal_handling 熟练"
+    },
+    {
+      "key": "skill_animal_handling_misc",
+      "sheet": "主要",
+      "address": "F59",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "animal_handling 修正"
+    },
+    {
+      "key": "skill_medicine_prof",
+      "sheet": "主要",
+      "address": "A60",
+      "kind": "input",
+      "requirement": "required",
+      "description": "medicine 熟练"
+    },
+    {
+      "key": "skill_medicine_misc",
+      "sheet": "主要",
+      "address": "F60",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "medicine 修正"
+    },
+    {
+      "key": "skill_survival_prof",
+      "sheet": "主要",
+      "address": "A61",
+      "kind": "input",
+      "requirement": "required",
+      "description": "survival 熟练"
+    },
+    {
+      "key": "skill_survival_misc",
+      "sheet": "主要",
+      "address": "F61",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "survival 修正"
+    },
+    {
+      "key": "skill_persuasion_prof",
+      "sheet": "主要",
+      "address": "A63",
+      "kind": "input",
+      "requirement": "required",
+      "description": "persuasion 熟练"
+    },
+    {
+      "key": "skill_persuasion_misc",
+      "sheet": "主要",
+      "address": "F63",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "persuasion 修正"
+    },
+    {
+      "key": "skill_deception_prof",
+      "sheet": "主要",
+      "address": "A64",
+      "kind": "input",
+      "requirement": "required",
+      "description": "deception 熟练"
+    },
+    {
+      "key": "skill_deception_misc",
+      "sheet": "主要",
+      "address": "F64",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "deception 修正"
+    },
+    {
+      "key": "skill_intimidation_prof",
+      "sheet": "主要",
+      "address": "A65",
+      "kind": "input",
+      "requirement": "required",
+      "description": "intimidation 熟练"
+    },
+    {
+      "key": "skill_intimidation_misc",
+      "sheet": "主要",
+      "address": "F65",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "intimidation 修正"
+    },
+    {
+      "key": "skill_performance_prof",
+      "sheet": "主要",
+      "address": "A66",
+      "kind": "input",
+      "requirement": "required",
+      "description": "performance 熟练"
+    },
+    {
+      "key": "skill_performance_misc",
+      "sheet": "主要",
+      "address": "F66",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "performance 修正"
+    },
+    {
+      "key": "ac_misc",
+      "sheet": "主要",
+      "address": "G32",
+      "kind": "input",
+      "requirement": "required",
+      "description": "AC 其他加值"
+    },
+    {
+      "key": "initiative_misc",
+      "sheet": "主要",
+      "address": "G29",
+      "kind": "input",
+      "requirement": "required",
+      "description": "先攻其他加值"
+    },
+    {
+      "key": "speed",
+      "sheet": "主要",
+      "address": "Q38",
+      "kind": "input",
+      "requirement": "required",
+      "description": "速度"
+    },
+    {
+      "key": "hp_max",
+      "sheet": "主要",
+      "address": "BE10",
+      "kind": "value",
+      "requirement": "required",
+      "description": "最大生命值"
+    },
+    {
+      "key": "hp_current",
+      "sheet": "主要",
+      "address": "M29",
+      "kind": "input",
+      "requirement": "required",
+      "description": "当前生命值"
+    },
+    {
+      "key": "hp_temp",
+      "sheet": "主要",
+      "address": "X29",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "临时生命值"
+    },
+    {
+      "key": "hit_dice_total",
+      "sheet": "主要",
+      "address": "L32",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "生命骰总数"
+    },
+    {
+      "key": "hit_dice_die",
+      "sheet": "主要",
+      "address": "M32",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "生命骰面数"
+    },
+    {
+      "key": "feature_1_level",
+      "sheet": "主要",
+      "address": "B90",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性1等级"
+    },
+    {
+      "key": "feature_1_name",
+      "sheet": "主要",
+      "address": "C90",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性1名称"
+    },
+    {
+      "key": "feature_1_desc",
+      "sheet": "主要",
+      "address": "H90",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性1描述"
+    },
+    {
+      "key": "feature_2_level",
+      "sheet": "主要",
+      "address": "B91",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性2等级"
+    },
+    {
+      "key": "feature_2_name",
+      "sheet": "主要",
+      "address": "C91",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性2名称"
+    },
+    {
+      "key": "feature_2_desc",
+      "sheet": "主要",
+      "address": "H91",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性2描述"
+    },
+    {
+      "key": "feature_3_level",
+      "sheet": "主要",
+      "address": "B92",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性3等级"
+    },
+    {
+      "key": "feature_3_name",
+      "sheet": "主要",
+      "address": "C92",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性3名称"
+    },
+    {
+      "key": "feature_3_desc",
+      "sheet": "主要",
+      "address": "H92",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性3描述"
+    },
+    {
+      "key": "feature_4_level",
+      "sheet": "主要",
+      "address": "B93",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性4等级"
+    },
+    {
+      "key": "feature_4_name",
+      "sheet": "主要",
+      "address": "C93",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性4名称"
+    },
+    {
+      "key": "feature_4_desc",
+      "sheet": "主要",
+      "address": "H93",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性4描述"
+    },
+    {
+      "key": "feature_5_level",
+      "sheet": "主要",
+      "address": "B94",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性5等级"
+    },
+    {
+      "key": "feature_5_name",
+      "sheet": "主要",
+      "address": "C94",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性5名称"
+    },
+    {
+      "key": "feature_5_desc",
+      "sheet": "主要",
+      "address": "H94",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性5描述"
+    },
+    {
+      "key": "feature_6_level",
+      "sheet": "主要",
+      "address": "B95",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性6等级"
+    },
+    {
+      "key": "feature_6_name",
+      "sheet": "主要",
+      "address": "C95",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性6名称"
+    },
+    {
+      "key": "feature_6_desc",
+      "sheet": "主要",
+      "address": "H95",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性6描述"
+    },
+    {
+      "key": "feature_7_level",
+      "sheet": "主要",
+      "address": "B96",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性7等级"
+    },
+    {
+      "key": "feature_7_name",
+      "sheet": "主要",
+      "address": "C96",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性7名称"
+    },
+    {
+      "key": "feature_7_desc",
+      "sheet": "主要",
+      "address": "H96",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性7描述"
+    },
+    {
+      "key": "feature_8_level",
+      "sheet": "主要",
+      "address": "B97",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性8等级"
+    },
+    {
+      "key": "feature_8_name",
+      "sheet": "主要",
+      "address": "C97",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性8名称"
+    },
+    {
+      "key": "feature_8_desc",
+      "sheet": "主要",
+      "address": "H97",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性8描述"
+    },
+    {
+      "key": "feature_9_level",
+      "sheet": "主要",
+      "address": "B98",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性9等级"
+    },
+    {
+      "key": "feature_9_name",
+      "sheet": "主要",
+      "address": "C98",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性9名称"
+    },
+    {
+      "key": "feature_9_desc",
+      "sheet": "主要",
+      "address": "H98",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性9描述"
+    },
+    {
+      "key": "feature_10_level",
+      "sheet": "主要",
+      "address": "B99",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性10等级"
+    },
+    {
+      "key": "feature_10_name",
+      "sheet": "主要",
+      "address": "C99",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性10名称"
+    },
+    {
+      "key": "feature_10_desc",
+      "sheet": "主要",
+      "address": "H99",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "特性10描述"
+    },
+    {
+      "key": "item_1",
+      "sheet": "主要",
+      "address": "Q53",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品1"
+    },
+    {
+      "key": "item_2",
+      "sheet": "主要",
+      "address": "Q54",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品2"
+    },
+    {
+      "key": "item_3",
+      "sheet": "主要",
+      "address": "Q55",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品3"
+    },
+    {
+      "key": "item_4",
+      "sheet": "主要",
+      "address": "Q56",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品4"
+    },
+    {
+      "key": "item_5",
+      "sheet": "主要",
+      "address": "Q57",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品5"
+    },
+    {
+      "key": "item_6",
+      "sheet": "主要",
+      "address": "Q58",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品6"
+    },
+    {
+      "key": "item_7",
+      "sheet": "主要",
+      "address": "Q59",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品7"
+    },
+    {
+      "key": "item_8",
+      "sheet": "主要",
+      "address": "Q60",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品8"
+    },
+    {
+      "key": "item_9",
+      "sheet": "主要",
+      "address": "Q61",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "物品9"
+    },
+    {
+      "key": "attack_1_name",
+      "sheet": "主要",
+      "address": "P47",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击1名称"
+    },
+    {
+      "key": "attack_1_bonus",
+      "sheet": "主要",
+      "address": "T47",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击1加值"
+    },
+    {
+      "key": "attack_1_damage",
+      "sheet": "主要",
+      "address": "AI47",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击1伤害"
+    },
+    {
+      "key": "attack_1_type",
+      "sheet": "主要",
+      "address": "AN47",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击1类型"
+    },
+    {
+      "key": "attack_2_name",
+      "sheet": "主要",
+      "address": "P48",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击2名称"
+    },
+    {
+      "key": "attack_2_bonus",
+      "sheet": "主要",
+      "address": "T48",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击2加值"
+    },
+    {
+      "key": "attack_2_damage",
+      "sheet": "主要",
+      "address": "AI48",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击2伤害"
+    },
+    {
+      "key": "attack_2_type",
+      "sheet": "主要",
+      "address": "AN48",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击2类型"
+    },
+    {
+      "key": "attack_3_name",
+      "sheet": "主要",
+      "address": "P49",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击3名称"
+    },
+    {
+      "key": "attack_3_bonus",
+      "sheet": "主要",
+      "address": "T49",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击3加值"
+    },
+    {
+      "key": "attack_3_damage",
+      "sheet": "主要",
+      "address": "AI49",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击3伤害"
+    },
+    {
+      "key": "attack_3_type",
+      "sheet": "主要",
+      "address": "AN49",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击3类型"
+    },
+    {
+      "key": "attack_4_name",
+      "sheet": "主要",
+      "address": "P50",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击4名称"
+    },
+    {
+      "key": "attack_4_bonus",
+      "sheet": "主要",
+      "address": "T50",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击4加值"
+    },
+    {
+      "key": "attack_4_damage",
+      "sheet": "主要",
+      "address": "AI50",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击4伤害"
+    },
+    {
+      "key": "attack_4_type",
+      "sheet": "主要",
+      "address": "AN50",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "攻击4类型"
+    },
+    {
+      "key": "pp",
+      "sheet": "主要",
+      "address": "AG62",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "pp 钱币"
+    },
+    {
+      "key": "ep",
+      "sheet": "主要",
+      "address": "AG63",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "ep 钱币"
+    },
+    {
+      "key": "gp",
+      "sheet": "主要",
+      "address": "AG64",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "gp 钱币"
+    },
+    {
+      "key": "sp",
+      "sheet": "主要",
+      "address": "AG65",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "sp 钱币"
+    },
+    {
+      "key": "cp",
+      "sheet": "主要",
+      "address": "AG66",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "cp 钱币"
+    },
+    {
+      "key": "spell_slot_1",
+      "sheet": "主要",
+      "address": "AN58",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "1 环法术位"
+    },
+    {
+      "key": "spell_slot_2",
+      "sheet": "主要",
+      "address": "AN59",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "2 环法术位"
+    },
+    {
+      "key": "spell_slot_3",
+      "sheet": "主要",
+      "address": "AN60",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "3 环法术位"
+    },
+    {
+      "key": "spell_slot_4",
+      "sheet": "主要",
+      "address": "AN61",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "4 环法术位"
+    },
+    {
+      "key": "spell_slot_5",
+      "sheet": "主要",
+      "address": "AN62",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "5 环法术位"
+    },
+    {
+      "key": "spell_slot_6",
+      "sheet": "主要",
+      "address": "AN63",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "6 环法术位"
+    },
+    {
+      "key": "spell_slot_7",
+      "sheet": "主要",
+      "address": "AN64",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "7 环法术位"
+    },
+    {
+      "key": "spell_slot_8",
+      "sheet": "主要",
+      "address": "AN65",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "8 环法术位"
+    },
+    {
+      "key": "spell_slot_9",
+      "sheet": "主要",
+      "address": "AN66",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "9 环法术位"
+    },
+    {
+      "key": "spell_1",
+      "sheet": "主要",
+      "address": "C72",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_1"
+    },
+    {
+      "key": "spell_2",
+      "sheet": "主要",
+      "address": "C73",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_2"
+    },
+    {
+      "key": "spell_3",
+      "sheet": "主要",
+      "address": "C74",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_3"
+    },
+    {
+      "key": "spell_4",
+      "sheet": "主要",
+      "address": "C75",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_4"
+    },
+    {
+      "key": "spell_5",
+      "sheet": "主要",
+      "address": "C76",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_5"
+    },
+    {
+      "key": "spell_6",
+      "sheet": "主要",
+      "address": "C77",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_6"
+    },
+    {
+      "key": "spell_7",
+      "sheet": "主要",
+      "address": "C78",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_7"
+    },
+    {
+      "key": "spell_8",
+      "sheet": "主要",
+      "address": "C79",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_8"
+    },
+    {
+      "key": "spell_9",
+      "sheet": "主要",
+      "address": "C80",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_9"
+    },
+    {
+      "key": "spell_10",
+      "sheet": "主要",
+      "address": "C81",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_10"
+    },
+    {
+      "key": "spell_11",
+      "sheet": "主要",
+      "address": "J72",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_11"
+    },
+    {
+      "key": "spell_12",
+      "sheet": "主要",
+      "address": "J73",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_12"
+    },
+    {
+      "key": "spell_13",
+      "sheet": "主要",
+      "address": "J74",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_13"
+    },
+    {
+      "key": "spell_14",
+      "sheet": "主要",
+      "address": "J75",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_14"
+    },
+    {
+      "key": "spell_15",
+      "sheet": "主要",
+      "address": "J76",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_15"
+    },
+    {
+      "key": "spell_16",
+      "sheet": "主要",
+      "address": "J77",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_16"
+    },
+    {
+      "key": "spell_17",
+      "sheet": "主要",
+      "address": "J78",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_17"
+    },
+    {
+      "key": "spell_18",
+      "sheet": "主要",
+      "address": "J79",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_18"
+    },
+    {
+      "key": "spell_19",
+      "sheet": "主要",
+      "address": "J80",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_19"
+    },
+    {
+      "key": "spell_20",
+      "sheet": "主要",
+      "address": "J81",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_20"
+    },
+    {
+      "key": "spell_21",
+      "sheet": "主要",
+      "address": "Q72",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_21"
+    },
+    {
+      "key": "spell_22",
+      "sheet": "主要",
+      "address": "Q73",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_22"
+    },
+    {
+      "key": "spell_23",
+      "sheet": "主要",
+      "address": "Q74",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_23"
+    },
+    {
+      "key": "spell_24",
+      "sheet": "主要",
+      "address": "Q75",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_24"
+    },
+    {
+      "key": "spell_25",
+      "sheet": "主要",
+      "address": "Q76",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_25"
+    },
+    {
+      "key": "spell_26",
+      "sheet": "主要",
+      "address": "Q77",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_26"
+    },
+    {
+      "key": "spell_27",
+      "sheet": "主要",
+      "address": "Q78",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_27"
+    },
+    {
+      "key": "spell_28",
+      "sheet": "主要",
+      "address": "Q79",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_28"
+    },
+    {
+      "key": "spell_29",
+      "sheet": "主要",
+      "address": "Q80",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_29"
+    },
+    {
+      "key": "spell_30",
+      "sheet": "主要",
+      "address": "Q81",
+      "kind": "input",
+      "requirement": "optional",
+      "description": "法术 spell_30"
+    }
+  ]
+}

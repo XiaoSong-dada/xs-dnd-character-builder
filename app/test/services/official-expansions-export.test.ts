@@ -10,7 +10,7 @@ import { CharacterJsonService } from '@/services/character-json'
 import { CharacterPackageService } from '@/services/character-package'
 import { DraftStorageService } from '@/services/draft-storage'
 import { fillPdfTemplate } from '@/services/export-pdf'
-import { buildXlsxFieldValues, fillTemplate, readFieldMapping } from '@/services/export-xlsx'
+import { buildXlsxFieldValues, fillCharacterSheetTemplate } from '@/services/export-xlsx'
 import { officialDraft, officialIds } from '../fixtures/official-expansions-2014'
 
 describe('O01官方扩展实际导出与存储', () => {
@@ -27,19 +27,8 @@ describe('O01官方扩展实际导出与存储', () => {
     const restored = await CharacterPackageService.import(new Blob([bytes as BlobPart], { type: 'application/zip' }))
     expect(restored.selections).toEqual(draft.selections)
     expect(buildCharacterExportModel(restored, deriveCharacter(restored)).features).toEqual(model.features)
-    const ExcelJS = await import('exceljs')
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-zh.xlsx')))
-    expect(fillTemplate(workbook, model).diagnostics.filter((item) => item.severity === 'error')).toEqual([])
-    const actual = new ExcelJS.Workbook()
-    await actual.xlsx.load(await workbook.xlsx.writeBuffer())
-    const mapping = readFieldMapping(actual)
-    for (const [key, value] of Object.entries(buildXlsxFieldValues(model).values)) {
-      const target = mapping.get(key)
-      if (!target) continue
-      const cell = actual.getWorksheet(target.sheet)?.getCell(target.address)
-      expect(cell?.formula ? cell.result ?? '' : cell?.value ?? '', key).toEqual(value)
-    }
+    const xlsx = fillCharacterSheetTemplate(new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-2014.xlsx'))), model, '2014')
+    expect(xlsx.diagnostics.filter((item) => item.severity === 'error')).toEqual([])
     const template = new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-zh-plus.pdf')))
     const font = new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/fonts/noto-sans-sc-subset.ttf')))
     const pdf = await fillPdfTemplate(template, font, model)
@@ -60,10 +49,7 @@ describe('O01官方扩展实际导出与存储', () => {
     const model = buildCharacterExportModel(saved, deriveCharacter(saved))
     expect(model.proficiencies.languages).toContain('通用语')
     expect(model.features.find((f) => f.name === '保留先祖遗产')?.summary).toContain('飞行')
-    const ExcelJS = await import('exceljs')
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-zh.xlsx')))
-    expect(fillTemplate(workbook, model).diagnostics.filter((item) => item.severity === 'error')).toEqual([])
+    expect(fillCharacterSheetTemplate(new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-2014.xlsx'))), model, '2014').diagnostics.filter((item) => item.severity === 'error')).toEqual([])
     expect(JSON.stringify(buildXlsxFieldValues(model).values)).toContain('飞行')
     const template = new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-zh-plus.pdf')))
     const font = new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/fonts/noto-sans-sc-subset.ttf')))

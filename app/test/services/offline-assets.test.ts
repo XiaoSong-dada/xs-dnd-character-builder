@@ -71,7 +71,7 @@ describe('离线资源清单', () => {
     const result = await downloadOfflineAssets((state) => progress.push(state.completed), storage)
 
     expect(result).toEqual({ outcome: 'completed', failedIds: [] })
-    expect(progress).toEqual([1, 2, 3])
+    expect(progress).toEqual(offlineAssets.map((_, index) => index + 1))
     expect(storage.stored.size).toBe(offlineAssets.length)
   })
 

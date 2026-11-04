@@ -1,14 +1,15 @@
-import type { Workbook } from 'exceljs'
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 
 import { formatExportCantripScaling, formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
 import {
   CHARACTER_SHEET_OFFLINE_MESSAGE,
-  CHARACTER_SHEET_XLSX_TEMPLATE_URL,
+  CHARACTER_SHEET_XLSX_TEMPLATE_URLS,
+  type CharacterSheetXlsxTemplateId,
 } from '@/services/character-sheet-templates'
 
 export const CHARACTER_SHEET_TEMPLATE_VERSION = 4
 
-export type TemplateFieldKind = 'input' | 'formula-cache' | 'optional'
+export type TemplateFieldKind = 'input' | 'formula-cache' | 'value'
 export type TemplateFieldRequirement = 'required' | 'conditional' | 'optional'
 
 export interface TemplateFieldTarget {
@@ -18,12 +19,300 @@ export interface TemplateFieldTarget {
   readonly requirement: TemplateFieldRequirement
 }
 
-export interface TemplateFillResult {
-  readonly diagnostics: readonly ExportDiagnostic[]
-  readonly writtenKeys: readonly string[]
+export interface XlsxTemplateMapping {
+  readonly version: number
+  readonly targets: ReadonlyMap<string, TemplateFieldTarget>
 }
 
-const SKILL_FIELDS: Readonly<Record<string, string>> = {
+export interface XlsxFillResult {
+  readonly bytes: Uint8Array
+  readonly diagnostics: readonly ExportDiagnostic[]
+}
+
+const XML_ENTITIES: Readonly<Record<string, string>> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&apos;': "'",
+}
+
+function decodeXmlText(value: string): string {
+  return value.replace(/&(?:#(\d+)|#x([\da-f]+)|amp|lt|gt|quot|apos);/gi, (entity, decimal: string | undefined, hexadecimal: string | undefined) => {
+    if (decimal) return String.fromCodePoint(Number(decimal))
+    if (hexadecimal) return String.fromCodePoint(Number.parseInt(hexadecimal, 16))
+    return XML_ENTITIES[entity.toLowerCase()] ?? entity
+  })
+}
+
+function escapeXmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function textContent(xml: string): string {
+  return decodeXmlText([...xml.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((match) => match[1]).join(''))
+}
+
+function workbookSheets(archive: Record<string, Uint8Array>): ReadonlyMap<string, string> {
+  const workbook = archive['xl/workbook.xml']
+  const relationships = archive['xl/_rels/workbook.xml.rels']
+  if (!workbook || !relationships) throw new Error('角色卡模板结构不完整。')
+
+  const relationshipMap = new Map<string, string>()
+  for (const match of strFromU8(relationships).matchAll(/<Relationship\b[^>]*>/g)) {
+    const id = match[0].match(/\bId="([^"]+)"/)?.[1]
+    const target = match[0].match(/\bTarget="([^"]+)"/)?.[1]
+    if (id && target) relationshipMap.set(id, target)
+  }
+
+  const sheets = new Map<string, string>()
+  for (const match of strFromU8(workbook).matchAll(/<sheet\b[^>]*>/g)) {
+    const name = match[0].match(/\bname="([^"]*)"/)?.[1]
+    const relationshipId = match[0].match(/\br:id="([^"]+)"/)?.[1]
+    const target = relationshipId ? relationshipMap.get(relationshipId) : undefined
+    if (!name || !target) continue
+    const normalized = target.replace(/^\//, '')
+    sheets.set(decodeXmlText(name), normalized.startsWith('xl/') ? normalized : `xl/${normalized}`)
+  }
+  return sheets
+}
+
+function sharedStrings(archive: Record<string, Uint8Array>): readonly string[] {
+  const bytes = archive['xl/sharedStrings.xml']
+  if (!bytes) return []
+  return [...strFromU8(bytes).matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)].map((match) => textContent(match[1]))
+}
+
+function cellValue(cellTag: string, strings: readonly string[]): string | boolean | number | undefined {
+  if (/<f\b/.test(cellTag)) {
+    const cached = cellTag.match(/<v\b[^>]*>([\s\S]*?)<\/v>/)?.[1]
+    return cached === undefined ? undefined : decodeXmlText(cached)
+  }
+  const type = cellTag.match(/\bt="([^"]*)"/)?.[1]
+  if (type === 'inlineStr') {
+    const inner = cellTag.match(/<is\b[^>]*>([\s\S]*?)<\/is>/)?.[1]
+    return inner === undefined ? '' : textContent(inner)
+  }
+  const raw = cellTag.match(/<v\b[^>]*>([\s\S]*?)<\/v>/)?.[1]
+  if (raw === undefined) return undefined
+  if (type === 's') return strings[Number(raw)] ?? ''
+  if (type === 'b') return raw === '1'
+  if (type === 'str' || type === 'e') return decodeXmlText(raw)
+  const number = Number(raw)
+  return Number.isFinite(number) ? number : decodeXmlText(raw)
+}
+
+interface MappingRow {
+  readonly row: number
+  readonly cells: ReadonlyMap<string, string | boolean | number | undefined>
+}
+
+function parseSheetRows(xml: string, strings: readonly string[]): readonly MappingRow[] {
+  const rows: MappingRow[] = []
+  for (const rowMatch of xml.matchAll(/<row\b[^>]*\br="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)) {
+    const cells = new Map<string, string | boolean | number | undefined>()
+    for (const cellMatch of rowMatch[2].matchAll(/<c\b[^>]*\br="([A-Z]+)\d+"[^>]*?(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+      cells.set(cellMatch[1], cellValue(cellMatch[0], strings))
+    }
+    rows.push({ row: Number(rowMatch[1]), cells })
+  }
+  return rows
+}
+
+function readMappingFromArchive(archive: Record<string, Uint8Array>): XlsxTemplateMapping {
+  const sheets = workbookSheets(archive)
+  const mappingPath = sheets.get('字段映射')
+  if (!mappingPath) throw new Error('角色卡模板缺少「字段映射」工作表。')
+  const mappingXml = archive[mappingPath]
+  if (!mappingXml) throw new Error('角色卡模板的「字段映射」工作表不可读取。')
+  const mappingText = strFromU8(mappingXml)
+  // 运行时模板的映射表使用 inlineStr；只有用户用 Excel 另存后才可能出现共享字符串。
+  const strings = mappingText.includes('t="s"') ? sharedStrings(archive) : []
+  const rows = parseSheetRows(mappingText, strings)
+  const header = rows.find((row) => row.row === 1)
+  if (header?.cells.get('I') !== CHARACTER_SHEET_TEMPLATE_VERSION) throw new Error('角色卡模板版本不兼容，请刷新页面后重试。')
+
+  const targets = new Map<string, TemplateFieldTarget>()
+  const targetIds = new Set<string>()
+  for (const row of rows) {
+    if (row.row === 1) continue
+    const key = row.cells.get('A')
+    const sheet = row.cells.get('B')
+    const address = row.cells.get('C')
+    if (typeof key !== 'string' || typeof sheet !== 'string' || typeof address !== 'string' || !key || !sheet || !address) continue
+    if (targets.has(key)) throw new Error(`角色卡模板字段重复：${key}`)
+    const targetId = `${sheet}!${address}`
+    if (targetIds.has(targetId)) throw new Error(`角色卡模板目标重复：${targetId}`)
+    const kindValue = row.cells.get('E')
+    const requirementValue = row.cells.get('F')
+    const kind: TemplateFieldKind = kindValue === 'formula-cache' || kindValue === 'value' ? kindValue : 'input'
+    const requirement: TemplateFieldRequirement = requirementValue === 'required' || requirementValue === 'conditional' ? requirementValue : 'optional'
+    targets.set(key, { sheet, address, kind, requirement })
+    targetIds.add(targetId)
+  }
+  if (!targets.size) throw new Error('角色卡模板「字段映射」工作表为空。')
+  return { version: CHARACTER_SHEET_TEMPLATE_VERSION, targets }
+}
+
+export function readXlsxTemplateMapping(templateBytes: Uint8Array): XlsxTemplateMapping {
+  return readMappingFromArchive(unzipSync(templateBytes))
+}
+
+function cellXmlForValue(address: string, styleAttribute: string, value: string | number | boolean): string {
+  if (typeof value === 'boolean') return `<c r="${address}"${styleAttribute} t="b"><v>${value ? 1 : 0}</v></c>`
+  if (typeof value === 'number' && Number.isFinite(value)) return `<c r="${address}"${styleAttribute}><v>${value}</v></c>`
+  return `<c r="${address}"${styleAttribute} t="inlineStr"><is><t xml:space="preserve">${escapeXmlText(String(value))}</t></is></c>`
+}
+
+function patchCell(sheetXml: string, address: string, value: string | number | boolean, kind: TemplateFieldKind): string {
+  const escapedAddress = address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const pattern = new RegExp(`<c\\b(?=[^>]*\\br="${escapedAddress}")([^>]*?)(?:/>|>([\\s\\S]*?)<\\/c>)`)
+  const match = pattern.exec(sheetXml)
+  if (!match) throw new Error(`模板缺少目标单元格：${address}`)
+  const attributes = match[1]
+  const inner = match[2] ?? ''
+  const hasFormula = /<f\b/.test(inner)
+  if (kind === 'input' && hasFormula) throw new Error(`输入字段错误指向公式单元格：${address}`)
+  if (kind === 'formula-cache' && !hasFormula) throw new Error(`公式缓存目标不是公式单元格：${address}`)
+  const style = attributes.match(/\bs="(\d+)"/)?.[1]
+  const styleAttribute = style ? ` s="${style}"` : ''
+  let replacement: string
+  if (kind === 'formula-cache') {
+    const formula = inner.match(/<f\b[^>]*>[\s\S]*?<\/f>|<f\b[^>]*\/>/)?.[0]
+    if (!formula) throw new Error(`公式缓存目标不是公式单元格：${address}`)
+    const stringResult = typeof value === 'string'
+    replacement = `<c r="${address}"${styleAttribute}${stringResult ? ' t="str"' : ''}>${formula}<v>${escapeXmlText(String(value))}</v></c>`
+  } else {
+    replacement = cellXmlForValue(address, styleAttribute, value)
+  }
+  return sheetXml.slice(0, match.index) + replacement + sheetXml.slice(match.index + match[0].length)
+}
+
+function setFullCalcOnLoad(workbookXml: string): string {
+  const calcPr = /<calcPr\b([^>]*)\/>/.exec(workbookXml)
+  if (calcPr) {
+    let attributes = calcPr[1]
+    attributes = attributes.replace(/\s*\bfullCalcOnLoad="[^"]*"/g, '').replace(/\s*\bcalcMode="[^"]*"/g, '')
+    return workbookXml.replace(calcPr[0], `<calcPr${attributes} fullCalcOnLoad="1" calcMode="auto"/>`)
+  }
+  return workbookXml.replace('</workbook>', '<calcPr fullCalcOnLoad="1" calcMode="auto"/></workbook>')
+}
+
+const SKILL_ABILITY: Readonly<Record<string, 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'>> = {
+  'skill-athletics': 'str',
+  'skill-acrobatics': 'dex',
+  'skill-sleight-of-hand': 'dex',
+  'skill-stealth': 'dex',
+  'skill-investigation': 'int',
+  'skill-arcana': 'int',
+  'skill-history': 'int',
+  'skill-nature': 'int',
+  'skill-religion': 'int',
+  'skill-perception': 'wis',
+  'skill-insight': 'wis',
+  'skill-animal-handling': 'wis',
+  'skill-medicine': 'wis',
+  'skill-survival': 'wis',
+  'skill-persuasion': 'cha',
+  'skill-deception': 'cha',
+  'skill-intimidation': 'cha',
+  'skill-performance': 'cha',
+}
+
+/** 自动卡写入值：模板公式负责最后一步派生，这里只写输入与误差修正。 */
+export function buildAutoCardValues(model: CharacterExportModel, templateId: CharacterSheetXlsxTemplateId): Record<string, string | number | boolean> {
+  const values: Record<string, string | number | boolean> = {
+    character_name: model.identity.characterName,
+    player_name: model.identity.playerName,
+    class_name: model.identity.classRows.length > 1 ? model.identity.classLevel : model.identity.className,
+    race: model.identity.raceName,
+    background: model.identity.backgroundName,
+    alignment: model.identity.alignment,
+    experience: model.identity.experience,
+    level: model.identity.level,
+    backstory: model.profile.backstory,
+    other_proficiencies_languages: model.proficiencies.text,
+    ac_misc: model.combat.armorClass - 10 - model.abilities.dex.modifier,
+    initiative: model.combat.initiative,
+    initiative_misc: model.combat.initiative - model.abilities.dex.modifier,
+    hp_max: model.combat.hitPointMaximum,
+    hp_current: model.combat.hitPointCurrent,
+    hp_temp: model.combat.hitPointTemporary,
+    speed: templateId === '2014' ? `${model.combat.speed}尺` : model.combat.speed,
+    hit_dice_total: Number(model.combat.hitDiceTotal.match(/^\d+/)?.[0] ?? model.identity.level),
+    hit_dice_die: model.combat.hitDice.match(/d\d+/)?.[0] ?? '',
+    cp: model.currency.cp,
+    sp: model.currency.sp,
+    ep: model.currency.ep,
+    gp: model.currency.gp,
+    pp: model.currency.pp,
+  }
+
+  for (const ability of Object.values(model.abilities)) {
+    values[`${ability.key}_score`] = ability.score
+    values[`save_${ability.key}_prof`] = templateId === '2024'
+      ? (ability.savingThrowProficient ? 'O' : 'X')
+      : ability.savingThrowProficient
+    values[`save_${ability.key}_misc`] = ability.savingThrow - ability.modifier - (ability.savingThrowProficient ? model.combat.proficiencyBonus : 0)
+  }
+
+  for (const skill of model.skills) {
+    const field = skill.id.replace(/^skill-/, '').replace(/-/g, '_')
+    const base = model.abilities[SKILL_ABILITY[skill.id] ?? 'str'].modifier
+    const proficiencyExtra = skill.proficiency === 'proficient' ? model.combat.proficiencyBonus : skill.proficiency === 'expertise' ? model.combat.proficiencyBonus * 2 : 0
+    values[`skill_${field}_prof`] = templateId === '2024'
+      ? (skill.proficiency === 'expertise' ? '❂' : skill.proficiency === 'proficient' ? 'O' : 'X')
+      : skill.proficiency !== 'none'
+    values[`skill_${field}_misc`] = skill.value - base - proficiencyExtra
+  }
+
+  const featureCapacity = templateId === '2024' ? 5 : 10
+  const featureEntries = [
+    ...model.features.map((feature) => ({ name: feature.name, description: feature.summary.replace(/\s+/g, ' ').trim() })),
+    ...(model.resources.length ? [{ name: '资源', description: model.resources.map((resource) => `${resource.name} ${resource.max}${resource.unit}`).join('；') }] : []),
+    ...(model.cantrips.length ? [{ name: '戏法成长', description: model.cantrips.map((cantrip) => `${cantrip.name}：${cantrip.scaling}`).join('；') }] : []),
+  ]
+  featureEntries.slice(0, featureCapacity).forEach((entry, index) => {
+    values[`feature_${index + 1}_name`] = entry.name
+    values[`feature_${index + 1}_desc`] = entry.description
+  })
+
+  const itemCapacity = templateId === '2024' ? 10 : 9
+  model.inventory.slice(0, itemCapacity).forEach((item, index) => {
+    values[`item_${index + 1}`] = `${item.name} × ${item.quantity}${item.equippedQuantity ? '（已装备）' : ''}`
+  })
+
+  const attackCapacity = templateId === '2024' ? 3 : 4
+  model.attacks.slice(0, attackCapacity).forEach((attack, index) => {
+    values[`attack_${index + 1}_name`] = attack.name
+    values[`attack_${index + 1}_bonus`] = formatSigned(attack.attackBonus)
+    values[`attack_${index + 1}_damage`] = attack.damage
+    values[`attack_${index + 1}_type`] = attack.damage.match(/[\u4e00-\u9fff]+$/u)?.[0] ?? ''
+  })
+
+  if (templateId === '2014') {
+    for (let level = 1; level <= 9; level += 1) {
+      const slots = model.spellcasting?.slots.filter((slot) => slot.level === level) ?? []
+      values[`spell_slot_${level}`] = (slots.find((slot) => !slot.pact) ?? slots[0])?.count ?? 0
+    }
+    model.spellcasting?.spells.slice(0, 30).forEach((spell, index) => {
+      values[`spell_${index + 1}`] = spell.name
+    })
+  }
+  return values
+}
+
+
+// ---------------------------------------------------------------------------
+// 旧版 6 表模板的字段值构造器（仅测试/迁移参考使用）。
+// 运行时自动卡已改为读取模板自带「字段映射」并由 buildAutoCardValues 写入。
+// ---------------------------------------------------------------------------
+
+const LEGACY_SKILL_FIELDS: Readonly<Record<string, string>> = {
   'skill-acrobatics': 'skill_acrobatics', 'skill-animal-handling': 'skill_animal_handling', 'skill-arcana': 'skill_arcana',
   'skill-athletics': 'skill_athletics', 'skill-deception': 'skill_deception', 'skill-history': 'skill_history',
   'skill-insight': 'skill_insight', 'skill-intimidation': 'skill_intimidation', 'skill-investigation': 'skill_investigation',
@@ -32,24 +321,15 @@ const SKILL_FIELDS: Readonly<Record<string, string>> = {
   'skill-sleight-of-hand': 'skill_sleight_of_hand', 'skill-stealth': 'skill_stealth', 'skill-survival': 'skill_survival',
 }
 
-const REQUIRED_TEMPLATE_KEYS = [
-  'character_name', 'class_name', 'race', 'background', 'level', 'alignment', 'experience',
-  'armor_class', 'speed', 'hp_max', 'hp_current', 'hp_temp', 'hit_dice', 'other_proficiencies_languages',
-  'features_traits', 'equipment', 'str_score', 'dex_score', 'con_score', 'int_score', 'wis_score', 'cha_score',
-  'str_mod', 'dex_mod', 'con_mod', 'int_mod', 'wis_mod', 'cha_mod', 'proficiency_bonus', 'initiative', 'passive_perception',
-  'cp', 'sp', 'ep', 'gp', 'pp',
-] as const
-
-function compactFeature(feature: CharacterExportModel['features'][number]): string {
+function legacyCompactFeature(feature: CharacterExportModel['features'][number]): string {
   const summary = feature.summary.replace(/\s+/g, ' ').trim()
   return summary ? `${feature.name}：${summary}` : feature.name
 }
 
-function splitFeatureText(model: CharacterExportModel): { primary: string; additional: string; truncated: boolean } {
+function legacySplitFeatureText(model: CharacterExportModel): { primary: string; additional: string; truncated: boolean } {
   const entries = [
-    ...model.features.map(compactFeature),
+    ...model.features.map(legacyCompactFeature),
     ...(model.resources.length ? [formatExportResources(model.resources)] : []),
-    // 戏法成长（MC-F01／D11）：与角色卡、跑团助手、法术步骤同一口径，只作展示。
     ...(model.cantrips.length ? [formatExportCantripScaling(model.cantrips, model.identity.level)] : []),
   ]
   const primary: string[] = []
@@ -71,15 +351,15 @@ function splitFeatureText(model: CharacterExportModel): { primary: string; addit
   return { primary: primary.join('\n'), additional: additional.join('\n'), truncated }
 }
 
+/** 旧版 6 表模板的 56+ 字段值；新自动卡不再使用，保留给导出数据回归测试。 */
 export function buildXlsxFieldValues(model: CharacterExportModel): { values: Record<string, string | number>; diagnostics: ExportDiagnostic[] } {
-  const featureText = splitFeatureText(model)
+  const featureText = legacySplitFeatureText(model)
   const diagnostics: ExportDiagnostic[] = [...model.diagnostics]
   if (featureText.truncated) diagnostics.push({ code: 'content-truncated', severity: 'warning', field: 'features', message: '部分特性因模板容量被省略。' })
   if (model.attacks.length > 4) diagnostics.push({ code: 'content-truncated', severity: 'warning', field: 'attacks', message: '模板最多显示四个攻击，额外攻击已省略。' })
 
   const values: Record<string, string | number> = {
     character_name: model.identity.characterName,
-    // 职业格（MC-F01）：多职业时写需求 §3.1 的统一标签；单职业保持职业名不变。
     class_name: model.identity.classRows.length > 1 ? model.identity.classLevel : model.identity.className,
     race: model.identity.raceName,
     background: model.identity.backgroundName,
@@ -99,9 +379,7 @@ export function buildXlsxFieldValues(model: CharacterExportModel): { values: Rec
     additional_features: featureText.additional,
     equipment: model.inventory.map((entry) => `${entry.name}×${entry.quantity}${entry.equippedQuantity ? '（已装备）' : ''}`).join('、'),
     backstory: model.profile.backstory,
-    spellcasting_class: model.spellcasting
-      ? [model.spellcasting.className, model.spellcasting.pactNote].filter(Boolean).join('；')
-      : '',
+    spellcasting_class: model.spellcasting ? [model.spellcasting.className, model.spellcasting.pactNote].filter(Boolean).join('；') : '',
     spellcasting_ability: model.spellcasting?.abilityLabel ?? '',
     proficiency_bonus: model.combat.proficiencyBonus,
     initiative: model.combat.initiative,
@@ -110,9 +388,7 @@ export function buildXlsxFieldValues(model: CharacterExportModel): { values: Rec
     spell_attack_bonus: model.spellcasting?.attackBonus ?? '',
     cp: model.currency.cp, sp: model.currency.sp, ep: model.currency.ep, gp: model.currency.gp, pp: model.currency.pp,
     profile_character_name: model.identity.characterName,
-    profile_class_level: model.identity.classRows.length > 1
-      ? model.identity.classLevel
-      : `${model.identity.className} ${model.identity.level}`.trim(),
+    profile_class_level: model.identity.classRows.length > 1 ? model.identity.classLevel : `${model.identity.className} ${model.identity.level}`.trim(),
     profile_race: model.identity.raceName,
     profile_background: model.identity.backgroundName,
     spell_character_name: model.identity.characterName,
@@ -125,7 +401,7 @@ export function buildXlsxFieldValues(model: CharacterExportModel): { values: Rec
     values[`save_${ability.key}_value`] = ability.savingThrow
   }
   for (const skill of model.skills) {
-    const field = SKILL_FIELDS[skill.id]
+    const field = LEGACY_SKILL_FIELDS[skill.id]
     if (!field) continue
     values[`${field}_prof`] = skill.proficiency === 'expertise' ? '◆' : skill.proficiency === 'proficient' ? '●' : ''
     values[`${field}_value`] = skill.value
@@ -136,8 +412,6 @@ export function buildXlsxFieldValues(model: CharacterExportModel): { values: Rec
     values[`attack_${position}_bonus`] = formatSigned(attack.attackBonus)
     values[`attack_${position}_damage`] = `${attack.damage}${attack.note ? `；${attack.note}` : ''}`
   })
-  // 法术位（MC-F01）：兼职时优先写通用池，契约池另在「施法职业」格里说明；
-  // 单职业魔契师没有通用池，回退到契约池（既有行为不变）。
   for (let level = 1; level <= 9; level += 1) {
     const slots = model.spellcasting?.slots.filter((slot) => slot.level === level) ?? []
     const general = slots.find((slot) => !slot.pact)
@@ -149,65 +423,35 @@ export function buildXlsxFieldValues(model: CharacterExportModel): { values: Rec
     if (spells.length > spellCapacities[level]) diagnostics.push({ code: 'content-truncated', severity: 'warning', field: `spells.${level}`, message: `${level} 环法术超过模板容量，额外法术已省略。` })
     spells.slice(0, spellCapacities[level]).forEach((spell, index) => {
       values[`spell_${level}_${index + 1}_prepared`] = spell.prepared ? '●' : ''
-      // 归属职业（MC-F01）：兼职时在法术名后标注；单职业保持原样。
       values[`spell_${level}_${index + 1}_name`] = spell.className ? `${spell.name}（${spell.className}）` : spell.name
     })
   }
   return { values, diagnostics }
 }
 
-export async function loadCharacterSheetTemplate(): Promise<Workbook> {
-  // 离线且本地未缓存时会直接 reject；此时 fetch 的原始报错没有指导意义。
-  const response = await fetch(CHARACTER_SHEET_XLSX_TEMPLATE_URL).catch(() => undefined)
+export async function loadCharacterSheetTemplate(templateId: CharacterSheetXlsxTemplateId): Promise<Uint8Array> {
+  const response = await fetch(CHARACTER_SHEET_XLSX_TEMPLATE_URLS[templateId]).catch(() => undefined)
   if (!response) throw new Error(CHARACTER_SHEET_OFFLINE_MESSAGE)
   if (!response.ok) throw new Error(`角色卡模板加载失败（${response.status}）`)
-  const ExcelJS = await import('exceljs')
-  const workbook = new ExcelJS.Workbook()
-  await workbook.xlsx.load(await response.arrayBuffer())
-  return workbook
+  return new Uint8Array(await response.arrayBuffer())
 }
 
-export function readTemplateVersion(workbook: Workbook): number | undefined {
-  const value = workbook.getWorksheet('字段映射')?.getCell('I1').value
-  return typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : undefined
-}
+export function fillCharacterSheetTemplate(templateBytes: Uint8Array, model: CharacterExportModel, templateId: CharacterSheetXlsxTemplateId): XlsxFillResult {
+  const archive = unzipSync(templateBytes)
+  const sheets = workbookSheets(archive)
+  const mapping = readMappingFromArchive(archive)
+  const values = buildAutoCardValues(model, templateId)
+  const diagnostics: ExportDiagnostic[] = [...model.diagnostics]
+  const sheetXml = new Map<string, string>()
 
-export function readFieldMapping(workbook: Workbook): Map<string, TemplateFieldTarget> {
-  const mappingSheet = workbook.getWorksheet('字段映射')
-  if (!mappingSheet) return new Map()
-  const mapping = new Map<string, TemplateFieldTarget>()
-  const targets = new Set<string>()
-  mappingSheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return
-    const [key, sheetName, address, kindValue, requirementValue] = [1, 2, 3, 5, 6].map((column) => row.getCell(column).value)
-    if (typeof key !== 'string' || typeof sheetName !== 'string' || typeof address !== 'string' || !key || !sheetName || !address) return
-    if (mapping.has(key)) throw new Error(`角色卡模板字段重复：${key}`)
-    const targetId = `${sheetName}!${address}`
-    if (targets.has(targetId)) throw new Error(`角色卡模板目标重复：${targetId}`)
-    const kind: TemplateFieldKind = kindValue === 'formula-cache' || kindValue === 'optional' ? kindValue : 'input'
-    const requirement: TemplateFieldRequirement = requirementValue === 'required' || requirementValue === 'conditional' ? requirementValue : 'optional'
-    mapping.set(key, { sheet: sheetName, address, kind, requirement })
-    targets.add(targetId)
-  })
-  return mapping
-}
-
-export function fillTemplate(workbook: Workbook, model: CharacterExportModel): TemplateFillResult {
-  if (readTemplateVersion(workbook) !== CHARACTER_SHEET_TEMPLATE_VERSION) throw new Error('角色卡模板版本不兼容，请刷新页面后重试。')
-  const mapping = readFieldMapping(workbook)
-  const { values, diagnostics } = buildXlsxFieldValues(model)
-  const writtenKeys: string[] = []
-  for (const key of REQUIRED_TEMPLATE_KEYS) {
-    if (!mapping.has(key)) diagnostics.push({ code: 'missing-template-field', severity: 'error', field: key, message: `模板缺少核心字段映射：${key}` })
-  }
-  for (const [key, target] of mapping) {
+  for (const [key, target] of mapping.targets) {
     const value = values[key]
     if (value === undefined) {
       if (target.requirement === 'required') diagnostics.push({ code: 'missing-template-field', severity: 'error', field: key, message: `缺少必填导出值：${key}` })
       continue
     }
-    const sheet = workbook.getWorksheet(target.sheet)
-    if (!sheet) {
+    const sheetPath = sheets.get(target.sheet)
+    if (!sheetPath || !archive[sheetPath]) {
       diagnostics.push({ code: 'invalid-template-target', severity: 'error', field: key, message: `模板工作表不存在：${target.sheet}` })
       continue
     }
@@ -215,109 +459,49 @@ export function fillTemplate(workbook: Workbook, model: CharacterExportModel): T
       diagnostics.push({ code: 'invalid-template-target', severity: 'error', field: key, message: `模板单元格地址无效：${target.sheet}!${target.address}` })
       continue
     }
-    const cell = sheet.getCell(target.address)
-    if (target.kind === 'formula-cache') {
-      if (!cell.formula) {
-        diagnostics.push({ code: 'invalid-template-target', severity: 'error', field: key, message: `公式缓存目标不是公式单元格：${target.sheet}!${target.address}` })
-        continue
-      }
-      cell.value = { formula: cell.formula, result: value }
-    } else {
-      if (cell.formula) {
-        diagnostics.push({ code: 'invalid-template-target', severity: 'error', field: key, message: `输入字段错误指向公式单元格：${target.sheet}!${target.address}` })
-        continue
-      }
-      cell.value = value
+    try {
+      const current = sheetXml.get(sheetPath) ?? strFromU8(archive[sheetPath])
+      sheetXml.set(sheetPath, patchCell(current, target.address, value, target.kind))
+    } catch (error) {
+      diagnostics.push({ code: 'invalid-template-target', severity: 'error', field: key, message: error instanceof Error ? error.message : String(error) })
     }
-    writtenKeys.push(key)
   }
-  for (const [key, value] of Object.entries(values)) {
-    if (value !== '' && value !== undefined && !mapping.has(key)) diagnostics.push({ code: 'missing-template-field', severity: 'error', field: key, message: `模板缺少字段映射：${key}` })
+
+  if (templateId === '2024' && model.spellcasting?.spells.length) {
+    diagnostics.push({ code: 'unsupported-template-field', severity: 'warning', field: 'spells', message: '2024 自动卡暂不写入法术列表；请在该卡「施法」页自行选择法术。' })
   }
-  workbook.calcProperties.fullCalcOnLoad = true
-  return { diagnostics, writtenKeys }
+  if (templateId === '2024' && model.spellcasting) {
+    diagnostics.push({ code: 'unsupported-template-field', severity: 'warning', field: 'spell_slots', message: '2024 自动卡暂不写入法术位总数；该卡会按职业与等级自动计算。' })
+  }
+  if (model.attacks.length > (templateId === '2024' ? 3 : 4)) diagnostics.push({ code: 'content-truncated', severity: 'warning', field: 'attacks', message: '自动卡攻击栏不足，额外攻击已省略。' })
+  if (model.inventory.length > (templateId === '2024' ? 10 : 9)) diagnostics.push({ code: 'content-truncated', severity: 'warning', field: 'inventory', message: '自动卡物品栏不足，额外物品已省略。' })
+  if (model.features.length > (templateId === '2024' ? 5 : 10)) diagnostics.push({ code: 'content-truncated', severity: 'warning', field: 'features', message: '自动卡特性栏不足，额外特性已省略。' })
+
+  if (diagnostics.some((item) => item.severity === 'error')) return { bytes: templateBytes, diagnostics }
+
+  for (const [path, xml] of sheetXml) archive[path] = strToU8(xml)
+  archive['xl/workbook.xml'] = strToU8(setFullCalcOnLoad(strFromU8(archive['xl/workbook.xml'])))
+  return { bytes: zipSync(archive, { level: 6 }), diagnostics }
 }
 
-export async function verifyFullCalculationOnLoad(buffer: ArrayBuffer | Uint8Array): Promise<void> {
-  const { strFromU8, unzipSync } = await import('fflate')
-  let workbookXml: Uint8Array | undefined
+export function verifyXlsxOutput(bytes: Uint8Array): void {
+  let archive: Record<string, Uint8Array>
   try {
-    const archive = unzipSync(buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer))
-    workbookXml = archive['xl/workbook.xml']
+    archive = unzipSync(bytes)
   } catch {
-    throw new Error('导出后的角色卡未启用打开时完整重算。')
+    throw new Error('导出后的角色卡不是有效的 XLSX 文件。')
   }
-  if (!workbookXml) throw new Error('导出后的角色卡未启用打开时完整重算。')
-  const xml = strFromU8(workbookXml)
-  if (!/<calcPr\b[^>]*\bfullCalcOnLoad\s*=\s*["'](?:1|true)["'][^>]*>/i.test(xml)) {
-    throw new Error('导出后的角色卡未启用打开时完整重算。')
-  }
+  if (!archive['xl/workbook.xml']) throw new Error('导出后的角色卡工作表结构不完整。')
+  const workbookXml = strFromU8(archive['xl/workbook.xml'])
+  if (!/<calcPr\b[^>]*\bfullCalcOnLoad="1"/.test(workbookXml)) throw new Error('导出后的角色卡未启用打开时完整重算。')
+  const sheets = workbookSheets(archive)
+  if (!sheets.has('字段映射')) throw new Error('导出后的角色卡缺少字段映射表。')
+  if (archive['xl/vbaProject.bin']) throw new Error('2024 自动卡仍包含宏，无法作为 xlsx 导出。')
 }
 
-function readXmlAttribute(tag: string, name: string): string | undefined {
-  const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'))
-  return match?.[2]
-}
-
-function decodeXmlText(value: string): string {
-  return value.replace(/&(?:#(\d+)|#x([\da-f]+)|amp|quot|apos|lt|gt);/gi, (entity, decimal: string | undefined, hexadecimal: string | undefined) => {
-    if (decimal) return String.fromCodePoint(Number(decimal))
-    if (hexadecimal) return String.fromCodePoint(Number.parseInt(hexadecimal, 16))
-    return ({ '&amp;': '&', '&quot;': '"', '&apos;': "'", '&lt;': '<', '&gt;': '>' } as const)[entity.toLowerCase() as '&amp;' | '&quot;' | '&apos;' | '&lt;' | '&gt;']
-  })
-}
-
-export async function verifyFormulaCaches(buffer: ArrayBuffer | Uint8Array, mapping: ReadonlyMap<string, TemplateFieldTarget>): Promise<void> {
-  const { strFromU8, unzipSync } = await import('fflate')
-  const binary = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
-  let archive: ReturnType<typeof unzipSync>
-  try {
-    archive = unzipSync(binary)
-  } catch {
-    throw new Error('导出后的角色卡工作表结构不完整。')
-  }
-  const workbookXmlBytes = archive['xl/workbook.xml']
-  const relationshipsXmlBytes = archive['xl/_rels/workbook.xml.rels']
-  if (!workbookXmlBytes || !relationshipsXmlBytes) throw new Error('导出后的角色卡工作表结构不完整。')
-
-  const relationshipTargets = new Map<string, string>()
-  for (const tag of strFromU8(relationshipsXmlBytes).match(/<Relationship\b[^>]*>/gi) ?? []) {
-    const id = readXmlAttribute(tag, 'Id')
-    const target = readXmlAttribute(tag, 'Target')
-    if (id && target) relationshipTargets.set(id, target)
-  }
-  const sheetPaths = new Map<string, string>()
-  for (const tag of strFromU8(workbookXmlBytes).match(/<sheet\b[^>]*>/gi) ?? []) {
-    const name = readXmlAttribute(tag, 'name')
-    const relationshipId = readXmlAttribute(tag, 'r:id')
-    const target = relationshipId ? relationshipTargets.get(relationshipId) : undefined
-    if (!name || !target) continue
-    const normalizedTarget = target.replace(/\\/g, '/').replace(/^\/+/, '')
-    sheetPaths.set(decodeXmlText(name), normalizedTarget.startsWith('xl/') ? normalizedTarget : `xl/${normalizedTarget}`)
-  }
-
-  for (const [key, target] of mapping) {
-    if (target.kind !== 'formula-cache') continue
-    const sheetPath = sheetPaths.get(target.sheet)
-    const sheetXmlBytes = sheetPath ? archive[sheetPath] : undefined
-    if (!sheetXmlBytes) throw new Error(`导出后的公式缓存校验失败：${key}`)
-    const address = target.address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const cell = strFromU8(sheetXmlBytes).match(new RegExp(`<c\\b(?=[^>]*\\br=["']${address}["'])[^>]*>[\\s\\S]*?<\\/c>`, 'i'))?.[0]
-    const hasFormula = Boolean(cell && /<f(?:\s[^>]*)?>[\s\S]*?<\/f>|<f(?:\s[^>]*)?\/>/i.test(cell))
-    const hasCachedValue = Boolean(cell && /<v(?:\s[^>]*)?>[\s\S]*?<\/v>|<v(?:\s[^>]*)?\/>/i.test(cell))
-    if (!hasFormula || !hasCachedValue) throw new Error(`导出后的公式缓存校验失败：${key}`)
-  }
-}
-
-export async function downloadXlsx(workbook: Workbook, filename: string): Promise<void> {
-  const buffer = await workbook.xlsx.writeBuffer()
-  await verifyFullCalculationOnLoad(buffer)
-  const ExcelJS = await import('exceljs')
-  const verified = new ExcelJS.Workbook()
-  await verified.xlsx.load(buffer)
-  if (verified.worksheets.length !== 6) throw new Error('导出后的角色卡工作表结构不完整。')
-  await verifyFormulaCaches(buffer, readFieldMapping(verified))
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+export function downloadXlsx(bytes: Uint8Array, filename: string): void {
+  verifyXlsxOutput(bytes)
+  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
