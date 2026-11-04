@@ -10,7 +10,7 @@ import { fighterExportModel, levelSixWizardExportModel, wizardExportModel } from
 import { inspectGeneratedPdfFont } from '../fixtures/pdf-font'
 
 const TEMPLATE_PATH = resolve(__dirname, '../../public/templates/character-sheet-zh-plus.pdf')
-const BASELINE_TEMPLATE_PATH = resolve(__dirname, '../../../docs/export-templates/DND_5E_2014_国内5E术语版角色卡_最终版.pdf')
+const BASELINE_TEMPLATE_PATH = resolve(__dirname, '../../../docs/export-templates/2_DnD_5E.pdf')
 const FONT_PATH = resolve(__dirname, '../../public/templates/fonts/noto-sans-sc-subset.ttf')
 const template = () => new Uint8Array(readFileSync(TEMPLATE_PATH))
 const baselineTemplate = () => new Uint8Array(readFileSync(BASELINE_TEMPLATE_PATH))
@@ -54,7 +54,7 @@ const REQUIRED_FIRST_PAGE_FIELDS = [
 ] as const
 const REQUIRED_PROFILE_FIELDS = ['CharacterName 2', 'Backstory', 'Feat+Traits', 'Treasure'] as const
 
-describe('export-pdf v7 国内 5E 术语版表单适配器', () => {
+describe('export-pdf v8 国内 5E 术语版表单适配器', () => {
   it('2014仙灵非施法职业的等级法术、种族数值与飞行限制可写入真实模板', async () => {
     const draft = draft2024({ ruleset: '5e-2014', classId: 'class-2014-fighter', targetLevel: 5,
       raceId: 'race-2014-motm-fairy', enabledSourceIds: ['motm-2022-index'], raceAbilityChoices: ['str', 'dex'],
@@ -79,7 +79,7 @@ describe('export-pdf v7 国内 5E 术语版表单适配器', () => {
   })
 
   it('目标模板为三页 AcroForm 且包含基础页和人物资料页必需字段', async () => {
-    expect(CHARACTER_SHEET_PDF_MAPPING_VERSION).toBe(7)
+    expect(CHARACTER_SHEET_PDF_MAPPING_VERSION).toBe(8)
     const { PDFDocument } = await import('pdf-lib')
     const document = await PDFDocument.load(template())
     expect(document.getPageCount()).toBe(3)
