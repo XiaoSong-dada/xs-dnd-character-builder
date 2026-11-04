@@ -121,6 +121,13 @@ describe('export-xlsx 自动卡模板契约 v4', () => {
     expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'AD17')).toBe(model.combat.speed)
     expect(cellValue(out, 'xl/worksheets/sheet2.xml', 'BN25')).toBeTruthy()
     expect(strFromU8(archive['xl/workbook.xml'])).toMatch(/<calcPr\b[^>]*fullCalcOnLoad="1"/)
+
+    const withAttack = { ...model, attacks: [{ itemId: 'test', name: '长剑', attackBonus: 5, damage: '1d8+3 挥砍', note: '' }] }
+    const attackOut = fillCharacterSheetTemplate(template('2024'), withAttack, '2024').bytes
+    expect(cellValue(attackOut, 'xl/worksheets/sheet2.xml', 'O25')).toBe('长剑')
+    expect(cellValue(attackOut, 'xl/worksheets/sheet2.xml', 'AD25')).toBe('+5')
+    expect(cellValue(attackOut, 'xl/worksheets/sheet2.xml', 'AI25')).toBe('1d8+3 挥砍')
+    expect(cellValue(attackOut, 'xl/worksheets/sheet2.xml', 'AM25')).toBe('挥砍')
   })
 
   it('自动卡值构造器把技能专精与法术位写成模板可计算的输入', () => {
@@ -136,6 +143,11 @@ describe('export-xlsx 自动卡模板契约 v4', () => {
     expect(fighter.skill_athletics_prof).toBe(true)
     expect(fighter.skill_athletics_misc).toBe(0)
     expect(fighter.save_str_misc).toBe(0)
+
+    const expertModel = { ...fighterExportModel(), skills: fighterExportModel().skills.map((skill) => skill.id === 'skill-athletics' ? { ...skill, proficiency: 'expertise' as const, value: skill.value + 2 } : skill) }
+    const expert = buildAutoCardValues(expertModel, '2014')
+    expect(expert.skill_athletics_prof).toBe(true)
+    expect(expert.skill_athletics_misc).toBe(2)
 
     const ranger = buildAutoCardValues(model2024(), '2024')
     expect(ranger.speed).toBe(30)

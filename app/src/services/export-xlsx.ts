@@ -263,11 +263,13 @@ export function buildAutoCardValues(model: CharacterExportModel, templateId: Cha
   for (const skill of model.skills) {
     const field = skill.id.replace(/^skill-/, '').replace(/-/g, '_')
     const base = model.abilities[SKILL_ABILITY[skill.id] ?? 'str'].modifier
-    const proficiencyExtra = skill.proficiency === 'proficient' ? model.combat.proficiencyBonus : skill.proficiency === 'expertise' ? model.combat.proficiencyBonus * 2 : 0
+    const templateProficiencyExtra = templateId === '2014'
+      ? (skill.proficiency === 'none' ? 0 : model.combat.proficiencyBonus)
+      : skill.proficiency === 'proficient' ? model.combat.proficiencyBonus : skill.proficiency === 'expertise' ? model.combat.proficiencyBonus * 2 : 0
     values[`skill_${field}_prof`] = templateId === '2024'
       ? (skill.proficiency === 'expertise' ? '❂' : skill.proficiency === 'proficient' ? 'O' : 'X')
       : skill.proficiency !== 'none'
-    values[`skill_${field}_misc`] = skill.value - base - proficiencyExtra
+    values[`skill_${field}_misc`] = skill.value - base - templateProficiencyExtra
   }
 
   const featureCapacity = templateId === '2024' ? 5 : 10
