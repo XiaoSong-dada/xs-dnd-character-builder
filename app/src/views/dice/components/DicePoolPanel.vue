@@ -12,6 +12,7 @@ defineProps<{
   disabled: boolean
   canAdd: (type: DieType) => boolean
   canSave: boolean
+  saveFeedback?: { message: string; error?: boolean }
 }>()
 
 const emit = defineEmits<{
@@ -66,6 +67,11 @@ function onModifierInput(event: Event) {
       <small v-else>还可加入 {{ remaining }} 个物理骰；一颗 d100 占两个。</small>
       <button type="button" class="dice-pool__save" :disabled="disabled || !canSave" @click="$emit('save')">保存预设</button>
     </div>
+    <p
+      v-if="saveFeedback"
+      :class="saveFeedback.error ? 'dice-pool__error' : 'dice-pool__feedback'"
+      :role="saveFeedback.error ? 'alert' : 'status'"
+    >{{ saveFeedback.message }}</p>
   </section>
 </template>
 
@@ -78,6 +84,13 @@ function onModifierInput(event: Event) {
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-subtle);
+
+  &__feedback {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+  }
 
   &__heading {
     display: flex;

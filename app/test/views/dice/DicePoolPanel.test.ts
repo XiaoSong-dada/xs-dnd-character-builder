@@ -55,4 +55,16 @@ describe('dice pool panel', () => {
     expect(wrapper.get('.dice-pool__save').attributes('disabled')).toBeDefined()
     wrapper.unmount()
   })
+
+  it('shows save feedback immediately below the footer containing the save button', async () => {
+    const wrapper = mountPanel()
+    const footer = wrapper.get('.dice-pool__save').element.parentElement
+    await wrapper.setProps({ saveFeedback: { message: '已保存预设 2d6 − 2。' } })
+    expect(footer?.nextElementSibling).toBe(wrapper.get('[role="status"]').element)
+    expect(wrapper.get('[role="status"]').text()).toBe('已保存预设 2d6 − 2。')
+    await wrapper.setProps({ saveFeedback: { message: '预设保存失败。', error: true } })
+    expect(footer?.nextElementSibling).toBe(wrapper.get('[role="alert"]').element)
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
 })

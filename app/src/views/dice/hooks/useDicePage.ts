@@ -42,6 +42,10 @@ interface WorkerClientLike {
 
 export const DICE_ROLL_DEADLINE_MS = 3_000
 
+type PresetFeedback =
+  | { target: 'save' | 'delete'; message: string; error?: boolean }
+  | { target: 'apply'; message: string; presetId: string }
+
 export interface DicePageDependencies {
   randomUint32?: () => number
   randomInteger?: (minimum: number, maximum: number) => number
@@ -63,8 +67,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   const notice = ref('')
   const error = ref('')
   const presets = ref<DicePoolPreset[]>([])
-  const presetNotice = ref('')
-  const presetError = ref('')
+  const presetFeedback = ref<PresetFeedback>()
   const visualAvailable = ref(true)
   const reducedMotion = ref(false)
   let mediaQuery: MediaQueryList | undefined
@@ -102,7 +105,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     presentation.value = undefined
     notice.value = ''
     error.value = ''
-    presetNotice.value = ''
+    presetFeedback.value = undefined
     status.value = 'idle'
   }
 
@@ -134,33 +137,29 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   function savePreset() {
     if (isBusy.value || physicalDiceCount.value === 0) return
     if (modifierError.value) {
-      presetError.value = modifierError.value
-      presetNotice.value = ''
+      presetFeedback.value = { target: 'save', message: modifierError.value, error: true }
       return
     }
     const preset = createDicePoolPreset(pool.value, modifierState.value.value)
     if (!preset) {
-      presetError.value = '当前骰池无法保存为预设，请检查骰子数量。'
-      presetNotice.value = ''
+      presetFeedback.value = { target: 'save', message: '当前骰池无法保存为预设，请检查骰子数量。', error: true }
       return
     }
     const duplicate = presets.value.find((item) => isSameDicePoolPreset(item, preset))
     if (!duplicate && presets.value.length >= MAX_DICE_PRESETS) {
-      presetError.value = `最多保存 ${MAX_DICE_PRESETS} 条预设，请先删除不再使用的预设。`
-      presetNotice.value = ''
+      presetFeedback.value = { target: 'save', message: `最多保存 ${MAX_DICE_PRESETS} 条预设，请先删除不再使用的预设。`, error: true }
       return
     }
     const next = duplicate
       ? [preset, ...presets.value.filter((item) => item.id !== duplicate.id)]
       : [preset, ...presets.value]
     if (!DicePresetStorageService.saveDicePresets(next)) {
-      presetError.value = '预设保存失败，浏览器本地存储不可用。'
-      presetNotice.value = ''
+      presetFeedback.value = { target: 'save', message: '预设保存失败，浏览器本地存储不可用。', error: true }
       return
     }
     presets.value = next
-    presetError.value = ''
-    presetNotice.value = duplicate ? '已更新该投掷式的预设。' : '已把当前骰池保存为预设。'
+    const savedExpression = formatDiceExpression(preset.pool, preset.modifier)
+    presetFeedback.value = { target: 'save', message: `${duplicate ? '已更新' : '已保存'}预设 ${savedExpression}。` }
   }
 
   function applyPreset(id: string) {
@@ -169,21 +168,22 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     if (!preset) return
     pool.value = preset.pool.map((entry) => ({ ...entry }))
     setModifier(preset.modifier === 0 ? '' : String(preset.modifier))
-    presetError.value = ''
-    presetNotice.value = '已应用预设，请手动投掷。'
+    presetFeedback.value = {
+      target: 'apply',
+      presetId: id,
+      message: `已应用 ${formatDiceExpression(preset.pool, preset.modifier)}，请手动投掷。`,
+    }
   }
 
   function deletePreset(id: string) {
     const next = presets.value.filter((item) => item.id !== id)
     if (next.length === presets.value.length) return
     if (!DicePresetStorageService.saveDicePresets(next)) {
-      presetError.value = '预设删除失败，浏览器本地存储不可用。'
-      presetNotice.value = ''
+      presetFeedback.value = { target: 'delete', message: '预设删除失败，浏览器本地存储不可用。', error: true }
       return
     }
     presets.value = next
-    presetError.value = ''
-    presetNotice.value = '已删除预设。'
+    presetFeedback.value = { target: 'delete', message: '已删除预设。' }
   }
 
   function clearDeadline() {
@@ -219,7 +219,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
 
   async function roll() {
     if (disposed || isBusy.value || physicalDiceCount.value === 0 || modifierError.value) return
-    presetNotice.value = ''
+    presetFeedback.value = undefined
     rollStartedAt = performance.now()
     playbackPhysicalCount = physicalDiceCount.value
     error.value = ''
@@ -407,8 +407,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     notice,
     error,
     presets,
-    presetNotice,
-    presetError,
+    presetFeedback,
     maxPresets: MAX_DICE_PRESETS,
     savePreset,
     applyPreset,

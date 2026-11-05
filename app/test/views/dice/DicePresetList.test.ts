@@ -12,7 +12,7 @@ const presets: DicePoolPreset[] = [
 
 describe('DicePresetList', () => {
   it('展示可辨认的投掷式并在点击时触发应用与删除', async () => {
-    const wrapper = mount(DicePresetList, { props: { presets, maximum: 20, disabled: false, notice: '', error: '' } })
+    const wrapper = mount(DicePresetList, { props: { presets, maximum: 20, disabled: false } })
     expect(wrapper.get('#dice-presets-title').text()).toBe('骰池预设')
     expect(wrapper.text()).toContain('1d20 + 5')
     expect(wrapper.text()).toContain('2d6 − 2')
@@ -27,20 +27,31 @@ describe('DicePresetList', () => {
   })
 
   it('空列表给出说明，忙碌时禁用应用与删除', () => {
-    const empty = mount(DicePresetList, { props: { presets: [], maximum: 20, disabled: false, notice: '', error: '' } })
+    const empty = mount(DicePresetList, { props: { presets: [], maximum: 20, disabled: false } })
     expect(empty.text()).toContain('保存常用的投掷组合')
     empty.unmount()
 
-    const busy = mount(DicePresetList, { props: { presets, maximum: 20, disabled: true, notice: '', error: '' } })
+    const busy = mount(DicePresetList, { props: { presets, maximum: 20, disabled: true } })
     expect(busy.get('[aria-label="应用预设 1d20 + 5"]').attributes('disabled')).toBeDefined()
     expect(busy.get('[aria-label="删除预设 1d20 + 5"]').attributes('disabled')).toBeDefined()
     busy.unmount()
   })
 
-  it('显示保存结果与错误提示', () => {
-    const wrapper = mount(DicePresetList, { props: { presets: [], maximum: 20, disabled: false, notice: '已保存。', error: '存储不可用。' } })
-    expect(wrapper.get('[role="status"]').text()).toBe('已保存。')
-    expect(wrapper.get('[role="alert"]').text()).toBe('存储不可用。')
+  it('应用提示只显示在本次应用的预设条目里，删除反馈显示在列表顶部', async () => {
+    const wrapper = mount(DicePresetList, {
+      props: {
+        presets, maximum: 20, disabled: false,
+        applyFeedback: { presetId: 'a', message: '已应用 1d20 + 5，请手动投掷。' },
+      },
+    })
+    expect(wrapper.get('[role="status"]').element.closest('li')).toBe(wrapper.get('[aria-label="应用预设 1d20 + 5"]').element.closest('li'))
+    await wrapper.setProps({ applyFeedback: { presetId: 'b', message: '已应用 2d6 − 2，请手动投掷。' } })
+    expect(wrapper.findAll('[role="status"]')).toHaveLength(1)
+    expect(wrapper.get('[role="status"]').text()).toBe('已应用 2d6 − 2，请手动投掷。')
+    expect(wrapper.get('[role="status"]').element.closest('li')).toBe(wrapper.get('[aria-label="应用预设 2d6 − 2"]').element.closest('li'))
+    await wrapper.setProps({ applyFeedback: undefined, deleteFeedback: { message: '预设删除失败。', error: true } })
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
+    expect(wrapper.get('[role="alert"]').element.nextElementSibling).toBe(wrapper.get('ul').element)
     wrapper.unmount()
   })
 })

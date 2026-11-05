@@ -14,7 +14,7 @@ const {
   modifierError, appliedModifier, diceTotal, total, reducedMotion,
   canAdd, addDie, removeDie, clearPool, roll, reroll, handlePlaybackComplete, handleRendererUnavailable,
   skipAnimation, soundEnabled, setModifier, setSkipAnimation, setSoundEnabled, handlePlaybackStarted,
-  presets, presetNotice, presetError, maxPresets, savePreset, applyPreset, deletePreset,
+  presets, presetFeedback, maxPresets, savePreset, applyPreset, deletePreset,
 } = useDicePage()
 </script>
 
@@ -26,6 +26,7 @@ const {
       :entries="pool" :expression="expression" :modifier="modifierInput" :modifier-error="modifierError"
       :physical-count="physicalDiceCount" :remaining="remainingPhysicalDice" :maximum="maxPhysicalDice"
       :disabled="isBusy" :can-add="canAdd" :can-save="physicalDiceCount > 0 && !modifierError"
+      :save-feedback="presetFeedback?.target === 'save' ? presetFeedback : undefined"
       @add="addDie" @remove="removeDie" @update:modifier="setModifier" @save="savePreset"
     />
     <DiceSettings :skip-animation="skipAnimation" :sound-enabled="soundEnabled" :busy="isBusy" @skip="setSkipAnimation" @sound="setSoundEnabled" />
@@ -43,7 +44,8 @@ const {
     <p v-if="error" class="dice-page__error" role="alert">{{ error }}</p>
     <DicePresetList
       :presets="presets" :maximum="maxPresets" :disabled="isBusy"
-      :notice="presetNotice" :error="presetError"
+      :delete-feedback="presetFeedback?.target === 'delete' ? presetFeedback : undefined"
+      :apply-feedback="presetFeedback?.target === 'apply' ? presetFeedback : undefined"
       @apply="applyPreset" @delete="deletePreset"
     />
     <div class="dice-page__actions">

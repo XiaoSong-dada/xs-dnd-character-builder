@@ -6,18 +6,14 @@ defineProps<{
   presets: DicePoolPreset[]
   maximum: number
   disabled: boolean
-  notice: string
-  error: string
+  deleteFeedback?: { message: string; error?: boolean }
+  applyFeedback?: { message: string; presetId: string }
 }>()
 
 defineEmits<{ apply: [id: string]; delete: [id: string] }>()
 
-/** 预设展示的是保存时的投掷式（骰池 + 固定修正值），而不是任何一次投出的点数。 */
 function presetExpression(preset: DicePoolPreset): string {
-  const base = formatDiceExpression(preset.pool)
-  if (preset.modifier > 0) return `${base} + ${preset.modifier}`
-  if (preset.modifier < 0) return `${base} − ${Math.abs(preset.modifier)}`
-  return base
+  return formatDiceExpression(preset.pool, preset.modifier)
 }
 </script>
 
@@ -27,15 +23,21 @@ function presetExpression(preset: DicePoolPreset): string {
       <h2 id="dice-presets-title">骰池预设</h2>
       <span>{{ presets.length }}/{{ maximum }}</span>
     </div>
-    <p v-if="notice" class="dice-presets__notice" role="status">{{ notice }}</p>
-    <p v-if="error" class="dice-presets__error" role="alert">{{ error }}</p>
+    <p
+      v-if="deleteFeedback"
+      :class="deleteFeedback.error ? 'dice-presets__error' : 'dice-presets__notice'"
+      :role="deleteFeedback.error ? 'alert' : 'status'"
+    >{{ deleteFeedback.message }}</p>
     <ul v-if="presets.length" class="dice-presets__list">
       <li v-for="preset in presets" :key="preset.id" class="dice-presets__item">
-        <span class="dice-presets__expression">{{ presetExpression(preset) }}</span>
-        <span class="dice-presets__actions">
-          <button type="button" :disabled="disabled" :aria-label="`应用预设 ${presetExpression(preset)}`" @click="$emit('apply', preset.id)">应用</button>
-          <button type="button" class="dice-presets__delete" :disabled="disabled" :aria-label="`删除预设 ${presetExpression(preset)}`" @click="$emit('delete', preset.id)">删除</button>
-        </span>
+        <div class="dice-presets__row">
+          <span class="dice-presets__expression">{{ presetExpression(preset) }}</span>
+          <span class="dice-presets__actions">
+            <button type="button" :disabled="disabled" :aria-label="`应用预设 ${presetExpression(preset)}`" @click="$emit('apply', preset.id)">应用</button>
+            <button type="button" class="dice-presets__delete" :disabled="disabled" :aria-label="`删除预设 ${presetExpression(preset)}`" @click="$emit('delete', preset.id)">删除</button>
+          </span>
+        </div>
+        <p v-if="applyFeedback?.presetId === preset.id" class="dice-presets__notice" role="status">{{ applyFeedback.message }}</p>
       </li>
     </ul>
     <p v-else class="dice-presets__empty">保存常用的投掷组合后，可以在这里一键应用。</p>
@@ -72,15 +74,21 @@ function presetExpression(preset: DicePoolPreset): string {
   &__list { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
 
   &__item {
+    min-width: 0;
+    padding: 0.35rem 0.35rem 0.35rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-gold-soft);
+
+    > p { padding-inline: 0; overflow-wrap: anywhere; }
+  }
+
+  &__row {
     display: flex;
     min-height: 2.75rem;
     align-items: center;
     justify-content: space-between;
     gap: 0.6rem;
-    padding: 0.35rem 0.35rem 0.35rem 0.75rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-gold-soft);
   }
 
   &__expression {
@@ -115,7 +123,8 @@ function presetExpression(preset: DicePoolPreset): string {
   &__delete { color: var(--color-text-muted); }
 
   @media (max-width: 24rem) {
-    &__item { align-items: stretch; flex-direction: column; padding-left: 0.35rem; }
+    &__item { padding-left: 0.35rem; }
+    &__row { align-items: stretch; flex-direction: column; }
     &__expression { padding: 0.35rem 0.4rem 0; }
     &__actions button { flex: 1; }
   }

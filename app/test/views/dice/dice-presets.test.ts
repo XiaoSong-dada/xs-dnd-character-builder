@@ -64,7 +64,7 @@ describe('dice pool presets', () => {
     expect(page.presets[0]?.modifier).toBe(5)
     expect(DicePresetStorageService.loadDicePresets()).toHaveLength(1)
     expect(localStorage.getItem(DICE_PRESET_STORAGE_KEY)).not.toContain('"value"')
-    expect(page.presetNotice).toContain('保存为预设')
+    expect(page.presetFeedback).toEqual({ target: 'save', message: '已保存预设 1d6 + 1d20 + 5。' })
     wrapper.unmount()
   })
 
@@ -80,7 +80,9 @@ describe('dice pool presets', () => {
     page.clearPool()
     page.addDie('d100')
     setModifierInput(pinia, '-2')
-    expect(page.results).toEqual([])
+    page.setSkipAnimation(true)
+    await page.roll()
+    expect(page.results).toHaveLength(1)
 
     page.applyPreset(presetId)
     expect(page.pool).toEqual([{ type: 'd20', quantity: 1 }])
@@ -89,7 +91,7 @@ describe('dice pool presets', () => {
     expect(page.expression).toBe('1d20')
     expect(page.results).toEqual([])
     expect(page.status).toBe('idle')
-    expect(page.presetNotice).toContain('手动投掷')
+    expect(page.presetFeedback).toEqual({ target: 'apply', presetId, message: '已应用 1d20 + 3，请手动投掷。' })
     wrapper.unmount()
   })
 
@@ -104,6 +106,7 @@ describe('dice pool presets', () => {
 
     page.applyPreset(saved.id)
     page.addDie('d6')
+    expect(page.presetFeedback).toBeUndefined()
     setModifierInput(pinia, '9')
     expect(page.presets[0]).toEqual(saved)
     expect(DicePresetStorageService.loadDicePresets()[0]).toEqual(saved)
@@ -135,6 +138,7 @@ describe('dice pool presets', () => {
     page.setSkipAnimation(true)
     page.applyPreset(presetId)
     await page.roll()
+    expect(page.presetFeedback).toBeUndefined()
     expect(page.results[0]?.value).toBe(1)
     expect(page.total).toBe(6)
     expect(page.appliedModifier).toBe(5)
@@ -149,7 +153,7 @@ describe('dice pool presets', () => {
     setModifierInput(pinia, 'abc')
     page.savePreset()
     expect(page.presets).toEqual([])
-    expect(page.presetError).toContain('整数')
+    expect(page.presetFeedback).toMatchObject({ target: 'save', error: true, message: expect.stringContaining('整数') })
     wrapper.unmount()
   })
 
@@ -162,7 +166,7 @@ describe('dice pool presets', () => {
     page.savePreset()
     expect(page.presets).toHaveLength(1)
     expect(page.presets[0]?.id).not.toBe(firstId)
-    expect(page.presetNotice).toContain('更新')
+    expect(page.presetFeedback).toEqual({ target: 'save', message: '已更新预设 1d20。' })
     wrapper.unmount()
   })
 
@@ -177,7 +181,22 @@ describe('dice pool presets', () => {
     page.addDie('d6')
     page.savePreset()
     expect(page.presets).toHaveLength(MAX_DICE_PRESETS)
-    expect(page.presetError).toContain('最多保存')
+    expect(page.presetFeedback).toMatchObject({ target: 'save', error: true, message: expect.stringContaining('最多保存 20 条') })
+    wrapper.unmount()
+  })
+
+  it('存储写入失败时显示保存错误并保留已保存的预设', () => {
+    const wrapper = mountPage()
+    const page = wrapper.vm as unknown as DicePage
+    page.addDie('d20')
+    page.savePreset()
+    const original = page.presets[0]
+    vi.spyOn(DicePresetStorageService, 'saveDicePresets').mockReturnValue(false)
+    page.savePreset()
+    expect(page.presets).toEqual([original])
+    expect(page.presetFeedback).toEqual({
+      target: 'save', error: true, message: '预设保存失败，浏览器本地存储不可用。',
+    })
     wrapper.unmount()
   })
 
@@ -190,7 +209,7 @@ describe('dice pool presets', () => {
     page.deletePreset(presetId)
     expect(page.presets).toEqual([])
     expect(DicePresetStorageService.loadDicePresets()).toEqual([])
-    expect(page.presetNotice).toContain('删除')
+    expect(page.presetFeedback).toEqual({ target: 'delete', message: '已删除预设。' })
     wrapper.unmount()
   })
 

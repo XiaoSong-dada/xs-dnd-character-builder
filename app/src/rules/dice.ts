@@ -29,12 +29,15 @@ export function getPhysicalDiceCount(pool: readonly DicePoolEntry[]): number {
   return pool.reduce((total, entry) => total + entry.quantity * getPhysicalDieCost(entry.type), 0)
 }
 
-export function formatDiceExpression(pool: readonly DicePoolEntry[]): string {
+export function formatDiceExpression(pool: readonly DicePoolEntry[], modifier = 0): string {
   const counts = new Map(pool.map((entry) => [entry.type, entry.quantity]))
-  return DIE_TYPES.flatMap((type) => {
+  const expression = DIE_TYPES.flatMap((type) => {
     const quantity = counts.get(type) ?? 0
     return quantity > 0 ? [`${quantity}${type}`] : []
   }).join(' + ')
+  if (modifier > 0) return `${expression} + ${modifier}`
+  if (modifier < 0) return `${expression} − ${Math.abs(modifier)}`
+  return expression
 }
 
 export function resolveD100(tens: number, ones: number): number {
