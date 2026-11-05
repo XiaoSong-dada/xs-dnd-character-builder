@@ -9,8 +9,8 @@ import { useDicePage } from '@/views/dice/hooks/useDicePage'
 
 const {
   title, description, dieTypes, maxPhysicalDice, pool, results, presentation, status, notice, error,
-  physicalDiceCount, remainingPhysicalDice, expression, isBusy, groupedResults, total, reducedMotion,
-  canAdd, addDie, removeDie, clearPool, roll, handlePlaybackComplete, handleRendererUnavailable,
+  physicalDiceCount, remainingPhysicalDice, expression, isBusy, canReroll, groupedResults, total, reducedMotion,
+  canAdd, addDie, removeDie, clearPool, roll, reroll, handlePlaybackComplete, handleRendererUnavailable,
   skipAnimation, soundEnabled, setSkipAnimation, setSoundEnabled, handlePlaybackStarted,
 } = useDicePage()
 </script>
@@ -25,12 +25,12 @@ const {
       :can-add="canAdd" @add="addDie" @remove="removeDie"
     />
     <DiceSettings :skip-animation="skipAnimation" :sound-enabled="soundEnabled" :busy="isBusy" @skip="setSkipAnimation" @sound="setSoundEnabled" />
-    <DiceResultPanel v-if="results.length" :groups="groupedResults" :total="total" />
+    <DiceResultPanel v-if="results.length" :groups="groupedResults" :total="total" :can-reroll="canReroll" @reroll="reroll" />
     <p v-if="skipAnimation" class="dice-page__notice">已跳过动画，投掷后直接显示结果。</p>
     <DiceTray v-else
       :presentation="presentation" :status="status" :reduced-motion="reducedMotion" :physical-count="physicalDiceCount"
-      @complete="handlePlaybackComplete" @unavailable="handleRendererUnavailable"
-      @started="handlePlaybackStarted"
+      :can-reroll="canReroll" @complete="handlePlaybackComplete" @unavailable="handleRendererUnavailable"
+      @started="handlePlaybackStarted" @reroll="reroll"
     />
     <p v-if="notice" class="dice-page__notice" role="status">{{ notice }}</p>
     <p v-if="error" class="dice-page__error" role="alert">{{ error }}</p>

@@ -9,8 +9,14 @@ const props = defineProps<{
   status: RollStatus
   reducedMotion: boolean
   physicalCount: number
+  canReroll: boolean
 }>()
-const emit = defineEmits<{ complete: [rollId: string]; unavailable: []; started: [rollId: string, durationMs: number] }>()
+const emit = defineEmits<{
+  complete: [rollId: string]
+  unavailable: []
+  started: [rollId: string, durationMs: number]
+  reroll: [logicalId: string]
+}>()
 const canvas = ref<HTMLCanvasElement>()
 const viewControlsEnabled = computed(() => props.status === 'complete' && Boolean(props.presentation))
 
@@ -36,6 +42,47 @@ let renderer: DiceRenderer | undefined
 let resizeObserver: ResizeObserver | undefined
 let animationFrame = 0
 let playbackId = 0
+
+// 单指轻触选骰重掷；超过移动容差或时长视为拖动骰盘视图，双指手势直接忽略。
+const TAP_MAX_DURATION_MS = 600
+const TAP_MAX_MOVE_PX = 10
+let activePointerId: number | undefined
+let pointerStartedAt = 0
+let pointerStartX = 0
+let pointerStartY = 0
+let multiPointer = false
+
+function resetPointer() {
+  activePointerId = undefined
+  multiPointer = false
+}
+
+function handlePointerDown(event: PointerEvent) {
+  if (!props.canReroll) return
+  if (activePointerId !== undefined) {
+    multiPointer = true
+    return
+  }
+  activePointerId = event.pointerId
+  pointerStartedAt = performance.now()
+  pointerStartX = event.clientX
+  pointerStartY = event.clientY
+}
+
+function handlePointerUp(event: PointerEvent) {
+  if (event.pointerId !== activePointerId) return
+  const wasMultiPointer = multiPointer
+  resetPointer()
+  if (!props.canReroll || wasMultiPointer) return
+  if (performance.now() - pointerStartedAt > TAP_MAX_DURATION_MS) return
+  if (Math.hypot(event.clientX - pointerStartX, event.clientY - pointerStartY) > TAP_MAX_MOVE_PX) return
+  const logicalId = renderer?.pickDie(event.clientX, event.clientY)
+  if (logicalId) emit('reroll', logicalId)
+}
+
+function handlePointerCancel(event: PointerEvent) {
+  if (event.pointerId === activePointerId) resetPointer()
+}
 
 function stopPlayback() {
   playbackId += 1
@@ -107,11 +154,18 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="dice-tray" aria-label="3D 骰盘">
-    <canvas ref="canvas" class="dice-tray__canvas" aria-hidden="true" />
+    <canvas
+      ref="canvas"
+      class="dice-tray__canvas"
+      aria-hidden="true"
+      @pointerdown="handlePointerDown"
+      @pointerup="handlePointerUp"
+      @pointercancel="handlePointerCancel"
+    />
     <div v-if="status === 'preparing'" class="dice-tray__state" role="status"><span class="dice-tray__spinner" aria-hidden="true" />正在准备物理轨迹…</div>
     <div v-else-if="status === 'idle'" class="dice-tray__state dice-tray__state--muted">骰子将在这里滚动并停稳</div>
     <div v-else-if="status === 'rolling'" class="dice-tray__rolling" role="status">投掷中</div>
-    <div v-if="showHint" class="dice-tray__hint" role="status">双指拖动移动视图 · 双指捏合缩放</div>
+    <div v-if="showHint" class="dice-tray__hint" role="status">轻触骰子单独重掷 · 双指拖动移动视图 · 双指捏合缩放</div>
     <div class="dice-tray__controls" aria-label="骰盘视图控制">
       <button
         class="dice-tray__control touch-manipulation" type="button" aria-label="放大骰盘视图"
