@@ -25,6 +25,13 @@ export const useDiceStore = defineStore('dice', () => {
     return activeRollId.value
   }
 
+  /** 单颗重掷：保留已公布结果，只在动画/结算期间挂起新一轮投掷标识。 */
+  function beginReroll() {
+    pendingResults.value = []
+    activeRollId.value = `reroll-${Date.now()}-${++sequence}`
+    return activeRollId.value
+  }
+
   function prepare(id: string, values: LogicalRollResult[]) {
     if (activeRollId.value === id) pendingResults.value = values
   }
@@ -37,5 +44,5 @@ export const useDiceStore = defineStore('dice', () => {
     return true
   }
 
-  return { pool, results, pendingResults, activeRollId, skipAnimation, soundEnabled, begin, prepare, publish, invalidate }
+  return { pool, results, pendingResults, activeRollId, skipAnimation, soundEnabled, begin, beginReroll, prepare, publish, invalidate }
 })

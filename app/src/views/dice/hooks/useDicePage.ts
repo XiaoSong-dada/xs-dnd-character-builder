@@ -4,12 +4,14 @@ import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import {
   DIE_TYPES,
   MAX_PHYSICAL_DICE,
+  buildRerollRequest,
   calculateRollTotal,
   formatDiceExpression,
   getPhysicalDiceCount,
   getPhysicalDieCost,
   groupRollResults,
   prepareRoll,
+  rerollLogicalResult,
 } from '@/rules/dice'
 import { DiceAudioService, type DiceAudio } from '@/services/dice-audio'
 import { randomIntegerInclusive, secureUint32 } from '@/services/dice-random'
@@ -57,11 +59,14 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   let workerClient: WorkerClientLike | undefined
   let rollStartedAt = 0
   let deadlineTimer: ReturnType<typeof setTimeout> | undefined
+  let playbackPhysicalCount = 0
 
   const physicalDiceCount = computed(() => getPhysicalDiceCount(pool.value))
   const remainingPhysicalDice = computed(() => MAX_PHYSICAL_DICE - physicalDiceCount.value)
   const expression = computed(() => formatDiceExpression(pool.value))
   const isBusy = computed(() => status.value === 'preparing' || status.value === 'rolling')
+  const canReroll = computed(() => !isBusy.value && results.value.length > 0
+    && (status.value === 'complete' || status.value === 'fallback'))
   const groupedResults = computed(() => groupRollResults(results.value))
   const total = computed(() => calculateRollTotal(results.value))
 
@@ -138,6 +143,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   async function roll() {
     if (disposed || isBusy.value || physicalDiceCount.value === 0) return
     rollStartedAt = performance.now()
+    playbackPhysicalCount = physicalDiceCount.value
     error.value = ''
     notice.value = ''
     presentation.value = undefined
@@ -185,6 +191,65 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     }
   }
 
+  async function reroll(logicalId: string) {
+    if (disposed || !canReroll.value) return
+    if (!results.value.some((result) => result.id === logicalId)) return
+
+    const nextResults = results.value.map((result) => result.id === logicalId
+      ? rerollLogicalResult(result, randomInteger)
+      : result)
+    const previous = presentation.value
+    const rollId = store.beginReroll()
+    soundedRollId = undefined
+    error.value = ''
+    notice.value = ''
+
+    let request: RollRequest | undefined
+    if (!skipAnimation.value && visualAvailable.value && previous) {
+      try {
+        request = buildRerollRequest(nextResults, logicalId, rollId, randomUint32(), previous)
+      } catch {
+        request = undefined
+      }
+    }
+
+    if (!request) {
+      store.prepare(rollId, nextResults)
+      store.publish(rollId)
+      audio.stop()
+      presentation.value = undefined
+      status.value = 'complete'
+      return
+    }
+
+    rollStartedAt = performance.now()
+    playbackPhysicalCount = request.dice.filter((die) => !die.staticPose).length
+    status.value = 'preparing'
+    if (soundEnabled.value && !reducedMotion.value) audio.unlock()
+    clearDeadline()
+    deadlineTimer = setTimeout(() => handleRollDeadline(rollId), DICE_ROLL_DEADLINE_MS)
+
+    try {
+      store.prepare(rollId, nextResults)
+      workerClient ??= createWorkerClient()
+      const response = await workerClient.simulate(request)
+      if (disposed || rollId !== activeRollId.value || status.value !== 'preparing') return
+      if (checkDeadline()) return
+      if (response.type === 'failure') {
+        completeAsTextFallback('物理骰盘本次未能稳定落骰，已使用公平文字结果。', rollId)
+        return
+      }
+      presentation.value = { request, trajectory: response.trajectory }
+      status.value = 'rolling'
+    } catch (reason) {
+      if (rollId !== activeRollId.value) return
+      completeAsTextFallback(
+        reason instanceof Error ? reason.message : '重掷失败，请稍后重试。',
+        rollId,
+      )
+    }
+  }
+
   function handlePlaybackComplete(rollId: string) {
     if (disposed || checkDeadline()) return
     if (activeRollId.value !== rollId || presentation.value?.request.id !== rollId || status.value !== 'rolling') return
@@ -212,7 +277,9 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     if (disposed || checkDeadline()) return
     if (disposed || rollId !== activeRollId.value || status.value !== 'rolling' || soundedRollId === rollId) return
     soundedRollId = rollId
-    if (soundEnabled.value && !skipAnimation.value && !reducedMotion.value) audio.play(durationMs, physicalDiceCount.value)
+    if (soundEnabled.value && !skipAnimation.value && !reducedMotion.value) {
+      audio.play(durationMs, playbackPhysicalCount || physicalDiceCount.value)
+    }
   }
 
   function handleRendererUnavailable() {
@@ -264,6 +331,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     remainingPhysicalDice,
     expression,
     isBusy,
+    canReroll,
     groupedResults,
     total,
     reducedMotion,
@@ -277,6 +345,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     removeDie,
     clearPool,
     roll,
+    reroll,
     handlePlaybackComplete,
     handleRendererUnavailable,
   }

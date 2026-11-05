@@ -26,12 +26,20 @@ export interface LogicalRollResult {
 
 export type PhysicalResultKind = 'standard' | 'percentile-tens' | 'percentile-ones'
 
+/** 重掷时，未选中的骰子保持上一轮停稳的位置与朝向，不再参与物理模拟。 */
+export interface PhysicalDieStaticPose {
+  position: Vector3Tuple
+  quaternion: QuaternionTuple
+  landingDirectionIndex: number
+}
+
 export interface PhysicalDieSpec {
   id: string
   logicalId: string
   type: PhysicalDieType
   resultKind: PhysicalResultKind
   targetValue: number
+  staticPose?: PhysicalDieStaticPose
 }
 
 export interface RollRequest {
