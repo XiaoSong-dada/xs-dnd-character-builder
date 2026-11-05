@@ -16,9 +16,16 @@ import {
   rerollLogicalResult,
 } from '@/rules/dice'
 import { DiceAudioService, type DiceAudio } from '@/services/dice-audio'
+import {
+  DicePresetStorageService,
+  MAX_DICE_PRESETS,
+  createDicePoolPreset,
+  isSameDicePoolPreset,
+} from '@/services/dice-presets'
 import { randomIntegerInclusive, secureUint32 } from '@/services/dice-random'
 import { useDiceStore } from '@/stores/dice'
 import type {
+  DicePoolPreset,
   DicePresentation,
   DiceWorkerResponse,
   DieType,
@@ -55,6 +62,9 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   const status = ref<RollStatus>(results.value.length ? 'complete' : 'idle')
   const notice = ref('')
   const error = ref('')
+  const presets = ref<DicePoolPreset[]>([])
+  const presetNotice = ref('')
+  const presetError = ref('')
   const visualAvailable = ref(true)
   const reducedMotion = ref(false)
   let mediaQuery: MediaQueryList | undefined
@@ -92,6 +102,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     presentation.value = undefined
     notice.value = ''
     error.value = ''
+    presetNotice.value = ''
     status.value = 'idle'
   }
 
@@ -118,6 +129,61 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     if (isBusy.value) return
     pool.value = []
     invalidateResult()
+  }
+
+  function savePreset() {
+    if (isBusy.value || physicalDiceCount.value === 0) return
+    if (modifierError.value) {
+      presetError.value = modifierError.value
+      presetNotice.value = ''
+      return
+    }
+    const preset = createDicePoolPreset(pool.value, modifierState.value.value)
+    if (!preset) {
+      presetError.value = '当前骰池无法保存为预设，请检查骰子数量。'
+      presetNotice.value = ''
+      return
+    }
+    const duplicate = presets.value.find((item) => isSameDicePoolPreset(item, preset))
+    if (!duplicate && presets.value.length >= MAX_DICE_PRESETS) {
+      presetError.value = `最多保存 ${MAX_DICE_PRESETS} 条预设，请先删除不再使用的预设。`
+      presetNotice.value = ''
+      return
+    }
+    const next = duplicate
+      ? [preset, ...presets.value.filter((item) => item.id !== duplicate.id)]
+      : [preset, ...presets.value]
+    if (!DicePresetStorageService.saveDicePresets(next)) {
+      presetError.value = '预设保存失败，浏览器本地存储不可用。'
+      presetNotice.value = ''
+      return
+    }
+    presets.value = next
+    presetError.value = ''
+    presetNotice.value = duplicate ? '已更新该投掷式的预设。' : '已把当前骰池保存为预设。'
+  }
+
+  function applyPreset(id: string) {
+    if (isBusy.value) return
+    const preset = presets.value.find((item) => item.id === id)
+    if (!preset) return
+    pool.value = preset.pool.map((entry) => ({ ...entry }))
+    setModifier(preset.modifier === 0 ? '' : String(preset.modifier))
+    presetError.value = ''
+    presetNotice.value = '已应用预设，请手动投掷。'
+  }
+
+  function deletePreset(id: string) {
+    const next = presets.value.filter((item) => item.id !== id)
+    if (next.length === presets.value.length) return
+    if (!DicePresetStorageService.saveDicePresets(next)) {
+      presetError.value = '预设删除失败，浏览器本地存储不可用。'
+      presetNotice.value = ''
+      return
+    }
+    presets.value = next
+    presetError.value = ''
+    presetNotice.value = '已删除预设。'
   }
 
   function clearDeadline() {
@@ -153,6 +219,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
 
   async function roll() {
     if (disposed || isBusy.value || physicalDiceCount.value === 0 || modifierError.value) return
+    presetNotice.value = ''
     rollStartedAt = performance.now()
     playbackPhysicalCount = physicalDiceCount.value
     error.value = ''
@@ -308,6 +375,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   }
 
   onMounted(() => {
+    presets.value = DicePresetStorageService.loadDicePresets()
     document.addEventListener('visibilitychange', checkDeadline)
     if (!globalThis.matchMedia) return
     mediaQuery = globalThis.matchMedia('(prefers-reduced-motion: reduce)')
@@ -338,6 +406,13 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     status,
     notice,
     error,
+    presets,
+    presetNotice,
+    presetError,
+    maxPresets: MAX_DICE_PRESETS,
+    savePreset,
+    applyPreset,
+    deletePreset,
     physicalDiceCount,
     remainingPhysicalDice,
     expression,

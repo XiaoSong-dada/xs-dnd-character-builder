@@ -391,11 +391,12 @@ src/hooks/useRulesRepository.ts（组件层响应式入口）
 ```text
 src/views/dice/index.vue
   -> src/views/dice/hooks/useDicePage.ts
-  -> src/views/dice/components/{DiceTypeSelector,DicePoolPanel,DiceTray,DiceResultPanel,DiceSettings}
+  -> src/views/dice/components/{DiceTypeSelector,DicePoolPanel,DicePresetList,DiceTray,DiceResultPanel,DiceSettings}
 
 src/views/dice/hooks/useDicePage.ts
   -> src/stores/dice.ts（会话内骰池、结果、待公布结果、固定修正值输入与本次投掷修正值快照、投掷标识及开关；无持久化）
   -> src/services/dice-audio.ts（页面拥有的惰性 Web Audio 音效）
+  -> src/services/dice-presets.ts（当前浏览器的骰池预设读写与归一化）
   -> src/rules/dice.ts
   -> src/services/dice-random.ts
   -> src/views/dice/engine/dice-worker-client.ts
@@ -410,6 +411,11 @@ src/stores/dice.ts
 src/services/dice-audio.ts
   -> src/services/dice-audio/synthesis.ts（确定性 PCM 合成、包络与软压缩，供实时和离线试听共用）
   -> Web Audio（unlock / play / stop / dispose；不在预渲染阶段初始化）
+
+src/services/dice-presets.ts
+  -> src/rules/dice.ts（骰池归一化与物理骰上限校验）
+  -> src/types/dice.ts（DicePoolPreset）
+  -> localStorage（仅当前浏览器；不进入骰池 Store，也不上传）
 
 src/views/dice/engine/*
   -> Three.js（渲染、骰面旋转）
