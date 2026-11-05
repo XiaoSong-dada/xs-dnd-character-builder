@@ -12,6 +12,14 @@ export interface DicePoolEntry {
   quantity: number
 }
 
+/** 保存在当前浏览器中的骰池预设：只记录骰型、数量与固定修正值，不记录投掷结果。 */
+export interface DicePoolPreset {
+  readonly id: string
+  readonly pool: DicePoolEntry[]
+  readonly modifier: number
+  readonly createdAt: number
+}
+
 export interface D100Components {
   tens: number
   ones: number
@@ -26,12 +34,20 @@ export interface LogicalRollResult {
 
 export type PhysicalResultKind = 'standard' | 'percentile-tens' | 'percentile-ones'
 
+/** 重掷时，未选中的骰子保持上一轮停稳的位置与朝向，不再参与物理模拟。 */
+export interface PhysicalDieStaticPose {
+  position: Vector3Tuple
+  quaternion: QuaternionTuple
+  landingDirectionIndex: number
+}
+
 export interface PhysicalDieSpec {
   id: string
   logicalId: string
   type: PhysicalDieType
   resultKind: PhysicalResultKind
   targetValue: number
+  staticPose?: PhysicalDieStaticPose
 }
 
 export interface RollRequest {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/ui/BaseButton.vue'
 import DicePoolPanel from '@/views/dice/components/DicePoolPanel.vue'
+import DicePresetList from '@/views/dice/components/DicePresetList.vue'
 import DiceResultPanel from '@/views/dice/components/DiceResultPanel.vue'
 import DiceSettings from '@/views/dice/components/DiceSettings.vue'
 import DiceTray from '@/views/dice/components/DiceTray.vue'
@@ -9,9 +10,11 @@ import { useDicePage } from '@/views/dice/hooks/useDicePage'
 
 const {
   title, description, dieTypes, maxPhysicalDice, pool, results, presentation, status, notice, error,
-  physicalDiceCount, remainingPhysicalDice, expression, isBusy, groupedResults, total, reducedMotion,
-  canAdd, addDie, removeDie, clearPool, roll, handlePlaybackComplete, handleRendererUnavailable,
-  skipAnimation, soundEnabled, setSkipAnimation, setSoundEnabled, handlePlaybackStarted,
+  physicalDiceCount, remainingPhysicalDice, expression, isBusy, canReroll, groupedResults, modifierInput,
+  modifierError, appliedModifier, diceTotal, total, reducedMotion,
+  canAdd, addDie, removeDie, clearPool, roll, reroll, handlePlaybackComplete, handleRendererUnavailable,
+  skipAnimation, soundEnabled, setModifier, setSkipAnimation, setSoundEnabled, handlePlaybackStarted,
+  presets, presetFeedback, maxPresets, savePreset, applyPreset, deletePreset,
 } = useDicePage()
 </script>
 
@@ -20,22 +23,33 @@ const {
     <header class="dice-page__header"><p>桌上冒险工具</p><h1>{{ title }}</h1><span>{{ description }}</span></header>
     <DiceTypeSelector :die-types="dieTypes" :disabled="isBusy" :can-add="canAdd" @add="addDie" />
     <DicePoolPanel
-      :entries="pool" :expression="expression" :physical-count="physicalDiceCount"
-      :remaining="remainingPhysicalDice" :maximum="maxPhysicalDice" :disabled="isBusy"
-      :can-add="canAdd" @add="addDie" @remove="removeDie"
+      :entries="pool" :expression="expression" :modifier="modifierInput" :modifier-error="modifierError"
+      :physical-count="physicalDiceCount" :remaining="remainingPhysicalDice" :maximum="maxPhysicalDice"
+      :disabled="isBusy" :can-add="canAdd" :can-save="physicalDiceCount > 0 && !modifierError"
+      :save-feedback="presetFeedback?.target === 'save' ? presetFeedback : undefined"
+      @add="addDie" @remove="removeDie" @update:modifier="setModifier" @save="savePreset"
     />
     <DiceSettings :skip-animation="skipAnimation" :sound-enabled="soundEnabled" :busy="isBusy" @skip="setSkipAnimation" @sound="setSoundEnabled" />
-    <DiceResultPanel v-if="results.length" :groups="groupedResults" :total="total" />
+    <DiceResultPanel
+      v-if="results.length" :groups="groupedResults" :total="total" :can-reroll="canReroll"
+      :dice-total="diceTotal" :modifier="appliedModifier" @reroll="reroll"
+    />
     <p v-if="skipAnimation" class="dice-page__notice">已跳过动画，投掷后直接显示结果。</p>
     <DiceTray v-else
       :presentation="presentation" :status="status" :reduced-motion="reducedMotion" :physical-count="physicalDiceCount"
-      @complete="handlePlaybackComplete" @unavailable="handleRendererUnavailable"
-      @started="handlePlaybackStarted"
+      :can-reroll="canReroll" @complete="handlePlaybackComplete" @unavailable="handleRendererUnavailable"
+      @started="handlePlaybackStarted" @reroll="reroll"
     />
     <p v-if="notice" class="dice-page__notice" role="status">{{ notice }}</p>
     <p v-if="error" class="dice-page__error" role="alert">{{ error }}</p>
+    <DicePresetList
+      :presets="presets" :maximum="maxPresets" :disabled="isBusy"
+      :delete-feedback="presetFeedback?.target === 'delete' ? presetFeedback : undefined"
+      :apply-feedback="presetFeedback?.target === 'apply' ? presetFeedback : undefined"
+      @apply="applyPreset" @delete="deletePreset"
+    />
     <div class="dice-page__actions">
-      <BaseButton class="dice-page__roll" :disabled="isBusy || physicalDiceCount === 0" @click="roll">
+      <BaseButton class="dice-page__roll" :disabled="isBusy || physicalDiceCount === 0 || !!modifierError" @click="roll">
         {{ results.length ? '再次投掷' : isBusy ? '投掷中…' : '投掷骰子' }}
       </BaseButton>
       <BaseButton variant="secondary" :disabled="isBusy || physicalDiceCount === 0" @click="clearPool">清空骰池</BaseButton>

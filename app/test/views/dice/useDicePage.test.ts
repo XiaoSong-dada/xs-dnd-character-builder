@@ -7,7 +7,12 @@ import type { DiceAudio } from '@/services/dice-audio'
 import type { DiceWorkerResponse, RollRequest } from '@/types/dice'
 import { DICE_ROLL_DEADLINE_MS, useDicePage } from '@/views/dice/hooks/useDicePage'
 
-function mountDicePage(responseFactory: (request: RollRequest) => DiceWorkerResponse | Promise<DiceWorkerResponse>, pinia = createPinia(), audio?: DiceAudio) {
+function mountDicePage(
+  responseFactory: (request: RollRequest) => DiceWorkerResponse | Promise<DiceWorkerResponse>,
+  pinia = createPinia(),
+  audio?: DiceAudio,
+  randomInteger: (minimum: number, maximum: number) => number = (minimum) => minimum,
+) {
   const terminate = vi.fn()
   const cancel = vi.fn()
   const simulate = vi.fn((request: RollRequest) => Promise.resolve(responseFactory(request)))
@@ -16,7 +21,7 @@ function mountDicePage(responseFactory: (request: RollRequest) => DiceWorkerResp
       return useDicePage({
         createAudio: audio ? () => audio : undefined,
         randomUint32: () => 123,
-        randomInteger: (minimum) => minimum,
+        randomInteger,
         createWorkerClient: () => ({ simulate, cancel, terminate }),
       })
     },
@@ -326,4 +331,206 @@ it('passes physical dice count to sound including the two percentile dice', asyn
   page.handlePlaybackStarted(page.presentation?.request.id ?? '', 1500)
   expect(audio.play).toHaveBeenCalledExactlyOnceWith(1500, 5)
   wrapper.unmount()
+})
+
+describe('single die reroll interaction', () => {
+  it('replaces one result and the total while skipping animation', async () => {
+    let rolled = 4
+    const { wrapper, simulate } = mountDicePage(successResponse, createPinia(), undefined, () => rolled)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.addDie('d6')
+    await page.roll()
+    page.handlePlaybackComplete(page.presentation?.request.id ?? '')
+    const before = page.results.map((result) => ({ ...result }))
+    expect(before.map((result) => result.value)).toEqual([4, 4])
+
+    page.setSkipAnimation(true)
+    rolled = 2
+    await page.reroll(before[1]?.id ?? '')
+
+    expect(page.status).toBe('complete')
+    expect(page.results.map((result) => result.value)).toEqual([4, 2])
+    expect(page.results[0]?.id).toBe(before[0]?.id)
+    expect(page.total).toBe(6)
+    expect(simulate).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
+
+  it('animates only the chosen die and publishes the new value after playback', async () => {
+    let rolled = 5
+    const { wrapper, simulate } = mountDicePage(successResponse, createPinia(), undefined, () => rolled)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.addDie('d10')
+    await page.roll()
+    page.handlePlaybackComplete(page.presentation?.request.id ?? '')
+    const before = page.results.map((result) => ({ ...result }))
+
+    rolled = 3
+    const pending = page.reroll(before[1]?.id ?? '')
+    expect(page.status).toBe('preparing')
+    await pending
+    expect(page.status).toBe('rolling')
+
+    const request = simulate.mock.calls[1]?.[0]
+    expect(request?.dice).toHaveLength(2)
+    expect(request?.dice[0]?.staticPose).toBeDefined()
+    expect(request?.dice[1]?.staticPose).toBeUndefined()
+    expect(request?.dice[1]?.targetValue).toBe(3)
+    expect(page.results.map((result) => result.value)).toEqual([5, 5])
+
+    page.handlePlaybackComplete(page.presentation?.request.id ?? '')
+    expect(page.status).toBe('complete')
+    expect(page.results.map((result) => result.value)).toEqual([5, 3])
+    expect(page.total).toBe(8)
+    wrapper.unmount()
+  })
+
+  it('ignores reroll while a roll is still settling', async () => {
+    const { wrapper, simulate } = mountDicePage(successResponse)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    await page.roll()
+    expect(page.status).toBe('rolling')
+    const logicalId = page.presentation?.request.dice[0]?.logicalId ?? ''
+    await page.reroll(logicalId)
+    expect(page.status).toBe('rolling')
+    expect(simulate).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
+
+  it('falls back to the fair text value when reroll physics fails', async () => {
+    let calls = 0
+    const { wrapper } = mountDicePage((request) => {
+      calls += 1
+      return calls === 1 ? successResponse(request) : { type: 'failure', rollId: request.id, reason: 'cocked' }
+    }, createPinia(), undefined, () => 6)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.addDie('d6')
+    await page.roll()
+    page.handlePlaybackComplete(page.presentation?.request.id ?? '')
+    const target = page.results[0]?.id ?? ''
+
+    await page.reroll(target)
+    expect(page.status).toBe('fallback')
+    expect(page.notice).toContain('公平文字结果')
+    expect(page.results[0]?.value).toBe(6)
+    expect(page.total).toBe(12)
+    wrapper.unmount()
+  })
+
+  it('rerolls from retained results after leaving and returning to the page', async () => {
+    const pinia = createPinia()
+    let rolled = 4
+    const first = mountDicePage(successResponse, pinia, undefined, () => rolled)
+    const page = first.wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.addDie('d8')
+    await page.roll()
+    page.handlePlaybackComplete(page.presentation?.request.id ?? '')
+    const retained = JSON.parse(JSON.stringify(page.results)) as Array<{ id: string; value: number }>
+    first.wrapper.unmount()
+
+    const second = mountDicePage(successResponse, pinia, undefined, () => rolled)
+    const restored = second.wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    expect(restored.presentation).toBeUndefined()
+    rolled = 2
+    await restored.reroll(retained[1]?.id ?? '')
+    expect(restored.results.map((result) => result.value)).toEqual([4, 2])
+    expect(restored.total).toBe(6)
+    expect(restored.status).toBe('complete')
+    second.wrapper.unmount()
+  })
+})
+
+
+describe('dice fixed modifier', () => {
+  it('applies the modifier once to the total and keeps per-die values unchanged', async () => {
+    const { wrapper } = mountDicePage(successResponse)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.addDie('d6')
+    page.setModifier('+5')
+    page.setSkipAnimation(true)
+    await page.roll()
+    expect(page.results.map((result) => result.value)).toEqual([1, 1])
+    expect(page.diceTotal).toBe(2)
+    expect(page.appliedModifier).toBe(5)
+    expect(page.total).toBe(7)
+    wrapper.unmount()
+  })
+
+  it('treats an empty modifier as zero and rejects invalid input before rolling', async () => {
+    const { wrapper } = mountDicePage(successResponse)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.setSkipAnimation(true)
+    page.setModifier('   ')
+    await page.roll()
+    expect(page.appliedModifier).toBe(0)
+    expect(page.total).toBe(1)
+    expect(page.modifierError).toBe('')
+
+    page.setModifier('1.5')
+    expect(page.modifierError).toContain('整数')
+    await page.roll()
+    expect(page.status).toBe('idle')
+    expect(page.results).toEqual([])
+    wrapper.unmount()
+  })
+
+  it('invalidates results when the modifier input changes', async () => {
+    const { wrapper } = mountDicePage(successResponse)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.setSkipAnimation(true)
+    await page.roll()
+    expect(page.results).toHaveLength(1)
+    page.setModifier('-2')
+    expect(page.results).toEqual([])
+    expect(page.appliedModifier).toBe(0)
+    expect(page.total).toBe(0)
+    wrapper.unmount()
+  })
+
+  it('retains the modifier input and applied modifier across remounts', async () => {
+    const pinia = createPinia()
+    const first = mountDicePage(successResponse, pinia)
+    const page = first.wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.setSkipAnimation(true)
+    page.setModifier('4')
+    await page.roll()
+    expect(page.total).toBe(5)
+    first.wrapper.unmount()
+
+    const second = mountDicePage(successResponse, pinia)
+    const restored = second.wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    expect(restored.modifierInput).toBe('4')
+    expect(restored.appliedModifier).toBe(4)
+    expect(restored.total).toBe(5)
+    second.wrapper.unmount()
+  })
+
+  it('recomputes the total from the updated dice and the snapshot modifier after rerolling one die', async () => {
+    let rolled = 1
+    const { wrapper } = mountDicePage(successResponse, createPinia(), undefined, () => rolled)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.addDie('d6')
+    page.setModifier('-2')
+    page.setSkipAnimation(true)
+    await page.roll()
+    expect(page.total).toBe(0)
+
+    rolled = 4
+    await page.reroll(page.results[1]?.id ?? '')
+    expect(page.results.map((result) => result.value)).toEqual([1, 4])
+    expect(page.diceTotal).toBe(5)
+    expect(page.appliedModifier).toBe(-2)
+    expect(page.total).toBe(3)
+    wrapper.unmount()
+  })
 })

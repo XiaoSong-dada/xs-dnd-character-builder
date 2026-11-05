@@ -14,6 +14,7 @@ const rendererMocks = vi.hoisted(() => ({
   zoomOut: vi.fn(),
   resetView: vi.fn(),
   clearPresentation: vi.fn(),
+  pickDie: vi.fn(),
   dispose: vi.fn(),
 }))
 
@@ -28,6 +29,7 @@ vi.mock('@/views/dice/engine/dice-renderer', () => ({
     zoomOut = rendererMocks.zoomOut
     resetView = rendererMocks.resetView
     clearPresentation = rendererMocks.clearPresentation
+    pickDie = rendererMocks.pickDie
     dispose = rendererMocks.dispose
   },
 }))
@@ -54,7 +56,7 @@ describe('DiceTray', () => {
 
   it('enables view buttons only for a completed visual roll', async () => {
     const wrapper = mount(DiceTray, {
-      props: { status: 'idle', reducedMotion: false, physicalCount: 6 },
+      props: { status: 'idle', reducedMotion: false, physicalCount: 6, canReroll: false },
     })
     const zoomIn = wrapper.get('button[aria-label="放大骰盘视图"]')
     expect(zoomIn.attributes('disabled')).toBeDefined()
@@ -80,7 +82,7 @@ describe('DiceTray', () => {
   it('shows the two-finger hint while view controls are enabled and dismisses it automatically', async () => {
     vi.useFakeTimers()
     const wrapper = mount(DiceTray, {
-      props: { status: 'idle', reducedMotion: false, physicalCount: 1 },
+      props: { status: 'idle', reducedMotion: false, physicalCount: 1, canReroll: false },
     })
     expect(wrapper.find('[role="status"]').exists()).toBe(false)
 
@@ -113,7 +115,7 @@ it.each([800, 6000])('plays the complete %i ms trajectory within 1500 ms', async
   vi.spyOn(performance, 'now').mockReturnValue(0)
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frame = callback; return 1 })
   const value = { ...presentation, trajectory: { ...presentation.trajectory, durationMs } }
-  const wrapper = mount(DiceTray, { props: { status: 'rolling', reducedMotion: false, physicalCount: 1, presentation: value } })
+  const wrapper = mount(DiceTray, { props: { status: 'rolling', reducedMotion: false, physicalCount: 1, presentation: value, canReroll: false } })
   const duration = Math.min(durationMs, 1500)
   expect(wrapper.emitted('started')).toEqual([['roll-1', duration]])
   frame?.(duration / 2)
@@ -125,4 +127,76 @@ it.each([800, 6000])('plays the complete %i ms trajectory within 1500 ms', async
   wrapper.unmount()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+})
+
+function dispatchPointer(target: EventTarget, type: string, pointerId: number, clientX: number, clientY: number) {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.assign(event, { pointerId, clientX, clientY })
+  target.dispatchEvent(event)
+}
+
+describe('DiceTray single die reroll picking', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  function mountComplete() {
+    return mount(DiceTray, {
+      props: { status: 'complete', reducedMotion: false, physicalCount: 1, presentation, canReroll: true },
+    })
+  }
+
+  it('emits the picked logical die for a short single-pointer tap', async () => {
+    rendererMocks.pickDie.mockReturnValue('d6-1')
+    const wrapper = mountComplete()
+    const canvas = wrapper.get('canvas').element
+    dispatchPointer(canvas, 'pointerdown', 1, 120, 140)
+    dispatchPointer(canvas, 'pointerup', 1, 122, 142)
+    await wrapper.vm.$nextTick()
+    expect(rendererMocks.pickDie).toHaveBeenCalledWith(122, 142)
+    expect(wrapper.emitted('reroll')).toEqual([['d6-1']])
+    wrapper.unmount()
+  })
+
+  it('does not reroll when the pointer drags across the tray', async () => {
+    rendererMocks.pickDie.mockReturnValue('d6-1')
+    const wrapper = mountComplete()
+    const canvas = wrapper.get('canvas').element
+    dispatchPointer(canvas, 'pointerdown', 1, 120, 140)
+    dispatchPointer(canvas, 'pointerup', 1, 160, 140)
+    await wrapper.vm.$nextTick()
+    expect(rendererMocks.pickDie).not.toHaveBeenCalled()
+    expect(wrapper.emitted('reroll')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('ignores two-finger gestures and taps while reroll is unavailable', async () => {
+    rendererMocks.pickDie.mockReturnValue('d6-1')
+    const wrapper = mountComplete()
+    const canvas = wrapper.get('canvas').element
+    dispatchPointer(canvas, 'pointerdown', 1, 120, 140)
+    dispatchPointer(canvas, 'pointerdown', 2, 220, 140)
+    dispatchPointer(canvas, 'pointerup', 1, 121, 141)
+    dispatchPointer(canvas, 'pointerup', 2, 220, 140)
+    expect(wrapper.emitted('reroll')).toBeUndefined()
+
+    await wrapper.setProps({ canReroll: false })
+    dispatchPointer(canvas, 'pointerdown', 3, 120, 140)
+    dispatchPointer(canvas, 'pointerup', 3, 120, 140)
+    expect(rendererMocks.pickDie).not.toHaveBeenCalled()
+    expect(wrapper.emitted('reroll')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('ignores a pointer held longer than a tap', async () => {
+    vi.useFakeTimers()
+    rendererMocks.pickDie.mockReturnValue('d6-1')
+    const wrapper = mountComplete()
+    const canvas = wrapper.get('canvas').element
+    dispatchPointer(canvas, 'pointerdown', 1, 120, 140)
+    await vi.advanceTimersByTimeAsync(700)
+    dispatchPointer(canvas, 'pointerup', 1, 120, 140)
+    expect(rendererMocks.pickDie).not.toHaveBeenCalled()
+    expect(wrapper.emitted('reroll')).toBeUndefined()
+    vi.useRealTimers()
+    wrapper.unmount()
+  })
 })

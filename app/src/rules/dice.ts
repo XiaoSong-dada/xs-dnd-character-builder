@@ -3,7 +3,9 @@ import type {
   DieType,
   LogicalRollResult,
   PhysicalDieSpec,
+  PhysicsTrajectory,
   RollPreparation,
+  RollRequest,
 } from '@/types/dice'
 
 export const MAX_PHYSICAL_DICE = 20
@@ -27,12 +29,15 @@ export function getPhysicalDiceCount(pool: readonly DicePoolEntry[]): number {
   return pool.reduce((total, entry) => total + entry.quantity * getPhysicalDieCost(entry.type), 0)
 }
 
-export function formatDiceExpression(pool: readonly DicePoolEntry[]): string {
+export function formatDiceExpression(pool: readonly DicePoolEntry[], modifier = 0): string {
   const counts = new Map(pool.map((entry) => [entry.type, entry.quantity]))
-  return DIE_TYPES.flatMap((type) => {
+  const expression = DIE_TYPES.flatMap((type) => {
     const quantity = counts.get(type) ?? 0
     return quantity > 0 ? [`${quantity}${type}`] : []
   }).join(' + ')
+  if (modifier > 0) return `${expression} + ${modifier}`
+  if (modifier < 0) return `${expression} − ${Math.abs(modifier)}`
+  return expression
 }
 
 export function resolveD100(tens: number, ones: number): number {
@@ -53,8 +58,38 @@ export function splitD100(value: number): { tens: number; ones: number } {
   return { tens: Math.floor(value / 10) * 10, ones: value % 10 }
 }
 
-export function calculateRollTotal(results: readonly LogicalRollResult[]): number {
+export function calculateDiceTotal(results: readonly LogicalRollResult[]): number {
   return results.reduce((total, result) => total + result.value, 0)
+}
+
+export function calculateRollTotal(results: readonly LogicalRollResult[], modifier = 0): number {
+  return calculateDiceTotal(results) + modifier
+}
+
+export interface RollModifierParseResult {
+  value: number
+  error: string
+}
+
+/** 校验「固定修正值」输入：留空视为 0，只接受整数（可带正负号）。 */
+export function parseRollModifier(input: string): RollModifierParseResult {
+  const trimmed = input.trim()
+  if (trimmed === '') return { value: 0, error: '' }
+  if (!/^[+-]?\d+$/.test(trimmed)) {
+    return { value: 0, error: '固定修正值只能填写整数，例如 5、-2 或 0。' }
+  }
+  const value = Number(trimmed)
+  if (!Number.isSafeInteger(value)) {
+    return { value: 0, error: '固定修正值超出可处理范围，请填写较小的整数。' }
+  }
+  return { value, error: '' }
+}
+
+/** 把骰点合计与修正值拼成结果区展示式，例如 `7 − 2 = 5`。 */
+export function formatRollTotalFormula(diceTotal: number, modifier: number): string {
+  if (modifier === 0) return `${diceTotal} + 0 = ${diceTotal}`
+  const operator = modifier > 0 ? '+' : '−'
+  return `${diceTotal} ${operator} ${Math.abs(modifier)} = ${diceTotal + modifier}`
 }
 
 export function groupRollResults(results: readonly LogicalRollResult[]) {
@@ -114,5 +149,116 @@ export function prepareRoll(
   }
 
   return { request: { id: rollId, seed, dice }, results }
+}
+
+export interface DiceRollSnapshot {
+  request: RollRequest
+  trajectory: PhysicsTrajectory
+}
+
+/** 只替换一颗逻辑骰的点数；d100 同步更新十位与个位读数。 */
+export function rerollLogicalResult(
+  result: LogicalRollResult,
+  randomInteger: (minimum: number, maximum: number) => number,
+): LogicalRollResult {
+  if (result.type === 'd100') {
+    const value = randomInteger(1, 100)
+    return { ...result, value, d100: splitD100(value) }
+  }
+  return { ...result, value: randomInteger(1, DIE_SIDES[result.type]) }
+}
+
+function createActiveSpecs(result: LogicalRollResult, previousSpecs: readonly PhysicalDieSpec[]): PhysicalDieSpec[] {
+  if (result.type === 'd100') {
+    const components = result.d100 ?? splitD100(result.value)
+    return [
+      {
+        id: previousSpecs[0]?.id ?? `${result.id}:tens`,
+        logicalId: result.id,
+        type: 'd10',
+        resultKind: 'percentile-tens',
+        targetValue: components.tens / 10,
+      },
+      {
+        id: previousSpecs[1]?.id ?? `${result.id}:ones`,
+        logicalId: result.id,
+        type: 'd10',
+        resultKind: 'percentile-ones',
+        targetValue: components.ones,
+      },
+    ]
+  }
+  return [{
+    id: previousSpecs[0]?.id ?? result.id,
+    logicalId: result.id,
+    type: result.type,
+    resultKind: 'standard',
+    targetValue: result.value,
+  }]
+}
+
+/**
+ * 以上一轮停稳的骰盘为基线，只让目标逻辑骰重新参与物理模拟；
+ * 其余骰子携带 staticPose，渲染时保持原位。
+ */
+export function buildRerollRequest(
+  results: readonly LogicalRollResult[],
+  targetId: string,
+  rollId: string,
+  seed: number,
+  previous: DiceRollSnapshot,
+): RollRequest {
+  if (!results.some((result) => result.id === targetId)) {
+    throw new RangeError('找不到要重掷的骰子。')
+  }
+  if (previous.request.dice.length === 0 || previous.trajectory.frameCount < 1) {
+    throw new RangeError('当前没有可重掷的骰盘状态。')
+  }
+
+  const previousSpecsByLogical = new Map<string, PhysicalDieSpec[]>()
+  const previousIndexById = new Map<string, number>()
+  previous.request.dice.forEach((spec, index) => {
+    const specs = previousSpecsByLogical.get(spec.logicalId) ?? []
+    specs.push(spec)
+    previousSpecsByLogical.set(spec.logicalId, specs)
+    previousIndexById.set(spec.id, index)
+  })
+
+  const diceCount = previous.request.dice.length
+  const lastFrame = previous.trajectory.frameCount - 1
+  const transforms = previous.trajectory.transforms
+  const dice: PhysicalDieSpec[] = []
+
+  for (const result of results) {
+    const previousSpecs = previousSpecsByLogical.get(result.id)
+    const expectedPhysicalCount = getPhysicalDieCost(result.type)
+    if (!previousSpecs || previousSpecs.length !== expectedPhysicalCount) {
+      throw new RangeError('骰盘状态与本次结果不一致，无法重掷。')
+    }
+    if (result.id === targetId) {
+      dice.push(...createActiveSpecs(result, previousSpecs))
+      continue
+    }
+    for (const spec of previousSpecs) {
+      const index = previousIndexById.get(spec.id)
+      if (index === undefined) throw new RangeError('骰盘状态与本次结果不一致，无法重掷。')
+      const offset = (lastFrame * diceCount + index) * 7
+      dice.push({
+        ...spec,
+        staticPose: {
+          position: [transforms[offset] ?? 0, transforms[offset + 1] ?? 0, transforms[offset + 2] ?? 0],
+          quaternion: [
+            transforms[offset + 3] ?? 0,
+            transforms[offset + 4] ?? 0,
+            transforms[offset + 5] ?? 0,
+            transforms[offset + 6] ?? 1,
+          ],
+          landingDirectionIndex: previous.trajectory.landingDirectionIndices[index] ?? 0,
+        },
+      })
+    }
+  }
+
+  return { id: rollId, seed, dice }
 }
 

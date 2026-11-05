@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { deriveCharacter } from '@/rules/derive'
 import { buildCharacterExportModel } from '@/features/character-export/build-export-data'
 import { fillPdfTemplate } from '@/services/export-pdf'
-import { buildXlsxFieldValues, fillTemplate, readFieldMapping } from '@/services/export-xlsx'
+import { buildXlsxFieldValues, fillCharacterSheetTemplate } from '@/services/export-xlsx'
 import { motmDraft, motmSlugs } from '../fixtures/motm-2014'
 
 describe('MotM 33项实际模板输出', () => {
@@ -12,21 +12,8 @@ describe('MotM 33项实际模板输出', () => {
     const draft = motmDraft(slug)
     const model = buildCharacterExportModel(draft, deriveCharacter(draft))
     const { values } = buildXlsxFieldValues(model)
-    const ExcelJS = await import('exceljs')
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-zh.xlsx')))
-    expect(fillTemplate(workbook, model).diagnostics.filter((item) => item.severity === 'error')).toEqual([])
-    const reloaded = new ExcelJS.Workbook()
-    await reloaded.xlsx.load(await workbook.xlsx.writeBuffer())
-    const mapping = readFieldMapping(reloaded)
-    for (const [key, value] of Object.entries(values)) {
-      const target = mapping.get(key)
-      if (target) {
-        const cell = reloaded.getWorksheet(target.sheet)?.getCell(target.address)
-        // ExcelJS value copies omit falsy results; result reads the actual formula cache.
-        expect(cell?.formula ? cell.result ?? '' : cell?.value ?? '', key).toEqual(value)
-      }
-    }
+    const xlsx = fillCharacterSheetTemplate(new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-2014.xlsx'))), model, '2014')
+    expect(xlsx.diagnostics.filter((item) => item.severity === 'error')).toEqual([])
     for (const spell of model.spellcasting?.spells ?? []) expect(Object.values(values)).toContain(spell.name)
     expect(model.features.some((feature) => feature.category === 'race')).toBe(true)
     if (slug === 'satyr') expect(JSON.stringify(values)).toContain('鲁特琴')

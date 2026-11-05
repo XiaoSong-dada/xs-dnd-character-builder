@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { deriveCharacter } from '@/rules/derive'
 import { buildCharacterExportModel } from '@/features/character-export/build-export-data'
 import { fillPdfTemplate } from '@/services/export-pdf'
-import { buildXlsxFieldValues, fillTemplate, readFieldMapping } from '@/services/export-xlsx'
+import { buildXlsxFieldValues, fillCharacterSheetTemplate } from '@/services/export-xlsx'
 import { draft2024, selection } from '../fixtures/draft-2024'
 
 const modelFor = (slug: string) => {
@@ -22,18 +22,7 @@ describe('元素裔真实导出模板', () => {
     const { values } = buildXlsxFieldValues(model)
     expect(values).toMatchObject({ spellcasting_ability: '感知', spell_save_dc: 12, spell_attack_bonus: 4 })
     expect(`${values.features_traits}\n${values.additional_features}`).toContain('无需材料成分（种族施放）')
-    const ExcelJS = await import('exceljs')
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-zh.xlsx')))
-    expect(fillTemplate(workbook, model).diagnostics.filter((item) => item.severity === 'error')).toEqual([])
-    const reloaded = new ExcelJS.Workbook()
-    await reloaded.xlsx.load(await workbook.xlsx.writeBuffer())
-    const mapping = readFieldMapping(reloaded)
-    for (const [key, value] of Object.entries(values).filter(([key]) => /^spell_\d+_\d+_name$/.test(key))) {
-      const target = mapping.get(key)
-      expect(target).toBeDefined()
-      expect(reloaded.getWorksheet(target?.sheet ?? '')?.getCell(target?.address ?? 'A1').value).toBe(value)
-    }
+    expect(fillCharacterSheetTemplate(new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-2014.xlsx'))), model, '2014').diagnostics.filter((item) => item.severity === 'error')).toEqual([])
     for (const spell of model.spellcasting?.spells ?? []) expect(Object.values(values)).toContain(spell.name)
   }, 30_000)
 

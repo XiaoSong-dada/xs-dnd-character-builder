@@ -11,8 +11,9 @@ import {
   World,
 } from 'cannon-es'
 
-import type { DiceWorkerResponse, PhysicsTrajectory, RollRequest, Vector3Tuple } from '@/types/dice'
+import type { DiceWorkerResponse, PhysicalDieSpec, PhysicsTrajectory, RollRequest, Vector3Tuple } from '@/types/dice'
 import { DIE_DEFINITIONS } from '@/views/dice/engine/dice-definitions'
+import type { DiceSpawnCell } from '@/views/dice/engine/dice-tray-layout'
 import { getDiceSpawnCells, getDiceTrayLayout } from '@/views/dice/engine/dice-tray-layout'
 
 const FRAME_RATE = 60
@@ -87,28 +88,83 @@ function getLandingDirection(body: Body, directions: readonly Vector3Tuple[]) {
   return first.index
 }
 
+function createDieShape(type: PhysicalDieSpec['type']): ConvexPolyhedron {
+  const definition = DIE_DEFINITIONS[type]
+  return new ConvexPolyhedron({
+    vertices: definition.vertices.map((vertex) => new Vec3(
+      vertex[0] * definition.radius,
+      vertex[1] * definition.radius,
+      vertex[2] * definition.radius,
+    )),
+    faces: definition.faces,
+  })
+}
+
+/** 重掷时让活动骰子从离静止骰子最远的出生格落下，尽量避免一出生就与旧骰子重叠。 */
+function pickSpawnCells(
+  cells: readonly DiceSpawnCell[],
+  staticPositions: readonly Vector3Tuple[],
+  count: number,
+): DiceSpawnCell[] {
+  if (staticPositions.length === 0) return cells.slice(0, count)
+  const available = [...cells]
+  const chosen: DiceSpawnCell[] = []
+  for (let index = 0; index < count && available.length > 0; index += 1) {
+    let bestIndex = 0
+    let bestDistance = -1
+    available.forEach((cell, cellIndex) => {
+      const distance = Math.min(...staticPositions.map(([x, , z]) => Math.hypot(cell.x - x, cell.z - z)))
+      if (distance > bestDistance) {
+        bestDistance = distance
+        bestIndex = cellIndex
+      }
+    })
+    const cell = available.splice(bestIndex, 1)[0]
+    if (cell) chosen.push(cell)
+  }
+  return chosen
+}
+
 function runAttempt(request: RollRequest, attempt: number): PhysicsTrajectory | 'timeout' | 'cocked' {
   const random = createPrng((request.seed + attempt * 0x9e37_79b9) >>> 0)
   const { world, diceMaterial, layout } = createWorld(request.dice.length)
   const spawnCells = getDiceSpawnCells(request.dice.length, layout)
-  const bodies = request.dice.map((die, index) => {
-    const definition = DIE_DEFINITIONS[die.type]
-    const spawnCell = spawnCells[index]
-    const scaledVertices = definition.vertices.map((vertex) => new Vec3(
-      vertex[0] * definition.radius,
-      vertex[1] * definition.radius,
-      vertex[2] * definition.radius,
-    ))
+  const hasStaticDice = request.dice.some((die) => Boolean(die.staticPose))
+  const staticPositions = request.dice.flatMap((die) => die.staticPose ? [die.staticPose.position] : [])
+  const activeDice = request.dice.filter((die) => !die.staticPose)
+  if (activeDice.length === 0) return 'cocked'
+  const activeSpawnCells = pickSpawnCells(spawnCells, staticPositions, activeDice.length)
+  const spawnCellById = new Map<string, DiceSpawnCell>()
+  if (hasStaticDice) {
+    activeDice.forEach((die, index) => {
+      const cell = activeSpawnCells[index]
+      if (cell) spawnCellById.set(die.id, cell)
+    })
+  } else {
+    request.dice.forEach((die, index) => {
+      const cell = spawnCells[index]
+      if (cell) spawnCellById.set(die.id, cell)
+    })
+  }
+
+  const bodies = request.dice.map((die) => {
     const body = new Body({
-      mass: 1,
+      mass: die.staticPose ? 0 : 1,
       material: diceMaterial,
-      shape: new ConvexPolyhedron({ vertices: scaledVertices, faces: definition.faces }),
+      shape: createDieShape(die.type),
       linearDamping: 0.2,
       angularDamping: 0.3,
       allowSleep: true,
       sleepSpeedLimit: 0.22,
       sleepTimeLimit: 0.4,
     })
+    if (die.staticPose) {
+      body.position.set(...die.staticPose.position)
+      body.quaternion.set(...die.staticPose.quaternion)
+      world.addBody(body)
+      return body
+    }
+    const spawnCell = spawnCellById.get(die.id)
     body.position.set(
       (spawnCell?.x ?? 0) + randomBetween(random, -(spawnCell?.jitterX ?? 0), spawnCell?.jitterX ?? 0),
       randomBetween(random, 3.4, 4.2),
@@ -136,6 +192,7 @@ function runAttempt(request: RollRequest, attempt: number): PhysicsTrajectory | 
     world.addBody(body)
     return body
   })
+  const activeBodies = bodies.filter((_, index) => !request.dice[index]?.staticPose)
 
   const frames: number[] = []
   let sleepingFrames = 0
@@ -150,7 +207,7 @@ function runAttempt(request: RollRequest, attempt: number): PhysicsTrajectory | 
       )
     }
     frameCount += 1
-    if (frame > 30 && bodies.every((body) => body.sleepState === Body.SLEEPING)) sleepingFrames += 1
+    if (frame > 30 && activeBodies.every((body) => body.sleepState === Body.SLEEPING)) sleepingFrames += 1
     else sleepingFrames = 0
     if (sleepingFrames >= 30) break
   }
@@ -158,6 +215,7 @@ function runAttempt(request: RollRequest, attempt: number): PhysicsTrajectory | 
   if (sleepingFrames < 30) return 'timeout'
   const landingDirectionIndices = bodies.map((body, index) => {
     const die = request.dice[index]
+    if (die?.staticPose) return die.staticPose.landingDirectionIndex
     return die ? getLandingDirection(body, DIE_DEFINITIONS[die.type].resultDirections) : undefined
   })
   if (landingDirectionIndices.some((index) => index === undefined)) return 'cocked'

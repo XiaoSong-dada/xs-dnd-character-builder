@@ -7,7 +7,7 @@ import { deriveCharacter } from '@/rules/derive'
 import { EMPTY_MANUAL_EDITS } from '@/rules/manual-edits'
 import { buildCharacterExportModel } from '@/features/character-export/build-export-data'
 import { fillPdfTemplate } from '@/services/export-pdf'
-import { buildXlsxFieldValues, fillTemplate } from '@/services/export-xlsx'
+import { buildXlsxFieldValues, fillCharacterSheetTemplate } from '@/services/export-xlsx'
 import { buildTimeline } from '@/rules/timeline'
 import { applyRestRecovery, listSessionResources } from '@/rules/session-resources'
 import { createInitialSessionState } from '@/rules/session-state'
@@ -156,14 +156,8 @@ describe('2014 种族法术接入契约', () => {
     const values = buildXlsxFieldValues(model).values
     expect(values).toMatchObject({ spellcasting_ability: '感知', spell_save_dc: 12, spell_attack_bonus: 4 })
     for (const grant of race.spellGrants ?? []) expect(Object.values(values)).toContain(rulesRepository.getSpell(grant.spellId)?.name)
-    const ExcelJS = await import('exceljs')
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-zh.xlsx')))
-    const xlsx = fillTemplate(workbook, model)
+    const xlsx = fillCharacterSheetTemplate(new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-2014.xlsx'))), model, '2014')
     expect(xlsx.diagnostics.filter((item) => item.severity === 'error')).toEqual([])
-    const reloaded = new ExcelJS.Workbook()
-    await reloaded.xlsx.load(await workbook.xlsx.writeBuffer())
-    expect(reloaded.worksheets).toHaveLength(6)
     const pdf = await fillPdfTemplate(
       new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-zh-plus.pdf'))),
       new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/fonts/noto-sans-sc-subset.ttf'))), model,

@@ -17,9 +17,11 @@ import {
   PerspectiveCamera,
   PlaneGeometry,
   Quaternion,
+  Raycaster,
   Scene,
   SRGBColorSpace,
   TOUCH,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from 'three'
@@ -34,6 +36,8 @@ import { clampDiceViewState, getDiceTrayLayout, getTrayFitDistance } from '@/vie
 
 interface RenderedDie {
   group: Group
+  body: Mesh
+  logicalId: string
   labelOffset: Quaternion
 }
 
@@ -340,7 +344,7 @@ export class DiceRenderer {
       const targetValue = spec.type === 'd10' ? spec.targetValue % 10 : spec.targetValue
       const landingIndex = presentation.trajectory.landingDirectionIndices[index] ?? 0
       const labelOffset = findLabelOffsetQuaternion(definition, targetValue, landingIndex)
-      this.dice.push({ group, labelOffset })
+      this.dice.push({ group, body: mesh, logicalId: spec.logicalId, labelOffset })
       this.diceGeometries.push(geometry, edgesGeometry)
       this.diceMaterials.push(material, edgeMaterial)
       this.scene.add(group)
@@ -385,6 +389,24 @@ export class DiceRenderer {
       die.group.quaternion.copy(firstQuaternion.slerp(secondQuaternion, alpha).multiply(die.labelOffset))
     })
     this.render()
+  }
+
+  /** 返回画布坐标命中的逻辑骰 id；未命中或当前不可交互时返回 undefined。 */
+  pickDie(clientX: number, clientY: number): string | undefined {
+    if (!this.interactionEnabled || this.dice.length === 0) return undefined
+    const bounds = this.canvas.getBoundingClientRect()
+    if (bounds.width <= 0 || bounds.height <= 0) return undefined
+    this.scene.updateMatrixWorld()
+    this.camera.updateMatrixWorld()
+    const pointer = new Vector2(
+      (clientX - bounds.left) / bounds.width * 2 - 1,
+      -((clientY - bounds.top) / bounds.height) * 2 + 1,
+    )
+    const raycaster = new Raycaster()
+    raycaster.setFromCamera(pointer, this.camera)
+    const hit = raycaster.intersectObjects(this.dice.map((die) => die.body), false)[0]
+    if (!hit) return undefined
+    return this.dice.find((die) => die.body === hit.object)?.logicalId
   }
 
   dispose() {
