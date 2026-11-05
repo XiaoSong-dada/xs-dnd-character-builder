@@ -5,11 +5,13 @@ import {
   DIE_TYPES,
   MAX_PHYSICAL_DICE,
   buildRerollRequest,
+  calculateDiceTotal,
   calculateRollTotal,
   formatDiceExpression,
   getPhysicalDiceCount,
   getPhysicalDieCost,
   groupRollResults,
+  parseRollModifier,
   prepareRoll,
   rerollLogicalResult,
 } from '@/rules/dice'
@@ -45,7 +47,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   const randomInteger = dependencies.randomInteger ?? randomIntegerInclusive
   const createWorkerClient = dependencies.createWorkerClient ?? (() => new DiceWorkerClient())
   const store = useDiceStore()
-  const { pool, results, activeRollId, skipAnimation, soundEnabled } = storeToRefs(store)
+  const { pool, results, modifierInput, appliedModifier, activeRollId, skipAnimation, soundEnabled } = storeToRefs(store)
   const audio = dependencies.createAudio?.() ?? new DiceAudioService()
   let disposed = false
   let soundedRollId: string | undefined
@@ -68,10 +70,19 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   const canReroll = computed(() => !isBusy.value && results.value.length > 0
     && (status.value === 'complete' || status.value === 'fallback'))
   const groupedResults = computed(() => groupRollResults(results.value))
-  const total = computed(() => calculateRollTotal(results.value))
+  const modifierState = computed(() => parseRollModifier(modifierInput.value))
+  const modifierError = computed(() => modifierState.value.error)
+  const diceTotal = computed(() => calculateDiceTotal(results.value))
+  const total = computed(() => calculateRollTotal(results.value, appliedModifier.value))
 
   function canAdd(type: DieType) {
     return !isBusy.value && remainingPhysicalDice.value >= getPhysicalDieCost(type)
+  }
+
+  function setModifier(value: string) {
+    if (isBusy.value) return
+    modifierInput.value = value
+    invalidateResult()
   }
 
   function invalidateResult() {
@@ -141,7 +152,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
   }
 
   async function roll() {
-    if (disposed || isBusy.value || physicalDiceCount.value === 0) return
+    if (disposed || isBusy.value || physicalDiceCount.value === 0 || modifierError.value) return
     rollStartedAt = performance.now()
     playbackPhysicalCount = physicalDiceCount.value
     error.value = ''
@@ -158,7 +169,7 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     try {
       const seed = randomUint32()
       const preparation = prepareRoll(pool.value, rollId, seed, randomInteger)
-      store.prepare(rollId, preparation.results)
+      store.prepare(rollId, preparation.results, modifierState.value.value)
       if (skipAnimation.value) {
         store.publish(rollId)
         status.value = 'complete'
@@ -333,10 +344,15 @@ export function useDicePage(dependencies: DicePageDependencies = {}) {
     isBusy,
     canReroll,
     groupedResults,
+    modifierInput,
+    modifierError,
+    appliedModifier,
+    diceTotal,
     total,
     reducedMotion,
     skipAnimation,
     soundEnabled,
+    setModifier,
     setSkipAnimation,
     setSoundEnabled,
     handlePlaybackStarted,

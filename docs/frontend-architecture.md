@@ -394,7 +394,7 @@ src/views/dice/index.vue
   -> src/views/dice/components/{DiceTypeSelector,DicePoolPanel,DiceTray,DiceResultPanel,DiceSettings}
 
 src/views/dice/hooks/useDicePage.ts
-  -> src/stores/dice.ts（会话内骰池、结果、待公布结果、投掷标识及开关；无持久化）
+  -> src/stores/dice.ts（会话内骰池、结果、待公布结果、固定修正值输入与本次投掷修正值快照、投掷标识及开关；无持久化）
   -> src/services/dice-audio.ts（页面拥有的惰性 Web Audio 音效）
   -> src/rules/dice.ts
   -> src/services/dice-random.ts

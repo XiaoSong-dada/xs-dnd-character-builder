@@ -444,3 +444,93 @@ describe('single die reroll interaction', () => {
     second.wrapper.unmount()
   })
 })
+
+
+describe('dice fixed modifier', () => {
+  it('applies the modifier once to the total and keeps per-die values unchanged', async () => {
+    const { wrapper } = mountDicePage(successResponse)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.addDie('d6')
+    page.setModifier('+5')
+    page.setSkipAnimation(true)
+    await page.roll()
+    expect(page.results.map((result) => result.value)).toEqual([1, 1])
+    expect(page.diceTotal).toBe(2)
+    expect(page.appliedModifier).toBe(5)
+    expect(page.total).toBe(7)
+    wrapper.unmount()
+  })
+
+  it('treats an empty modifier as zero and rejects invalid input before rolling', async () => {
+    const { wrapper } = mountDicePage(successResponse)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.setSkipAnimation(true)
+    page.setModifier('   ')
+    await page.roll()
+    expect(page.appliedModifier).toBe(0)
+    expect(page.total).toBe(1)
+    expect(page.modifierError).toBe('')
+
+    page.setModifier('1.5')
+    expect(page.modifierError).toContain('整数')
+    await page.roll()
+    expect(page.status).toBe('idle')
+    expect(page.results).toEqual([])
+    wrapper.unmount()
+  })
+
+  it('invalidates results when the modifier input changes', async () => {
+    const { wrapper } = mountDicePage(successResponse)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.setSkipAnimation(true)
+    await page.roll()
+    expect(page.results).toHaveLength(1)
+    page.setModifier('-2')
+    expect(page.results).toEqual([])
+    expect(page.appliedModifier).toBe(0)
+    expect(page.total).toBe(0)
+    wrapper.unmount()
+  })
+
+  it('retains the modifier input and applied modifier across remounts', async () => {
+    const pinia = createPinia()
+    const first = mountDicePage(successResponse, pinia)
+    const page = first.wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.setSkipAnimation(true)
+    page.setModifier('4')
+    await page.roll()
+    expect(page.total).toBe(5)
+    first.wrapper.unmount()
+
+    const second = mountDicePage(successResponse, pinia)
+    const restored = second.wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    expect(restored.modifierInput).toBe('4')
+    expect(restored.appliedModifier).toBe(4)
+    expect(restored.total).toBe(5)
+    second.wrapper.unmount()
+  })
+
+  it('recomputes the total from the updated dice and the snapshot modifier after rerolling one die', async () => {
+    let rolled = 1
+    const { wrapper } = mountDicePage(successResponse, createPinia(), undefined, () => rolled)
+    const page = wrapper.vm as unknown as ReturnType<typeof useDicePage>
+    page.addDie('d6')
+    page.addDie('d6')
+    page.setModifier('-2')
+    page.setSkipAnimation(true)
+    await page.roll()
+    expect(page.total).toBe(0)
+
+    rolled = 4
+    await page.reroll(page.results[1]?.id ?? '')
+    expect(page.results.map((result) => result.value)).toEqual([1, 4])
+    expect(page.diceTotal).toBe(5)
+    expect(page.appliedModifier).toBe(-2)
+    expect(page.total).toBe(3)
+    wrapper.unmount()
+  })
+})

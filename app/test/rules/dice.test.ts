@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  calculateDiceTotal,
   calculateRollTotal,
   formatDiceExpression,
+  formatRollTotalFormula,
   getPhysicalDiceCount,
+  parseRollModifier,
   prepareRoll,
   resolveD100,
   splitD100,
@@ -57,6 +60,47 @@ describe('dice rules', () => {
   it('rejects more than twenty physical dice', () => {
     expect(() => prepareRoll([{ type: 'd100', quantity: 11 }], 'roll', 1, () => 1))
       .toThrow('单次最多投掷 20 个物理骰子')
+  })
+
+  it('adds the fixed modifier to the total only once', () => {
+    const results = [
+      { id: 'a', type: 'd6' as const, value: 3 },
+      { id: 'b', type: 'd6' as const, value: 4 },
+    ]
+    expect(calculateDiceTotal(results)).toBe(7)
+    expect(calculateRollTotal(results)).toBe(7)
+    expect(calculateRollTotal(results, 5)).toBe(12)
+    expect(calculateRollTotal(results, -2)).toBe(5)
+    expect(calculateRollTotal(results, 0)).toBe(7)
+  })
+
+  it.each([
+    ['', 0],
+    ['   ', 0],
+    ['0', 0],
+    ['+5', 5],
+    ['-2', -2],
+    [' 12 ', 12],
+  ])('parses modifier %j as %i with no error', (input, expected) => {
+    expect(parseRollModifier(input)).toEqual({ value: expected, error: '' })
+  })
+
+  it.each(['1.5', 'abc', '1e3', '--2', '1 2'])('rejects invalid modifier %j', (input) => {
+    const parsed = parseRollModifier(input)
+    expect(parsed.value).toBe(0)
+    expect(parsed.error).toContain('整数')
+  })
+
+  it('rejects a modifier outside the safe integer range', () => {
+    expect(parseRollModifier('99999999999999999999').error).toContain('超出可处理范围')
+  })
+
+  it.each([
+    [7, -2, '7 − 2 = 5'],
+    [7, 5, '7 + 5 = 12'],
+    [7, 0, '7 + 0 = 7'],
+  ])('formats %i with modifier %i as %s', (diceTotal, modifier, expected) => {
+    expect(formatRollTotalFormula(diceTotal, modifier)).toBe(expected)
   })
 })
 

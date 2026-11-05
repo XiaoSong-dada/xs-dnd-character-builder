@@ -4,6 +4,8 @@ import type { DicePoolEntry, DieType } from '@/types/dice'
 defineProps<{
   entries: DicePoolEntry[]
   expression: string
+  modifier: string
+  modifierError: string
   physicalCount: number
   remaining: number
   maximum: number
@@ -11,7 +13,15 @@ defineProps<{
   canAdd: (type: DieType) => boolean
 }>()
 
-defineEmits<{ add: [type: DieType]; remove: [type: DieType] }>()
+const emit = defineEmits<{
+  add: [type: DieType]
+  remove: [type: DieType]
+  'update:modifier': [value: string]
+}>()
+
+function onModifierInput(event: Event) {
+  emit('update:modifier', (event.target as HTMLInputElement).value)
+}
 </script>
 
 <template>
@@ -32,6 +42,23 @@ defineEmits<{ add: [type: DieType]; remove: [type: DieType] }>()
       </div>
     </div>
     <p v-else class="dice-pool__empty">从上方选择骰型，支持相同或不同骰子一起投掷。</p>
+    <div class="dice-pool__modifier">
+      <label for="dice-modifier">固定修正值</label>
+      <input
+        id="dice-modifier"
+        :value="modifier"
+        type="text"
+        inputmode="text"
+        autocomplete="off"
+        placeholder="0"
+        :disabled="disabled"
+        :aria-invalid="modifierError ? 'true' : undefined"
+        :aria-describedby="modifierError ? 'dice-modifier-hint dice-modifier-error' : 'dice-modifier-hint'"
+        @input="onModifierInput"
+      >
+    </div>
+    <p id="dice-modifier-hint" class="dice-pool__hint">作用于整次投掷总和，只计一次；可填正整数、负整数或 0，留空按 0 处理。</p>
+    <p v-if="modifierError" id="dice-modifier-error" class="dice-pool__error" role="alert">{{ modifierError }}</p>
     <small v-if="remaining === 0" class="dice-pool__limit">已达到单次投掷上限。</small>
     <small v-else>还可加入 {{ remaining }} 个物理骰；一颗 d100 占两个。</small>
   </section>
@@ -87,6 +114,34 @@ defineEmits<{ add: [type: DieType]; remove: [type: DieType] }>()
       &:disabled { color: #a59d91; cursor: not-allowed; }
     }
   }
+
+  &__modifier {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem;
+
+    label { color: var(--color-text); font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
+    input {
+      min-width: 0;
+      min-height: 2.75rem;
+      padding: 0.45rem 0.7rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font: inherit;
+      font-variant-numeric: tabular-nums;
+      &:disabled { color: var(--color-text-muted); background: var(--color-gold-soft); cursor: not-allowed; }
+      &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+      &[aria-invalid='true'] { border-color: var(--color-error); }
+    }
+  }
+
+  &__hint,
+  &__error { margin: 0; font-size: 0.75rem; line-height: 1.5; }
+  &__hint { color: var(--color-text-muted); }
+  &__error { color: var(--color-error); font-weight: 700; }
 
   &__empty,
   > small { margin: 0; color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; }
