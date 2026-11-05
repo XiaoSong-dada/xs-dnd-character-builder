@@ -37,7 +37,7 @@ import { CharacterImportError, CharacterJsonService } from '@/services/character
 import { CharacterPackageService } from '@/services/character-package'
 import { RulesetPreferenceService, resolveInitialRuleset } from '@/services/ruleset-preference'
 import { randomIntegerInclusive, secureUint32 } from '@/services/dice-random'
-import { downloadXlsx, fillTemplate, loadCharacterSheetTemplate } from '@/services/export-xlsx'
+import { downloadXlsx, fillCharacterSheetTemplate, loadCharacterSheetTemplate } from '@/services/export-xlsx'
 import { buildCharacterSheetPdf, downloadPdf } from '@/services/export-pdf'
 import { buildCharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
@@ -1099,11 +1099,12 @@ export function useCharacterBuilderPage() {
       const model = buildCharacterExportModel(draft, currentDerived)
       const modelBlocker = blockingMessage(model.diagnostics)
       if (modelBlocker) throw new Error(modelBlocker)
-      const workbook = await loadCharacterSheetTemplate()
-      const result = fillTemplate(workbook, model)
+      const templateId = draft.ruleset === '5e-2024' ? '2024' : '2014'
+      const template = await loadCharacterSheetTemplate(templateId)
+      const result = fillCharacterSheetTemplate(template, model, templateId)
       const blocker = blockingMessage(result.diagnostics)
       if (blocker) throw new Error(blocker)
-      await downloadXlsx(workbook, `${draft.name.trim() || 'dnd-character'}-dnd5e.xlsx`)
+      await downloadXlsx(result.bytes, `${draft.name.trim() || 'dnd-character'}-dnd5e.xlsx`)
       const warning = diagnosticSummary(result.diagnostics)
       exportNotice.value = warning ? { tone: 'warning', title: 'XLSX 已导出，但有内容省略', message: warning } : { tone: 'success', title: 'XLSX 导出完成', message: '自动计算角色卡已校验并开始下载。' }
     } catch (error) {

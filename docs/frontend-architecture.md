@@ -442,8 +442,8 @@ src/views/character-builder/hooks/useCharacterBuilderPage.ts
   -> src/views/character-builder/steps.ts
   -> src/stores/character-drafts.ts
   -> src/services/character-json.ts
-  -> src/services/export-xlsx.ts（exportXlsx：v4 模板加载 + 输入/公式缓存填充 + 校验 + 下载）
-  -> src/services/export-pdf.ts（exportPdf：v4 三页区域映射填充 + 诊断 + 下载）
+  -> src/services/export-xlsx.ts（exportXlsx：按规则集选择 v4 模板 + 字段映射 XML 填充 + 校验 + 下载）
+  -> src/services/export-pdf.ts（exportPdf：v8 三页 AcroForm 模板填充 + 诊断 + 下载）
   -> src/features/character-export/build-export-data.ts（buildCharacterExportModel）
   -> src/rules/{derive,abilities,dependency,repository,timeline,spellcasting,starting-equipment}
   -> vue-router（useRoute / useRouter，路由查询与步骤编排）
@@ -591,8 +591,8 @@ src/services/character-package.ts
   -> src/types/character
 
 src/services/export-xlsx.ts
-  -> exceljs（动态 import，仅导出时按需加载；不进入 SSG 预渲染路径）
-  -> src/services/character-sheet-templates（XLSX 模板 URL 与离线缺失提示）
+  -> fflate（解包模板、按「字段映射」修补单元格 XML、重新打包；不加载 ExcelJS）
+  -> src/services/character-sheet-templates（2014/2024 XLSX 模板 URL 与离线缺失提示）
   -> src/features/character-export/build-export-data（消费唯一 CharacterExportModel，不导入 rules）
 
 src/services/export-pdf.ts

@@ -1,9 +1,13 @@
 # 国内 5E 术语版角色卡 PDF 字段契约
 
-> 模板：`DND_5E_2014_国内5E术语版角色卡_最终版.pdf`  
+> 模板：`2_DnD_5E.pdf`（运行时文件 `app/public/templates/character-sheet-zh-plus.pdf`）  
 > PDF：1.7，3 页，Letter（612 × 792 pt）  
-> 适配版本：PDF mapping v5  
+> 适配版本：PDF mapping v8  
 > 填充方式：AcroForm 字段填充、Noto Sans SC 更新外观、导出前扁平化
+
+> v8（2026-11-04，Issue #18）：运行时模板替换为参考画卡；该模板把 18 项技能中文标签
+> 调整回标准顺序（体操→生存），字段名仍沿用官方英文名，因此技能按同名字段直连，
+> 不再需要 v7 的错位映射。字段集合与页面结构保持 334 个字段 / 3 页。
 
 ## 1. 字段匹配规则
 

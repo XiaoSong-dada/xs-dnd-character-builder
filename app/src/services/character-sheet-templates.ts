@@ -9,8 +9,13 @@ import { baseUrl } from '@/config/site'
  * 与 `vite.config.ts` 中 workbox 运行时缓存规则通过 `/templates/` 前缀耦合：
  * 调整目录结构时必须同步该正则，否则一键下载的资源不会被 Service Worker 缓存。
  */
+export type CharacterSheetXlsxTemplateId = '2014' | '2024'
+
 export const CHARACTER_SHEET_PDF_TEMPLATE_URL = `${baseUrl}templates/character-sheet-zh-plus.pdf`
-export const CHARACTER_SHEET_XLSX_TEMPLATE_URL = `${baseUrl}templates/character-sheet-zh.xlsx`
+export const CHARACTER_SHEET_XLSX_TEMPLATE_URLS: Readonly<Record<CharacterSheetXlsxTemplateId, string>> = {
+  '2014': `${baseUrl}templates/character-sheet-2014.xlsx`,
+  '2024': `${baseUrl}templates/character-sheet-2024.xlsx`,
+}
 export const CHARACTER_SHEET_FONT_URL = `${baseUrl}templates/fonts/noto-sans-sc-subset.ttf`
 
 /**

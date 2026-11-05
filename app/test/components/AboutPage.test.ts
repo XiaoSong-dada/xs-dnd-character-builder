@@ -144,16 +144,16 @@ describe('关于本站页面', () => {
     expect(wrapper.find('.tip-qr').exists()).toBe(false)
   })
 
-  it('展示离线使用区块与三项导出资源，默认全部标记为未下载', async () => {
+  it('展示离线使用区块与四项导出资源，默认全部标记为未下载', async () => {
     const wrapper = mountAbout()
     await Promise.resolve()
 
     expect(wrapper.text()).toContain('离线使用')
-    expect(wrapper.findAll('.offline-assets__item')).toHaveLength(3)
+    expect(wrapper.findAll('.offline-assets__item')).toHaveLength(4)
     expect(wrapper.text()).toContain('PDF 角色卡模板')
     expect(wrapper.text()).toContain('Excel 角色卡模板')
     expect(wrapper.text()).toContain('中文字体子集')
-    expect(wrapper.findAll('.ui-badge').filter((badge) => badge.text() === '未下载')).toHaveLength(3)
+    expect(wrapper.findAll('.ui-badge').filter((badge) => badge.text() === '未下载')).toHaveLength(4)
     expect(wrapper.get('.offline-assets__action').text()).toBe('一键下载离线资源')
     expect(wrapper.text()).toContain('本地数据保护')
   })
