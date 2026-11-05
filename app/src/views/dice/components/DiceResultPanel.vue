@@ -1,13 +1,28 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
+import { formatRollTotalFormula } from '@/rules/dice'
 import type { DieType, LogicalRollResult } from '@/types/dice'
 
-defineProps<{ groups: Array<{ type: DieType; results: LogicalRollResult[] }>; total: number; canReroll: boolean }>()
+const props = defineProps<{
+  groups: Array<{ type: DieType; results: LogicalRollResult[] }>
+  total: number
+  diceTotal: number
+  modifier: number
+  canReroll: boolean
+}>()
 const emit = defineEmits<{ reroll: [logicalId: string] }>()
+
+const formula = computed(() => formatRollTotalFormula(props.diceTotal, props.modifier))
 </script>
 
 <template>
   <section class="dice-results" aria-live="polite" aria-atomic="false">
-    <div class="dice-results__total"><span>本次总和</span><strong>{{ total }}</strong></div>
+    <div class="dice-results__total">
+      <span>本次总和</span>
+      <strong>{{ total }}</strong>
+      <small class="dice-results__formula">{{ formula }}</small>
+    </div>
     <div class="dice-results__groups">
       <div v-for="group in groups" :key="group.type" class="dice-results__group">
         <strong>{{ group.type }}</strong>
@@ -52,6 +67,17 @@ const emit = defineEmits<{ reroll: [logicalId: string] }>()
     background: var(--color-primary-soft);
     span { color: var(--color-text-muted); font-size: 0.72rem; }
     strong { color: var(--color-primary); font-size: 2rem; font-variant-numeric: tabular-nums; }
+    small {
+      max-width: 100%;
+      padding-inline: 0.35rem;
+      color: var(--color-primary);
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.35;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
   }
 
   &__groups { display: grid; align-content: center; gap: 0.45rem; }

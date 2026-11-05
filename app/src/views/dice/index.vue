@@ -9,9 +9,10 @@ import { useDicePage } from '@/views/dice/hooks/useDicePage'
 
 const {
   title, description, dieTypes, maxPhysicalDice, pool, results, presentation, status, notice, error,
-  physicalDiceCount, remainingPhysicalDice, expression, isBusy, canReroll, groupedResults, total, reducedMotion,
+  physicalDiceCount, remainingPhysicalDice, expression, isBusy, canReroll, groupedResults, modifierInput,
+  modifierError, appliedModifier, diceTotal, total, reducedMotion,
   canAdd, addDie, removeDie, clearPool, roll, reroll, handlePlaybackComplete, handleRendererUnavailable,
-  skipAnimation, soundEnabled, setSkipAnimation, setSoundEnabled, handlePlaybackStarted,
+  skipAnimation, soundEnabled, setModifier, setSkipAnimation, setSoundEnabled, handlePlaybackStarted,
 } = useDicePage()
 </script>
 
@@ -20,12 +21,15 @@ const {
     <header class="dice-page__header"><p>桌上冒险工具</p><h1>{{ title }}</h1><span>{{ description }}</span></header>
     <DiceTypeSelector :die-types="dieTypes" :disabled="isBusy" :can-add="canAdd" @add="addDie" />
     <DicePoolPanel
-      :entries="pool" :expression="expression" :physical-count="physicalDiceCount"
-      :remaining="remainingPhysicalDice" :maximum="maxPhysicalDice" :disabled="isBusy"
-      :can-add="canAdd" @add="addDie" @remove="removeDie"
+      :entries="pool" :expression="expression" :modifier="modifierInput" :modifier-error="modifierError"
+      :physical-count="physicalDiceCount" :remaining="remainingPhysicalDice" :maximum="maxPhysicalDice"
+      :disabled="isBusy" :can-add="canAdd" @add="addDie" @remove="removeDie" @update:modifier="setModifier"
     />
     <DiceSettings :skip-animation="skipAnimation" :sound-enabled="soundEnabled" :busy="isBusy" @skip="setSkipAnimation" @sound="setSoundEnabled" />
-    <DiceResultPanel v-if="results.length" :groups="groupedResults" :total="total" :can-reroll="canReroll" @reroll="reroll" />
+    <DiceResultPanel
+      v-if="results.length" :groups="groupedResults" :total="total" :can-reroll="canReroll"
+      :dice-total="diceTotal" :modifier="appliedModifier" @reroll="reroll"
+    />
     <p v-if="skipAnimation" class="dice-page__notice">已跳过动画，投掷后直接显示结果。</p>
     <DiceTray v-else
       :presentation="presentation" :status="status" :reduced-motion="reducedMotion" :physical-count="physicalDiceCount"
@@ -35,7 +39,7 @@ const {
     <p v-if="notice" class="dice-page__notice" role="status">{{ notice }}</p>
     <p v-if="error" class="dice-page__error" role="alert">{{ error }}</p>
     <div class="dice-page__actions">
-      <BaseButton class="dice-page__roll" :disabled="isBusy || physicalDiceCount === 0" @click="roll">
+      <BaseButton class="dice-page__roll" :disabled="isBusy || physicalDiceCount === 0 || !!modifierError" @click="roll">
         {{ results.length ? '再次投掷' : isBusy ? '投掷中…' : '投掷骰子' }}
       </BaseButton>
       <BaseButton variant="secondary" :disabled="isBusy || physicalDiceCount === 0" @click="clearPool">清空骰池</BaseButton>

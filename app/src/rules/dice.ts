@@ -55,8 +55,38 @@ export function splitD100(value: number): { tens: number; ones: number } {
   return { tens: Math.floor(value / 10) * 10, ones: value % 10 }
 }
 
-export function calculateRollTotal(results: readonly LogicalRollResult[]): number {
+export function calculateDiceTotal(results: readonly LogicalRollResult[]): number {
   return results.reduce((total, result) => total + result.value, 0)
+}
+
+export function calculateRollTotal(results: readonly LogicalRollResult[], modifier = 0): number {
+  return calculateDiceTotal(results) + modifier
+}
+
+export interface RollModifierParseResult {
+  value: number
+  error: string
+}
+
+/** 校验「固定修正值」输入：留空视为 0，只接受整数（可带正负号）。 */
+export function parseRollModifier(input: string): RollModifierParseResult {
+  const trimmed = input.trim()
+  if (trimmed === '') return { value: 0, error: '' }
+  if (!/^[+-]?\d+$/.test(trimmed)) {
+    return { value: 0, error: '固定修正值只能填写整数，例如 5、-2 或 0。' }
+  }
+  const value = Number(trimmed)
+  if (!Number.isSafeInteger(value)) {
+    return { value: 0, error: '固定修正值超出可处理范围，请填写较小的整数。' }
+  }
+  return { value, error: '' }
+}
+
+/** 把骰点合计与修正值拼成结果区展示式，例如 `7 − 2 = 5`。 */
+export function formatRollTotalFormula(diceTotal: number, modifier: number): string {
+  if (modifier === 0) return `${diceTotal} + 0 = ${diceTotal}`
+  const operator = modifier > 0 ? '+' : '−'
+  return `${diceTotal} ${operator} ${Math.abs(modifier)} = ${diceTotal + modifier}`
 }
 
 export function groupRollResults(results: readonly LogicalRollResult[]) {
