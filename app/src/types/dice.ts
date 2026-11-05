@@ -12,6 +12,14 @@ export interface DicePoolEntry {
   quantity: number
 }
 
+/** 保存在当前浏览器中的骰池预设：只记录骰型、数量与固定修正值，不记录投掷结果。 */
+export interface DicePoolPreset {
+  readonly id: string
+  readonly pool: DicePoolEntry[]
+  readonly modifier: number
+  readonly createdAt: number
+}
+
 export interface D100Components {
   tens: number
   ones: number

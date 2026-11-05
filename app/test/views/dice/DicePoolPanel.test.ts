@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import DicePoolPanel from '@/views/dice/components/DicePoolPanel.vue'
 
-function mountPanel(overrides: Partial<{ modifier: string; modifierError: string; disabled: boolean }> = {}) {
+function mountPanel(overrides: Partial<{ modifier: string; modifierError: string; disabled: boolean; canSave: boolean }> = {}) {
   return mount(DicePoolPanel, {
     props: {
       entries: [{ type: 'd6', quantity: 2 }],
@@ -15,6 +15,7 @@ function mountPanel(overrides: Partial<{ modifier: string; modifierError: string
       maximum: 20,
       disabled: false,
       canAdd: () => true,
+      canSave: true,
       ...overrides,
     },
   })
@@ -41,6 +42,17 @@ describe('dice pool panel', () => {
   it('disables the modifier input while a roll is in progress', () => {
     const wrapper = mountPanel({ disabled: true })
     expect(wrapper.get('#dice-modifier').attributes('disabled')).toBeDefined()
+    wrapper.unmount()
+  })
+
+  it('offers a save-preset entry that is disabled until the pool can be saved', async () => {
+    const wrapper = mountPanel()
+    await wrapper.get('.dice-pool__save').trigger('click')
+    expect(wrapper.emitted('save')).toEqual([[]])
+    await wrapper.setProps({ canSave: false })
+    expect(wrapper.get('.dice-pool__save').attributes('disabled')).toBeDefined()
+    await wrapper.setProps({ canSave: true, disabled: true })
+    expect(wrapper.get('.dice-pool__save').attributes('disabled')).toBeDefined()
     wrapper.unmount()
   })
 })
