@@ -748,8 +748,8 @@ sorcerer-2024          （术士职业／9 条职业特性／4 术法／术法�
 metamagic-2024         （2024 超魔 10 项独立数据表，与 metamagic-2014 分离；由 sorcerer-2024 引用并经 repositories 挂载）
 warlock-2024           （魔契师职业／8 条职业特性／4 宗主／契约施法（pact 模式＋准备表）／玄奥秘法与宗主法术；经 classes-2024、subclasses-2024 挂载）
 invocations-2024       （2024 魔能祈唤 28 项独立数据（等级先决、依赖先决、复选标记）；由 warlock-2024 引用并经 repositories 挂载）
-paladin-2024           （圣武士职业／16 条职业特性／4 誓言与誓言法术／圣疗池与引导神力资源／半施法者施法；经 classes-2024、subclasses-2024 挂载）
-ranger-2024            （游侠职业／16 条职业特性／4 范型与范型法术／宿敌与感知型资源／半施法者施法；猎人范型选项由 rangerOptions2024 登记；经 classes-2024、subclasses-2024 挂载）
+paladin-2024           （圣武士职业／16 条职业特性／4 誓言与誓言法术／圣疗池与引导神力资源／半施法者施法；法术位、最高环级与准备数取自 spell-slots-2024；经 classes-2024、subclasses-2024 挂载）
+ranger-2024            （游侠职业／16 条职业特性／4 范型与范型法术／宿敌与感知型资源／半施法者施法；法术位、最高环级与准备数取自 spell-slots-2024；猎人范型选项由 rangerOptions2024 登记；经 classes-2024、subclasses-2024 挂载）
 magic-items-2024       （DMG 2024 魔法物品 348 条／同调、动作、充能与消耗登记；由 scripts/build-magic-items-2024.mjs 从 B01 两份矩阵生成，经 repositories 挂载到 2024 仓库）
 wizard-2024            （法师 9 条职业特性、学者专精与塑能师额外入书规则，经 classes-2024、subclasses-2024 挂载）
 classes-2024           <- {barbarian-2024, bard-2024, cleric-2024, druid-2024, fighter-2024, monk-2024, paladin-2024, ranger-2024, rogue-2024, sorcerer-2024, warlock-2024, wizard-2024}（职业装配列表）
@@ -762,6 +762,7 @@ species-traits-2024    （物种特性注册表，按 raceId 关联 origins-2024
 subclass-features-2014 <- {martials-2014, fighter, arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（子职特性）
 spells-2014            <- {arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（职业/子职法术归属）
 spell-slots-2014       <- {arcane-casters-2014, half-casters-2014, full-casters-2014, subclasses-2014}（法术位表与最高施法环级常量；无依赖，最底层）
+spell-slots-2024       <- {paladin-2024, ranger-2024, ua-artificer-2024}（2024 半施法者法术位表、最高施法环级与准备数量常量；1 级起即有环位，与 2014 表互相独立；无依赖，最底层）
 magic-items-dmg-catalog-2014 <- magic-items-2014 <- repository（同调审计表 JSON 共享；DMG 候选目录由构建期脚本生成，运行时仅做合并去重）
 magic-items-expansions-2014  <- repository（ERftLW/EGtW 目录由构建期脚本生成；重印按稳定身份合并来源）
 generated/magic-items-catalog-2014       （构建期产物：完整目录含 description，由 item-catalog-loader 动态加载；不进入主分块）

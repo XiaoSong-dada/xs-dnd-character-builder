@@ -1,4 +1,5 @@
 import type { ChoiceCheckpoint, ClassFeature, ClassRule, RuleOption, SubclassFeature, SubclassRule } from '@/types/rules'
+import { HALF_CASTER_PREPARED_2024, HALF_CASTER_SPELL_SLOTS_2024, halfCasterMaximumSpellLevels2024 } from '@/rules/data/spell-slots-2024'
 
 /**
  * 破解奥秘：艾伯伦（UA）奇械师 2024。
@@ -45,13 +46,6 @@ const ARTIFICER_2024_CLASS_SPELL_IDS: readonly string[] = [
 /** 长休结束时同时存在的仿制魔法物品上限（2／3／4／5／6）。 */
 const REPLICATED_ITEM_MAX = [0, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6] as const
 const CANTRIPS_2024: readonly number[] = [2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4]
-const PREPARED_2024: readonly number[] = [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15]
-const SLOTS_2024: readonly (readonly number[])[] = [
-  [2], [2], [3], [3], [4, 2], [4, 2], [4, 3], [4, 3], [4, 3, 2], [4, 3, 2],
-  [4, 3, 3], [4, 3, 3], [4, 3, 3, 1], [4, 3, 3, 1], [4, 3, 3, 2], [4, 3, 3, 2],
-  [4, 3, 3, 3, 1], [4, 3, 3, 3, 1], [4, 3, 3, 3, 2], [4, 3, 3, 3, 2],
-]
-const MAX_SPELL_LEVEL_2024: readonly number[] = [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5]
 
 const ARTIFICER_SKILL_OPTION_IDS = [
   'skill-arcana', 'skill-history', 'skill-investigation', 'skill-medicine', 'skill-nature', 'skill-perception', 'skill-sleight-of-hand',
@@ -317,10 +311,10 @@ export const artificerRule2024: ClassRule = {
     mode: 'prepared',
     ability: 'int',
     startsAtLevel: 1,
-    preparedCountByLevel: PREPARED_2024,
+    preparedCountByLevel: HALF_CASTER_PREPARED_2024,
     cantripsKnownByLevel: CANTRIPS_2024,
-    maxSpellLevelByClassLevel: MAX_SPELL_LEVEL_2024,
-    slotsByClassLevel: SLOTS_2024,
+    maxSpellLevelByClassLevel: halfCasterMaximumSpellLevels2024,
+    slotsByClassLevel: HALF_CASTER_SPELL_SLOTS_2024,
     classSpellIds: ARTIFICER_2024_CLASS_SPELL_IDS,
   },
   features: artificerFeatures2024,
