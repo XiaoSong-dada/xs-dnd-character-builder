@@ -1,4 +1,5 @@
 import type { ChoiceCheckpoint, ClassFeature, ClassRule, SubclassFeature, SubclassRule } from '@/types/rules'
+import { HALF_CASTER_PREPARED_2024, HALF_CASTER_SPELL_SLOTS_2024, halfCasterMaximumSpellLevels2024 } from '@/rules/data/spell-slots-2024'
 import { spells2024 } from '@/rules/data/spells-2024'
 
 /**
@@ -23,36 +24,11 @@ const PALADIN_SKILL_OPTION_IDS = [
 /** 武器精通候选：全部 2024 武器（限职业熟练武器，由检查点过滤）。 */
 const ALL_WEAPON_OPTION_IDS: readonly string[] = []
 
-// 2024 圣武士成长表（B01 CV-011 核对）。
-const PALADIN_PREPARED = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15] as const
+// 2024 圣武士成长相关常量（B01 CV-011 核对）；准备数量与法术位取自共享的 2024 半施法者表。
 /** 引导神力使用次数：3 级起 2 次，11 级起 3 次。 */
 const CHANNEL_DIVINITY_USES = [0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3] as const
 /** 圣疗池：治疗量＝圣武士等级×5，长休补满。 */
 const LAY_ON_HANDS = Array.from({ length: 20 }, (_, index) => (index + 1) * 5)
-/** 半施法者法术位（1 级无环位，2 级起）。 */
-const PALADIN_SPELL_SLOTS = [
-  [],
-  [2],
-  [3],
-  [3],
-  [4, 2],
-  [4, 2],
-  [4, 3],
-  [4, 3],
-  [4, 3, 2],
-  [4, 3, 2],
-  [4, 3, 3],
-  [4, 3, 3],
-  [4, 3, 3, 1],
-  [4, 3, 3, 1],
-  [4, 3, 3, 2],
-  [4, 3, 3, 2],
-  [4, 3, 3, 3, 1],
-  [4, 3, 3, 3, 1],
-  [4, 3, 3, 3, 2],
-  [4, 3, 3, 3, 2],
-] as const
-const PALADIN_MAX_SPELL_LEVELS = PALADIN_SPELL_SLOTS.map((slots) => slots.length)
 /** 武器精通固定 2 种（无升级增长）。 */
 const PALADIN_MASTERY_COUNTS = Array.from({ length: 20 }, () => 2)
 
@@ -103,8 +79,8 @@ export const paladinFeatures2024: readonly ClassFeature[] = [
   },
   {
     id: 'paladin-2024-class-spellcasting', classId: 'class-2024-paladin', name: '施法', englishName: 'Spellcasting', level: 1,
-    summary: '魅力准备制半施法者：1 级无环位、2 级起 2 个一环；准备数量按职业表，长休可更换。',
-    description: '施法属性为魅力，可使用圣徽作为施法法器。半施法者法术位按职业表：1 级无环位，2 级起获得一环法术位，随等级提升最高到五环。准备法术数量按职业表（1 级 2 道、20 级 15 道），所选法术环级不得超过当前拥有的法术位环级；完成长休时可替换任意数量已准备法术。其他特性授予的始终准备法术不计入准备数量。圣武士没有戏法。',
+    summary: '魅力准备制半施法者：1 级起即有 2 个一环法术位；准备数量按职业表，长休可更换。',
+    description: '施法属性为魅力，可使用圣徽作为施法法器。半施法者法术位按职业表：1 级起获得一环法术位（1 级 2 个），随等级提升最高到五环。准备法术数量按职业表（1 级 2 道、20 级 15 道），所选法术环级不得超过当前拥有的法术位环级；完成长休时可替换任意数量已准备法术。其他特性授予的始终准备法术不计入准备数量。圣武士没有戏法。',
     kind: 'resource', status: 'implemented', sourceIds,
   },
   {
@@ -245,9 +221,9 @@ export const paladinRule2024: ClassRule = {
     mode: 'prepared',
     ability: 'cha',
     startsAtLevel: 1,
-    preparedCountByLevel: PALADIN_PREPARED,
-    maxSpellLevelByClassLevel: PALADIN_MAX_SPELL_LEVELS,
-    slotsByClassLevel: PALADIN_SPELL_SLOTS,
+    preparedCountByLevel: HALF_CASTER_PREPARED_2024,
+    maxSpellLevelByClassLevel: halfCasterMaximumSpellLevels2024,
+    slotsByClassLevel: HALF_CASTER_SPELL_SLOTS_2024,
     classSpellIds: paladinClassSpellIds2024,
     alwaysPreparedSpellIdsByLevel: { 2: ['spell-2024-divine-smite'], 5: ['spell-2024-find-steed'] },
   },

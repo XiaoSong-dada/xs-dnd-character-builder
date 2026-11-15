@@ -62,18 +62,19 @@ describe('2024 游侠与 4 范型数据（B08-12）', () => {
     expect(veil?.maxFromAbility).toEqual({ ability: 'wis', minimum: 1 })
   })
 
-  it('半施法者施法配置：准备数量与法术位按职业表', () => {
+  it('半施法者施法配置：1 级起即有法术位，准备数量与法术位按职业表', () => {
     const config = getSpellcastingConfig({ classId: 'class-2024-ranger', enabledSourceIds: [], ruleset: '5e-2024' })
     if (!config) throw new Error('缺少游侠施法配置')
     expect(config.mode).toBe('prepared')
     expect(config.ability).toBe('wis')
     expect(getRequiredSpellCount(rangerDraft({ targetLevel: 1 }), config)).toBe(2)
+    expect(getRequiredSpellCount(rangerDraft({ targetLevel: 6 }), config)).toBe(6)
     expect(getRequiredSpellCount(rangerDraft({ targetLevel: 20 }), config)).toBe(15)
-    expect(getMaximumSpellLevel(config, 1)).toBe(0)
+    expect(getMaximumSpellLevel(config, 1)).toBe(1)
     expect(getMaximumSpellLevel(config, 2)).toBe(1)
     expect(getMaximumSpellLevel(config, 5)).toBe(2)
     expect(getMaximumSpellLevel(config, 20)).toBe(5)
-    expect(getSpellSlots(config, 1)).toEqual([])
+    expect(getSpellSlots(config, 1).map((slot) => [slot.level, slot.count])).toEqual([[1, 2]])
     expect(getSpellSlots(config, 2).map((slot) => [slot.level, slot.count])).toEqual([[1, 2]])
     expect(getSpellSlots(config, 9).map((slot) => [slot.level, slot.count])).toEqual([[1, 4], [2, 3], [3, 2]])
   })

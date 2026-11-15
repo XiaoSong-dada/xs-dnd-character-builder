@@ -1,4 +1,5 @@
 import type { ChoiceCheckpoint, ClassFeature, ClassRule, RuleOption, SubclassFeature, SubclassRule } from '@/types/rules'
+import { HALF_CASTER_PREPARED_2024, HALF_CASTER_SPELL_SLOTS_2024, halfCasterMaximumSpellLevels2024 } from '@/rules/data/spell-slots-2024'
 import { spells2024 } from '@/rules/data/spells-2024'
 
 /**
@@ -44,34 +45,9 @@ const ALL_SKILL_OPTION_IDS = [
   'skill-survival',
 ] as const
 
-// 2024 游侠成长表（B01 CV-038 核对）。
-const RANGER_PREPARED = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15] as const
+// 2024 游侠成长相关常量（B01 CV-038 核对）；准备数量与法术位取自共享的 2024 半施法者表。
 /** 宿敌免费施法次数：1—4 级 2 次、5—8 级 3 次、9—12 级 4 次、13—16 级 5 次、17 级起 6 次。 */
 const FAVORED_ENEMY_USES = [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6] as const
-/** 半施法者法术位（1 级无环位，2 级起）。 */
-const RANGER_SPELL_SLOTS = [
-  [],
-  [2],
-  [3],
-  [3],
-  [4, 2],
-  [4, 2],
-  [4, 3],
-  [4, 3],
-  [4, 3, 2],
-  [4, 3, 2],
-  [4, 3, 3],
-  [4, 3, 3],
-  [4, 3, 3, 1],
-  [4, 3, 3, 1],
-  [4, 3, 3, 2],
-  [4, 3, 3, 2],
-  [4, 3, 3, 3, 1],
-  [4, 3, 3, 3, 1],
-  [4, 3, 3, 3, 2],
-  [4, 3, 3, 3, 2],
-] as const
-const RANGER_MAX_SPELL_LEVELS = RANGER_SPELL_SLOTS.map((slots) => slots.length)
 /** 武器精通固定 2 种（无升级增长）。 */
 const RANGER_MASTERY_COUNTS = Array.from({ length: 20 }, () => 2)
 
@@ -106,8 +82,8 @@ export const rangerOptions2024: readonly RuleOption[] = [
 export const rangerFeatures2024: readonly ClassFeature[] = [
   {
     id: 'ranger-2024-class-spellcasting', classId: 'class-2024-ranger', name: '施法', englishName: 'Spellcasting', level: 1,
-    summary: '感知准备制半施法者：1 级无环位、2 级起 2 个一环；准备数量按职业表，长休可更换。',
-    description: '施法属性为感知，可使用德鲁伊法器作为施法法器。半施法者法术位按职业表：1 级无环位，2 级起获得一环法术位，随等级提升最高到五环。准备法术数量按职业表（1 级 2 道、20 级 15 道），所选法术环级不得超过当前拥有的法术位环级；完成长休时可替换任意数量已准备法术。其他特性授予的始终准备法术不计入准备数量。游侠没有戏法（德鲁伊教战士除外）。',
+    summary: '感知准备制半施法者：1 级起即有 2 个一环法术位；准备数量按职业表，长休可更换。',
+    description: '施法属性为感知，可使用德鲁伊法器作为施法法器。半施法者法术位按职业表：1 级起获得一环法术位（1 级 2 个），随等级提升最高到五环。准备法术数量按职业表（1 级 2 道、20 级 15 道），所选法术环级不得超过当前拥有的法术位环级；完成长休时可替换任意数量已准备法术。其他特性授予的始终准备法术不计入准备数量。游侠没有戏法（德鲁伊教战士除外）。',
     kind: 'resource', status: 'implemented', sourceIds,
   },
   {
@@ -212,7 +188,7 @@ export const rangerRule2024: ClassRule = {
   name: '游侠',
   englishName: 'Ranger',
   summary: '2024版原初半施法者：猎人印记标记猎物，武器精通与范型特化荒野作战。',
-  introduction: '守望荒野的猎手与半施法者：宿敌标记提供稳定的额外伤害，擅长追踪、探索与地形适应，2 级起以感知施展自然法术，远程与双持皆可。',
+  introduction: '守望荒野的猎手与半施法者：宿敌标记提供稳定的额外伤害，擅长追踪、探索与地形适应，1 级起以感知施展自然法术，远程与双持皆可。',
   hitDie: 10,
   primaryAbilities: ['dex', 'wis'],
   playStyleTags: ['skirmisher', 'striker', 'utility'],
@@ -265,9 +241,9 @@ export const rangerRule2024: ClassRule = {
     mode: 'prepared',
     ability: 'wis',
     startsAtLevel: 1,
-    preparedCountByLevel: RANGER_PREPARED,
-    maxSpellLevelByClassLevel: RANGER_MAX_SPELL_LEVELS,
-    slotsByClassLevel: RANGER_SPELL_SLOTS,
+    preparedCountByLevel: HALF_CASTER_PREPARED_2024,
+    maxSpellLevelByClassLevel: halfCasterMaximumSpellLevels2024,
+    slotsByClassLevel: HALF_CASTER_SPELL_SLOTS_2024,
     classSpellIds: rangerClassSpellIds2024,
     alwaysPreparedSpellIdsByLevel: { 1: ['spell-2024-hunter-s-mark'] },
   },

@@ -56,18 +56,22 @@ describe('2024 圣武士与 4 誓言数据（B08-11）', () => {
     expect(channel.recovery).toBe('short-rest')
   })
 
-  it('半施法者施法配置：准备数量与法术位按职业表', () => {
+  it('半施法者施法配置：1 级起即有法术位，准备数量与法术位按职业表', () => {
     const config = getSpellcastingConfig({ classId: 'class-2024-paladin', enabledSourceIds: [], ruleset: '5e-2024' })
     if (!config) throw new Error('缺少圣武士施法配置')
     expect(config.mode).toBe('prepared')
     expect(config.ability).toBe('cha')
     expect(getRequiredSpellCount(paladinDraft({ targetLevel: 1 }), config)).toBe(2)
+    // 2024 半施法者准备数量按职业表：6 级 6、9 级 9、20 级 15（不是线性递增）。
+    expect(getRequiredSpellCount(paladinDraft({ targetLevel: 6 }), config)).toBe(6)
+    expect(getRequiredSpellCount(paladinDraft({ targetLevel: 9 }), config)).toBe(9)
     expect(getRequiredSpellCount(paladinDraft({ targetLevel: 20 }), config)).toBe(15)
-    expect(getMaximumSpellLevel(config, 1)).toBe(0)
+    expect(getMaximumSpellLevel(config, 1)).toBe(1)
     expect(getMaximumSpellLevel(config, 2)).toBe(1)
     expect(getMaximumSpellLevel(config, 5)).toBe(2)
     expect(getMaximumSpellLevel(config, 20)).toBe(5)
-    expect(getSpellSlots(config, 1)).toEqual([])
+    // 2024 版 1 级起施法：1 级就有 2 个一环法术位（2014 版 1 级无环位）。
+    expect(getSpellSlots(config, 1).map((slot) => [slot.level, slot.count])).toEqual([[1, 2]])
     expect(getSpellSlots(config, 2).map((slot) => [slot.level, slot.count])).toEqual([[1, 2]])
     expect(getSpellSlots(config, 5).map((slot) => [slot.level, slot.count])).toEqual([[1, 4], [2, 2]])
     expect(getSpellSlots(config, 20).map((slot) => [slot.level, slot.count])).toEqual([[1, 4], [2, 3], [3, 3], [4, 3], [5, 2]])
