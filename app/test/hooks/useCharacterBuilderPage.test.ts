@@ -735,3 +735,103 @@ describe('useCharacterBuilderPage 起源步骤完成判定（B09-07）', () => {
     expect(page.canContinue.value).toBe(true)
   })
 })
+
+describe('useCharacterBuilderPage 时间线魔能祈唤缺法术先决', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    routerReplace.mockClear()
+  })
+
+  const ELDRITCH_BLAST = 'spell-2014-eldritch-blast'
+
+  function makeWarlockDraft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
+    return makeFighterDraft({
+      id: 'test-warlock-invocation',
+      classId: 'class-2014-warlock',
+      subclassId: undefined,
+      targetLevel: 2,
+      baseAbilities: { str: 8, dex: 14, con: 13, int: 10, wis: 12, cha: 15 },
+      selections: [
+        { checkpointId: 'warlock-2014-skills-1', optionIds: ['skill-arcana', 'skill-deception'], confirmedAt: '' },
+        { checkpointId: 'warlock-2014-subclass-1', optionIds: ['subclass-2014-warlock-fiend'], confirmedAt: '' },
+      ],
+      currentStep: 'timeline',
+      name: '',
+      ...overrides,
+    })
+  }
+
+  function warlockCantripsExcludingEldritchBlast(): readonly string[] {
+    return (rulesRepository.getSpellcastingConfig({ classId: 'class-2014-warlock' })?.classSpellIds ?? [])
+      .map((id) => rulesRepository.getSpell(id))
+      .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell && spell.level === 0 && spell.id !== ELDRITCH_BLAST))
+      .slice(0, 2)
+      .map((spell) => spell.id)
+  }
+
+  it('法术为空时选择苦痛魔爆会自动习得魔能爆并写入选择', async () => {
+    const { page, store } = await setupPage(makeWarlockDraft())
+
+    page.saveTimelineSelection('warlock-2014-invocations-2', ['invocation-agonizing-blast'])
+
+    expect(store.activeDraft?.spellSelections.cantripIds).toContain(ELDRITCH_BLAST)
+    expect(store.activeDraft?.selections.find((item) => item.checkpointId === 'warlock-2014-invocations-2')?.optionIds)
+      .toEqual(['invocation-agonizing-blast'])
+    expect(page.levelAdjustNotice.value?.tone).toBe('success')
+    expect(page.levelAdjustNotice.value?.message).toContain('魔能爆')
+  })
+
+  it('戏法名额已满时不写入祈唤，跳到法术步骤并提示调整', async () => {
+    const cantrips = warlockCantripsExcludingEldritchBlast()
+    const draft = makeWarlockDraft({
+      spellSelections: { ...makeWarlockDraft().spellSelections, cantripIds: cantrips },
+    })
+    const { page, store } = await setupPage(draft)
+
+    page.saveTimelineSelection('warlock-2014-invocations-2', ['invocation-agonizing-blast'])
+
+    expect(store.activeDraft?.selections.some((item) => item.checkpointId === 'warlock-2014-invocations-2')).toBe(false)
+    expect(store.activeDraft?.spellSelections.cantripIds).toEqual(cantrips)
+    expect(page.step.value).toBe('spells')
+    expect(page.levelAdjustNotice.value?.tone).toBe('warning')
+    expect(page.levelAdjustNotice.value?.step).toBe('spells')
+  })
+
+  it('兼职时自动补选写入邪术师自己的法术分桶', async () => {
+    const draft = makeWarlockDraft({
+      id: 'test-warlock-multiclass',
+      targetLevel: 3,
+      multiclass: {
+        enabled: true,
+        primaryClassId: 'class-2014-warlock',
+        classes: [
+          { classId: 'class-2014-warlock', level: 2 },
+          { classId: 'class-2014-fighter', level: 1 },
+        ],
+        levelOrder: ['class-2014-warlock', 'class-2014-warlock', 'class-2014-fighter'],
+      },
+    })
+    const { page, store } = await setupPage(draft)
+
+    page.saveTimelineSelection('warlock-2014-invocations-2', ['invocation-agonizing-blast'])
+
+    const warlockBucket = store.activeDraft?.spellSelections.classSpellSelections
+      ?.find((bucket) => bucket.classId === 'class-2014-warlock')
+    expect(warlockBucket?.cantripIds).toContain(ELDRITCH_BLAST)
+    expect(store.activeDraft?.spellSelections.cantripIds).toContain(ELDRITCH_BLAST)
+  })
+
+  it('已经习得魔能爆时不重复写入', async () => {
+    const base = makeWarlockDraft()
+    const draft = makeWarlockDraft({
+      spellSelections: { ...base.spellSelections, cantripIds: [ELDRITCH_BLAST] },
+    })
+    const { page, store } = await setupPage(draft)
+
+    page.saveTimelineSelection('warlock-2014-invocations-2', ['invocation-agonizing-blast'])
+
+    expect(store.activeDraft?.spellSelections.cantripIds).toEqual([ELDRITCH_BLAST])
+    expect(page.levelAdjustNotice.value).toBeUndefined()
+  })
+})

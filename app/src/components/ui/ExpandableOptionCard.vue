@@ -9,6 +9,8 @@ const props = withDefaults(
     expandedLabel?: string
     state?: 'default' | 'selected' | 'recommended' | 'complete' | 'locked' | 'incompatible' | 'error'
     disabledReason?: string
+    /** 原因行的语义：`error` 为不满足先决，`hint` 为可点击的补选/跳转提示。 */
+    reasonTone?: 'error' | 'hint'
     /** 单击选择时同时展开介绍区（用于弹窗类紧凑列表的下拉式介绍）。 */
     expandOnSelect?: boolean
     /** 是否显示左侧单选标记（radio 样式：圆形，选中时显示实心圆点）；默认关闭（不显示选择框）。 */
@@ -19,6 +21,7 @@ const props = withDefaults(
     expandedLabel: '',
     state: 'default',
     disabledReason: '',
+    reasonTone: 'error',
     expandOnSelect: false,
     radio: false,
   },
@@ -83,7 +86,11 @@ onBeforeUnmount(() => {
             <strong>{{ title }}</strong>
           </span>
           <span v-if="description" class="expandable-option-card__summary">{{ description }}</span>
-          <span v-if="disabledReason" class="expandable-option-card__reason">{{ disabledReason }}</span>
+          <span
+            v-if="disabledReason"
+            class="expandable-option-card__reason"
+            :class="{ 'expandable-option-card__reason--hint': reasonTone === 'hint' }"
+          >{{ disabledReason }}</span>
         </span>
       </button>
       <div class="expandable-option-card__badges"><slot name="suffix" /></div>
@@ -206,6 +213,12 @@ onBeforeUnmount(() => {
     line-height: 1.45;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    &--hint {
+      overflow: visible;
+      color: var(--color-primary) !important;
+      white-space: normal;
+    }
   }
 
   &__arrow {
