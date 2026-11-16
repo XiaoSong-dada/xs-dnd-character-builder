@@ -37,10 +37,14 @@ import { formatSpellLabel } from '@/utils/format-spell-label'
 const props = defineProps<{
   draft: CharacterDraft
   derived: DerivedCharacter
+  embedded?: boolean
+  preparedFileName?: string
   exportingFormat?: 'pdf' | 'xlsx' | 'zip'
   exportNotice?: { readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }
 }>()
 const emit = defineEmits<{
+  enterSession: []
+  downloadInNewTab: []
   export: []
   exportPackage: []
   exportPdf: []
@@ -726,7 +730,7 @@ const needsReview = computed(() => {
 /** 导出：菜单弹层；PDF/XLSX 走模板填充下载（hook 处理）。 */
 const showExportMenu = ref(false)
 function handleExportJson(): void {
-  showExportMenu.value = false
+  if (!props.embedded) showExportMenu.value = false
   emit('export')
 }
 function handleExportPackage(): void {
@@ -1300,6 +1304,7 @@ function handleExportPdf(): void {
     <div class="character-sheet__footer">
       <button type="button" class="character-sheet__export" :disabled="Boolean(exportingFormat)" @click="showExportMenu = true">{{ exportingFormat ? '正在导出…' : '导出' }}</button>
       <button type="button" class="character-sheet__export character-sheet__export--secondary" @click="$emit('reedit')">重新编辑</button>
+      <button v-if="embedded" type="button" class="character-sheet__export" @click="$emit('enterSession')">进入跑团</button>
     </div>
     <UiModal :open="showMediaEditor" title="编辑角色形象" @close="showMediaEditor = false">
       <CharacterMediaEditor :draft="draft" @change="$emit('changeMedia', $event)" />
@@ -1307,6 +1312,7 @@ function handleExportPdf(): void {
     <UiModal :open="showExportMenu" title="导出角色" @close="showExportMenu = false">
       <div class="character-sheet__export-menu">
         <UiNotice v-if="exportNotice" :tone="exportNotice.tone" :title="exportNotice.title">{{ exportNotice.message }}</UiNotice>
+        <button v-if="preparedFileName" type="button" class="character-sheet__export-menu-item" @click="$emit('downloadInNewTab')">在新标签页下载 {{ preparedFileName }}</button>
         <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportPdf">{{ exportingFormat === 'pdf' ? '正在生成 PDF…' : '导出 PDF 角色卡' }}</button>
         <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportXlsx">{{ exportingFormat === 'xlsx' ? '正在生成 XLSX…' : '导出 XLSX 自动计算卡' }}</button>
         <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportJson">导出 JSON 数据文件（不含图片）</button>

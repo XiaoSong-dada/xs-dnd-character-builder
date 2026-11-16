@@ -3,14 +3,14 @@ import { RouterLink, RouterView } from 'vue-router'
 
 import { useAssistantShell } from '@/views/assistant/hooks/useAssistantShell'
 
-const { sections, isActive } = useAssistantShell()
+const { sections, isActive, owlbearEmbed } = useAssistantShell()
 </script>
 
 <template>
   <div class="assistant-shell">
     <header class="assistant-shell__header">
       <h1 class="assistant-shell__title">跑团助手</h1>
-      <nav class="assistant-shell__switcher" aria-label="跑团助手功能">
+      <nav v-if="!owlbearEmbed" class="assistant-shell__switcher" aria-label="跑团助手功能">
         <RouterLink
           v-for="section in sections"
           :key="section.routeName"

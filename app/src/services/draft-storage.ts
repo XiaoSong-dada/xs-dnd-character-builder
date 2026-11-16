@@ -9,6 +9,7 @@ import type {
   LineageHistoryEntry,
   SpellSelections,
 } from '@/types/character'
+import { STORAGE_KEY, PREVIOUS_DRAFT_KEYS, readDraftArray, loadLegacyDrafts } from '@/services/draft-records'
 import type { ClassSpellSelections } from '@/types/multiclass'
 import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
 import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source-books'
@@ -19,18 +20,7 @@ import { getClassSubclassId, getPrimaryClassId, normalizeMulticlass, rebuildLeve
 import { normalizeSpellSelectionBuckets } from '@/rules/spellcasting'
 import { getRulesRepository, isRulesetId } from '@/rules/repositories'
 
-const STORAGE_KEY = 'dnd-character-builder:drafts:v10'
-/** 无法解析的当前键条目隔离区；与草稿键分开，避免被 saveAll 覆盖。 */
 const QUARANTINE_KEY = 'dnd-character-builder:drafts:unsupported:v1'
-const V9_STORAGE_KEY = 'dnd-character-builder:drafts:v9'
-const V8_STORAGE_KEY = 'dnd-character-builder:drafts:v8'
-const V7_STORAGE_KEY = 'dnd-character-builder:drafts:v7'
-const V6_STORAGE_KEY = 'dnd-character-builder:drafts:v6'
-const V5_STORAGE_KEY = 'dnd-character-builder:drafts:v5'
-const V4_STORAGE_KEY = 'dnd-character-builder:drafts:v4'
-const V3_STORAGE_KEY = 'dnd-character-builder:drafts:v3'
-const V2_STORAGE_KEY = 'dnd-character-builder:drafts:v2'
-const LEGACY_STORAGE_KEY = 'dnd-character-builder:drafts:v1'
 
 const SUPPORTED_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8, 9, 10])
 const MIGRATABLE_SCHEMA_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8, 9])
@@ -410,7 +400,7 @@ function fingerprintOf(value: unknown): string {
 function quarantineRejected(entries: readonly unknown[]): void {
   if (entries.length === 0) return
   try {
-    const stored = readArray(QUARANTINE_KEY).filter(isQuarantinedRecord)
+    const stored = readDraftArray(QUARANTINE_KEY).filter(isQuarantinedRecord)
     const fingerprints = new Set(stored.map((record) => record.fingerprint))
     const detectedAt = new Date().toISOString()
     const additions = entries.flatMap((raw) => {
@@ -426,22 +416,11 @@ function quarantineRejected(entries: readonly unknown[]): void {
   }
 }
 
-function readArray(key: string): readonly unknown[] {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return []
-    const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
 export const DraftStorageService = {
   loadAll(): readonly CharacterDraft[] {
     const current: CharacterDraft[] = []
     const rejected: unknown[] = []
-    for (const entry of readArray(STORAGE_KEY)) {
+    for (const entry of readDraftArray(STORAGE_KEY)) {
       const draft = parseCharacterDraft(entry)
       if (draft) current.push(draft)
       else rejected.push(entry)
@@ -449,14 +428,7 @@ export const DraftStorageService = {
     quarantineRejected(rejected)
     const seenIds = new Set(current.map((draft) => draft.id))
     const migrated = [
-      ...readArray(V9_STORAGE_KEY).map(migrateDraftToV10),
-      ...readArray(V8_STORAGE_KEY).map(migrateDraftToV10),
-      ...readArray(V7_STORAGE_KEY).map(migrateDraftToV10),
-      ...readArray(V6_STORAGE_KEY).map(migrateDraftToV10),
-      ...readArray(V5_STORAGE_KEY).map(migrateDraftToV10),
-      ...readArray(V4_STORAGE_KEY).map(migrateDraftToV10),
-      ...readArray(V3_STORAGE_KEY).map(migrateDraftToV10),
-      ...readArray(V2_STORAGE_KEY).map(migrateDraftToV10),
+      ...PREVIOUS_DRAFT_KEYS.flatMap((key) => readDraftArray(key).map(migrateDraftToV10))
     ]
       .filter((draft): draft is CharacterDraft => {
         if (!draft || seenIds.has(draft.id)) return false
@@ -466,18 +438,7 @@ export const DraftStorageService = {
     return [...current, ...migrated]
   },
   loadLegacy(): readonly LegacyDraftRecord[] {
-    return readArray(LEGACY_STORAGE_KEY).flatMap((raw, index) => {
-      if (!raw || typeof raw !== 'object') return []
-      const candidate = raw as { id?: unknown; name?: unknown; ruleset?: unknown; targetLevel?: unknown }
-      if (candidate.ruleset !== '5e-2024') return []
-      return [{
-        id: typeof candidate.id === 'string' ? candidate.id : `legacy-${index}`,
-        name: typeof candidate.name === 'string' && candidate.name.trim() ? candidate.name : '未命名2024角色',
-        ruleset: '5e-2024',
-        targetLevel: typeof candidate.targetLevel === 'number' ? candidate.targetLevel : undefined,
-        raw,
-      }]
-    })
+    return loadLegacyDrafts()
   },
   saveAll(drafts: readonly CharacterDraft[]): void {
     const payload: readonly unknown[] = pendingRejections.length > 0 ? [...drafts, ...pendingRejections] : drafts

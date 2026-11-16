@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 
 import { describeMissingCustomContent } from '@/features/custom-content/missing-content'
+import { useOwlbearEmbed, useOwlbearStorageUnavailable } from '@/hooks/useOwlbearEmbed'
 import { CharacterImportError } from '@/services/character-json'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import { useCustomContentStore } from '@/stores/custom-content'
@@ -9,9 +10,11 @@ import type { CharacterDraft } from '@/types/character'
 
 /** 跑团助手入口 hook：草稿列表、JSON 导入与角色选择/切换（列表视图 ⇄ 局内面板视图）。 */
 export function useSessionAssistantPage() {
+  const owlbearEmbed = useOwlbearEmbed()
+  const storageUnavailable = useOwlbearStorageUnavailable(owlbearEmbed)
+  const customContentStore = useCustomContentStore()
   const store = useCharacterDraftsStore()
   const viewStore = useSessionAssistantStore()
-  const customContentStore = useCustomContentStore()
   const importError = ref('')
   /** 导入成功后：角色引用了本机不存在的自定义内容时的提示（R9）。 */
   const importNotice = ref('')
@@ -63,10 +66,16 @@ export function useSessionAssistantPage() {
       }
       return
     }
-    importRaw(await file.text())
+    try {
+      importRaw(await file.text())
+    } catch {
+      importError.value = '无法读取角色文件，请重新选择文件。'
+    }
   }
 
   return {
+    owlbearEmbed,
+    storageUnavailable,
     drafts,
     selectedDraft,
     selectDraft,

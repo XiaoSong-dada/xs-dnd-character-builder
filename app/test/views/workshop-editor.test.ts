@@ -7,6 +7,8 @@ import { createMemoryHistory, createRouter, RouterView, type Router } from 'vue-
 import { routes } from '@/router/router'
 import { resetCustomContent } from '@/rules/repositories'
 import { useCustomContentStore } from '@/stores/custom-content'
+import { useCharacterDraftsStore } from '@/stores/character-drafts'
+import { useSessionAssistantStore } from '@/stores/session-assistant'
 import RaceForm from '@/views/workshop/edit/components/RaceForm.vue'
 
 /** 路由渲染外壳：让被测页面作为真正的路由组件挂载。 */
@@ -87,6 +89,41 @@ describe('自定义种族表单', () => {
 })
 
 describe('内容工坊编辑器页', () => {
+  it.each(['5e-2014', '5e-2024'] as const)('枭熊中保存 %s 扩展后返回原草稿，并以同一角色进入跑团', async (ruleset) => {
+    const { pinia, store } = setupStore()
+    const drafts = useCharacterDraftsStore()
+    const target = drafts.createDraft(ruleset)
+    const other = drafts.createDraft(ruleset)
+    const { wrapper, router } = await mountEditor(pinia,
+      `/assistant/workshop/expansion/new?embed=owlbear&from=character-builder&ruleset=${ruleset}&draft=${target.id}&step=sources`)
+    try {
+      await wrapper.get('#expansion-title').setValue('枭熊测试扩展')
+      await wrapper.get('#expansion-short').setValue('测试')
+      const saveButton = wrapper.findAll('button').find((button) => button.text() === '保存扩展')
+      expect(saveButton).toBeDefined()
+      await saveButton?.trigger('click')
+      await vi.waitFor(() => {
+        const expansion = store.expansionsOf(ruleset)[0]
+        expect(expansion).toBeDefined()
+        expect(router.currentRoute.value.query).toEqual({ embed: 'owlbear', draft: target.id, step: 'sources' })
+        expect(drafts.activeDraft?.enabledSourceIds).toContain(expansion?.id)
+        expect(drafts.drafts.find((draft) => draft.id === other.id)?.enabledSourceIds).not.toContain(expansion?.id)
+      }, { timeout: 12_000 })
+      await router.push({ name: 'character-builder', query: { embed: 'owlbear', draft: target.id, step: 'sheet' } })
+      await flushPromises()
+      const enter = wrapper.findAll('button').find((button) => button.text() === '进入跑团')
+      expect(enter).toBeDefined()
+      await enter?.trigger('click')
+      await vi.waitFor(() => {
+        expect(router.currentRoute.value.name).toBe('session-assistant')
+        expect(router.currentRoute.value.query.embed).toBe('owlbear')
+        expect(useSessionAssistantStore().selectedDraft?.id).toBe(target.id)
+      })
+    } finally {
+      wrapper.unmount()
+    }
+  }, 20_000)
+
   it('新建扩展保存后写入内容库并回到列表', async () => {
     const { pinia, store } = setupStore()
     const { wrapper, router } = await mountEditor(pinia, '/assistant/workshop/expansion/new')

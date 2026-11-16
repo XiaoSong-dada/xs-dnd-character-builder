@@ -1,4 +1,4 @@
-import { isRulesetId, isRulesetOpen } from '@/rules/repositories'
+import { isRulesetId, isRulesetOpen } from '@/rules/ruleset-ids'
 import type { RulesetId } from '@/types/character'
 
 const STORAGE_KEY = 'dnd-character-builder:ruleset-preference:v1'
@@ -8,7 +8,7 @@ interface PersistedRulesetPreference {
 }
 
 function hasLocalStorage(): boolean {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+  return typeof window !== 'undefined'
 }
 
 /**

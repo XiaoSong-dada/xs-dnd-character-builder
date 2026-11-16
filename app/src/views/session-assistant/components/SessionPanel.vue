@@ -31,9 +31,9 @@ import { DEBUFF_STATUSES, EXHAUSTION_DESCRIPTION } from '@/types/session-state'
 import type { AbilityKey, CharacterDraft, InventoryEntry, ValueSource } from '@/types/character'
 import type { SpellRule } from '@/types/rules'
 import { formatSpellLabel } from '@/utils/format-spell-label'
-import { useSessionPanel } from '../hooks/useSessionPanel'
+import { useSessionPanel } from '@/views/session-assistant/hooks/useSessionPanel'
 
-const props = defineProps<{ draft: CharacterDraft }>()
+const props = defineProps<{ draft: CharacterDraft; embedded?: boolean }>()
 
 /** 名称与条目解析按草稿版本（2024 草稿不得使用 2014 静态仓库）。 */
 const repository = useRulesRepository(() => props.draft.ruleset)
@@ -398,6 +398,7 @@ function openTranscribe(spellId?: string): void {
       <p v-if="panel.operationError.value" class="session-panel__base-error" role="alert">{{ panel.operationError.value }}</p>
       <div class="session-panel__hp">
         <h3>生命值</h3>
+        <p v-if="embedded">护甲等级（AC） <strong>{{ panel.derived.value.armorClass.value }}</strong></p>
         <div class="session-panel__content">
           <div class="session-panel__hp-row">
             <button type="button" class="session-panel__step" aria-label="减少生命值" @click="panel.changeHp(-hpAmount())">−</button>

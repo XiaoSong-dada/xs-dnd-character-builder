@@ -1,3 +1,5 @@
+import { isRulesetId } from '@/rules/ruleset-ids'
+export { isRulesetId, isRulesetOpen, OPEN_RULESETS } from '@/rules/ruleset-ids'
 import { createRulesRepository } from '@/rules/repository-builder'
 import { rulesRepository2014 } from '@/rules/repository'
 import { emptyBundle, toRuleSource } from '@/rules/custom-content'
@@ -117,17 +119,6 @@ export const rulesRepository2024 = createRulesRepository('5e-2024', {
 const repositories: Readonly<Record<RulesetId, RulesRepository>> = {
   '5e-2014': rulesRepository2014,
   '5e-2024': rulesRepository2024,
-}
-
-export function isRulesetId(value: unknown): value is RulesetId {
-  return value === '5e-2014' || value === '5e-2024'
-}
-
-/** 已开放的规则版本：2024 车卡流程自 B09-01 起可用；资源结算（B10）与导出承载（B11）尚未完成，按 B00-06 继续分批推进。 */
-export const OPEN_RULESETS: readonly RulesetId[] = ['5e-2014', '5e-2024']
-
-export function isRulesetOpen(value: unknown): value is RulesetId {
-  return isRulesetId(value) && OPEN_RULESETS.includes(value)
 }
 
 /** 外部输入必须经过此入口解析；缺失或未知版本不会回退到 2014。 */

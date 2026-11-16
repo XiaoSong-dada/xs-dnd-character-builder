@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { owlbearWorkshopQuery } from '@/hooks/useOwlbearEmbed'
 
 import { customKindLabel, isCustomContentKind } from '@/features/custom-content/dictionary'
 import { useCustomContentStore } from '@/stores/custom-content'
@@ -36,7 +37,7 @@ export function useWorkshopEditorPage() {
   })
 
   function backToList(): void {
-    void router.push({ name: 'workshop' })
+    void router.push({ name: 'workshop', query: owlbearWorkshopQuery(route.query) })
   }
 
   return { kind, entryId, isNew, title, missing, ruleset: computed(() => store.activeRuleset), backToList } as const

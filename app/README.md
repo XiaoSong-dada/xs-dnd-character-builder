@@ -217,6 +217,16 @@ docker build \
 
 使用仓库根目录的 `docker-compose.yml` 时，可复制根目录 `.env.example` 为 `.env` 后调整配置。以上变量均在 Vite 构建期注入；修改后必须重新执行 `docker compose up -d --build`，仅重启现有容器不会更新统计配置。
 
+## 在枭熊 2 中使用车卡助手
+
+1. 将项目部署到可在浏览器中访问的 HTTPS 地址。扩展清单位于站点部署根的 `owlbear-manifest.json`，例如 `https://example.com/车卡部署前缀/owlbear-manifest.json`。使用子路径部署时，清单、图标和弹窗入口共享 `VITE_BASE_URL`。
+2. 在 Owlbear Rodeo 的扩展管理中添加自定义扩展，粘贴清单 URL，并在测试房间启用扩展。打开房间左上角的「车卡助手」。 [枭熊安装教程](https://docs.owlbear.rodeo/extensions/tutorial-hello-world/install-your-extension/)
+3. 从原网站导出角色 JSON，在弹窗的角色列表中导入，再核对护甲等级和最大生命值。扣血后刷新房间并重新打开弹窗，确认当前生命值已恢复。存档依赖当前浏览器的嵌入页面存储，首次进入时请在弹窗内导入。
+
+弹窗顶部可切换「辅助车卡」「跑团助手」「内容工坊」。在弹窗内建卡后，可以从角色卡直接进入跑团。车卡的「来源」步骤也可以跳到内容工坊，保存扩展后回到原角色并启用该扩展。导出菜单生成文件后会提供「在新标签页下载」，可在弹窗未保存文件时使用。
+
+自定义托管时，检查清单返回 JSON，且 `/assistant/session?embed=owlbear` 可直接访问。若站点或反向代理配置了 `Content-Security-Policy: frame-ancestors` 或 `X-Frame-Options`，需允许枭熊的房间页面嵌入该入口。开发服也提供可用于本机测试的清单（默认 `http://localhost:5173/owlbear-manifest.json`）。
+
 ## 开发约定
 
 - 产品代码固定在 `app`；`跑团车卡辅助` 仅作为视觉原型项目。

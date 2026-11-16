@@ -17,7 +17,7 @@ vi.mock('@/rules/item-catalog-loader', async () => {
   }
 })
 
-import CharacterBuilderPage from '@/views/character-builder/index.vue'
+import CharacterBuilderPage from '@/views/character-builder/components/CharacterBuilderEditor.vue'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import type { CharacterDraft } from '@/types/character'
 

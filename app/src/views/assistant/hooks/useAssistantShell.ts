@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useOwlbearEmbed } from '@/hooks/useOwlbearEmbed'
 
 /** 跑团助手的一级分段：局内模式 / 内容工坊。 */
 export interface AssistantSection {
@@ -20,11 +21,12 @@ export const assistantSections = [
  */
 export function useAssistantShell() {
   const route = useRoute()
+  const owlbearEmbed = useOwlbearEmbed()
   const currentRouteName = computed(() => String(route.name ?? ''))
 
   function isActive(section: AssistantSection): boolean {
     return section.routeNames.includes(currentRouteName.value)
   }
 
-  return { sections: assistantSections, isActive } as const
+  return { sections: assistantSections, isActive, owlbearEmbed } as const
 }

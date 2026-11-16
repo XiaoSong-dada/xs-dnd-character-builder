@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { owlbearWorkshopQuery } from '@/hooks/useOwlbearEmbed'
 
 import { CUSTOM_KIND_FILTERS, customKindLabel } from '@/features/custom-content/dictionary'
 import { useCustomEntryReferences } from '@/features/custom-content/hooks/useCustomEntryReferences'
@@ -69,10 +70,16 @@ export type WorkshopItem = WorkshopExpansionItem | WorkshopEntryItem
 export function useWorkshopPage() {
   const store = useCustomContentStore()
   const router = useRouter()
+  const route = useRoute()
   const { referenceCountOf, referencesOf } = useCustomEntryReferences()
 
   const filter = ref<CustomContentKind | 'all'>('all')
   const query = ref('')
+  const sourceRuleset = route?.query.ruleset
+  const rulesetLocked = computed(() => route?.query.embed === 'owlbear' && route.query.from === 'character-builder')
+  if (route?.query.embed === 'owlbear' && (sourceRuleset === '5e-2014' || sourceRuleset === '5e-2024')) {
+    store.setActiveRuleset(sourceRuleset)
+  }
   const kindPickerOpen = ref(false)
 
   const ruleset = computed(() => store.activeRuleset)
@@ -158,7 +165,7 @@ export function useWorkshopPage() {
   const hasExpansion = computed(() => bundle.value.expansions.length > 0)
 
   function selectRuleset(value: RulesetId): void {
-    store.setActiveRuleset(value)
+    if (!rulesetLocked.value) store.setActiveRuleset(value)
   }
 
   function setFilter(value: CustomContentKind | 'all'): void {
@@ -174,7 +181,8 @@ export function useWorkshopPage() {
   }
 
   function newEntryPath(kind: CustomContentKind) {
-    return { name: 'workshop-editor', params: { kind, entryId: 'new' } }
+    const context = owlbearWorkshopQuery(route?.query ?? {})
+    return { name: 'workshop-editor', params: { kind, entryId: 'new' }, query: context.embed ? { ...context, ruleset: ruleset.value } : context }
   }
 
   function selectKind(kind: CustomContentKind): void {
@@ -183,7 +191,8 @@ export function useWorkshopPage() {
   }
 
   function openEntry(targetId: string, kind: CustomContentKind): void {
-    void router.push({ name: 'workshop-editor', params: { kind, entryId: targetId } })
+    const context = owlbearWorkshopQuery(route?.query ?? {})
+    void router.push({ name: 'workshop-editor', params: { kind, entryId: targetId }, query: context.embed ? { ...context, ruleset: ruleset.value } : context })
   }
 
   /** 空态文案：区分"没有扩展""搜索无结果""该类型暂无内容"三种情况。 */
@@ -334,6 +343,7 @@ export function useWorkshopPage() {
 
   return {
     rulesetOptions: RULESET_OPTIONS,
+    rulesetLocked,
     filter,
     query,
     kindPickerOpen,

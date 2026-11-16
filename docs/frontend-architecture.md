@@ -256,7 +256,7 @@ src/App.vue
   -> src/features/update-notice/components/UpdateNoticeModal.vue
   -> src/stores/update-notice.ts（浏览器挂载后执行一次版本检查）
   -> src/features/app-update/components/AppUpdatePrompt.vue
-  -> src/stores/app-update.ts（浏览器挂载后注册 Service Worker 并做一次构建标识对账，同时登记联网／回到前台的补充对账时机；仅提示、不自动刷新）
+  -> src/stores/app-update.ts（浏览器首帧后的空闲期注册 Service Worker，并登记构建标识对账）
 
 src/router/router.ts
   -> src/layout/MainLayout.vue
@@ -344,7 +344,7 @@ src/views/session-assistant/components/SessionPanel.vue
 src/views/assistant/index.vue（外壳：h1 + 分段控件 + RouterView）
   -> src/views/assistant/hooks/useAssistantShell.ts（分段配置与路由归属判定）
 
-src/views/session-assistant/index.vue（/assistant/session，行为不变）
+src/views/session-assistant/index.vue（/assistant/session）
 
 src/views/workshop/index.vue（/assistant/workshop，列表页）
   -> src/views/workshop/hooks/useWorkshopPage.ts
@@ -385,6 +385,9 @@ src/hooks/useRulesRepository.ts（组件层响应式入口）
 - 自定义子职不新增仓库查询路径：`toSubclassRule` 投影后直接进入 `repository.subclasses`，时间线由既有 `buildSubclassCheckpoint` 动态生成选择节点；`ClassRule.checkpoints` 保持为空，避免把子职写进职业快照。
 - 父职业删除保护是内容→内容引用：`stores/custom-content.ts#deleteEntry` 检查同规则集自定义子职的 `classId`；角色草稿引用仍由 `custom-content-references.ts` 统计。
 - 子路由不预渲染、不进 sitemap（`/assistant` 仍重定向并预渲染）。
+- 枭熊扩展清单由 Vite 插件按部署基路径输出。弹窗沿用 `/assistant/session?embed=owlbear`，应用外壳、主 Layout、跑团助手外壳和局内页面 Hook 通过 `useOwlbearEmbed` 读取嵌入模式。应用外壳在弹窗里隐藏更新提示。局内页面 Hook 通过会话存储服务探测本地写入能力，角色 JSON、规则计算和局内状态仍走跑团助手原有依赖。
+- 弹窗导航复用辅助车卡、跑团助手及工坊路由。车卡编辑器 Hook 通过跑团视图 store 选中同一草稿，工坊通过路由查询传递返回草稿。嵌入页面通过共享 Hook 探测本地存储。车卡导出沿用现有生成服务，浏览器下载服务可将生成的 File 通过同站窗口消息交给独立下载页。
+- 辅助车卡路由先装配轻量首页和草稿摘要。首页 Hook 通过 `draft-records` 读取旧存档与当前存档的摘要，点击草稿操作或命中草稿深链接时才动态加载编辑器及完整规则。车卡编辑器、跑团助手和内容工坊在各自入口初始化自定义内容 store。应用挂载后在首帧后的空闲期启动 PWA 注册和版本检查。
 
 赛博骰娘页面为独立的页面内聚模块：
 
@@ -434,6 +437,12 @@ src/views/dice/workers/dicePhysics.worker.ts
 
 ```text
 src/views/character-builder/index.vue
+  -> src/views/character-builder/components/StartPanel.vue（轻量草稿列表）
+  -> src/views/character-builder/hooks/useCharacterBuilderLanding.ts
+     -> src/services/draft-records.ts（只读摘要）
+     -> src/views/character-builder/components/CharacterBuilderEditor.vue（按需加载）
+
+src/views/character-builder/components/CharacterBuilderEditor.vue
   -> src/views/character-builder/hooks/useCharacterBuilderPage.ts
   -> src/views/character-builder/hooks/{useSelectionTaskFlow,useSpellcastingStepFlow}.ts（第 4／8 步页面私有任务派生、活动项、自动推进与筛选状态）
   -> src/views/character-builder/steps.ts（STEP_ORDER / STEP_META）

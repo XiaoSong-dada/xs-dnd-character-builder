@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { owlbearWorkshopQuery } from '@/hooks/useOwlbearEmbed'
 
 import { customKindLabel, isCustomContentKind } from '@/features/custom-content/dictionary'
 import { buildTemplateEntry, listCustomTemplateOptions } from '@/features/custom-content/templates'
@@ -18,6 +19,10 @@ export function useWorkshopEditor() {
   const route = useRoute()
   const router = useRouter()
   const store = useCustomContentStore()
+  const requestedRuleset = route.query.ruleset
+  if (route.query.embed === 'owlbear' && (requestedRuleset === '5e-2014' || requestedRuleset === '5e-2024')) {
+    store.setActiveRuleset(requestedRuleset)
+  }
 
   const rawKind = computed(() => String(route.params.kind ?? ''))
   const kind = computed<CustomContentKind | undefined>(() =>
@@ -103,7 +108,7 @@ export function useWorkshopEditor() {
   }
 
   function backToList(): void {
-    void router.push({ name: 'workshop' })
+    void router.push({ name: 'workshop', query: owlbearWorkshopQuery(route.query) })
   }
 
   function handleFailure(cause: unknown): void {
@@ -141,7 +146,8 @@ export function useWorkshopEditor() {
       dirty.value = false
       // 从车卡第 2 步跳转进来的：保存后回到车卡，并把新扩展自动勾选进那份草稿（需求 Q14）。
       if (route.query.from === 'character-builder') {
-        void router.push({ name: 'character-builder', query: { enableSource: expansion.id } })
+        const { embed, draft, step } = owlbearWorkshopQuery(route.query)
+        void router.push({ name: 'character-builder', query: { embed, draft, step, enableSource: expansion.id } })
         return
       }
       backToList()

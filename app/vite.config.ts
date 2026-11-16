@@ -10,6 +10,7 @@ import type { ViteSSGContext } from 'vite-ssg'
 
 import { appBuildIdPlugin, resolveAppBuildId } from './scripts/app-build-id'
 import { normalizeDeployBase, resolveDeployUrl, templatesDenylistPattern } from './scripts/deploy-base'
+import { owlbearManifestPlugin } from './scripts/owlbear-manifest'
 
 // 本期预渲染清单（docs/seo-requirements.md §P1-1）：
 // 根路径（重定向后渲染车卡页）+ 辅助车卡 + 赛博骰娘 + 404（命中 catch-all 路由）
@@ -118,6 +119,7 @@ export default defineConfig(({ mode }) => {
       vue(),
       // 输出 dist/version.json：运行时以 no-store 拉取它，与本进程注入的 __APP_BUILD_ID__ 比对。
       appBuildIdPlugin(APP_BUILD_ID),
+      owlbearManifestPlugin(base, APP_VERSION),
       /**
        * PWA 离线外壳（见 docs/需求文档/PWA离线与可安装-更新计划.md）。关键取舍：
        *
