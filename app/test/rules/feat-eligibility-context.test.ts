@@ -98,3 +98,88 @@ describe('B09-08 专长资格上下文（2014 行为不变）', () => {
     expect(wizardEligibility.available).toBe(false)
   })
 })
+
+describe('不可复选专长的重复选择提示（时间线候选阶段）', () => {
+  const selection = (checkpointId: string, optionIds: readonly string[]): CharacterDraft['selections'][number] => ({
+    checkpointId,
+    optionIds,
+    confirmedAt: '2026-09-11T00:00:00.000Z',
+  })
+
+  it('2024：低等级已取得的专长在后续节点提示已获得及来源', () => {
+    const draft = fighter2024({
+      targetLevel: 6,
+      selections: [selection('class-2024-fighter-feat-4', ['feat-2024-tough'])],
+    })
+    const feat = repository2024.getFeat('feat-2024-tough')!
+    const later = getFeatEligibility(feat, getFeatEligibilityContext(draft, {
+      checkpointId: 'class-2024-fighter-feat-6',
+      checkpointLevel: 6,
+    }))
+    expect(later.available).toBe(false)
+    expect(later.reasons).toContain('已获得（4级属性提升或专长）')
+  })
+
+  it('2024：回看原节点时该节点自身的授予不算重复', () => {
+    const draft = fighter2024({
+      targetLevel: 6,
+      selections: [selection('class-2024-fighter-feat-4', ['feat-2024-tough'])],
+    })
+    const feat = repository2024.getFeat('feat-2024-tough')!
+    const own = getFeatEligibility(feat, getFeatEligibilityContext(draft, {
+      checkpointId: 'class-2024-fighter-feat-4',
+      checkpointLevel: 4,
+    }))
+    expect(own.available).toBe(true)
+    expect(own.reasons).not.toContain('已获得（4级属性提升或专长）')
+  })
+
+  it('2024：背景授予的专长也阻止时间线重复选择', () => {
+    const draft = fighter2024({
+      targetLevel: 4,
+      backgroundId: 'background-2024-soldier',
+    })
+    const feat = repository2024.getFeat('feat-2024-savage-attacker')!
+    const eligibility = getFeatEligibility(feat, contextAtFeat4(draft))
+    expect(eligibility.available).toBe(false)
+    expect(eligibility.reasons).toContain('已获得（背景：士兵）')
+  })
+
+  it('2024：可复选专长在满足前置时仍可再次选择', () => {
+    const draft = fighter2024({
+      targetLevel: 6,
+      selections: [selection('class-2024-fighter-feat-4', ['feat-2024-ability-score-improvement'])],
+    })
+    const feat = repository2024.getFeat('feat-2024-ability-score-improvement')!
+    const later = getFeatEligibility(feat, getFeatEligibilityContext(draft, {
+      checkpointId: 'class-2024-fighter-feat-6',
+      checkpointLevel: 6,
+    }))
+    expect(later.available).toBe(true)
+    expect(later.reasons.some((reason) => reason.startsWith('已获得'))).toBe(false)
+  })
+
+  it('2014：与 2024 同口径，低等级节点已取得的专长在后续节点不可再选', () => {
+    const draft: CharacterDraft = {
+      ...draft2024(),
+      ruleset: '5e-2014',
+      classId: 'class-2014-fighter',
+      targetLevel: 8,
+      baseAbilities: { ...draft2024().baseAbilities, cha: 13 },
+      selections: [selection('fighter-2014-asi-4', ['feat-actor'])],
+    }
+    const feat = repository2014.getFeat('feat-actor')!
+    const later = getFeatEligibility(feat, getFeatEligibilityContext(draft, {
+      checkpointId: 'fighter-2014-asi-8',
+      checkpointLevel: 8,
+    }))
+    expect(later.available).toBe(false)
+    expect(later.reasons).toContain('已获得（4级属性提升或专长）')
+
+    const own = getFeatEligibility(feat, getFeatEligibilityContext(draft, {
+      checkpointId: 'fighter-2014-asi-4',
+      checkpointLevel: 4,
+    }))
+    expect(own.available).toBe(true)
+  })
+})
