@@ -9,6 +9,7 @@ import { useWorkshopPage, type WorkshopItem } from '@/views/workshop/hooks/useWo
 
 const {
   rulesetOptions,
+  rulesetLocked,
   filter,
   query,
   kindPickerOpen,
@@ -61,6 +62,7 @@ function openItem(item: WorkshopItem): void {
         class="workshop__ruleset-button"
         :class="{ 'workshop__ruleset-button--active': ruleset === option.value }"
         :aria-pressed="ruleset === option.value"
+        :disabled="rulesetLocked && ruleset !== option.value"
         @click="selectRuleset(option.value)"
       >
         {{ option.label }}

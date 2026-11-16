@@ -1156,8 +1156,8 @@ describe('CharacterSheetStep 候选池与点击交互', () => {
 
 describe('CharacterSheetStep 事件绑定契约', () => {
   it('index.vue 使用 @change-spell-selections 监听（kebab-case 与 defineEmits 的 changeSpellSelections 一致）', () => {
-    const source = readFileSync(resolve(process.cwd(), 'src/views/character-builder/index.vue'), 'utf-8')
-    const sheetLine = source.split('\n').find((line) => line.includes('<CharacterSheetStep'))
+    const source = readFileSync(resolve(process.cwd(), 'src/views/character-builder/components/CharacterBuilderEditor.vue'), 'utf-8')
+    const sheetLine = source.match(/<CharacterSheetStep\b[\s\S]*?\/>/)?.[0]
     expect(sheetLine).toBeTruthy()
     expect(sheetLine).toContain('@change-spell-selections="updateSpells"')
     expect(sheetLine).not.toContain('@change-spells=')

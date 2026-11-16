@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
  * 页面 hook 侧另有「产出的引导条一定带 `step`」的不变式断言（`useCharacterBuilderPage.test.ts`）。
  */
 describe('角色卡等级调整引导条 · 模板契约', () => {
-  const source = readFileSync(resolve(process.cwd(), 'src/views/character-builder/index.vue'), 'utf-8')
+  const source = readFileSync(resolve(process.cwd(), 'src/views/character-builder/components/CharacterBuilderEditor.vue'), 'utf-8')
 
   it('只有存在目标步骤时才显示可点击提示与手型光标', () => {
     expect(source).toContain("'builder-level-notice--static': !levelAdjustNotice.step")

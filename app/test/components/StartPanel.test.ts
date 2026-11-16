@@ -2,12 +2,20 @@ import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import StartPanel from '@/views/character-builder/components/StartPanel.vue'
-import type { CharacterDraft } from '@/types/character'
+import { getClassLevelLabel } from '@/rules/multiclass-session'
+import type { CharacterDraft, LegacyDraftRecord } from '@/types/character'
 
 const mockConfig = vi.hoisted(() => ({
   siteConfig: { authorName: '小宋哒哒', githubUrl: 'https://github.com/XiaoSong-dada', version: '0.1.0' },
 }))
 vi.mock('@/config/site', () => mockConfig)
+
+function mountStartPanel(options: { props: { drafts: readonly CharacterDraft[]; legacyDrafts: readonly LegacyDraftRecord[]; defaultRuleset?: CharacterDraft['ruleset'] }; attachTo?: HTMLElement }) {
+  return mount(StartPanel, {
+    ...options,
+    props: { ...options.props, classLabels: Object.fromEntries(options.props.drafts.map((draft) => [draft.id, getClassLevelLabel(draft)])) },
+  })
+}
 
 const draft: CharacterDraft = {
   schemaVersion: 8,
@@ -45,7 +53,7 @@ describe('StartPanel 版本展示（B09-01）', () => {
   it('hero 按默认版本显示，角色条显示自身版本', () => {
     const legacy = { ...draft, id: 'legacy-draft', ruleset: '5e-2014' as const }
     const modern = { ...draft, id: 'modern-draft', ruleset: '5e-2024' as const }
-    const wrapper = mount(StartPanel, { props: { drafts: [legacy, modern], legacyDrafts: [], defaultRuleset: '5e-2024' } })
+    const wrapper = mountStartPanel({ props: { drafts: [legacy, modern], legacyDrafts: [], defaultRuleset: '5e-2024' } })
 
     expect(wrapper.text()).toContain('D&D 5e · 2024')
     expect(wrapper.text()).toContain('2014 · 3级')
@@ -53,14 +61,14 @@ describe('StartPanel 版本展示（B09-01）', () => {
   })
 
   it('未传入默认版本时 hero 回退 2014', () => {
-    const wrapper = mount(StartPanel, { props: { drafts: [], legacyDrafts: [] } })
+    const wrapper = mountStartPanel({ props: { drafts: [], legacyDrafts: [] } })
     expect(wrapper.text()).toContain('D&D 5e · 2014')
   })
 })
 
 describe('StartPanel draft deletion', () => {
   it('requires confirmation before emitting delete', async () => {
-    const wrapper = mount(StartPanel, {
+    const wrapper = mountStartPanel({
       props: { drafts: [draft], legacyDrafts: [] },
       attachTo: document.body,
     })
@@ -85,7 +93,7 @@ describe('StartPanel 角色条信息展示', () => {
   }
 
   it('完成态（sheet）显示职业名，不出现英文步骤 ID', () => {
-    const wrapper = mount(StartPanel, { props: { drafts: [sheetWithClass()], legacyDrafts: [] } })
+    const wrapper = mountStartPanel({ props: { drafts: [sheetWithClass()], legacyDrafts: [] } })
 
     expect(wrapper.text()).toContain('3级 · 战士')
     expect(wrapper.text()).not.toContain('sheet')
@@ -93,7 +101,7 @@ describe('StartPanel 角色条信息展示', () => {
 
   it('进行中已选职业显示"职业+职业等级 · 第N步"', () => {
     const inProgress = { ...draft, classId: 'class-2014-fighter' }
-    const wrapper = mount(StartPanel, { props: { drafts: [inProgress], legacyDrafts: [] } })
+    const wrapper = mountStartPanel({ props: { drafts: [inProgress], legacyDrafts: [] } })
 
     // MC-E05：职业段改用统一格式「战士3」，与角色卡头部、跑团助手一致
     expect(wrapper.text()).toContain('3级 · 战士3 · 第4步')
@@ -101,7 +109,7 @@ describe('StartPanel 角色条信息展示', () => {
   })
 
   it('进行中未选职业显示"第N步 · 步骤名"', () => {
-    const wrapper = mount(StartPanel, { props: { drafts: [draft], legacyDrafts: [] } })
+    const wrapper = mountStartPanel({ props: { drafts: [draft], legacyDrafts: [] } })
 
     expect(wrapper.text()).toContain('3级 · 第4步 · 确定角色起源')
     expect(wrapper.text()).not.toContain('origin')
@@ -109,7 +117,7 @@ describe('StartPanel 角色条信息展示', () => {
 
   it('职业查询不到时回退：完成态显示"角色完成"', () => {
     const unknownClass = { ...draft, classId: 'class-2014-unknown', currentStep: 'sheet' }
-    const wrapper = mount(StartPanel, { props: { drafts: [unknownClass], legacyDrafts: [] } })
+    const wrapper = mountStartPanel({ props: { drafts: [unknownClass], legacyDrafts: [] } })
 
     expect(wrapper.text()).toContain('3级 · 角色完成')
     expect(wrapper.text()).not.toContain('sheet')
@@ -135,7 +143,7 @@ describe('StartPanel 角色条信息展示', () => {
         levelOrder: [...Array(3).fill('class-2014-fighter'), ...Array(2).fill('class-2014-rogue')],
       },
     }
-    const wrapper = mount(StartPanel, { props: { drafts: [multiclass], legacyDrafts: [] } })
+    const wrapper = mountStartPanel({ props: { drafts: [multiclass], legacyDrafts: [] } })
 
     expect(wrapper.text()).toContain('战士3 / 游荡者2（5 级角色）')
     expect(wrapper.text()).toContain('2014 · 5级')
@@ -159,14 +167,14 @@ describe('StartPanel 角色条信息展示', () => {
         levelOrder: [...Array(3).fill('class-2014-fighter'), ...Array(2).fill('class-2014-rogue')],
       },
     }
-    const wrapper = mount(StartPanel, { props: { drafts: [multiclass], legacyDrafts: [] } })
+    const wrapper = mountStartPanel({ props: { drafts: [multiclass], legacyDrafts: [] } })
 
     expect(wrapper.text()).toContain('战士3 / 游荡者2（5 级角色） · 第4步')
   })
 
   it('仅有头像引用的角色条渲染头像，没有头像时不显示占位', () => {
     const withAvatar = { ...draft, id: 'with-avatar', media: { avatar: { mediaId: 'avatar-1', mimeType: 'image/webp' as const, width: 512, height: 512 } } }
-    const wrapper = mount(StartPanel, {
+    const wrapper = mountStartPanel({
       props: { drafts: [withAvatar, { ...draft, id: 'without-avatar' }], legacyDrafts: [] },
       global: { stubs: { CharacterMediaImage: { template: '<img>' } } },
     })
@@ -182,7 +190,7 @@ describe('StartPanel hero 署名行', () => {
   })
 
   it('配置齐全时显示作者、GitHub 链接与版本', () => {
-    const wrapper = mount(StartPanel, { props: { drafts: [draft], legacyDrafts: [] } })
+    const wrapper = mountStartPanel({ props: { drafts: [draft], legacyDrafts: [] } })
 
     expect(wrapper.text()).toContain('由 小宋哒哒 制作')
     expect(wrapper.text()).toContain('v0.1.0')
@@ -196,7 +204,7 @@ describe('StartPanel hero 署名行', () => {
   it('部分配置时对应段省略', () => {
     mockConfig.siteConfig.githubUrl = undefined
     mockConfig.siteConfig.version = undefined
-    const wrapper = mount(StartPanel, { props: { drafts: [draft], legacyDrafts: [] } })
+    const wrapper = mountStartPanel({ props: { drafts: [draft], legacyDrafts: [] } })
 
     expect(wrapper.text()).toContain('由 小宋哒哒 制作')
     expect(wrapper.text()).not.toContain('GitHub')
@@ -207,7 +215,7 @@ describe('StartPanel hero 署名行', () => {
     mockConfig.siteConfig.authorName = undefined
     mockConfig.siteConfig.githubUrl = undefined
     mockConfig.siteConfig.version = undefined
-    const wrapper = mount(StartPanel, { props: { drafts: [draft], legacyDrafts: [] } })
+    const wrapper = mountStartPanel({ props: { drafts: [draft], legacyDrafts: [] } })
 
     expect(wrapper.find('.start-panel__signature').exists()).toBe(false)
     expect(wrapper.find('a[href*="github"]').exists()).toBe(false)

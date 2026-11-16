@@ -1,9 +1,8 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 
 import { describeMissingCustomContent } from '@/features/custom-content/missing-content'
-import { useOwlbearEmbed } from '@/hooks/useOwlbearEmbed'
+import { useOwlbearEmbed, useOwlbearStorageUnavailable } from '@/hooks/useOwlbearEmbed'
 import { CharacterImportError } from '@/services/character-json'
-import { SessionStateStorageService } from '@/services/session-state-storage'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import { useCustomContentStore } from '@/stores/custom-content'
 import { useSessionAssistantStore } from '@/stores/session-assistant'
@@ -12,13 +11,10 @@ import type { CharacterDraft } from '@/types/character'
 /** 跑团助手入口 hook：草稿列表、JSON 导入与角色选择/切换（列表视图 ⇄ 局内面板视图）。 */
 export function useSessionAssistantPage() {
   const owlbearEmbed = useOwlbearEmbed()
-  const storageUnavailable = ref(false)
-  watch(owlbearEmbed, (embedded) => {
-    storageUnavailable.value = embedded && !SessionStateStorageService.canWrite()
-  }, { immediate: true })
+  const storageUnavailable = useOwlbearStorageUnavailable(owlbearEmbed)
+  const customContentStore = useCustomContentStore()
   const store = useCharacterDraftsStore()
   const viewStore = useSessionAssistantStore()
-  const customContentStore = useCustomContentStore()
   const importError = ref('')
   /** 导入成功后：角色引用了本机不存在的自定义内容时的提示（R9）。 */
   const importNotice = ref('')

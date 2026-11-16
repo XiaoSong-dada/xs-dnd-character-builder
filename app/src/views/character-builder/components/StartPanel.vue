@@ -4,14 +4,16 @@ import { computed, ref } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
-import { CharacterMediaImage } from '@/features/character-media'
+import CharacterMediaImage from '@/features/character-media/components/CharacterMediaImage.vue'
 import { siteConfig } from '@/config/site'
-import { getClassLevelLabel } from '@/rules/multiclass-session'
 import { STEP_META } from '@/views/character-builder/steps'
-import type { CharacterDraft, LegacyDraftRecord, RulesetId } from '@/types/character'
+import type { LegacyDraftRecord, RulesetId } from '@/types/character'
+import type { DraftSummary } from '@/services/draft-records'
 
 const props = withDefaults(defineProps<{
-  drafts: readonly CharacterDraft[]
+  drafts: readonly DraftSummary[]
+  busy?: boolean
+  classLabels?: Readonly<Record<string, string>>
   legacyDrafts: readonly LegacyDraftRecord[]
   /** 新建默认版本（按本设备偏好解析，B00-02）。 */
   defaultRuleset?: RulesetId
@@ -57,14 +59,11 @@ function confirmDelete(): void {
 }
 
 /** 职业段（MC-E05）：单职业「战士5」，兼职「战士3 / 游荡者2（5 级角色）」；未选职业时为空串。 */
-function classLabel(draft: CharacterDraft): string {
-  return getClassLevelLabel(draft)
-}
 
 /** 角色条第三段信息：完成态显示职业；进行中已选职业显示"职业 · 第N步"；未选职业显示"第N步 · 步骤名"。 */
-const statusText = (draft: CharacterDraft): string => {
-  const meta = STEP_META[draft.currentStep]
-  const label = classLabel(draft)
+const statusText = (draft: DraftSummary): string => {
+  const meta = STEP_META[draft.currentStep] ?? STEP_META.setup
+  const label = props.classLabels?.[draft.id] ?? ''
   if (draft.currentStep === 'sheet') return label || meta.eyebrow
   return label ? `${label} · ${meta.eyebrow}` : `${meta.eyebrow} · ${meta.title}`
 }
@@ -96,13 +95,13 @@ const hasSiteInfo = computed(() => Boolean(siteConfig.authorName || siteConfig.g
         <span v-if="siteConfig.version">v{{ siteConfig.version }}</span>
       </p>
     </div>
-    <BaseButton @click="$emit('create')">创建新角色</BaseButton>
+    <BaseButton :disabled="busy" @click="$emit('create')">创建新角色</BaseButton>
     <article
       v-for="draft in drafts"
       :key="draft.id"
       class="start-panel__draft"
     >
-      <button type="button" class="start-panel__draft-open" @click="$emit('open', draft.id)">
+      <button type="button" class="start-panel__draft-open" :disabled="busy" @click="$emit('open', draft.id)">
         <CharacterMediaImage v-if="draft.media?.avatar" class="start-panel__draft-avatar" :media-id="draft.media.avatar.mediaId" :alt="`${draft.name || '角色'}头像`" />
         <span><strong>{{ draft.name || '未命名角色' }}</strong><small>{{ rulesetLabel(draft.ruleset) }} · {{ draft.targetLevel }}级 · {{ statusText(draft) }}</small></span>
         <b>继续 ›</b>

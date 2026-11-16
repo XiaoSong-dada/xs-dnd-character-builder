@@ -37,10 +37,11 @@ import { CharacterImportError, CharacterJsonService } from '@/services/character
 import { CharacterPackageService } from '@/services/character-package'
 import { RulesetPreferenceService, resolveInitialRuleset } from '@/services/ruleset-preference'
 import { randomIntegerInclusive, secureUint32 } from '@/services/dice-random'
-import { downloadXlsx, fillCharacterSheetTemplate, loadCharacterSheetTemplate } from '@/services/export-xlsx'
-import { buildCharacterSheetPdf, downloadPdf } from '@/services/export-pdf'
-import { buildCharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
+import type { ExportDiagnostic } from '@/features/character-export/build-export-data'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
+import { useSessionAssistantStore } from '@/stores/session-assistant'
+import { useOwlbearEmbed } from '@/hooks/useOwlbearEmbed'
+import { downloadCharacterFile, openCharacterFileDownload } from '@/services/character-file-download'
 import type {
   AbilityKey,
   AbilityMethod,
@@ -85,12 +86,15 @@ interface PendingChange {
 export function useCharacterBuilderPage() {
   const route = useRoute()
   const router = useRouter()
+  const owlbearEmbed = useOwlbearEmbed(route)
+  const embedQuery = () => owlbearEmbed.value ? { embed: 'owlbear' } : {}
+  const customContentStore = useCustomContentStore()
   const store = useCharacterDraftsStore()
   const { drafts, legacyDrafts, activeDraft, derivedSummary, validationIssues, completion } = storeToRefs(store)
   const lineageTransformation = useLineageTransformation(activeDraft, store.updateDraft)
   const importError = ref('')
   const importNotice = ref('')
-  const customContentStore = useCustomContentStore()
+  const workshopReturnNotice = ref('')
   /** 新建默认版本（按本设备偏好解析，B00-02）；起点页 hero 与第一页共用。 */
   const defaultRuleset = ref<RulesetId>(resolveInitialRuleset().ruleset)
   /** 记忆版本尚未开放时的回退说明（Q-B09-1：第一页内联提示）。 */
@@ -104,18 +108,27 @@ export function useCharacterBuilderPage() {
    * 从内容工坊返回（`?enableSource=<id>`）：把刚保存的自定义扩展并入当前草稿的来源，
    * 让玩家回到第 2 步就能直接看到新内容（需求 Q14）。只加不删，不触发确认弹窗。
    */
-  const pendingCustomSourceId = typeof route.query.enableSource === 'string' ? route.query.enableSource : ''
-  if (pendingCustomSourceId && isCustomSourceId(pendingCustomSourceId) && activeDraft.value) {
+  function applyWorkshopReturn(): void {
+    const { enableSource, ...query } = route.query
+    if (typeof enableSource !== 'string' || !isCustomSourceId(enableSource)) return
+    const targetId = typeof query.draft === 'string' ? query.draft : undefined
+    if (owlbearEmbed.value && (!targetId || !store.activateDraft(targetId))) {
+      store.closeActiveDraft()
+      workshopReturnNotice.value = '原角色草稿已不存在，请从列表选择角色。'
+      void router.replace({ name: 'character-builder', query: embedQuery() })
+      return
+    }
     const draft = activeDraft.value
-    if (!draft.enabledSourceIds.includes(pendingCustomSourceId)) {
+    if (draft && !draft.enabledSourceIds.includes(enableSource)) {
       store.updateDraft({
-        enabledSourceIds: normalizeEnabledSourceIds([...draft.enabledSourceIds, pendingCustomSourceId], draft.ruleset),
+        enabledSourceIds: normalizeEnabledSourceIds([...draft.enabledSourceIds, enableSource], draft.ruleset),
       })
     }
-    const { enableSource: _enableSource, ...query } = route.query
-    void router.replace({ query })
+    void router.replace({ name: 'character-builder', query })
   }
   const exportingFormat = ref<'pdf' | 'xlsx' | 'zip'>()
+  const preparedFile = ref<File>()
+  watch(() => activeDraft.value?.id, () => { preparedFile.value = undefined })
   const exportNotice = ref<{ readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }>()
   const pendingChange = ref<PendingChange>()
   const derived = computed(() => activeDraft.value ? deriveCharacter(activeDraft.value) : undefined)
@@ -225,7 +238,13 @@ export function useCharacterBuilderPage() {
   })
 
   function syncRoute(draft: CharacterDraft): void {
-    void router.replace({ name: 'character-builder', query: { draft: draft.id, step: draft.currentStep } })
+    void router.replace({ name: 'character-builder', query: { ...embedQuery(), draft: draft.id, step: draft.currentStep } })
+  }
+
+  function enterSession(): void {
+    if (!owlbearEmbed.value || !activeDraft.value) return
+    useSessionAssistantStore().selectDraft(activeDraft.value.id)
+    void router.push({ name: 'session-assistant', query: embedQuery() })
   }
 
   function createDraft(): void {
@@ -271,18 +290,23 @@ export function useCharacterBuilderPage() {
   }
 
   function openDraft(id: string): void {
-    if (store.activateDraft(id) && store.activeDraft) syncRoute(store.activeDraft)
+    if (store.activateDraft(id) && store.activeDraft) {
+      workshopReturnNotice.value = ''
+      syncRoute(store.activeDraft)
+    } else {
+      workshopReturnNotice.value = '这份草稿无法打开，请从列表选择其他角色。'
+    }
   }
 
   function returnToStart(): void {
     store.closeActiveDraft()
-    void router.replace({ name: 'character-builder' })
+    void router.replace({ name: 'character-builder', query: embedQuery() })
   }
 
   function deleteDraft(id: string): void {
     const deletingActiveDraft = store.activeDraftId === id
     if (!store.deleteDraft(id)) return
-    if (deletingActiveDraft) void router.replace({ name: 'character-builder' })
+    if (deletingActiveDraft) void router.replace({ name: 'character-builder', query: embedQuery() })
   }
 
   /** 导入成功后：角色引用了本机不存在的自定义内容时给出提示（需求 R9）。 */
@@ -806,9 +830,15 @@ export function useCharacterBuilderPage() {
 
   /** 跳转到内容工坊：带上来源步骤的规则集与返回标记（保存扩展后自动回到这里）。 */
   function openWorkshop(): void {
+    const draft = activeDraft.value
     void router.push({
       name: 'workshop',
-      query: { from: 'character-builder', ruleset: activeDraft.value?.ruleset ?? defaultRuleset.value },
+      query: {
+        ...embedQuery(),
+        from: 'character-builder',
+        ruleset: draft?.ruleset ?? defaultRuleset.value,
+        ...(owlbearEmbed.value && draft ? { draft: draft.id, step: 'sources' } : {}),
+      },
     })
   }
 
@@ -1033,16 +1063,40 @@ export function useCharacterBuilderPage() {
   }
 
   function exportDraft(): void {
-    if (activeDraft.value) CharacterJsonService.downloadDraft(activeDraft.value)
+    const draft = activeDraft.value
+    if (!draft || exportingFormat.value) return
+    if (owlbearEmbed.value) {
+      exportNotice.value = undefined
+      downloadInEmbed([CharacterJsonService.exportDraft(draft)], `${draft.name.trim() || 'dnd-character'}-${draft.id}.json`, 'application/json')
+      return
+    }
+    CharacterJsonService.downloadDraft(draft)
+  }
+
+  function downloadInEmbed(parts: BlobPart[], name: string, type: string): void {
+    const file = new File(parts, name, { type })
+    preparedFile.value = file
+    downloadCharacterFile(file)
+  }
+
+  function downloadInNewTab(): void {
+    if (!preparedFile.value || openCharacterFileDownload(preparedFile.value)) return
+    exportNotice.value = { tone: 'error', title: '无法打开下载页', message: '请允许弹出窗口后重试。' }
   }
 
   async function exportPackage(): Promise<void> {
     const draft = activeDraft.value
     if (!draft || exportingFormat.value) return
     exportingFormat.value = 'zip'
+    preparedFile.value = undefined
     exportNotice.value = undefined
     try {
-      await CharacterPackageService.download(draft)
+      if (owlbearEmbed.value) {
+        const bytes = await CharacterPackageService.build(draft)
+        downloadInEmbed([bytes as BlobPart], `${draft.name.trim() || 'dnd-character'}-${draft.id}.zip`, 'application/zip')
+      } else {
+        await CharacterPackageService.download(draft)
+      }
       exportNotice.value = { tone: 'success', title: '完整角色包导出完成', message: '角色数据、头像与立绘已打包并开始下载。' }
     } catch (error) {
       exportNotice.value = { tone: 'error', title: '角色包导出失败', message: exportErrorMessage(error) }
@@ -1071,15 +1125,22 @@ export function useCharacterBuilderPage() {
     const currentDerived = derived.value
     if (!draft || !currentDerived || exportingFormat.value) return
     exportingFormat.value = 'pdf'
+    preparedFile.value = undefined
     exportNotice.value = undefined
     try {
+      const [{ buildCharacterExportModel }, { buildCharacterSheetPdf, downloadPdf }] = await Promise.all([
+        import('@/features/character-export/build-export-data'),
+        import('@/services/export-pdf'),
+      ])
       const model = buildCharacterExportModel(draft, currentDerived)
       const modelBlocker = blockingMessage(model.diagnostics)
       if (modelBlocker) throw new Error(modelBlocker)
       const result = await buildCharacterSheetPdf(model)
       const blocker = blockingMessage(result.diagnostics)
       if (blocker) throw new Error(blocker)
-      await downloadPdf(result.bytes, `${draft.name.trim() || 'dnd-character'}-dnd5e.pdf`)
+      const filename = `${draft.name.trim() || 'dnd-character'}-dnd5e.pdf`
+      if (owlbearEmbed.value) downloadInEmbed([result.bytes as BlobPart], filename, 'application/pdf')
+      else await downloadPdf(result.bytes, filename)
       const warning = diagnosticSummary(result.diagnostics)
       exportNotice.value = warning ? { tone: 'warning', title: 'PDF 已导出，但有内容省略', message: warning } : { tone: 'success', title: 'PDF 导出完成', message: '三页角色卡已生成并开始下载。' }
     } catch (error) {
@@ -1094,8 +1155,13 @@ export function useCharacterBuilderPage() {
     const currentDerived = derived.value
     if (!draft || !currentDerived || exportingFormat.value) return
     exportingFormat.value = 'xlsx'
+    preparedFile.value = undefined
     exportNotice.value = undefined
     try {
+      const [{ buildCharacterExportModel }, { downloadXlsx, fillCharacterSheetTemplate, loadCharacterSheetTemplate }] = await Promise.all([
+        import('@/features/character-export/build-export-data'),
+        import('@/services/export-xlsx'),
+      ])
       const model = buildCharacterExportModel(draft, currentDerived)
       const modelBlocker = blockingMessage(model.diagnostics)
       if (modelBlocker) throw new Error(modelBlocker)
@@ -1104,7 +1170,9 @@ export function useCharacterBuilderPage() {
       const result = fillCharacterSheetTemplate(template, model, templateId)
       const blocker = blockingMessage(result.diagnostics)
       if (blocker) throw new Error(blocker)
-      await downloadXlsx(result.bytes, `${draft.name.trim() || 'dnd-character'}-dnd5e.xlsx`)
+      const filename = `${draft.name.trim() || 'dnd-character'}-dnd5e.xlsx`
+      if (owlbearEmbed.value) downloadInEmbed([result.bytes as BlobPart], filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      else downloadXlsx(result.bytes, filename)
       const warning = diagnosticSummary(result.diagnostics)
       exportNotice.value = warning ? { tone: 'warning', title: 'XLSX 已导出，但有内容省略', message: warning } : { tone: 'success', title: 'XLSX 导出完成', message: '自动计算角色卡已校验并开始下载。' }
     } catch (error) {
@@ -1119,7 +1187,11 @@ export function useCharacterBuilderPage() {
     if (draftId && store.activateDraft(draftId)) {
       const routeStep = route.query.step
       if (isDraftStep(routeStep) && routeStep !== store.activeDraft?.currentStep) store.setStep(routeStep)
+    } else if (draftId) {
+      store.closeActiveDraft()
+      workshopReturnNotice.value = '这份草稿无法打开，请从列表选择其他角色。'
     }
+    applyWorkshopReturn()
   })
 
   watch(
@@ -1131,6 +1203,11 @@ export function useCharacterBuilderPage() {
   )
 
   return {
+    owlbearEmbed,
+    enterSession,
+    workshopReturnNotice,
+    preparedFile,
+    downloadInNewTab,
     title: '辅助车卡',
     lineageTransformation,
     drafts,
