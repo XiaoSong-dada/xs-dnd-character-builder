@@ -469,7 +469,7 @@ src/views/character-builder/hooks/useCharacterSheetEditing.ts
   （角色卡私有编辑状态、字段差值换算、人工法术与一键恢复；不持有第二份业务事实）
 
 src/views/character-builder/components/*
-  -> src/views/character-builder/components/SelectionTaskNavigator.vue（OriginStep／SpellcastingStep 共用的页面私有任务导航与键盘操作）
+  -> src/views/character-builder/components/SelectionTaskNavigator.vue（SetupStep／OriginStep／SpellcastingStep 共用的页面私有任务导航与键盘操作）
   -> src/views/character-builder/hooks/{useSelectionTaskFlow,useSpellcastingStepFlow}.ts
   -> src/views/character-builder/components/{EditableStatTile,AddManualSpellModal}（双击/键盘数值编辑与完整系统法术库选择；说明区由 components/ui/StatNote 承担两行截断与明细弹窗）
   -> src/views/character-builder/components/{FeatChoicePanel}（页面内复用）
@@ -826,7 +826,7 @@ views/character-builder/index.vue
   -> views/character-builder/hooks/{useSelectionTaskFlow,useSpellcastingStepFlow}.ts
   -> views/character-builder/steps.ts（STEP_META/STEP_ORDER 步骤顺序与友好文案公共常量，被 hook 与 StartPanel 共用）
   -> views/character-builder/selection-task.ts（页面私有任务接口：SelectionTask 与步骤向页面暴露的 SelectionTaskFocusHandle）
-  -> views/character-builder/components/*（新增 SelectionTaskNavigator；OriginStep 与 SpellcastingStep 复用，二者均 defineExpose 聚焦句柄）
+  -> views/character-builder/components/*（新增 SelectionTaskNavigator；SetupStep、OriginStep 与 SpellcastingStep 复用，后二者 defineExpose 聚焦句柄）
   -> features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
   -> stores/character-drafts.ts
       -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}
