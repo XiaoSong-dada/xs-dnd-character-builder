@@ -29,6 +29,16 @@ function writeStates(states: readonly SessionState[]): void {
 
 /** 跑团助手局内状态存储：按草稿 id 独立保存，与车卡草稿（drafts）分开。 */
 export const SessionStateStorageService = {
+  canWrite(): boolean {
+    const probeKey = `${STORAGE_KEY}:probe`
+    try {
+      localStorage.setItem(probeKey, '1')
+      localStorage.removeItem(probeKey)
+      return true
+    } catch {
+      return false
+    }
+  },
   loadAll(): readonly SessionState[] {
     return readStates()
   },

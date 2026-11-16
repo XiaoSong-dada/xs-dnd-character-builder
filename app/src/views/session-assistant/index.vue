@@ -5,10 +5,10 @@ import UiNotice from '@/components/ui/UiNotice.vue'
 
 import { deriveCharacterSummary } from '@/rules/derive'
 import { CharacterMediaImage } from '@/features/character-media'
-import SessionPanel from './components/SessionPanel.vue'
-import { useSessionAssistantPage } from './hooks/useSessionAssistantPage'
+import SessionPanel from '@/views/session-assistant/components/SessionPanel.vue'
+import { useSessionAssistantPage } from '@/views/session-assistant/hooks/useSessionAssistantPage'
 
-const { drafts, selectedDraft, selectDraft, backToList, importError, importNotice, readImportFile } = useSessionAssistantPage()
+const { drafts, selectedDraft, selectDraft, backToList, importError, importNotice, readImportFile, owlbearEmbed, storageUnavailable } = useSessionAssistantPage()
 
 const summaries = computed(() =>
   drafts.value.map((draft) => ({ draft, summary: deriveCharacterSummary(draft) })),
@@ -16,11 +16,14 @@ const summaries = computed(() =>
 </script>
 
 <template>
-  <main class="session-assistant touch-manipulation">
+  <main class="session-assistant touch-manipulation" :class="{ 'session-assistant--embedded': owlbearEmbed }">
     <!-- 导入结果提示放在两个视图之外：导入后会自动进入局内面板，玩家仍需要看到它。 -->
     <UiNotice v-if="importNotice" tone="warning" title="缺少自定义内容">{{ importNotice }}</UiNotice>
 
-    <SessionPanel v-if="selectedDraft" :draft="selectedDraft" @back="backToList" />
+    <UiNotice v-if="storageUnavailable" tone="warning" title="无法保存角色">
+      当前浏览器无法在枭熊弹窗中保存角色和生命值。请允许嵌入页面使用本地存储后重新打开弹窗。
+    </UiNotice>
+    <SessionPanel v-else-if="selectedDraft" :key="selectedDraft.id" :draft="selectedDraft" :embedded="owlbearEmbed" @back="backToList" />
 
     <div v-else class="session-assistant__list">
       <header class="session-assistant__header">
@@ -64,6 +67,11 @@ const summaries = computed(() =>
 <style scoped lang="scss">
 .session-assistant {
   min-height: calc(100dvh - 4.5rem);
+
+  &--embedded {
+    min-height: 0;
+    padding: 0.75rem;
+  }
 
   &__list {
     display: flex;

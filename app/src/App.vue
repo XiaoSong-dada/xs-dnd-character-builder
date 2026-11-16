@@ -4,12 +4,14 @@ import { RouterView } from 'vue-router'
 
 import AppUpdatePrompt from '@/features/app-update/components/AppUpdatePrompt.vue'
 import UpdateNoticeModal from '@/features/update-notice/components/UpdateNoticeModal.vue'
+import { useOwlbearEmbed } from '@/hooks/useOwlbearEmbed'
 import { useAppUpdateStore } from '@/stores/app-update'
 import { useCustomContentStore } from '@/stores/custom-content'
 import { useUpdateNoticeStore } from '@/stores/update-notice'
 
 const updateNoticeStore = useUpdateNoticeStore()
 const appUpdateStore = useAppUpdateStore()
+const owlbearEmbed = useOwlbearEmbed()
 // 内容工坊：setup 阶段同步读入本机自定义内容并注册到规则仓库，早于任何页面渲染，
 // 因此车卡首屏即可看到自定义条目。预渲染期无 localStorage，store 内已静默降级为空库。
 useCustomContentStore()
@@ -23,6 +25,6 @@ onMounted(() => {
 
 <template>
   <RouterView />
-  <UpdateNoticeModal />
-  <AppUpdatePrompt />
+  <UpdateNoticeModal v-if="!owlbearEmbed" />
+  <AppUpdatePrompt v-if="!owlbearEmbed" />
 </template>

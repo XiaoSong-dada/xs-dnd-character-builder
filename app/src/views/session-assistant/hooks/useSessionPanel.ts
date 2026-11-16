@@ -132,8 +132,8 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   })
 
   function persist(next: SessionState): void {
-    sessionState.value = next
     SessionStateStorageService.save(next)
+    sessionState.value = next
   }
 
   // ---- 操作越界提示（钳制类操作统一出口）----
@@ -145,7 +145,11 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     // 双向钳制：加血超过最大生命值自动满血，减血低于 0 自动归零，均不弹错误。
     const next = Math.min(maxHp.value, Math.max(0, state.currentHp + delta))
     operationError.value = ''
-    persist(applyHpChange(state, next - state.currentHp, maxHp.value))
+    try {
+      persist(applyHpChange(state, next - state.currentHp, maxHp.value))
+    } catch {
+      operationError.value = '无法保存生命值，请检查浏览器的本地存储设置后重试。'
+    }
   }
 
   // ---- 法术位 ----

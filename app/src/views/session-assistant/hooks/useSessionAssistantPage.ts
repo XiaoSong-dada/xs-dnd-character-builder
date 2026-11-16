@@ -1,7 +1,9 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { describeMissingCustomContent } from '@/features/custom-content/missing-content'
+import { useOwlbearEmbed } from '@/hooks/useOwlbearEmbed'
 import { CharacterImportError } from '@/services/character-json'
+import { SessionStateStorageService } from '@/services/session-state-storage'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
 import { useCustomContentStore } from '@/stores/custom-content'
 import { useSessionAssistantStore } from '@/stores/session-assistant'
@@ -9,6 +11,11 @@ import type { CharacterDraft } from '@/types/character'
 
 /** 跑团助手入口 hook：草稿列表、JSON 导入与角色选择/切换（列表视图 ⇄ 局内面板视图）。 */
 export function useSessionAssistantPage() {
+  const owlbearEmbed = useOwlbearEmbed()
+  const storageUnavailable = ref(false)
+  watch(owlbearEmbed, (embedded) => {
+    storageUnavailable.value = embedded && !SessionStateStorageService.canWrite()
+  }, { immediate: true })
   const store = useCharacterDraftsStore()
   const viewStore = useSessionAssistantStore()
   const customContentStore = useCustomContentStore()
@@ -63,10 +70,16 @@ export function useSessionAssistantPage() {
       }
       return
     }
-    importRaw(await file.text())
+    try {
+      importRaw(await file.text())
+    } catch {
+      importError.value = '无法读取角色文件，请重新选择文件。'
+    }
   }
 
   return {
+    owlbearEmbed,
+    storageUnavailable,
     drafts,
     selectedDraft,
     selectDraft,

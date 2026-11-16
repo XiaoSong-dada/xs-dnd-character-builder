@@ -344,7 +344,7 @@ src/views/session-assistant/components/SessionPanel.vue
 src/views/assistant/index.vue（外壳：h1 + 分段控件 + RouterView）
   -> src/views/assistant/hooks/useAssistantShell.ts（分段配置与路由归属判定）
 
-src/views/session-assistant/index.vue（/assistant/session，行为不变）
+src/views/session-assistant/index.vue（/assistant/session）
 
 src/views/workshop/index.vue（/assistant/workshop，列表页）
   -> src/views/workshop/hooks/useWorkshopPage.ts
@@ -385,6 +385,7 @@ src/hooks/useRulesRepository.ts（组件层响应式入口）
 - 自定义子职不新增仓库查询路径：`toSubclassRule` 投影后直接进入 `repository.subclasses`，时间线由既有 `buildSubclassCheckpoint` 动态生成选择节点；`ClassRule.checkpoints` 保持为空，避免把子职写进职业快照。
 - 父职业删除保护是内容→内容引用：`stores/custom-content.ts#deleteEntry` 检查同规则集自定义子职的 `classId`；角色草稿引用仍由 `custom-content-references.ts` 统计。
 - 子路由不预渲染、不进 sitemap（`/assistant` 仍重定向并预渲染）。
+- 枭熊扩展清单由 Vite 插件按部署基路径输出。弹窗沿用 `/assistant/session?embed=owlbear`，应用外壳、主 Layout、跑团助手外壳和局内页面 Hook 通过 `useOwlbearEmbed` 读取嵌入模式。应用外壳在弹窗里隐藏更新提示。局内页面 Hook 通过会话存储服务探测本地写入能力，角色 JSON、规则计算和局内状态仍走跑团助手原有依赖。
 
 赛博骰娘页面为独立的页面内聚模块：
 
