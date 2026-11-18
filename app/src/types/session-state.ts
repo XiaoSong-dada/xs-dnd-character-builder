@@ -78,6 +78,8 @@ export interface SessionState {
   readonly hitDice?: HitDicePool
   /** 职业资源／骰池／免费施法已用数量（key = 特性 id 或 `sourceId:spellId`；仅 2024 结算）。 */
   readonly resourceUsage?: Readonly<Record<string, number>>
+  /** 手动记录的英雄激励持有量。旧存档缺省为 0，独立于休息快照。 */
+  readonly heroicInspirationCount?: number
   /** 上次消耗生命骰前的快照（撤回生命骰消耗用）。 */
   readonly lastHitDiceSnapshot?: SessionRestSnapshot
   /** 上次休息前的状态快照（用于撤回）；未执行过休息或无可用快照时为 undefined。 */
