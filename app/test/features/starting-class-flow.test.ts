@@ -260,8 +260,10 @@ describe('SC-D01 三处入口一致（需求 §6 验收标准 6）', () => {
     ['第 3 步 ClassStep', () => mount(ClassStep, { props: { draft: multiDraft() } })],
   ]
 
-  it.each(entries)('%s 同时提供等级滑杆、等级表格与「设置起始职业」入口', (_label, factory) => {
+  it.each(entries)('%s 同时提供等级滑杆、等级表格与「设置起始职业」入口', async (_label, factory) => {
     const wrapper = factory()
+    // 第 1 步改为任务式引导后，等级控件在「等级与兼职」任务内；第 3 步仍直接展示。
+    if (_label.includes('SetupStep')) await wrapper.get('[data-task-id="level"]').trigger('click')
     expect(wrapper.find('.allocation__slider input[type="range"]').exists()).toBe(true)
     expect(wrapper.findAll('button').some((button) => /^(展开|收起)等级列表/.test(button.text()))).toBe(true)
     expect(wrapper.findAll('button').some((button) => button.text() === '设置起始职业')).toBe(true)
