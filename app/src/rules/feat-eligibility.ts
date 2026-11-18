@@ -1,5 +1,5 @@
 import { deriveAbilities } from '@/rules/derive'
-import { classHasFightingStyle, collectArmorTrainings, listFeatGrants, type FeatEligibilityContext } from '@/rules/feats'
+import { classHasFightingStyle, collectArmorTrainings, listAcquiredFeatSources, listFeatGrants, type FeatEligibilityContext } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
 import { getSpellcastingConfig } from '@/rules/spellcasting'
 import { buildTimeline } from '@/rules/timeline'
@@ -8,6 +8,16 @@ import type { CharacterDraft } from '@/types/character'
 export interface FeatEligibilityOptions {
   readonly checkpointId?: string
   readonly checkpointLevel?: number
+  /**
+   * 跳过「已获得同一不可复选专长」的候选提示。
+   * 最终校验由 `validateDraft` 的统一查重条目录入，逐节点前置校验不需要重复报同一问题。
+   */
+  readonly ignoreFeatAcquisition?: boolean
+}
+
+/** 检查点标题（含等级）——重复授予提示用等级与标题定位需要修改的节点。 */
+function buildCheckpointTitles(timeline: ReturnType<typeof buildTimeline>): ReadonlyMap<string, string> {
+  return new Map(timeline.map((checkpoint) => [checkpoint.id, `${checkpoint.level}级${checkpoint.title}`]))
 }
 
 /**
@@ -17,6 +27,8 @@ export interface FeatEligibilityOptions {
  *
  * - 属性：2024 按"获得节点之前的属性"推导（与校验同口径）；2014 沿用草稿当前属性。
  * - 2014 保持既有最小上下文（不传 level／armorTrainings／hasFightingStyle），行为不变。
+ * - 已获得专长来源：默认排除**当前节点自身**的授予，回看原节点时已选项仍显示为可选；
+ *   其它节点与背景、物种、手动授予都参与，供候选禁用提示与最终查重同源判定。
  */
 export function getFeatEligibilityContext(
   draft: CharacterDraft,
@@ -47,8 +59,16 @@ export function getFeatEligibilityContext(
   const canCastSpells = Boolean(
     spellcasting && checkpointLevel !== undefined && checkpointLevel >= spellcasting.startsAtLevel,
   )
-  const acquiredFeatIds = listFeatGrants(draft, repository).map((grant) => grant.featId)
+  const grants = listFeatGrants(draft, repository)
+  const acquiredFeatIds = grants.map((grant) => grant.featId)
   const acquiredFeatTags = [...new Set(acquiredFeatIds.flatMap((featId) => repository.getFeat(featId)?.tags ?? []))]
+  const acquiredFeatSources = options.ignoreFeatAcquisition
+    ? undefined
+    : listAcquiredFeatSources(
+      grants.filter((grant) => !checkpointId || grant.checkpointId !== checkpointId),
+      repository,
+      buildCheckpointTitles(timeline),
+    )
   if (repository.ruleset !== '5e-2024') {
     return {
       abilities,
@@ -59,6 +79,7 @@ export function getFeatEligibilityContext(
       acquiredFeatIds,
       raceAliasIds: draft.raceId ? repository.getRace(draft.raceId)?.countsAsRaceIds : [],
       acquiredFeatTags,
+      acquiredFeatSources,
       ...(isCustomLineage ? { level: 1 } : {}),
     }
   }
@@ -73,5 +94,6 @@ export function getFeatEligibilityContext(
     armorTrainings: collectArmorTrainings(draft, repository),
     acquiredFeatIds,
     acquiredFeatTags,
+    acquiredFeatSources,
   }
 }

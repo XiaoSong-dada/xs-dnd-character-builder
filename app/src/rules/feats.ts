@@ -35,6 +35,11 @@ export interface FeatEligibilityContext {
   readonly acquiredFeatIds?: readonly string[]
   /** 已获得专长携带的标签集合（如 dragonmark、wild-talent）。 */
   readonly acquiredFeatTags?: readonly string[]
+  /**
+   * 角色已获得的不可复选专长来源（featId → 来源标签，如「背景：士兵」「4级属性提升或专长」）。
+   * 由 `getFeatEligibilityContext` 计算；不含当前正在选择节点自身的授予，供回看已选项与重复选择提示。
+   */
+  readonly acquiredFeatSources?: Readonly<Record<string, readonly string[]>>
 }
 
 /** 专长授予来源；用于重复选择校验与数值来源解释。 */
@@ -254,6 +259,12 @@ export function getFeatEligibility(
   if (excludedFeatTag && context.acquiredFeatTags?.includes(excludedFeatTag)) {
     reasons.push('不具有其他同类专长')
   }
+  // 不可复选专长（含背景、物种、职业与手动授予）：候选阶段与最终查重共用同一来源清单，
+  // 让玩家在时间线选择时就看见「已获得」及其来源，而不是等到最终校验才发现重复。
+  const acquiredSources = selectedFeat.repeatable ? undefined : context.acquiredFeatSources?.[selectedFeat.id]
+  if (acquiredSources?.length) {
+    reasons.push(`已获得（${acquiredSources.join('、')}）`)
+  }
   if (requiredCapability === 'spellcasting' && !context.canCastSpells) {
     reasons.push(`需要${capabilityLabels.spellcasting}`)
   }
@@ -456,6 +467,44 @@ export function formatFeatGrantSource(grant: FeatGrant, repository: RulesReposit
   if (grant.sourceKind === 'species') return '物种授予'
   if (grant.sourceKind === 'subclass') return '子职选择'
   return '职业选择'
+}
+
+/**
+ * 重复授予提示中的来源标签：优先给出可定位的节点（如「4级属性提升或专长」）或背景名，
+ * 让玩家知道该去哪一处修改已有记录；缺少节点标题时退回通用来源标签。
+ */
+export function formatFeatGrantOrigin(
+  grant: FeatGrant,
+  repository: RulesRepository,
+  checkpointTitles?: ReadonlyMap<string, string>,
+): string {
+  if (grant.sourceKind === 'background') {
+    const background = repository.getBackground(grant.sourceId)
+    return background ? `背景：${background.name}` : '背景'
+  }
+  if (grant.sourceKind === 'manual') return '手动添加'
+  const title = grant.checkpointId ? checkpointTitles?.get(grant.checkpointId) : undefined
+  return title ?? formatFeatGrantSource(grant, repository)
+}
+
+/**
+ * 汇总「已获得且不可复选」的专长来源（featId → 来源标签，同来源去重）。
+ * 时间线候选禁用与最终查重共用；可复选专长不参与，故不会阻止合法的再次选择。
+ */
+export function listAcquiredFeatSources(
+  grants: readonly FeatGrant[],
+  repository: RulesRepository,
+  checkpointTitles?: ReadonlyMap<string, string>,
+): Readonly<Record<string, readonly string[]>> {
+  const sources: Record<string, string[]> = {}
+  for (const grant of grants) {
+    const feat = repository.getFeat(grant.featId)
+    if (!feat || feat.repeatable) continue
+    const label = formatFeatGrantOrigin(grant, repository, checkpointTitles)
+    const labels = sources[grant.featId] ?? (sources[grant.featId] = [])
+    if (!labels.includes(label)) labels.push(label)
+  }
+  return sources
 }
 
 /** 角色当前生效的专长条目（按授予顺序去重）。 */

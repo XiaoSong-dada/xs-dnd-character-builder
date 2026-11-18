@@ -6,6 +6,7 @@ import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
 import {
   collectFeatSkillSelections,
   decodeAbilityImprovement,
+  formatFeatGrantOrigin,
   getAbilityImprovementEligibility,
   getCheckpointSelectionBounds,
   getFeatEligibility,
@@ -655,9 +656,15 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         }
         const selectedFeat = repository.getFeat(optionId)
         if (selectedFeat && draft.classId) {
+          // 重复授予由时间线统一查重（见下方 feat-duplicate-*）：逐节点前置校验不重复报「已获得」，
+          // 避免同一问题既算前置不满足又算重复取得。
           const eligibility = getFeatEligibility(
             selectedFeat,
-            getFeatEligibilityContext(draft, { checkpointId: checkpoint.id, checkpointLevel: checkpoint.level }),
+            getFeatEligibilityContext(draft, {
+              checkpointId: checkpoint.id,
+              checkpointLevel: checkpoint.level,
+              ignoreFeatAcquisition: true,
+            }),
           )
           if (!eligibility.available) {
             issues.push({
@@ -701,28 +708,29 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         }
       }
     }
-    if (isV2024) {
-      const byFeat = new Map<string, FeatGrant[]>()
-      for (const grant of listFeatGrants(draft, repository)) {
-        const list = byFeat.get(grant.featId) ?? []
-        list.push(grant)
-        byFeat.set(grant.featId, list)
-      }
-      const titleById = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint.title]))
-      for (const [featId, list] of byFeat) {
-        const feat = repository.getFeat(featId)
-        if (!feat || feat.repeatable || list.length <= 1) continue
-        const labels = list.map((grant) => grant.sourceKind === 'background'
-          ? `背景：${repository.getBackground(grant.sourceId)?.name ?? grant.sourceId}`
-          : titleById.get(grant.checkpointId ?? '') ?? grant.sourceId)
-        issues.push({
-          id: `feat-duplicate-${featId}`,
-          step: 'timeline',
-          severity: 'error',
-          message: `不可复选专长「${feat.name}」被重复取得（${labels.join('、')}）。`,
-          resolution: '更换其中一处来源；背景、物种与职业授予的同一专长只能取得一次。',
-        })
-      }
+    // 不可复选专长查重对 2014 与 2024 同口径：与时间线候选禁用共用 `listFeatGrants`、
+    // 可复选标记与来源标签，旧记录里的重复授予也能指出需要修改的节点。
+    const byFeat = new Map<string, FeatGrant[]>()
+    for (const grant of listFeatGrants(draft, repository)) {
+      const list = byFeat.get(grant.featId) ?? []
+      list.push(grant)
+      byFeat.set(grant.featId, list)
+    }
+    const titleById = new Map(timeline.map((checkpoint) => [
+      checkpoint.id,
+      `${checkpoint.level}级${checkpoint.title}`,
+    ]))
+    for (const [featId, list] of byFeat) {
+      const feat = repository.getFeat(featId)
+      if (!feat || feat.repeatable || list.length <= 1) continue
+      const labels = list.map((grant) => formatFeatGrantOrigin(grant, repository, titleById))
+      issues.push({
+        id: `feat-duplicate-${featId}`,
+        step: 'timeline',
+        severity: 'error',
+        message: `不可复选专长「${feat.name}」被重复取得（${labels.join('、')}）。`,
+        resolution: '更换其中一处来源；背景、物种与职业授予的同一专长只能取得一次。',
+      })
     }
     for (const group of new Set(timeline.map((checkpoint) => checkpoint.uniqueGroup).filter((value): value is string => Boolean(value)))) {
       const selectedIds = timeline

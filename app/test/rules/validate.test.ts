@@ -95,6 +95,28 @@ describe('validateDraft', () => {
     expect(issues.some((issue) => issue.id.startsWith('feat-prerequisite-'))).toBe(true)
   })
 
+  it('2014 同一不可复选专长跨等级重复取得时报错并定位节点（问题 #29）', () => {
+    const draft: CharacterDraft = {
+      ...createDraft(),
+      targetLevel: 8,
+      classId: 'class-2014-fighter',
+      backgroundId: 'background-2014-soldier',
+      raceId: 'race-2014-human',
+      name: '凯恩',
+      baseAbilities: { str: 15, dex: 14, con: 13, int: 8, wis: 12, cha: 13 },
+      selections: [
+        { checkpointId: 'fighter-2014-asi-4', optionIds: ['feat-actor'], confirmedAt: '' },
+        { checkpointId: 'fighter-2014-asi-6', optionIds: ['asi-str-2'], confirmedAt: '' },
+        { checkpointId: 'fighter-2014-asi-8', optionIds: ['feat-actor'], confirmedAt: '' },
+      ],
+    }
+    const duplicate = validateDraft(draft).find((issue) => issue.id === 'feat-duplicate-feat-actor')
+    expect(duplicate).toBeTruthy()
+    expect(duplicate?.message).toContain('不可复选专长「演员」被重复取得')
+    expect(duplicate?.message).toContain('4级属性提升或专长')
+    expect(duplicate?.message).toContain('8级属性提升或专长')
+  })
+
   it('27点预算只校验基础值，不计入等级属性提升', () => {
     const draft: CharacterDraft = {
       ...createDraft(),
