@@ -12,6 +12,7 @@ import { abilityModifier, deriveAbilities } from '@/rules/derive'
 import { formatFeatBonusOption, getCheckpointSelectionBounds } from '@/rules/feats'
 import { formatResourceText } from '@/rules/resources'
 import { buildTimelineForDraft } from '@/rules/timeline'
+import { getOptionPrerequisiteFailures, getRequiredSpellAutoAddPlan } from '@/rules/option-prerequisites'
 import { getValidSpeciesChoice } from '@/rules/origins'
 import { getCheckpointCandidates, isSpellbookReservationCheckpoint } from '@/rules/spellcasting'
 import type { CharacterDraft, ChoiceSelection } from '@/types/character'
@@ -178,10 +179,66 @@ function candidateFeatDetail(optionId: string): string | undefined {
   return rulesRepository.value.getFeat(optionId)?.detail
 }
 
+/**
+ * 选项先决失败项（等级／依赖选项／依赖法术）。
+ * 与 `validate` 最终校验共用 `rules/option-prerequisites`，候选卡与最终检查不会给出两套结论。
+ */
+function optionPrerequisiteFailures(checkpointId: string, optionId: string) {
+  const option = rulesRepository.value.getOption(optionId) ?? rulesRepository.value.getFeat(optionId)
+  if (!option) return []
+  const checkpoint = checkpoints.value.find((item) => item.id === checkpointId)
+  return getOptionPrerequisiteFailures(option, {
+    draft: props.draft,
+    repository: rulesRepository.value,
+    classId: checkpoint?.classId,
+  })
+}
+
 function optionState(checkpointId: string, optionId: string): OptionCardState {
   if (selectedIds(checkpointId).includes(optionId)) return 'selected'
-  if (isUniqueOptionUsedElsewhere(checkpointId, optionId) || isBackgroundSkill(checkpointId, optionId) || isExpertiseLocked(checkpointId, optionId)) return 'locked'
+  if (
+    isUniqueOptionUsedElsewhere(checkpointId, optionId)
+    || isBackgroundSkill(checkpointId, optionId)
+    || isExpertiseLocked(checkpointId, optionId)
+  ) return 'locked'
+  // 仅缺必需法术时保持可点击：点击后由页面自动补选戏法，或引导到法术步骤调整。
+  const failures = optionPrerequisiteFailures(checkpointId, optionId)
+  if (failures.some((failure) => failure.kind !== 'required-spell')) return 'locked'
   return optionStatus(optionId) === 'index-only' ? 'incompatible' : 'default'
+}
+
+/** 仅缺必需法术的候选：保留可点击并给出补选/跳转提示，而不是当成硬锁定。 */
+function isOnlyMissingRequiredSpell(checkpointId: string, optionId: string): boolean {
+  const failures = optionPrerequisiteFailures(checkpointId, optionId)
+  return failures.length > 0 && failures.every((failure) => failure.kind === 'required-spell')
+}
+
+function optionReasonTone(checkpointId: string, optionId: string): 'error' | 'hint' {
+  if (selectedIds(checkpointId).includes(optionId)) return 'error'
+  return isOnlyMissingRequiredSpell(checkpointId, optionId) ? 'hint' : 'error'
+}
+
+/** 缺失法术先决时的候选提示：能自动补选就说明会携带什么，名额不足则说明去法术步骤调整。 */
+function missingRequiredSpellHint(checkpointId: string, optionId: string): string {
+  const option = rulesRepository.value.getOption(optionId) ?? rulesRepository.value.getFeat(optionId)
+  if (!option) return ''
+  const checkpoint = checkpoints.value.find((item) => item.id === checkpointId)
+  const plan = getRequiredSpellAutoAddPlan(option, {
+    draft: props.draft,
+    repository: rulesRepository.value,
+    classId: checkpoint?.classId,
+  })
+  const names = (ids: readonly string[]) => ids
+    .map((id) => rulesRepository.value.getSpell(id)?.name ?? id)
+    .join('、')
+  if (plan.blockedSpellIds.length === 0) {
+    return `点击后将自动习得戏法${names(plan.autoAddSpellIds)}`
+  }
+  const blockedNames = names(plan.blockedSpellIds)
+  const blockedCantripsOnly = plan.blockedSpellIds.every((id) => rulesRepository.value.getSpell(id)?.level === 0)
+  return blockedCantripsOnly
+    ? `戏法名额已满，点击前往法术步骤调整并选定${blockedNames}`
+    : `需先在法术步骤选定${blockedNames}，点击前往调整`
 }
 
 function optionDisabledReason(checkpointId: string, optionId: string): string {
@@ -191,7 +248,14 @@ function optionDisabledReason(checkpointId: string, optionId: string): string {
   }
   if (isBackgroundSkill(checkpointId, optionId)) return '背景已提供此技能，请选择另一项职业技能'
   if (isExpertiseLocked(checkpointId, optionId)) return '需先获得该技能熟练（职业技能或背景）'
-  return ''
+  const failures = optionPrerequisiteFailures(checkpointId, optionId)
+  if (failures.length === 0) return ''
+  if (isOnlyMissingRequiredSpell(checkpointId, optionId)) {
+    return selectedIds(checkpointId).includes(optionId)
+      ? failures.map((failure) => failure.message).join('；')
+      : missingRequiredSpellHint(checkpointId, optionId)
+  }
+  return failures.map((failure) => failure.message).join('；')
 }
 
 /** 展开区的先决条件行：由选项字段生成（等级／魔契／法术），子职选择另补「所属职业 · 选择等级」。 */
@@ -202,10 +266,13 @@ function optionPrerequisiteText(checkpoint: ChoiceCheckpoint, optionId: string):
   if (subclass) {
     parts.push(`${rulesRepository.value.getClass(subclass.classId)?.name ?? '本职业'} · ${subclass.selectionLevel} 级可选`)
   }
-  if (option?.minimumLevel) parts.push(`${option.minimumLevel} 级`)
-  for (const requiredId of option?.requiredOptionIds ?? []) {
-    parts.push(rulesRepository.value.getOption(requiredId)?.name ?? requiredId)
+  if (option?.minimumLevel) {
+    const className = checkpoint.classId ? rulesRepository.value.getClass(checkpoint.classId)?.name : undefined
+    parts.push(className ? `${className} ${option.minimumLevel} 级` : `${option.minimumLevel} 级`)
   }
+  const requiredOptionNames = (option?.requiredOptionIds ?? [])
+    .map((requiredId) => rulesRepository.value.getOption(requiredId)?.name ?? requiredId)
+  if (requiredOptionNames.length) parts.push(`需先选择${requiredOptionNames.join('、')}`)
   if (option?.requiredSpellIds?.length) {
     const spellNames = option.requiredSpellIds.map((id) => rulesRepository.value.getSpell(id)?.name ?? id)
     parts.push(`已习得法术 ${spellNames.join('、')}`)
@@ -230,7 +297,13 @@ function toggle(checkpointId: string, optionId: string, max: number): void {
   const alreadySelected = current.includes(optionId)
   if (
     !alreadySelected
-    && (isUniqueOptionUsedElsewhere(checkpointId, optionId) || isBackgroundSkill(checkpointId, optionId) || isExpertiseLocked(checkpointId, optionId))
+    && (
+      isUniqueOptionUsedElsewhere(checkpointId, optionId)
+      || isBackgroundSkill(checkpointId, optionId)
+      || isExpertiseLocked(checkpointId, optionId)
+      // 仅缺必需法术时允许点击：页面会自动补选戏法，名额不足则跳到法术步骤。
+      || optionPrerequisiteFailures(checkpointId, optionId).some((failure) => failure.kind !== 'required-spell')
+    )
   ) return
   const next = alreadySelected
     ? current.filter((id) => id !== optionId)
@@ -356,6 +429,7 @@ function spellCandidateDescription(spell: SpellRule): string {
             expanded-label="详情"
             :state="optionState(checkpoint.id, optionId)"
             :disabled-reason="optionDisabledReason(checkpoint.id, optionId)"
+            :reason-tone="optionReasonTone(checkpoint.id, optionId)"
             @select="toggle(checkpoint.id, optionId, checkpointBounds(checkpoint).max)"
           >
             <template #suffix>

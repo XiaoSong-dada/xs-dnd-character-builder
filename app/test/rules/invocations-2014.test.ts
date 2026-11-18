@@ -29,6 +29,34 @@ function warlockDraft(level: number, overrides: Partial<CharacterDraft> = {}): C
   })
 }
 
+/** 邪术师 + 战士兼职：总等级 = 两者之和，用于验证等级先决按职业等级而非总等级判定。 */
+function multiclassWarlockDraft(
+  warlockLevel: number,
+  fighterLevel: number,
+  overrides: Partial<CharacterDraft> = {},
+): CharacterDraft {
+  return draft2024({
+    ruleset: '5e-2014',
+    classId: 'class-2014-warlock',
+    targetLevel: warlockLevel + fighterLevel,
+    enabledSourceIds: [...ALL_SOURCES],
+    baseAbilities: { str: 13, dex: 14, con: 13, int: 8, wis: 12, cha: 13 },
+    multiclass: {
+      enabled: true,
+      primaryClassId: 'class-2014-warlock',
+      classes: [
+        { classId: 'class-2014-warlock', level: warlockLevel },
+        { classId: 'class-2014-fighter', level: fighterLevel },
+      ],
+      levelOrder: [
+        ...Array.from({ length: warlockLevel }, () => 'class-2014-warlock'),
+        ...Array.from({ length: fighterLevel }, () => 'class-2014-fighter'),
+      ],
+    },
+    ...overrides,
+  })
+}
+
 const issueIds = (draft: CharacterDraft) => validateDraft(draft).map((issue) => issue.id)
 
 /** 仅取阻塞级问题：`index-only` 选项本身会产生一条 warning 级「只有规则索引」提示，不算先决失败。 */
@@ -259,6 +287,37 @@ describe('2014 魔能祈唤先决校验', () => {
       selections: [selection('warlock-2014-invocations-2', ['invocation-2014-maddening-hex'])],
     })
     expect(issueIds(tooEarly)).toContain('option-level-warlock-2014-invocations-2-invocation-2014-maddening-hex')
+  })
+
+  it('兼职按邪术师等级判定：总等级 9 但邪术师 8 级时不能取得 9 级祈唤', () => {
+    const draft = multiclassWarlockDraft(8, 1, {
+      selections: [selection('warlock-2014-invocations-7', ['invocation-2014-ascendant-step'])],
+    })
+    const issue = validateDraft(draft)
+      .find((item) => item.id === 'option-level-warlock-2014-invocations-7-invocation-2014-ascendant-step')
+    expect(issue?.message).toContain('星移步法')
+    expect(issue?.message).toContain('邪术师 9 级')
+    expect(issue?.message).toContain('当前 8 级')
+    expect(issue?.resolution).toContain('邪术师等级提高到 9 级')
+  })
+
+  it('兼职且邪术师等级足够时同一祈唤不再报等级先决', () => {
+    const draft = multiclassWarlockDraft(9, 1, {
+      selections: [selection('warlock-2014-invocations-9', ['invocation-2014-ascendant-step'])],
+    })
+    expect(issueIds(draft)).not.toContain('option-level-warlock-2014-invocations-9-invocation-2014-ascendant-step')
+  })
+
+  it('已有角色失去先决、检查点已不在时间线时仍点名受影响的祈唤', () => {
+    // 邪术师从 9 降到 8 后，9 级祈唤检查点会从时间线消失；导入或旧草稿的选择未必带失效标记。
+    const draft = multiclassWarlockDraft(8, 1, {
+      selections: [selection('warlock-2014-invocations-9', ['invocation-2014-ascendant-step'])],
+    })
+    const issue = validateDraft(draft)
+      .find((item) => item.id === 'option-level-warlock-2014-invocations-9-invocation-2014-ascendant-step')
+    expect(issue?.message).toContain('星移步法')
+    expect(issue?.message).toContain('邪术师 9 级')
+    expect(issue?.resolution).toContain('移除')
   })
 })
 
