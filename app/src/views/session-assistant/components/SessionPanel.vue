@@ -500,9 +500,24 @@ function openTranscribe(spellId?: string): void {
           <button type="button" class="session-panel__step" aria-label="增加力竭层数" @click="panel.changeExhaustion(1)">＋</button>
         </div>
       </section>
-      <section v-if="panel.resourceViews.value.length" class="session-panel__section">
+      <section class="session-panel__section">
         <h3>资源</h3>
         <div class="session-panel__resource-list">
+          <div class="session-panel__heroic-inspiration">
+            <span>
+              英雄激励
+              <small>当前持有 {{ panel.heroicInspirationCount.value }} 份</small>
+              <small>消耗 1 份可重投</small>
+            </span>
+            <button
+              type="button"
+              class="session-panel__step"
+              aria-label="消耗英雄激励"
+              :disabled="panel.heroicInspirationCount.value === 0"
+              @click="panel.changeHeroicInspiration(-1)"
+            >−</button>
+            <button type="button" class="session-panel__step" aria-label="获得英雄激励" @click="panel.changeHeroicInspiration(1)">＋</button>
+          </div>
           <div v-for="resource in panel.resourceViews.value" :key="resource.id" class="session-panel__resource">
             <span>
               {{ resource.name }}
@@ -1112,6 +1127,11 @@ function openTranscribe(spellId?: string): void {
     color: var(--color-primary);
     font-size: 1.1rem;
     font-weight: 700;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
   }
 
   &__gold-actions {
@@ -1356,6 +1376,18 @@ function openTranscribe(spellId?: string): void {
     span {
       flex: 1;
       font-weight: 700;
+    }
+  }
+
+  &__heroic-inspiration {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 0.5rem;
+
+    small {
+      display: block;
+      color: var(--color-text-muted);
     }
   }
 

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { emptyBundle } from '@/rules/custom-content'
 import { registerCustomContent, resetCustomContent } from '@/rules/repositories'
+import { rulesRepository } from '@/rules/repository'
 import type { CustomSubclassEntry } from '@/types/custom-content'
 import TimelineStep from '@/views/character-builder/components/TimelineStep.vue'
 import type { CharacterDraft } from '@/types/character'
@@ -459,6 +460,96 @@ describe('TimelineStep 邪术师可展开卡片', () => {
       expect(expandableCard(wrapper, name), name).toBeDefined()
     }
     expect(wrapper.findAll('.option-card').length).toBe(0)
+  })
+})
+
+describe('TimelineStep 魔能祈唤先决锁定', () => {
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
+  const skillSelection = { checkpointId: 'warlock-2014-skills-1', optionIds: ['skill-arcana', 'skill-deception'], confirmedAt: '' }
+  const patronSelection = { checkpointId: 'warlock-2014-subclass-1', optionIds: ['subclass-2014-warlock-fiend'], confirmedAt: '' }
+  const invocation2Selection = { checkpointId: 'warlock-2014-invocations-2', optionIds: ['invocation-devils-sight', 'invocation-2014-armor-of-shadows'], confirmedAt: '' }
+  const asi4Selection = { checkpointId: 'warlock-2014-asi-4', optionIds: ['asi-cha-2'], confirmedAt: '' }
+
+  function warlockDraft(level: number, selections: CharacterDraft['selections']): CharacterDraft {
+    return { ...bardDraft(), classId: 'class-2014-warlock', targetLevel: level, selections }
+  }
+
+  function card(wrapper: ReturnType<typeof mountStep>, name: string) {
+    return wrapper.findAll('.expandable-option-card').find((item) => item.text().includes(name))
+  }
+
+  it('未选刃之魔契时锁定饥渴魔刃并说明原因，点击不会写入选择', async () => {
+    const wrapper = mountStep(warlockDraft(5, [
+      skillSelection,
+      patronSelection,
+      invocation2Selection,
+      { checkpointId: 'warlock-2014-pact-3', optionIds: ['pact-tome'], confirmedAt: '' },
+      asi4Selection,
+    ]))
+
+    const thirsting = card(wrapper, '饥渴魔刃')
+    expect(thirsting?.find('.expandable-option-card__main').attributes('disabled')).toBeDefined()
+    expect(thirsting?.text()).toContain('需要先选择刃之魔契')
+
+    await selectStaticCard(wrapper, '饥渴魔刃')
+    expect(wrapper.emitted('select')).toBeUndefined()
+  })
+
+  it('选定刃之魔契后饥渴魔刃解锁并可写入', async () => {
+    const wrapper = mountStep(warlockDraft(5, [
+      skillSelection,
+      patronSelection,
+      invocation2Selection,
+      { checkpointId: 'warlock-2014-pact-3', optionIds: ['pact-blade'], confirmedAt: '' },
+      asi4Selection,
+    ]))
+
+    const thirsting = card(wrapper, '饥渴魔刃')
+    expect(thirsting?.find('.expandable-option-card__main').attributes('disabled')).toBeUndefined()
+
+    await selectStaticCard(wrapper, '饥渴魔刃')
+    expect(wrapper.emitted('select')?.[0]).toEqual(['warlock-2014-invocations-5', ['invocation-2014-thirsting-blade']])
+  })
+
+  it('未习得魔能爆时苦痛魔爆仍可点击，并提示会自动习得', async () => {
+    const wrapper = mountStep(warlockDraft(2, [skillSelection, patronSelection]))
+
+    const agonizing = card(wrapper, '苦痛魔爆')
+    expect(agonizing?.find('.expandable-option-card__main').attributes('disabled')).toBeUndefined()
+    expect(agonizing?.text()).toContain('点击后将自动习得戏法魔能爆')
+
+    await selectStaticCard(wrapper, '苦痛魔爆')
+    expect(wrapper.emitted('select')?.[0]).toEqual(['warlock-2014-invocations-2', ['invocation-agonizing-blast']])
+  })
+
+  it('戏法名额已满时提示前往法术步骤调整', () => {
+    const base = warlockDraft(2, [skillSelection, patronSelection])
+    const warlockCantrips = (rulesRepository.getSpellcastingConfig({ classId: 'class-2014-warlock' })?.classSpellIds ?? [])
+      .map((id) => rulesRepository.getSpell(id))
+      .filter((spell): spell is NonNullable<typeof spell> => Boolean(spell && spell.level === 0 && spell.id !== 'spell-2014-eldritch-blast'))
+      .slice(0, 2)
+      .map((spell) => spell.id)
+    const wrapper = mountStep({
+      ...base,
+      spellSelections: { ...base.spellSelections, cantripIds: warlockCantrips },
+    })
+
+    const agonizing = card(wrapper, '苦痛魔爆')
+    expect(agonizing?.find('.expandable-option-card__main').attributes('disabled')).toBeUndefined()
+    expect(agonizing?.text()).toContain('戏法名额已满')
+  })
+
+  it('习得魔能爆后苦痛魔爆解锁', () => {
+    const base = warlockDraft(2, [skillSelection, patronSelection])
+    const wrapper = mountStep({
+      ...base,
+      spellSelections: { ...base.spellSelections, cantripIds: ['spell-2014-eldritch-blast'] },
+    })
+
+    const agonizing = card(wrapper, '苦痛魔爆')
+    expect(agonizing?.find('.expandable-option-card__main').attributes('disabled')).toBeUndefined()
   })
 })
 

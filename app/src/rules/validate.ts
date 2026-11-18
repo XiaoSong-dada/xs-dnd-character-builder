@@ -6,6 +6,7 @@ import { getFeatEligibilityContext } from '@/rules/feat-eligibility'
 import {
   collectFeatSkillSelections,
   decodeAbilityImprovement,
+  formatFeatGrantOrigin,
   getAbilityImprovementEligibility,
   getCheckpointSelectionBounds,
   getFeatEligibility,
@@ -15,6 +16,7 @@ import {
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap } from '@/rules/abilities'
 import { getFlexibleBonusGroups, getFlexibleBonusRule, getRaceAbilityBonuses, SKILL_IDS } from '@/rules/derive'
 import { buildTimelineForDraft } from '@/rules/timeline'
+import { getOptionPrerequisiteFailures, type OptionPrerequisiteFailure } from '@/rules/option-prerequisites'
 import { getAvailableSpells, getCheckpointCandidates, getRequiredCantripCount, getRequiredSpellbookCount, getRequiredSpellCount, getSelectedSpellIds, getSpellbookExtraAllowance, getSpellbookExtraCandidates, getSpellcastingConfig, listSpellcastingScopes } from '@/rules/spellcasting'
 import { getLanguageOptions, getRequiredLanguageCount } from '@/rules/languages'
 import { getBackgroundAllocationIssue, getOriginStepBlockers, getSpeciesProficiencyBlockers, getSpeciesChoiceCheckpoints, getValidSpeciesChoice } from '@/rules/origins'
@@ -29,6 +31,13 @@ import { artificerInfusions2014, getArtificerInfusedItemLimit } from '@/rules/da
 import { artificerReplicatePlans2024, getArtificerReplicatedItemLimit2024 } from '@/rules/data/ua-artificer-2024'
 import type { AbilityKey, CharacterDraft, ValidationIssue } from '@/types/character'
 import type { RulesRepository } from '@/types/rules'
+
+/** 先决失败种类到既有校验问题 ID 前缀的映射（保持旧 ID 稳定，供回归测试与提示定位）。 */
+const OPTION_PREREQUISITE_ISSUE_PREFIX: Readonly<Record<OptionPrerequisiteFailure['kind'], string>> = {
+  'class-level': 'option-level',
+  'required-option': 'option-prerequisite',
+  'required-spell': 'option-spell-prerequisite',
+}
 
 /**
  * 自定义内容缺失/归档的提示级问题（需求 R6）：不阻断导出与非自定义角色，
@@ -531,6 +540,7 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
     }
     const timeline = buildTimelineForDraft(draft)
     const checkpointLevels = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint.level]))
+    const timelineCheckpointIds = new Set(timeline.map((checkpoint) => checkpoint.id))
     const isV2024 = repository.ruleset === '5e-2024'
     for (const checkpoint of timeline) {
       const selection = draft.selections.find((item) => item.checkpointId === checkpoint.id && !item.invalidatedAt)
@@ -581,47 +591,20 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         : deriveAbilities(draft, checkpoint.id)
       for (const optionId of selection?.optionIds ?? []) {
         const option = repository.getOption(optionId) ?? repository.getFeat(optionId)
-        // 选项等级先决（如 2024 魔能祈唤）与依赖先决（如魔能斩需先选刃之魔契）。
-        if (option?.minimumLevel && option.minimumLevel > draft.targetLevel) {
-          issues.push({
-            id: `option-level-${checkpoint.id}-${optionId}`,
-            step: checkpoint.step,
-            severity: 'error',
-            message: `「${option.name}」需要 ${option.minimumLevel} 级才能选择。`,
-            resolution: '提高目标等级，或移除该选择。',
-          })
-        }
-        if (option?.requiredOptionIds?.length) {
-          const activeOptionIds = new Set(draft.selections.filter((item) => !item.invalidatedAt).flatMap((item) => item.optionIds))
-          const missing = option.requiredOptionIds.filter((id) => !activeOptionIds.has(id))
-          if (missing.length > 0) {
-            const names = missing.map((id) => repository.getOption(id)?.name ?? id).join('、')
+        // 选项先决（等级／依赖选项／依赖法术）与候选卡共用同一套判定：
+        // `minimumLevel` 是**所属职业等级**，兼职时不能用角色总等级。
+        if (option) {
+          for (const failure of getOptionPrerequisiteFailures(option, {
+            draft,
+            repository,
+            classId: checkpoint.classId,
+          })) {
             issues.push({
-              id: `option-prerequisite-${checkpoint.id}-${optionId}`,
+              id: `${OPTION_PREREQUISITE_ISSUE_PREFIX[failure.kind]}-${checkpoint.id}-${optionId}`,
               step: checkpoint.step,
               severity: 'error',
-              message: `「${option.name}」需要先选择：${names}。`,
-              resolution: '先选择前置祈唤，或移除该选择。',
-            })
-          }
-        }
-        if (option?.requiredSpellIds?.length) {
-          const knownSpellIds = new Set([
-            ...draft.spellSelections.cantripIds,
-            ...draft.spellSelections.knownSpellIds,
-            ...draft.spellSelections.preparedSpellIds,
-            ...draft.spellSelections.spellbookSpellIds,
-            ...draft.spellSelections.transcribedSpellIds,
-          ])
-          const missingSpells = option.requiredSpellIds.filter((id) => !knownSpellIds.has(id))
-          if (missingSpells.length > 0) {
-            const names = missingSpells.map((id) => repository.getSpell(id)?.name ?? id).join('、')
-            issues.push({
-              id: `option-spell-prerequisite-${checkpoint.id}-${optionId}`,
-              step: checkpoint.step,
-              severity: 'error',
-              message: `「${option.name}」需要先习得法术：${names}。`,
-              resolution: '先在法术步骤习得该法术，或移除该选择。',
+              message: `「${option.name}」${failure.message}。`,
+              resolution: failure.resolution,
             })
           }
         }
@@ -655,9 +638,15 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         }
         const selectedFeat = repository.getFeat(optionId)
         if (selectedFeat && draft.classId) {
+          // 重复授予由时间线统一查重（见下方 feat-duplicate-*）：逐节点前置校验不重复报「已获得」，
+          // 避免同一问题既算前置不满足又算重复取得。
           const eligibility = getFeatEligibility(
             selectedFeat,
-            getFeatEligibilityContext(draft, { checkpointId: checkpoint.id, checkpointLevel: checkpoint.level }),
+            getFeatEligibilityContext(draft, {
+              checkpointId: checkpoint.id,
+              checkpointLevel: checkpoint.level,
+              ignoreFeatAcquisition: true,
+            }),
           )
           if (!eligibility.available) {
             issues.push({
@@ -701,28 +690,48 @@ export function validateDraft(draft: CharacterDraft): readonly ValidationIssue[]
         }
       }
     }
-    if (isV2024) {
-      const byFeat = new Map<string, FeatGrant[]>()
-      for (const grant of listFeatGrants(draft, repository)) {
-        const list = byFeat.get(grant.featId) ?? []
-        list.push(grant)
-        byFeat.set(grant.featId, list)
+    // 已选条目的检查点可能因调整职业等级而从当前时间线消失（如邪术师 9 → 8 级）：
+    // 正常变更会把选择标记失效，但导入草稿或旧数据未必有标记。这里对不在时间线中的
+    // 有效选择再按先决复核一次，保证「已有角色失去前置」时能点名受影响的祈唤。
+    for (const selection of draft.selections) {
+      if (selection.invalidatedAt || timelineCheckpointIds.has(selection.checkpointId)) continue
+      for (const optionId of selection.optionIds) {
+        const option = repository.getOption(optionId) ?? repository.getFeat(optionId)
+        if (!option) continue
+        for (const failure of getOptionPrerequisiteFailures(option, { draft, repository })) {
+          issues.push({
+            id: `${OPTION_PREREQUISITE_ISSUE_PREFIX[failure.kind]}-${selection.checkpointId}-${optionId}`,
+            step: 'timeline',
+            severity: 'error',
+            message: `「${option.name}」${failure.message}。`,
+            resolution: failure.resolution,
+          })
+        }
       }
-      const titleById = new Map(timeline.map((checkpoint) => [checkpoint.id, checkpoint.title]))
-      for (const [featId, list] of byFeat) {
-        const feat = repository.getFeat(featId)
-        if (!feat || feat.repeatable || list.length <= 1) continue
-        const labels = list.map((grant) => grant.sourceKind === 'background'
-          ? `背景：${repository.getBackground(grant.sourceId)?.name ?? grant.sourceId}`
-          : titleById.get(grant.checkpointId ?? '') ?? grant.sourceId)
-        issues.push({
-          id: `feat-duplicate-${featId}`,
-          step: 'timeline',
-          severity: 'error',
-          message: `不可复选专长「${feat.name}」被重复取得（${labels.join('、')}）。`,
-          resolution: '更换其中一处来源；背景、物种与职业授予的同一专长只能取得一次。',
-        })
-      }
+    }
+    // 不可复选专长查重对 2014 与 2024 同口径：与时间线候选禁用共用 `listFeatGrants`、
+    // 可复选标记与来源标签，旧记录里的重复授予也能指出需要修改的节点。
+    const byFeat = new Map<string, FeatGrant[]>()
+    for (const grant of listFeatGrants(draft, repository)) {
+      const list = byFeat.get(grant.featId) ?? []
+      list.push(grant)
+      byFeat.set(grant.featId, list)
+    }
+    const titleById = new Map(timeline.map((checkpoint) => [
+      checkpoint.id,
+      `${checkpoint.level}级${checkpoint.title}`,
+    ]))
+    for (const [featId, list] of byFeat) {
+      const feat = repository.getFeat(featId)
+      if (!feat || feat.repeatable || list.length <= 1) continue
+      const labels = list.map((grant) => formatFeatGrantOrigin(grant, repository, titleById))
+      issues.push({
+        id: `feat-duplicate-${featId}`,
+        step: 'timeline',
+        severity: 'error',
+        message: `不可复选专长「${feat.name}」被重复取得（${labels.join('、')}）。`,
+        resolution: '更换其中一处来源；背景、物种与职业授予的同一专长只能取得一次。',
+      })
     }
     for (const group of new Set(timeline.map((checkpoint) => checkpoint.uniqueGroup).filter((value): value is string => Boolean(value)))) {
       const selectedIds = timeline

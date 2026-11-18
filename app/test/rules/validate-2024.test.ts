@@ -58,8 +58,12 @@ describe('2024 专长校验', () => {
       ],
     })
     const issues = validateDraft(draft)
-    expect(issues.some((issue) => issue.id === 'feat-duplicate-feat-2024-tough')).toBe(true)
-    expect(issues.some((issue) => issue.message.includes('不可复选专长「健壮」被重复取得'))).toBe(true)
+    const duplicate = issues.find((issue) => issue.id === 'feat-duplicate-feat-2024-tough')
+    expect(duplicate).toBeTruthy()
+    expect(duplicate?.message).toContain('不可复选专长「健壮」被重复取得')
+    // 来源标签带等级与节点标题，旧记录能定位到需要修改的节点。
+    expect(duplicate?.message).toContain('4级属性提升或专长')
+    expect(duplicate?.message).toContain('6级属性提升或专长')
   })
 
   it('背景与人类同授可复选专长时不报重复（魔法学徒按换表处理）', () => {

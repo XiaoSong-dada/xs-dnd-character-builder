@@ -227,6 +227,18 @@ export function applyExhaustionChange(state: SessionState, delta: number): Sessi
   return { ...state, exhaustionLevel, updatedAt: new Date().toISOString() }
 }
 
+export function getHeroicInspirationCount(state: SessionState): number {
+  const count = state.heroicInspirationCount ?? 0
+  return Number.isSafeInteger(count) && count >= 0 ? count : 0
+}
+
+export function applyHeroicInspirationChange(state: SessionState, delta: 1 | -1): SessionState {
+  const current = getHeroicInspirationCount(state)
+  const heroicInspirationCount = Math.max(0, current + delta)
+  if (heroicInspirationCount === current || !Number.isSafeInteger(heroicInspirationCount)) return state
+  return { ...state, heroicInspirationCount, updatedAt: new Date().toISOString() }
+}
+
 /** 挂载/摘除普通 debuff（幂等：已挂则摘、未挂则挂）。 */
 export function toggleDebuff(state: SessionState, debuffId: string): SessionState {
   const exists = state.debuffs.includes(debuffId)

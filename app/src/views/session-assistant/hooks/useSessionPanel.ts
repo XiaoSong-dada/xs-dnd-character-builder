@@ -8,6 +8,7 @@ import { applyClassSpellSelections, getClassSpellSelections, getEffectiveSpellSl
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import {
   applyExhaustionChange,
+  applyHeroicInspirationChange,
   applyHpChange,
   applyLongRest,
   applyShortRest,
@@ -16,6 +17,7 @@ import {
   clampCurrentHp,
   createInitialSessionState,
   ensureHitDicePool,
+  getHeroicInspirationCount,
   getHitDicePoolEntries,
   restoreLastRest,
   spendHitDice,
@@ -279,6 +281,13 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
   const classSpellcastingProfiles = computed(() => getClassSpellcastingProfiles(draft.value))
   /** 已登记的职业、种族及免费施法资源，按草稿规则集解析。 */
   const sessionResources = computed(() => listSessionResources(draft.value, derived.value.modifiers))
+  const heroicInspirationCount = computed(() => getHeroicInspirationCount(ensureState()))
+
+  function changeHeroicInspiration(delta: 1 | -1): void {
+    const state = ensureState()
+    const next = applyHeroicInspirationChange(state, delta)
+    if (next !== state) persist(next)
+  }
 
   /** 资源已用/剩余视图。 */
   const resourceViews = computed(() => sessionResources.value.map((resource) => ({
@@ -371,6 +380,8 @@ export function useSessionPanel(draft: Ref<CharacterDraft>) {
     hitDice,
     hitDiceGroups,
     hitDiceSnapshotAvailable,
+    heroicInspirationCount,
+    changeHeroicInspiration,
     resourceViews,
     changeResource,
     spendHitDice: spendHitDiceAction,

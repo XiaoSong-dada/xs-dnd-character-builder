@@ -14,7 +14,8 @@ import { getDependencyImpact, type DraftChange } from '@/rules/dependency'
 import { hasBuildChoices } from '@/rules/draft-progress'
 import { isSourceEnabled, normalizeEnabledSourceIds } from '@/rules/source-books'
 import { buildTimelineForDraft } from '@/rules/timeline'
-import { applySpellbookReservationSelection, isSpellbookReservationCheckpoint, normalizeSpellSelectionBuckets, validateSpellSelections } from '@/rules/spellcasting'
+import { applyClassSpellSelections, applySpellbookReservationSelection, getSpellcastingScope, isSpellbookReservationCheckpoint, normalizeSpellSelectionBuckets, validateSpellSelections } from '@/rules/spellcasting'
+import { getRequiredSpellAutoAddPlan } from '@/rules/option-prerequisites'
 import {
   deleteInactiveSpellSelection,
   reconcileSpellSelections,
@@ -58,9 +59,17 @@ import type {
   StartingEquipmentSelection,
 } from '@/types/character'
 import type { ClassLevelEntry } from '@/types/multiclass'
+import type { ChoiceCheckpoint } from '@/types/rules'
 
 function isDraftStep(value: unknown): value is DraftStep {
   return typeof value === 'string' && STEP_ORDER.includes(value as DraftStep)
+}
+
+/** 时间线选择时对缺失必需法术的处理结果：可补选、或需引导到法术步骤。 */
+interface RequiredSpellResolution {
+  readonly spellSelections: SpellSelections
+  readonly addedSpellNames: readonly string[]
+  readonly blockedSpellNames: readonly string[]
 }
 
 /** 依赖影响确认弹窗的载荷（需求 §3，决策 D37／D43）。 */
@@ -917,19 +926,89 @@ export function useCharacterBuilderPage() {
     })
   }
 
+  /**
+   * 时间线写入前补选缺失的必需戏法。
+   *
+   * 典型场景：第一次车卡时法术步骤在时间线之后，邪术师选「苦痛魔爆」时还没选「魔能爆」。
+   * 若职业戏法名额仍有余量，直接把必需戏法写进该职业的法术选择，让当前点击一次完成；
+   * 名额不足或必需法术不是可选戏法时不写入，返回阻塞项，由调用方引导到法术步骤调整。
+   */
+  function resolveRequiredSpellsForTimelineSelection(
+    draft: CharacterDraft,
+    checkpoint: ChoiceCheckpoint | undefined,
+    previousOptionIds: readonly string[],
+    nextOptionIds: readonly string[],
+  ): RequiredSpellResolution {
+    const repository = repositoryFor(draft)
+    const addedOptionIds = nextOptionIds.filter((optionId) => !previousOptionIds.includes(optionId))
+    const addedSpellNames: string[] = []
+    const blockedSpellNames: string[] = []
+    let currentDraft = draft
+    for (const optionId of addedOptionIds) {
+      const option = repository.getOption(optionId) ?? repository.getFeat(optionId)
+      if (!option?.requiredSpellIds?.length) continue
+      const plan = getRequiredSpellAutoAddPlan(option, {
+        draft: currentDraft,
+        repository,
+        classId: checkpoint?.classId,
+      })
+      if (plan.blockedSpellIds.length > 0) {
+        blockedSpellNames.push(...plan.blockedSpellIds.map((id) => repository.getSpell(id)?.name ?? id))
+        continue
+      }
+      if (plan.autoAddSpellIds.length === 0 || !plan.classId) continue
+      const scope = getSpellcastingScope(currentDraft, plan.classId)
+      if (!scope) {
+        blockedSpellNames.push(...plan.autoAddSpellIds.map((id) => repository.getSpell(id)?.name ?? id))
+        continue
+      }
+      const spellSelections = applyClassSpellSelections(currentDraft, plan.classId, {
+        ...scope.selections,
+        cantripIds: [...scope.selections.cantripIds, ...plan.autoAddSpellIds],
+      })
+      currentDraft = { ...currentDraft, spellSelections }
+      addedSpellNames.push(...plan.autoAddSpellIds.map((id) => repository.getSpell(id)?.name ?? id))
+    }
+    if (blockedSpellNames.length > 0) {
+      return { spellSelections: draft.spellSelections, addedSpellNames: [], blockedSpellNames }
+    }
+    return { spellSelections: currentDraft.spellSelections, addedSpellNames, blockedSpellNames }
+  }
+
   function saveTimelineSelection(checkpointId: string, optionIds: readonly string[]): void {
     const current = activeDraft.value
     if (!current) return
+    const checkpoint = buildTimelineForDraft(current).find((item) => item.id === checkpointId)
+    const previousOptionIds = current.selections
+      .find((item) => item.checkpointId === checkpointId && !item.invalidatedAt)?.optionIds ?? []
+    const requiredSpells = resolveRequiredSpellsForTimelineSelection(current, checkpoint, previousOptionIds, optionIds)
+    if (requiredSpells.blockedSpellNames.length > 0) {
+      levelAdjustNotice.value = {
+        tone: 'warning',
+        message: `戏法名额已满或需手动补选${requiredSpells.blockedSpellNames.join('、')}：请先在法术步骤调整，再返回时间线选择「${checkpoint?.title ?? '该祈唤'}」。`,
+        step: 'spells',
+      }
+      setStep('spells')
+      return
+    }
+    if (requiredSpells.spellSelections !== current.spellSelections) {
+      store.updateDraft({ spellSelections: requiredSpells.spellSelections })
+    }
     if (isSpellbookReservationCheckpoint(checkpointId)) {
-      const reconciled = applySpellbookReservationSelection(current, checkpointId, optionIds)
+      const reconciled = applySpellbookReservationSelection(activeDraft.value ?? current, checkpointId, optionIds)
       store.updateDraft(reconciled)
     } else {
       store.saveSelection(checkpointId, optionIds)
     }
+    if (requiredSpells.addedSpellNames.length > 0) {
+      levelAdjustNotice.value = {
+        tone: 'success',
+        message: `已自动习得戏法${requiredSpells.addedSpellNames.join('、')}；如需更换戏法，可在法术步骤调整。`,
+        step: 'spells',
+      }
+    }
     const draft = activeDraft.value
     if (!draft?.classId) return
-    const checkpoint = buildTimelineForDraft(draft)
-      .find((item) => item.id === checkpointId)
     if (checkpoint?.kind !== 'subclass') return
     // 子职必须同时写「职业分配条目」与「起始职业兼容字段」：第 8 步施法作用域、时间线子职特性
     // 都按条目读，只写顶层会让奥法骑士等子职级施法被判为「无需配置法术」（rules.md 字段一致性）。

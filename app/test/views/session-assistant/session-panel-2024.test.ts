@@ -20,6 +20,51 @@ describe('SessionPanel 按草稿版本解析显示数据', () => {
     setActivePinia(createPinia())
   })
 
+  it('双版本角色均可手动记录英雄激励，刷新与切换角色时按角色恢复', async () => {
+    const draft2014 = draft2024({
+      id: 'heroic-inspiration-2014',
+      ruleset: '5e-2014',
+      classId: 'class-2014-fighter',
+    })
+    const otherDraft = draft2024({ id: 'heroic-inspiration-2024' })
+    SessionStateStorageService.save({
+      draftId: draft2014.id,
+      currentHp: 8,
+      usedSpellSlots: {},
+      exhaustionLevel: 0,
+      debuffs: [],
+      updatedAt: '2026-08-01T00:00:00.000Z',
+    })
+
+    const gain = 'button[aria-label="获得英雄激励"]'
+    const spend = 'button[aria-label="消耗英雄激励"]'
+    const firstPanel = mount(SessionPanel, { props: { draft: draft2014 } })
+    expect(firstPanel.text()).toContain('当前持有 0 份')
+    expect(firstPanel.text()).toContain('消耗 1 份可重投')
+    expect(firstPanel.get(spend).attributes('disabled')).toBeDefined()
+    for (let count = 1; count <= 3; count += 1) {
+      await firstPanel.get(gain).trigger('click')
+      expect(firstPanel.text()).toContain(`当前持有 ${count} 份`)
+    }
+    firstPanel.unmount()
+
+    const otherPanel = mount(SessionPanel, { props: { draft: otherDraft } })
+    expect(otherPanel.text()).toContain('当前持有 0 份')
+    await otherPanel.get(gain).trigger('click')
+    expect(otherPanel.text()).toContain('当前持有 1 份')
+    otherPanel.unmount()
+
+    const reopenedPanel = mount(SessionPanel, { props: { draft: draft2014 } })
+    expect(reopenedPanel.text()).toContain('当前持有 3 份')
+    for (let count = 2; count >= 0; count -= 1) {
+      await reopenedPanel.get(spend).trigger('click')
+      expect(reopenedPanel.text()).toContain(`当前持有 ${count} 份`)
+    }
+    expect(reopenedPanel.get(spend).attributes('disabled')).toBeDefined()
+    expect(SessionStateStorageService.load(otherDraft.id)?.heroicInspirationCount).toBe(1)
+    reopenedPanel.unmount()
+  })
+
   it('2014兔人资源可消耗并持久化，来源关闭隐藏、恢复后保留已用次数', async () => {
     const draft = draft2024({ id: 'session-rabbit', ruleset: '5e-2014', classId: 'class-2014-fighter', raceId: 'race-2014-motm-harengon', targetLevel: 5,
       enabledSourceIds: ['motm-2022-index'], raceAbilityChoices: ['str', 'con'] })

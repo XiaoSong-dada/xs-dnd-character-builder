@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   applyExhaustionChange,
+  applyHeroicInspirationChange,
   applyHpChange,
   applyLongRest,
   applyShortRest,
@@ -13,6 +14,7 @@ import {
   spendHitDice,
   undoHitDiceSpend,
   getAvailableSlotLevels,
+  getHeroicInspirationCount,
   restoreLastRest,
   reconcileSessionLimits,
   toggleDebuff,
@@ -39,6 +41,42 @@ describe('session-state 初始状态', () => {
       debuffs: [],
     })
     expect(state.lastRestSnapshot).toBeUndefined()
+  })
+})
+
+describe('session-state 英雄激励', () => {
+  it('旧存档按 0 读取，可累计多份并逐份消耗', () => {
+    expect(getHeroicInspirationCount(baseState)).toBe(0)
+    let state = baseState
+    for (let count = 1; count <= 3; count += 1) {
+      state = applyHeroicInspirationChange(state, 1)
+      expect(getHeroicInspirationCount(state)).toBe(count)
+    }
+    for (let count = 2; count >= 0; count -= 1) {
+      state = applyHeroicInspirationChange(state, -1)
+      expect(getHeroicInspirationCount(state)).toBe(count)
+    }
+    expect(applyHeroicInspirationChange(state, -1)).toBe(state)
+  })
+
+  it.each(['5e-2014', '5e-2024'] as const)('%s 短休、长休及撤回休息保留当前持有量', (ruleset) => {
+    const state = { ...baseState, heroicInspirationCount: 2 }
+    const restedStates = [
+      applyShortRest(state, [], 30, { ruleset }),
+      applyLongRest(state, 30, { ruleset }),
+    ]
+    for (const rested of restedStates) {
+      expect(getHeroicInspirationCount(rested)).toBe(2)
+      const adjusted = applyHeroicInspirationChange(rested, 1)
+      expect(getHeroicInspirationCount(restoreLastRest(adjusted))).toBe(3)
+    }
+  })
+
+  it('撤回生命骰消耗保留之后调整的持有量', () => {
+    const state = applyHeroicInspirationChange(createInitialSessionState('draft-1', 30, 2), 1)
+    const spent = spendHitDice(state, { count: 1, outcomes: [4], conModifier: 0, maxHp: 30 })
+    const adjusted = applyHeroicInspirationChange(spent, -1)
+    expect(undoHitDiceSpend(adjusted)).toMatchObject({ heroicInspirationCount: 0, hitDice: { spent: 0 } })
   })
 })
 

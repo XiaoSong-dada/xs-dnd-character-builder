@@ -45,13 +45,14 @@ const tagFilters = ['all', '战斗', '施法', '属性', '探索', '支援'] as 
 const tagFilterOptions = tagFilters.map((id) => ({ id, label: id === 'all' ? '全部' : id }))
 
 const abilitiesBeforeCheckpoint = computed(() => deriveAbilities(props.draft, props.checkpointId))
+/** 资格上下文与 validateDraft 同源（B09-08）：包含节点等级、护甲训练、战斗风格前置与已获得专长来源。 */
+const eligibilityContext = computed(() => getFeatEligibilityContext(props.draft, {
+  checkpointId: props.checkpointId,
+  checkpointLevel: props.checkpointLevel,
+}))
 const featEntries = computed(() => repository.value.feats.map((feat) => ({
   feat,
-  // 资格上下文与 validateDraft 同源（B09-08）：包含 2024 的节点等级、护甲训练与战斗风格前置。
-  eligibility: getFeatEligibility(feat, getFeatEligibilityContext(props.draft, {
-    checkpointId: props.checkpointId,
-    checkpointLevel: props.checkpointLevel,
-  })),
+  eligibility: getFeatEligibility(feat, eligibilityContext.value),
 })))
 const visibleFeats = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('zh-CN')

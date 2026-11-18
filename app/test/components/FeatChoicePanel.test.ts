@@ -119,3 +119,49 @@ describe('FeatChoicePanel 2024 等级前置（B09-08）', () => {
     expect(boon!.text()).toContain('需要19级')
   })
 })
+
+describe('FeatChoicePanel 不可复选专长重复选择（问题 #29）', () => {
+  function mountAt(checkpointId: string, checkpointLevel: number, draft: CharacterDraft) {
+    return mount(FeatChoicePanel, {
+      props: { checkpointId, checkpointLevel, draft, allowAbilityImprovement: false },
+    })
+  }
+
+  const toughAtFour: CharacterDraft = draft2024({
+    targetLevel: 8,
+    classId: 'class-2024-fighter',
+    selections: [{ checkpointId: 'class-2024-fighter-feat-4', optionIds: ['feat-2024-tough'], confirmedAt: '' }],
+  })
+
+  it('4 级已取得的专长在 8 级节点被禁用并提示来源', async () => {
+    const wrapper = mountAt('class-2024-fighter-feat-8', 8, toughAtFour)
+    await wrapper.get('input[type="search"]').setValue('健壮')
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('健壮 · Tough'))
+    expect(card).toBeTruthy()
+    expect(card!.classes()).toContain('expandable-option-card--locked')
+    expect(card!.text()).toContain('已获得（4级属性提升或专长）')
+  })
+
+  it('回看 4 级原节点时已选项仍正常显示且可选', async () => {
+    const wrapper = mountAt('class-2024-fighter-feat-4', 4, toughAtFour)
+    await wrapper.get('input[type="search"]').setValue('健壮')
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('健壮 · Tough'))
+    expect(card).toBeTruthy()
+    expect(card!.classes()).not.toContain('expandable-option-card--locked')
+    expect(card!.find('.expandable-option-card__main').attributes('disabled')).toBeUndefined()
+    expect(card!.text()).not.toContain('已获得')
+  })
+
+  it('可复选专长在后续节点仍可选择', async () => {
+    const draft = draft2024({
+      targetLevel: 8,
+      classId: 'class-2024-fighter',
+      selections: [{ checkpointId: 'class-2024-fighter-feat-4', optionIds: ['feat-2024-ability-score-improvement'], confirmedAt: '' }],
+    })
+    const wrapper = mountAt('class-2024-fighter-feat-8', 8, draft)
+    await wrapper.get('input[type="search"]').setValue('属性值提升')
+    const card = wrapper.findAll('.expandable-option-card').find((item) => item.text().includes('属性值提升'))
+    expect(card).toBeTruthy()
+    expect(card!.classes()).not.toContain('expandable-option-card--locked')
+  })
+})

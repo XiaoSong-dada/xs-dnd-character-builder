@@ -12,6 +12,14 @@
 
 ## 2. 总体依赖方向
 
+### 魔能祈唤先决统一校验实际拓扑（2026-11-16）
+
+- 新增叶子规则模块 `rules/option-prerequisites`：依赖 `rules/multiclass`、`rules/spellcasting`、共享类型与规则仓库接口，按 `RuleOption.minimumLevel`（所属职业等级）、`requiredOptionIds`、`requiredSpellIds` 生成玩家可读的失败原因与修正建议，并给出缺失戏法的自动补选/跳转方案；不读写存储、不依赖 Vue／Pinia／Router／DOM，也不反向导入 UI。
+- 调用方为 `rules/validate`（最终校验，含检查点已不在时间线的有效旧选择）、`views/character-builder/components/TimelineStep`（候选卡状态与提示）与 `views/character-builder/hooks/useCharacterBuilderPage`（点击后自动补选戏法、名额不足时跳转法术步骤）；三处共用同一判定与容量计算，避免候选、写入与最终结论分叉。
+- 未新增 store、服务、组件或持久化字段；依赖方向保持 `views → rules → types`，`rules/option-prerequisites` 不反向依赖 `views` 或 `stores`。
+
+已复核前端依赖拓扑，已更新（新增 1 个 `rules/option-prerequisites` 叶子模块）。
+
 ### X 批次合作与 UA 种族实际拓扑（2026-10-10）
 
 新增五个纯数据模块，均只依赖共享类型 `@/types/rules`（2014 侧另有既有装备／技能目录）：
@@ -469,7 +477,7 @@ src/views/character-builder/hooks/useCharacterSheetEditing.ts
   （角色卡私有编辑状态、字段差值换算、人工法术与一键恢复；不持有第二份业务事实）
 
 src/views/character-builder/components/*
-  -> src/views/character-builder/components/SelectionTaskNavigator.vue（OriginStep／SpellcastingStep 共用的页面私有任务导航与键盘操作）
+  -> src/views/character-builder/components/SelectionTaskNavigator.vue（SetupStep／OriginStep／SpellcastingStep 共用的页面私有任务导航与键盘操作）
   -> src/views/character-builder/hooks/{useSelectionTaskFlow,useSpellcastingStepFlow}.ts
   -> src/views/character-builder/components/{EditableStatTile,AddManualSpellModal}（双击/键盘数值编辑与完整系统法术库选择；说明区由 components/ui/StatNote 承担两行截断与明细弹窗）
   -> src/views/character-builder/components/{FeatChoicePanel}（页面内复用）
@@ -826,7 +834,7 @@ views/character-builder/index.vue
   -> views/character-builder/hooks/{useSelectionTaskFlow,useSpellcastingStepFlow}.ts
   -> views/character-builder/steps.ts（STEP_META/STEP_ORDER 步骤顺序与友好文案公共常量，被 hook 与 StartPanel 共用）
   -> views/character-builder/selection-task.ts（页面私有任务接口：SelectionTask 与步骤向页面暴露的 SelectionTaskFocusHandle）
-  -> views/character-builder/components/*（新增 SelectionTaskNavigator；OriginStep 与 SpellcastingStep 复用，二者均 defineExpose 聚焦句柄）
+  -> views/character-builder/components/*（新增 SelectionTaskNavigator；SetupStep、OriginStep 与 SpellcastingStep 复用，后二者 defineExpose 聚焦句柄）
   -> features/quick-build/components/{CharacterDrawer,QuickBuildShell,StepHeader,StickyActionBar}
   -> stores/character-drafts.ts
       -> rules/{derive,validate,timeline,dependency,repository,subclass-effects,abilities,feats,recommend,spellcasting,starting-equipment}

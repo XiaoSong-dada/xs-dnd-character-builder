@@ -31,7 +31,11 @@ const categories = computed(() => [...new Set(repository.value.feats
   .map((feat) => feat.category)
   .filter((item): item is FeatCategory => Boolean(item)))])
 const grants = computed(() => listFeatGrants(props.draft, repository.value))
-const eligibilityContext = computed(() => getFeatEligibilityContext(props.draft, { checkpointLevel: props.draft.targetLevel }))
+// 手动授予自带「该专长不可重复获得」的禁用与徽标；前置提示不重复追加已获得来源。
+const eligibilityContext = computed(() => getFeatEligibilityContext(props.draft, {
+  checkpointLevel: props.draft.targetLevel,
+  ignoreFeatAcquisition: true,
+}))
 
 function duplicateReason(feat: FeatRule): string {
   return !feat.repeatable && grants.value.some((grant) => grant.featId === feat.id) ? '该专长不可重复获得' : ''

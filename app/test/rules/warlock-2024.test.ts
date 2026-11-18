@@ -20,6 +20,30 @@ const SUBCLASS_IDS = [
 const warlockDraft = (overrides: Parameters<typeof draft2024>[0] = {}) =>
   draft2024({ classId: 'class-2024-warlock', targetLevel: 1, ...overrides })
 
+/** 魔契师 + 战士兼职：等级先决必须按魔契师自身等级判定，不能读取角色总等级。 */
+const multiclassWarlockDraft = (
+  warlockLevel: number,
+  fighterLevel: number,
+  overrides: Parameters<typeof draft2024>[0] = {},
+) => draft2024({
+  classId: 'class-2024-warlock',
+  targetLevel: warlockLevel + fighterLevel,
+  baseAbilities: { str: 13, dex: 14, con: 13, int: 8, wis: 12, cha: 13 },
+  multiclass: {
+    enabled: true,
+    primaryClassId: 'class-2024-warlock',
+    classes: [
+      { classId: 'class-2024-warlock', level: warlockLevel },
+      { classId: 'class-2024-fighter', level: fighterLevel },
+    ],
+    levelOrder: [
+      ...Array.from({ length: warlockLevel }, () => 'class-2024-warlock'),
+      ...Array.from({ length: fighterLevel }, () => 'class-2024-fighter'),
+    ],
+  },
+  ...overrides,
+})
+
 const issueIds = (draft: Parameters<typeof validateDraft>[0]) => validateDraft(draft).map((issue) => issue.id)
 
 describe('2024 魔契师与 4 宗主数据（B08-10）', () => {
@@ -123,6 +147,28 @@ describe('2024 魔契师与 4 宗主数据（B08-10）', () => {
       ],
     })
     expect(issueIds(withPact)).not.toContain('option-prerequisite-class-2024-warlock-invocations-5-invocation-2024-eldritch-smite')
+  })
+
+  it('兼职按魔契师等级判定：总等级 5 但魔契师 4 级时不能取得 5 级祈唤', () => {
+    const draft = multiclassWarlockDraft(4, 1, {
+      selections: [selection('class-2024-warlock-invocations-2', ['invocation-2024-eldritch-smite'])],
+    })
+    const issue = validateDraft(draft)
+      .find((item) => item.id === 'option-level-class-2024-warlock-invocations-2-invocation-2024-eldritch-smite')
+    expect(issue?.message).toContain('魔能斩')
+    expect(issue?.message).toContain('魔契师 5 级')
+    expect(issue?.message).toContain('当前 4 级')
+  })
+
+  it('检查点已不在时间线时仍按魔契师等级点名受影响的祈唤', () => {
+    const draft = multiclassWarlockDraft(4, 1, {
+      selections: [selection('class-2024-warlock-invocations-5', ['invocation-2024-eldritch-smite'])],
+    })
+    const issue = validateDraft(draft)
+      .find((item) => item.id === 'option-level-class-2024-warlock-invocations-5-invocation-2024-eldritch-smite')
+    expect(issue?.message).toContain('魔能斩')
+    expect(issue?.message).toContain('魔契师 5 级')
+    expect(issue?.resolution).toContain('移除')
   })
 
   it('玄奥秘法四档候选限魔契师法术且始终准备、可免费施放', () => {
