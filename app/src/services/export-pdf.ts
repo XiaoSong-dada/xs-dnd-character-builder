@@ -1,4 +1,5 @@
 import type { PDFCheckBox, PDFField, PDFFont, PDFForm, PDFTextField } from 'pdf-lib'
+import { INCOMPLETE_CUSTOM_CONTENT } from '@/rules/custom-content-references'
 
 import { formatExportCantripScaling, formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
 import {
@@ -681,8 +682,27 @@ export async function fillPdfTemplate(templateBytes: Uint8Array, fontBytes: Uint
   if (diagnostics.some((item) => item.severity === 'error')) return { bytes: templateBytes, diagnostics }
   form.updateFieldAppearances(font)
   form.flatten({ updateFieldAppearances: false })
+  const pageOrder = [0, 2, 1]
+  const missing = diagnostics.filter((item) => item.code === 'missing-custom-content')
+  if (missing.length) {
+    // Reuse the form font. A second subsetting pass can corrupt glyph offsets.
+    const first = document.getPage(0)
+    first.drawText(INCOMPLETE_CUSTOM_CONTENT, { x: 24, y: first.getHeight() - 18, size: 9, font })
+    const lines = [
+      INCOMPLETE_CUSTOM_CONTENT,
+      '以下数值按本机现有内容计算。请导入原扩展后重新导出。',
+      ...missing.map((item) => item.message),
+    ].flatMap((line) => wrapPdfText(line, font, 11, 511))
+    for (let offset = 0; offset < lines.length; offset += 40) {
+      pageOrder.push(document.getPageCount())
+      const page = document.addPage([595, 842])
+      lines.slice(offset, offset + 40).forEach((line, index) => {
+        page.drawText(line, { x: 42, y: 790 - index * 18, size: 11, font })
+      })
+    }
+  }
   const reordered = await PDFDocument.create()
-  const pages = await reordered.copyPages(document, [0, 2, 1])
+  const pages = await reordered.copyPages(document, pageOrder)
   pages.forEach((page) => reordered.addPage(page))
   return { bytes: await reordered.save({ updateFieldAppearances: false }), diagnostics }
 }

@@ -8,6 +8,7 @@ import WorkshopKindPicker from '@/views/workshop/components/WorkshopKindPicker.v
 import { useWorkshopPage, type WorkshopItem } from '@/views/workshop/hooks/useWorkshopPage'
 
 const {
+  returnToExport,
   rulesetOptions,
   rulesetLocked,
   filter,
@@ -50,6 +51,7 @@ function openItem(item: WorkshopItem): void {
 
 <template>
   <main class="workshop">
+    <RouterLink v-if="returnToExport" :to="returnToExport">返回角色卡</RouterLink>
     <p class="workshop__lead">
       在这里录入自己的扩展、种族、职业、专长与法术；保存后会出现在车卡的对应步骤。内容只保存在本机浏览器，不会上传。
     </p>

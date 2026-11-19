@@ -10,7 +10,8 @@ import {
   validateCustomEntry,
   validateCustomExpansion,
 } from '@/rules/custom-content'
-import { getCustomContentRevision, getRulesRepository, registerCustomContent, resetCustomContent } from '@/rules/repositories'
+import { listBundleEntries, mergeCharacterContent } from '@/rules/custom-content-package'
+import { getCustomContentRevision, getRulesRepository, registerCustomContent, resetCustomContent, validateCustomContentRegistration } from '@/rules/repositories'
 import { CustomContentStorageError, CustomContentStorageService, clearStoredCustomContent } from '@/services/custom-content-storage'
 import { resolveInitialRuleset } from '@/services/ruleset-preference'
 import type { RulesetId } from '@/types/character'
@@ -340,6 +341,34 @@ export const useCustomContentStore = defineStore('custom-content', () => {
     commit(next)
   }
 
+  function validateCharacterContent(ruleset: RulesetId, incoming: CustomContentBundle, selectedIds: ReadonlySet<string>): CustomContentBundle {
+    const merged = mergeCharacterContent(state.value[ruleset], incoming, selectedIds)
+    const repository = validateCustomContentRegistration(ruleset, merged)
+    const classIds = repository.classes.map((entry) => entry.id)
+    const spellIds = repository.spells.map((entry) => entry.id)
+    const subclassLevelsByClass: Record<string, number> = {}
+    for (const subclass of repository.subclasses) {
+      subclassLevelsByClass[subclass.classId] ??= subclass.selectionLevel
+    }
+    const expansionIds = new Set(merged.expansions.map((entry) => entry.id))
+    for (const expansion of incoming.expansions) {
+      if (!selectedIds.has(expansion.id)) continue
+      const issue = validateCustomExpansion(expansion)[0]
+      if (issue) throw new CustomContentStorageError(`「${expansion.title}」：${issue}`)
+    }
+    for (const entry of listBundleEntries(incoming)) {
+      if (!selectedIds.has(entry.id)) continue
+      const issue = !expansionIds.has(entry.expansionId) ? '所属扩展缺失。'
+        : validateCustomEntry(entry, { classIds, spellIds, subclassLevelsByClass })[0]
+      if (issue) throw new CustomContentStorageError(`「${entry.name}」：${issue}`)
+    }
+    return merged
+  }
+
+  function applyCharacterContent(ruleset: RulesetId, incoming: CustomContentBundle, selectedIds: ReadonlySet<string>): void {
+    if (selectedIds.size) commit(withBundle(state.value, ruleset, validateCharacterContent(ruleset, incoming, selectedIds)))
+  }
+
   /**
    * 合并导入的内容库：同 ID 用导入版本覆盖，本机独有条目保留。
    * 返回计数用于导入预览与结果提示。
@@ -416,6 +445,8 @@ export const useCustomContentStore = defineStore('custom-content', () => {
     exportToJson,
     parseImport,
     replaceState,
+    validateCharacterContent,
+    applyCharacterContent,
     mergeState,
     clearAll,
     resetForTests,

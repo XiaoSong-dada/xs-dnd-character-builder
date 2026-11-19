@@ -7,6 +7,9 @@ import { getBackgroundAbilityBonuses, getOriginStepBlockers, isOriginStepComplet
 import { getRulesRepository } from '@/rules/repositories'
 import { isCustomSourceId } from '@/rules/custom-content'
 import { describeMissingCustomContent } from '@/features/custom-content/missing-content'
+import { useCharacterPackageImport } from '@/features/custom-content/hooks/useCharacterPackageImport'
+import { collectCharacterContent } from '@/rules/custom-content-package'
+import { listMissingCustomRules } from '@/rules/custom-content-references'
 import { useCustomContentStore } from '@/stores/custom-content'
 import { getCheckpointSelectionBounds } from '@/rules/feats'
 import { areBaseAbilitiesValid, areOriginAbilitiesWithinCap, clampDestinyCount, rollAbilityScoreSets, STANDARD_ARRAY_DEFAULT } from '@/rules/abilities'
@@ -36,6 +39,8 @@ import { STEP_META, STEP_ORDER } from '@/views/character-builder/steps'
 import { useLineageTransformation } from '@/views/character-builder/hooks/useLineageTransformation'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { CharacterPackageService } from '@/services/character-package'
+import { CustomContentStorageService } from '@/services/custom-content-storage'
+import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { RulesetPreferenceService, resolveInitialRuleset } from '@/services/ruleset-preference'
 import { randomIntegerInclusive, secureUint32 } from '@/services/dice-random'
 import type { ExportDiagnostic } from '@/features/character-export/build-export-data'
@@ -140,7 +145,23 @@ export function useCharacterBuilderPage() {
   watch(() => activeDraft.value?.id, () => { preparedFile.value = undefined })
   const exportNotice = ref<{ readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }>()
   const pendingChange = ref<PendingChange>()
-  const derived = computed(() => activeDraft.value ? deriveCharacter(activeDraft.value) : undefined)
+  const reactiveRepository = useRulesRepository(() => activeDraft.value?.ruleset ?? defaultRuleset.value)
+  const derived = computed(() => {
+    const draft = activeDraft.value
+    if (draft) {
+      void reactiveRepository.value
+      return deriveCharacter(draft)
+    }
+  })
+  const missingExportContent = computed(() => activeDraft.value ? listMissingCustomRules(activeDraft.value, reactiveRepository.value) : [])
+  const packageContent = computed(() => {
+    const draft = activeDraft.value
+    return draft ? collectCharacterContent(draft, customContentStore.bundleOf(draft.ruleset)) : undefined
+  })
+  const packageImport = useCharacterPackageImport((draft) => {
+    syncRoute(draft)
+    importNotice.value = missingNoticeOf(draft)
+  }, (message) => { importError.value = message })
   /**
    * 第 3 步职业卡高亮：以职业分配解析出的**起始职业**为准。
    *
@@ -851,6 +872,15 @@ export function useCharacterBuilderPage() {
     })
   }
 
+  function openWorkshopFromExport(): void {
+    const draft = activeDraft.value
+    if (!draft) return
+    void router.push({
+      name: 'workshop',
+      query: { ...embedQuery(), from: 'character-builder', ruleset: draft.ruleset, draft: draft.id, step: 'sheet' },
+    })
+  }
+
   function updateSources(sourceIds: readonly string[]): void {
     const draft = activeDraft.value
     if (!draft) return
@@ -1066,15 +1096,9 @@ export function useCharacterBuilderPage() {
   }
 
   async function importPackage(file: File): Promise<void> {
-    try {
-      importError.value = ''
-      importNotice.value = ''
-      const draft = await store.importPackage(file)
-      syncRoute(draft)
-      importNotice.value = missingNoticeOf(draft)
-    } catch (error) {
-      importError.value = error instanceof Error ? error.message : '无法导入完整角色包。'
-    }
+    importError.value = ''
+    importNotice.value = ''
+    await packageImport.open(file)
   }
 
   function updateManualEdits(value: CharacterManualEdits): void {
@@ -1163,20 +1187,29 @@ export function useCharacterBuilderPage() {
     exportNotice.value = { tone: 'error', title: '无法打开下载页', message: '请允许弹出窗口后重试。' }
   }
 
-  async function exportPackage(): Promise<void> {
+  async function exportPackage(includeContent = false): Promise<void> {
     const draft = activeDraft.value
     if (!draft || exportingFormat.value) return
     exportingFormat.value = 'zip'
     preparedFile.value = undefined
     exportNotice.value = undefined
     try {
+      const selection = includeContent ? packageContent.value : undefined
+      const payload = selection?.count
+        ? CustomContentStorageService.exportJson({ ...customContentStore.state, [draft.ruleset]: selection.bundle }, draft.ruleset)
+        : undefined
       if (owlbearEmbed.value) {
-        const bytes = await CharacterPackageService.build(draft)
+        const bytes = await CharacterPackageService.build(draft, payload)
         downloadInEmbed([bytes as BlobPart], `${draft.name.trim() || 'dnd-character'}-${draft.id}.zip`, 'application/zip')
       } else {
-        await CharacterPackageService.download(draft)
+        await CharacterPackageService.download(draft, payload)
       }
-      exportNotice.value = { tone: 'success', title: '完整角色包导出完成', message: '角色数据、头像与立绘已打包并开始下载。' }
+      exportNotice.value = {
+        tone: selection?.missing.length ? 'warning' : 'success',
+        title: '完整角色包导出完成',
+        message: selection?.missing.length ? `角色包已下载。本机缺少 ${selection.missing.length} 项自定义内容。`
+          : payload ? `角色包已下载，含 ${selection?.count} 项自定义内容。` : '角色包已生成并开始下载。',
+      }
     } catch (error) {
       exportNotice.value = { tone: 'error', title: '角色包导出失败', message: exportErrorMessage(error) }
     } finally {
@@ -1282,6 +1315,10 @@ export function useCharacterBuilderPage() {
   )
 
   return {
+    missingExportContent,
+    packageContent,
+    packageImport,
+    openWorkshopFromExport,
     owlbearEmbed,
     enterSession,
     workshopReturnNotice,

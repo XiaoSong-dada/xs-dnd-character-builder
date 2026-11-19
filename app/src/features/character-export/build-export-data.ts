@@ -1,6 +1,8 @@
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { isCustomEntryId } from '@/rules/custom-content'
+import { listMissingCustomRules } from '@/rules/custom-content-references'
 import { normalizeManualEdits } from '@/rules/manual-edits'
 import { getEffectiveSpeciesFeatures, getEffectiveSpeciesSize } from '@/rules/origins'
 import { listSessionResources } from '@/rules/session-resources'
@@ -16,6 +18,7 @@ import type { RulesRepository } from '@/types/rules'
 
 export type ExportDiagnosticCode =
   | 'missing-rule-data'
+  | 'missing-custom-content'
   | 'missing-template-field'
   | 'unsupported-template-field'
   | 'invalid-template-target'
@@ -515,10 +518,18 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
   const subrace = draft.subraceId ? repository.getRace(draft.subraceId) : undefined
   const background = draft.backgroundId ? repository.getBackground(draft.backgroundId) : undefined
   const backgroundVariant = draft.backgroundVariantId ? repository.getBackground(draft.backgroundVariantId) : undefined
-  if (draft.classId && !classRule) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.class', message: '无法解析角色职业。' })
+  if (draft.classId && !classRule && !isCustomEntryId(draft.classId)) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.class', message: '无法解析角色职业。' })
   if (classRule && !isSourceEnabled(classRule.sourceIds, draft.enabledSourceIds, repository)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.class', message: `职业“${classRule.name}”的来源已关闭，导出已阻止。` })
   if (subclass && !isSourceEnabled(subclass.sourceIds, draft.enabledSourceIds, repository)) diagnostics.push({ code: 'source-disabled', severity: 'error', field: 'identity.subclass', message: `子职“${subclass.name}”的来源已关闭，导出已阻止。` })
-  if (draft.raceId && !race) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.race', message: '无法解析角色种族。' })
+  if (draft.raceId && !race && !isCustomEntryId(draft.raceId)) diagnostics.push({ code: 'missing-rule-data', severity: 'error', field: 'identity.race', message: '无法解析角色种族。' })
+  const missing = listMissingCustomRules(draft, repository)
+  for (const { id, label, affected } of missing) {
+    diagnostics.push({ code: 'missing-custom-content', severity: 'warning', field: id, message: `缺少自定义${label}（${id}）。待核对：${affected}。` })
+  }
+  const missingName = (id: string | undefined) => {
+    const item = missing.find((entry) => entry.id === id)
+    return item ? `自定义${item.label}缺失` : ''
+  }
 
   const inventory = buildInventory(draft, diagnostics)
   const attacks = inventory.filter((entry) => entry.equippedQuantity > 0).flatMap((entry) => {
@@ -563,14 +574,16 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
     const entrySubclass = entry.subclassId ? repository.getSubclass(entry.subclassId) : undefined
     return {
       classId: entry.classId,
-      className: classRule?.name ?? entry.classId,
+      className: classRule?.name ?? (missingName(entry.classId) || entry.classId),
       level: entry.level,
-      ...(entrySubclass ? { subclassName: entrySubclass.name } : {}),
+      ...(entrySubclass || missingName(entry.subclassId) ? { subclassName: entrySubclass?.name ?? missingName(entry.subclassId) } : {}),
       primary: index === 0,
     }
   })
   // 职业标签（MC-F01，需求 §3.1）：多职业统一格式；单职业保持既有 `职业（N级）` 文案逐字段不变。
-  const classLabel = getClassLevelLabel(draft, repository)
+  const classLabel = classRows.some((entry) => missingName(entry.classId))
+    ? `${classRows.map((entry) => `${entry.className}${entry.level}`).join(' / ')}（${getTotalLevel(draft)} 级角色）`
+    : getClassLevelLabel(draft, repository)
   // 生命骰（需求 §2.4）：按各职业骰面汇集；单职业仍是 `5d10`。
   const hitDiceFaces = getHitDiceFaces(draft)
   const hitDice = multiClass
@@ -590,9 +603,11 @@ export function buildCharacterExportModel(draft: CharacterDraft, derived: Derive
 
   return {
     identity: {
-      characterName: draft.name || '', className: classRule?.name ?? '', level: draft.targetLevel,
-      classLevel: multiClass && classLabel ? classLabel : classRule ? `${classRule.name}（${draft.targetLevel}级）` : '',
-      subclassName: subclass?.name ?? '', raceName: subrace?.name ?? race?.name ?? '', backgroundName: backgroundVariant?.name ?? background?.name ?? '',
+      characterName: draft.name || '', className: classRule?.name ?? missingName(draft.classId), level: draft.targetLevel,
+      classLevel: multiClass && classLabel ? classLabel : classRule ? `${classRule.name}（${draft.targetLevel}级）` : missingName(draft.classId),
+      subclassName: subclass?.name ?? missingName(draft.subclassId),
+      raceName: subrace?.name ?? (missingName(draft.subraceId) || race?.name || missingName(draft.raceId)),
+      backgroundName: backgroundVariant?.name ?? (missingName(draft.backgroundVariantId) || background?.name || missingName(draft.backgroundId)),
       alignment: draft.alignment, playerName: '', experience: 0,
       classRows,
     },

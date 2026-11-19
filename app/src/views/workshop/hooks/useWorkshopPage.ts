@@ -71,13 +71,18 @@ export function useWorkshopPage() {
   const store = useCustomContentStore()
   const router = useRouter()
   const route = useRoute()
+  const returnToExport = computed(() => {
+    if (route.query.from !== 'character-builder' || route.query.step !== 'sheet' || typeof route.query.draft !== 'string') return undefined
+    const { draft, step, embed } = route.query
+    return { name: 'character-builder', query: { draft, step, ...(embed ? { embed } : {}) } }
+  })
   const { referenceCountOf, referencesOf } = useCustomEntryReferences()
 
   const filter = ref<CustomContentKind | 'all'>('all')
   const query = ref('')
   const sourceRuleset = route?.query.ruleset
   const rulesetLocked = computed(() => route?.query.embed === 'owlbear' && route.query.from === 'character-builder')
-  if (route?.query.embed === 'owlbear' && (sourceRuleset === '5e-2014' || sourceRuleset === '5e-2024')) {
+  if ((route?.query.embed === 'owlbear' || returnToExport.value) && (sourceRuleset === '5e-2014' || sourceRuleset === '5e-2024')) {
     store.setActiveRuleset(sourceRuleset)
   }
   const kindPickerOpen = ref(false)
@@ -342,6 +347,7 @@ export function useWorkshopPage() {
   }
 
   return {
+    returnToExport,
     rulesetOptions: RULESET_OPTIONS,
     rulesetLocked,
     filter,

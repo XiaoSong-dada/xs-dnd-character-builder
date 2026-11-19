@@ -13,6 +13,7 @@ import { STORAGE_KEY, PREVIOUS_DRAFT_KEYS, readDraftArray, loadLegacyDrafts } fr
 import type { ClassSpellSelections } from '@/types/multiclass'
 import { EMPTY_CURRENCY } from '@/rules/starting-equipment'
 import { inferEnabledSourceIds, normalizeEnabledSourceIds } from '@/rules/source-books'
+import { isCustomSourceId } from '@/rules/custom-content'
 import { rulesRepository } from '@/rules/repository'
 import { EMPTY_MANUAL_EDITS, normalizeManualEdits } from '@/rules/manual-edits'
 import { normalizeAbilityDestiny } from '@/rules/abilities'
@@ -146,9 +147,13 @@ function normalizeMedia(value: unknown): CharacterMedia | undefined {
   return avatar || portrait ? { avatar, portrait } : undefined
 }
 
-/** 按草稿规则集保留本版可选来源；2024 的 UA 游玩测试来源同样按白名单规范化。 */
-function normalizeDraftSourceIds(draft: CharacterDraft): readonly string[] {
-  return normalizeEnabledSourceIds(draft.enabledSourceIds, draft.ruleset)
+/** 保留可选内置来源和暂未安装的自定义扩展引用。 */
+function normalizeDraftSourceIds(value: unknown, ruleset: CharacterDraft['ruleset']): readonly string[] {
+  const ids = Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []
+  return [...new Set([
+    ...normalizeEnabledSourceIds(ids, ruleset),
+    ...ids.filter(isCustomSourceId),
+  ])]
 }
 
 /** 2024 背景属性分配：只保留六项属性中 1／2 的整数值。 */
@@ -208,7 +213,7 @@ function normalizeDraft(draft: CharacterDraft): CharacterDraft {
     subclassId: primarySubclassId,
     targetLevel,
     ...(healedMulticlass ? { multiclass: healedMulticlass } : {}),
-    enabledSourceIds: normalizeDraftSourceIds(draft),
+    enabledSourceIds: normalizeDraftSourceIds(draft.enabledSourceIds, draft.ruleset),
     backgroundAbilityAllocation: normalizeBackgroundAbilityAllocation(draft.backgroundAbilityAllocation),
     speciesSizeChoice: draft.speciesSizeChoice === 'small' || draft.speciesSizeChoice === 'medium' ? draft.speciesSizeChoice : undefined,
     raceToolChoices: Array.isArray(draft.raceToolChoices) ? draft.raceToolChoices.filter((id): id is string => typeof id === 'string') : undefined,
@@ -320,8 +325,8 @@ export function migrateDraftToV10(value: unknown): CharacterDraft | undefined {
     }))
     : (draft.inventory as CharacterDraft['inventory'] | undefined) ?? []
   const enabledSourceIds = oldVersion >= 5
-    ? normalizeEnabledSourceIds(
-        draft.enabledSourceIds as readonly string[] | undefined,
+    ? normalizeDraftSourceIds(
+        draft.enabledSourceIds,
         oldVersion >= 8 && isRulesetId(draft.ruleset) ? draft.ruleset : '5e-2014',
       )
     : inferEnabledSourceIds({

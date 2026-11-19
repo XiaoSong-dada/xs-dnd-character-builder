@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 
 import { describeMissingCustomContent } from '@/features/custom-content/missing-content'
+import { useCharacterPackageImport } from '@/features/custom-content/hooks/useCharacterPackageImport'
 import { useOwlbearEmbed, useOwlbearStorageUnavailable } from '@/hooks/useOwlbearEmbed'
 import { CharacterImportError } from '@/services/character-json'
 import { useCharacterDraftsStore } from '@/stores/character-drafts'
@@ -18,6 +19,10 @@ export function useSessionAssistantPage() {
   const importError = ref('')
   /** 导入成功后：角色引用了本机不存在的自定义内容时的提示（R9）。 */
   const importNotice = ref('')
+  const packageImport = useCharacterPackageImport((draft) => {
+    importNotice.value = missingNoticeOf(draft)
+    viewStore.selectDraft(draft.id)
+  }, (message) => { importError.value = message })
 
   const drafts = computed(() => store.drafts)
   const selectedDraft = computed(() => viewStore.selectedDraft)
@@ -54,16 +59,11 @@ export function useSessionAssistantPage() {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
     if (!file) return
+    input.value = ''
     if (file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip') {
-      try {
-        importError.value = ''
-        importNotice.value = ''
-        const draft = await store.importPackage(file)
-        importNotice.value = missingNoticeOf(draft)
-        viewStore.selectDraft(draft.id)
-      } catch (error) {
-        importError.value = error instanceof Error ? error.message : '无法导入完整角色包。'
-      }
+      importError.value = ''
+      importNotice.value = ''
+      await packageImport.open(file)
       return
     }
     try {
@@ -74,6 +74,7 @@ export function useSessionAssistantPage() {
   }
 
   return {
+    packageImport,
     owlbearEmbed,
     storageUnavailable,
     drafts,

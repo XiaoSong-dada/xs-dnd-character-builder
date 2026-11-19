@@ -610,7 +610,7 @@ src/services/character-image.ts（格式/大小校验、WebP 压缩、头像裁�
 
 src/services/character-package.ts
   -> src/services/{character-json,character-media-storage}
-  -> fflate（ZIP 完整角色包：character.json + 可选 avatar.webp / portrait.webp）
+  -> fflate（ZIP 完整角色包：character.json + 可选媒体与 custom-content.json）
   -> src/types/character
 
 src/services/export-xlsx.ts
@@ -697,6 +697,8 @@ src/views/character-builder/components/CharacterPrintSheet.vue（页面私有打
   -> src/features/character-export/build-export-data（与 XLSX 共用同一导出数据）
   -> src/types/character
 ```
+
+车卡与跑团助手的 ZIP 导入复用内容工坊 feature 的预览组件和 hook。ZIP 服务先拆包校验，再由草稿 Store 保存角色和图片。内容 Store 按预览选项校验合并并注册仓库。纯规则模块 `custom-content-package.ts` 负责依赖收集、冲突比较和按选择合并。未安装的自定义来源引用由草稿服务保留。车卡和共享导出模型复用规则层的缺失检查，PDF／XLSX 服务消费同一诊断并生成文件内说明。
 
 ### 8.6.1 schema v9 与有效角色数据
 

@@ -20,7 +20,7 @@ import { SessionStateStorageService } from '@/services/session-state-storage'
 import { CharacterImportError, CharacterJsonService } from '@/services/character-json'
 import { DraftStorageService } from '@/services/draft-storage'
 import { CharacterMediaStorageService } from '@/services/character-media-storage'
-import { CharacterPackageError, CharacterPackageService } from '@/services/character-package'
+import { CharacterPackageError, CharacterPackageService, type ParsedCharacterPackage } from '@/services/character-package'
 import type {
   AbilityScores,
   CharacterManualEdits,
@@ -267,11 +267,17 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
   }
 
   async function importPackage(file: Blob): Promise<CharacterDraft> {
-    const draft = await CharacterPackageService.import(file)
-    if (!isRulesetOpen(draft.ruleset)) {
-      const mediaIds = CharacterPackageService.mediaIds(draft.media)
-      if (mediaIds.length > 0) void CharacterMediaStorageService.removeMany(mediaIds).catch(() => undefined)
-      throw new CharacterPackageError(UNOPENED_RULESET_MESSAGE)
+    return importParsedPackage(await CharacterPackageService.inspect(file))
+  }
+
+  async function importParsedPackage(parsed: ParsedCharacterPackage): Promise<CharacterDraft> {
+    if (!isRulesetOpen(parsed.draft.ruleset)) throw new CharacterPackageError(UNOPENED_RULESET_MESSAGE)
+    const draft = await CharacterPackageService.saveParsed(parsed)
+    try {
+      DraftStorageService.saveAll([...drafts.value, draft])
+    } catch {
+      await CharacterMediaStorageService.removeMany(CharacterPackageService.mediaIds(draft.media)).catch(() => undefined)
+      throw new CharacterPackageError('无法保存角色草稿，请检查本机存储空间后重试。')
     }
     drafts.value.push(draft)
     activeDraftId.value = draft.id
@@ -310,6 +316,7 @@ export const useCharacterDraftsStore = defineStore('character-drafts', () => {
     invalidateSelections,
     importDraft,
     importPackage,
+    importParsedPackage,
     exportActiveDraft,
     exportLegacyDraft,
   }

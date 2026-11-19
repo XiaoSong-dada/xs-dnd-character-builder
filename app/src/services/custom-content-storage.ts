@@ -387,6 +387,26 @@ export const CustomContentStorageService = {
     if (empty) throw new CustomContentStorageError('该文件里没有可导入的自定义内容。')
     return { state, skipped }
   },
+
+  importCharacterContent(raw: string, ruleset: RulesetId): CustomContentBundle {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      throw new CustomContentStorageError('角色包中的自定义内容不是有效的 JSON。')
+    }
+    if (!isRecord(parsed) || parsed.version !== 1 || !isRecord(parsed.rulesets)
+      || Object.keys(parsed.rulesets).length !== 1 || !isRecord(parsed.rulesets[ruleset])) {
+      throw new CustomContentStorageError('自定义内容的格式或规则版本与角色不一致。')
+    }
+    const { state, skipped } = this.importJson(raw)
+    const bundle = state[ruleset]
+    const ids = [...bundle.expansions, ...bundle.races, ...bundle.classes, ...bundle.subclasses, ...bundle.feats, ...bundle.spells].map((entry) => entry.id)
+    if (skipped || new Set(ids).size !== ids.length) {
+      throw new CustomContentStorageError('角色包包含无效或重复的自定义条目。')
+    }
+    return bundle
+  },
 }
 
 /** 供测试与"清空内容库"复用：删除本机保存的内容库。 */

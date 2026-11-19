@@ -3,6 +3,15 @@ import { normalizeVersion } from '@/utils/version'
 
 export const updateNotices: readonly UpdateNotice[] = [
   {
+    version: '1.15.2',
+    title: '自定义扩展与角色卡导出',
+    items: [
+      '缺少自定义扩展时仍可导出 PDF 和 XLSX，文件会列出缺失内容及待核对的字段。',
+      '完整角色包可选附带角色所需的自定义内容。导入时可逐条处理同 ID 冲突，默认保留本机版本。',
+      '修复 PDF 首页警示和说明页的字符缺失，中文、标点与条目 ID 均可正常显示。',
+    ],
+  },
+  {
     version: '1.15.1',
     title: '跑团助手新增英雄激励，修复魔能祈唤、专长和 2024 版法术步骤',
     items: [

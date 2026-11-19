@@ -1672,6 +1672,22 @@ describe('CharacterSheetStep 导出入口', () => {
     expect(wrapper.emitted('exportPackage')).toEqual([[]])
   })
 
+  it('缺少自定义物种时先提示，确认后才触发 PDF 导出', async () => {
+    const wrapper = await openExportMenu()
+    await wrapper.setProps({ missingExportContent: [{ id: 'custom-race-missing', label: '物种', affected: '速度' }] })
+    const menuButton = (text: string) => [...document.body.querySelectorAll<HTMLButtonElement>('.character-sheet__export-menu-item')]
+      .find((button) => button.textContent?.includes(text))!
+    menuButton('导出 PDF 角色卡').click()
+    await nextTick()
+    expect(wrapper.emitted('exportPdf')).toBeUndefined()
+    expect(document.body.textContent).toContain('custom-race-missing')
+    expect(document.body.textContent).toContain('前往内容工坊导入')
+    menuButton('仍然导出 PDF').click()
+    await nextTick()
+    expect(wrapper.emitted('exportPdf')).toEqual([[]])
+    wrapper.unmount()
+  })
+
   it('PDF 菜单项触发 exportPdf 事件（模板填充下载）', async () => {
     const wrapper = await openExportMenu()
     const items = Array.from(document.body.querySelectorAll('.character-sheet__export-menu-item'))
