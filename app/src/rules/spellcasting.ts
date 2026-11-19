@@ -575,8 +575,10 @@ export function getAvailableSpells(draft: CharacterDraft, config: SpellcastingCo
   const resolved = scope ?? resolveScope(draft, config)
   const classLevel = resolved.classLevel
   const maximumLevel = getMaximumSpellLevel(resolved.config, classLevel)
-  const expanded = resolved.config.expandedSpellPool && classLevel >= resolved.config.expandedSpellPool.startsAtLevel
-    ? resolved.config.expandedSpellPool.spellIds
+  const pool = resolved.config.expandedSpellPool
+  const expanded = pool && classLevel >= pool.startsAtLevel
+    && isSourceEnabled(pool.sourceIds ?? [], draft.enabledSourceIds, repository)
+    ? pool.spellIds
     : []
   // 专长扩表（如龙纹「纹中之法」）：仅在来源启用时加入候选。
   const featExpanded = listActiveFeats(draft, repository).flatMap((feat) => feat.expandedSpellPool ?? [])

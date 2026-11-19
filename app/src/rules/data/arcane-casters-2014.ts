@@ -56,7 +56,13 @@ export const arcaneCasterClasses2014: readonly ClassRule[] = [
       { id: 'wizard-2014-signature-spells-20', level: 20, step: 'timeline', kind: 'class-choice', title: '选择2个招牌法术', description: '从法术书中选择 2 个 3 环法术作为招牌法术：长休后可各免费施放一次，且不计入准备数量。', required: true, minSelections: 2, maxSelections: 2, optionIds: [], candidateKind: 'spellbook-level-3' },
       ...[4, 8, 12, 16, 19].map((level) => asi(level, 'wizard')),
     ],
-    spellcasting: { ruleset: '5e-2014', mode: 'spellbook', ability: 'int', startsAtLevel: 1, preparedFormula: 'ability-plus-level', cantripsKnownByLevel: wizardCantrips, spellbookSpellsByLevel: wizardSpellbookCounts, maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS, classSpellIds: spellIds('class-2014-wizard') },
+    spellcasting: {
+      ruleset: '5e-2014', mode: 'spellbook', ability: 'int', startsAtLevel: 1, preparedFormula: 'ability-plus-level',
+      cantripsKnownByLevel: wizardCantrips, spellbookSpellsByLevel: wizardSpellbookCounts,
+      maxSpellLevelByClassLevel: fullCasterMaximumSpellLevels, slotsByClassLevel: FULL_CASTER_SPELL_SLOTS,
+      classSpellIds: spellIds('class-2014-wizard'),
+      expandedSpellPool: { spellIds: ['spell-2014-divination'], startsAtLevel: 1, sourceIds: tcoeSource },
+    },
   },
   {
     id: 'class-2014-warlock', ruleset: '5e-2014', name: '邪术师', englishName: 'Warlock', summary: '2014版契约施法者，以短休恢复的契约法术位施法。', hitDie: 8, primaryAbilities: ['cha'], playStyleTags: ['spellcaster', 'striker', 'control', 'utility'], savingThrowAbilities: ['wis', 'cha'], status: 'implemented', sourceIds: basicSource,

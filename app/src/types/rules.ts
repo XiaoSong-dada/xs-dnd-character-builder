@@ -343,6 +343,7 @@ export interface SpellcastingConfig {
   readonly expandedSpellPool?: {
     readonly spellIds: readonly string[]
     readonly startsAtLevel: number
+    readonly sourceIds?: readonly string[]
   }
   /** 可从法术书直接施展仪式，无需准备（2024 法师仪式学家）。 */
   readonly ritualCastingFromBook?: boolean
