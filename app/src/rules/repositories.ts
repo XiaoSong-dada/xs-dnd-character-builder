@@ -161,6 +161,10 @@ export function registerCustomContent(ruleset: RulesetId, bundle: CustomContentB
   mergedRepositories.set(ruleset, repository)
 }
 
+export function validateCustomContentRegistration(ruleset: RulesetId, bundle: CustomContentBundle): RulesRepository {
+  return mergeCustomContent(repositories[ruleset], bundle)
+}
+
 /** 清空全部自定义内容（测试与"清空内容库"使用）。 */
 export function resetCustomContent(): void {
   customContentRevision += 1

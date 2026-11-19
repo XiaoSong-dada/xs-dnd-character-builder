@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CharacterPackageImportDialog from '@/features/custom-content/components/CharacterPackageImportDialog.vue'
 import { computed } from 'vue'
 
 import UiNotice from '@/components/ui/UiNotice.vue'
@@ -8,7 +9,7 @@ import { CharacterMediaImage } from '@/features/character-media'
 import SessionPanel from '@/views/session-assistant/components/SessionPanel.vue'
 import { useSessionAssistantPage } from '@/views/session-assistant/hooks/useSessionAssistantPage'
 
-const { drafts, selectedDraft, selectDraft, backToList, importError, importNotice, readImportFile, owlbearEmbed, storageUnavailable } = useSessionAssistantPage()
+const { drafts, selectedDraft, selectDraft, backToList, importError, importNotice, readImportFile, owlbearEmbed, storageUnavailable, packageImport } = useSessionAssistantPage()
 
 const summaries = computed(() =>
   drafts.value.map((draft) => ({ draft, summary: deriveCharacterSummary(draft) })),
@@ -61,6 +62,12 @@ const summaries = computed(() =>
         </p>
       </section>
     </div>
+    <CharacterPackageImportDialog
+      v-bind="packageImport.dialog.value"
+      @close="packageImport.close"
+      @confirm="packageImport.confirm"
+      @choose="packageImport.choose"
+    />
   </main>
 </template>
 

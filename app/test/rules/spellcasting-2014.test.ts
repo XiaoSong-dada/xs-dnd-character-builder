@@ -9,6 +9,7 @@ import {
   THIRD_CASTER_SPELL_SLOTS,
 } from '@/rules/data/spell-slots-2014'
 import { rulesRepository } from '@/rules/repository'
+import { getSpellCandidates } from '@/rules/spellcasting'
 import { getCheckpointCandidates, getEffectiveSelectedSpellIds, getEffectiveSpellSlots, getMagicalSecretsSpellIds, getMaximumSpellLevel, getRequiredCantripCount, getRequiredSpellCount, getSpellcastingConfig, getSpellSlots, getUnpreparedManualSpellIds, groupSpellsByLevel, validateSpellSelections } from '@/rules/spellcasting'
 import { validateDraft } from '@/rules/validate'
 import type { CharacterDraft } from '@/types/character'
@@ -51,6 +52,18 @@ function draft(patch: Partial<CharacterDraft> = {}): CharacterDraft {
     ...patch,
   }
 }
+
+it('adds Divination to the 2014 wizard spellbook only with Tasha and fourth-level spells', () => {
+  const spellId = 'spell-2014-divination'
+  const wizard = draft({ classId: 'class-2014-wizard', targetLevel: 7, enabledSourceIds: [] })
+  const tasha = { ...wizard, enabledSourceIds: ['tcoe-2020-index'] }
+  const config = getSpellcastingConfig(wizard)!
+  expect(getSpellCandidates(wizard, config).writeToBook).not.toContain(spellId)
+  expect(getSpellCandidates({ ...tasha, targetLevel: 6 }, config).writeToBook).not.toContain(spellId)
+  expect(getSpellCandidates(tasha, config).writeToBook).toContain(spellId)
+  const cleric = { ...wizard, classId: 'class-2014-cleric' }
+  expect(getSpellCandidates(cleric, getSpellcastingConfig(cleric)!).prepared).toContain(spellId)
+})
 
 describe('2014 half-caster spellcasting', () => {
   it('starts both classes at level 2 and follows the half-caster spell levels', () => {

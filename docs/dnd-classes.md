@@ -275,6 +275,7 @@
 
 - 职业 ID：`wizard`
 - 当前2014实现：[2014法师实现说明](classes/subclasses/wizard/wizard-2014.md)
+- 2014 法师的「预言术」来自《塔莎的万事坩埚》的额外法师法术，随该扩展启用。
 - 职业基础与等级特性：[法师详细资料](classes/subclasses/wizard/wizard.md)
 - 2024子职：[防护师](classes/subclasses/wizard/wizard-abjurer.md)、[预言师](classes/subclasses/wizard/wizard-diviner.md)、[塑能师](classes/subclasses/wizard/wizard-evoker.md)、[幻术师](classes/subclasses/wizard/wizard-illusionist.md)
 - 旧版与扩展子职：[咒法学派](classes/subclasses/wizard/wizard-conjuration.md)、[附魔学派](classes/subclasses/wizard/wizard-enchantment.md)、[死灵学派](classes/subclasses/wizard/wizard-necromancy.md)、[变化学派](classes/subclasses/wizard/wizard-transmutation.md)、[剑咏](classes/subclasses/wizard/wizard-bladesinging.md)、[战争魔法](classes/subclasses/wizard/wizard-war-magic.md)、[时间魔法](classes/subclasses/wizard/wizard-chronurgy-magic.md)、[重力魔法](classes/subclasses/wizard/wizard-graviturgy-magic.md)、[书士会](classes/subclasses/wizard/wizard-order-of-scribes.md)

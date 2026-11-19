@@ -20,6 +20,8 @@ import { CharacterMediaEditor, CharacterMediaImage } from '@/features/character-
 import { ABILITY_LABELS } from '@/rules/data/feats-2014'
 import { decodeAbilityImprovement, formatFeatBonusOption, formatFeatGrantSource, getCheckpointSelectionBounds, getFeatStructuredEffectLabels, manualFeatParentCheckpointId, listFeatGrants } from '@/rules/feats'
 import { getRulesRepository } from '@/rules/repositories'
+import { INCOMPLETE_CUSTOM_CONTENT, type MissingCustomRule } from '@/rules/custom-content-references'
+import { listBundleEntries, type collectCharacterContent } from '@/rules/custom-content-package'
 import { useRulesRepository } from '@/hooks/useRulesRepository'
 import { getClassEntries, getClassLevel, getPrimaryClassId, getTotalLevel } from '@/rules/multiclass'
 import { getClassLevelLabel } from '@/rules/multiclass-session'
@@ -41,14 +43,17 @@ const props = defineProps<{
   preparedFileName?: string
   exportingFormat?: 'pdf' | 'xlsx' | 'zip'
   exportNotice?: { readonly tone: 'warning' | 'error' | 'success'; readonly title: string; readonly message: string }
+  missingExportContent?: readonly MissingCustomRule[]
+  packageContent?: ReturnType<typeof collectCharacterContent>
 }>()
 const emit = defineEmits<{
   enterSession: []
   downloadInNewTab: []
   export: []
-  exportPackage: []
+  exportPackage: [includeContent?: boolean]
   exportPdf: []
   exportXlsx: []
+  openWorkshopFromExport: []
   adjustLevel: []
   reedit: []
   transformLineage: []
@@ -729,18 +734,34 @@ const needsReview = computed(() => {
 })
 /** 导出：菜单弹层；PDF/XLSX 走模板填充下载（hook 处理）。 */
 const showExportMenu = ref(false)
+const pendingExport = ref<'pdf' | 'xlsx'>()
+const includePackageContent = ref(false)
+const packageEntries = computed(() => props.packageContent ? listBundleEntries(props.packageContent.bundle) : [])
+function closeExportMenu(): void {
+  showExportMenu.value = false
+  pendingExport.value = undefined
+  includePackageContent.value = false
+}
+function openMissingContentWorkshop(): void {
+  closeExportMenu()
+  emit('openWorkshopFromExport')
+}
 function handleExportJson(): void {
-  if (!props.embedded) showExportMenu.value = false
+  if (!props.embedded) closeExportMenu()
   emit('export')
 }
 function handleExportPackage(): void {
-  emit('exportPackage')
+  if (includePackageContent.value) emit('exportPackage', true)
+  else emit('exportPackage')
 }
-function handleExportXlsx(): void {
-  emit('exportXlsx')
-}
-function handleExportPdf(): void {
-  emit('exportPdf')
+function handleDocumentExport(format: 'pdf' | 'xlsx', confirmed = false): void {
+  if (props.missingExportContent?.length && !confirmed) {
+    pendingExport.value = format
+    return
+  }
+  pendingExport.value = undefined
+  if (format === 'pdf') emit('exportPdf')
+  else emit('exportXlsx')
 }
 </script>
 
@@ -1309,14 +1330,41 @@ function handleExportPdf(): void {
     <UiModal :open="showMediaEditor" title="编辑角色形象" @close="showMediaEditor = false">
       <CharacterMediaEditor :draft="draft" @change="$emit('changeMedia', $event)" />
     </UiModal>
-    <UiModal :open="showExportMenu" title="导出角色" @close="showExportMenu = false">
+    <UiModal :open="showExportMenu" title="导出角色" @close="closeExportMenu">
       <div class="character-sheet__export-menu">
-        <UiNotice v-if="exportNotice" :tone="exportNotice.tone" :title="exportNotice.title">{{ exportNotice.message }}</UiNotice>
-        <button v-if="preparedFileName" type="button" class="character-sheet__export-menu-item" @click="$emit('downloadInNewTab')">在新标签页下载 {{ preparedFileName }}</button>
-        <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportPdf">{{ exportingFormat === 'pdf' ? '正在生成 PDF…' : '导出 PDF 角色卡' }}</button>
-        <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportXlsx">{{ exportingFormat === 'xlsx' ? '正在生成 XLSX…' : '导出 XLSX 自动计算卡' }}</button>
-        <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportJson">导出 JSON 数据文件（不含图片）</button>
-        <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportPackage">{{ exportingFormat === 'zip' ? '正在生成角色包…' : '导出完整角色包（含图片）' }}</button>
+        <template v-if="pendingExport">
+          <UiNotice tone="warning" :title="INCOMPLETE_CUSTOM_CONTENT">继续导出时，文件内会列出受影响的字段。</UiNotice>
+          <ul>
+            <li v-for="item in missingExportContent" :key="item.id">{{ item.label }}（{{ item.id }}）。待核对：{{ item.affected }}。</li>
+          </ul>
+          <button type="button" class="character-sheet__export-menu-item" @click="openMissingContentWorkshop">前往内容工坊导入</button>
+          <button type="button" class="character-sheet__export-menu-item" @click="handleDocumentExport(pendingExport, true)">仍然导出 {{ pendingExport === 'pdf' ? 'PDF' : 'XLSX' }}</button>
+          <button type="button" class="character-sheet__export-menu-item" @click="pendingExport = undefined">返回导出选项</button>
+        </template>
+        <template v-else>
+          <UiNotice v-if="exportNotice" :tone="exportNotice.tone" :title="exportNotice.title">{{ exportNotice.message }}</UiNotice>
+          <button v-if="preparedFileName" type="button" class="character-sheet__export-menu-item" @click="$emit('downloadInNewTab')">在新标签页下载 {{ preparedFileName }}</button>
+          <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleDocumentExport('pdf')">{{ exportingFormat === 'pdf' ? '正在生成 PDF…' : '导出 PDF 角色卡' }}</button>
+          <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleDocumentExport('xlsx')">{{ exportingFormat === 'xlsx' ? '正在生成 XLSX…' : '导出 XLSX 自动计算卡' }}</button>
+          <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportJson">导出 JSON 数据文件（不含图片）</button>
+          <label v-if="packageEntries.length || packageContent?.missing.length" class="character-sheet__package-option">
+            <input v-model="includePackageContent" type="checkbox" :disabled="Boolean(exportingFormat)" />
+            附带此角色所需的自定义内容
+          </label>
+          <template v-if="includePackageContent && packageContent">
+            <p>将附带 {{ packageEntries.length }} 项自定义内容。</p>
+            <ul v-if="packageEntries.length">
+              <li v-for="entry in packageEntries" :key="entry.id">{{ entry.name }}</li>
+            </ul>
+            <UiNotice v-if="packageContent.missing.length" tone="warning" title="本机缺少部分自定义内容">
+              以下 {{ packageContent.missing.length }} 项内容无法附带。
+            </UiNotice>
+            <ul v-if="packageContent.missing.length">
+              <li v-for="id in packageContent.missing" :key="id">{{ id }}</li>
+            </ul>
+          </template>
+          <button type="button" class="character-sheet__export-menu-item" :disabled="Boolean(exportingFormat)" @click="handleExportPackage">{{ exportingFormat === 'zip' ? '正在生成角色包…' : '导出完整角色包（含图片）' }}</button>
+        </template>
       </div>
     </UiModal>
     <UiModal :open="editing.showResetConfirm.value" title="恢复系统默认" @close="editing.showResetConfirm.value = false">
@@ -1592,7 +1640,8 @@ function handleExportPdf(): void {
     &:disabled { cursor: wait; opacity: 0.65; }
   }
 
-  &__export-menu { display: grid; gap: 0.5rem; }
+  &__export-menu { display: grid; gap: 0.5rem; overflow-wrap: anywhere; }
+  &__package-option { display: flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; }
 
   &__export-menu-item {
     min-height: 3rem;

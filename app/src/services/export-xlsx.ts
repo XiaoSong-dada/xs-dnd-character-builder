@@ -1,4 +1,5 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
+import { INCOMPLETE_CUSTOM_CONTENT } from '@/rules/custom-content-references'
 
 import { formatExportCantripScaling, formatExportResources, formatSigned, type CharacterExportModel, type ExportDiagnostic } from '@/features/character-export/build-export-data'
 import {
@@ -438,6 +439,31 @@ export async function loadCharacterSheetTemplate(templateId: CharacterSheetXlsxT
   return new Uint8Array(await response.arrayBuffer())
 }
 
+function appendExportNotes(archive: Record<string, Uint8Array>, messages: readonly string[]): void {
+  const workbookPath = 'xl/workbook.xml'
+  const relationsPath = 'xl/_rels/workbook.xml.rels'
+  const contentTypesPath = '[Content_Types].xml'
+  const sheetPath = 'xl/worksheets/character-export-notes.xml'
+  const relationId = 'rIdCharacterExportNotes'
+  const workbook = strFromU8(archive[workbookPath])
+  const sheetIds = [...workbook.matchAll(/\bsheetId="(\d+)"/g)].map((match) => Number(match[1]))
+  const workbookWithNotes = workbook.replace('</sheets>', `<sheet name="导出说明" sheetId="${Math.max(0, ...sheetIds) + 1}" r:id="${relationId}"/></sheets>`)
+  archive[workbookPath] = strToU8(workbookWithNotes.replace(/<workbookView\b[^>]*>/g, (tag) => {
+    if (tag.includes('activeTab=')) return tag.replace(/activeTab="[^"]*"/, `activeTab="${sheetIds.length}"`)
+    return tag.replace(/^<workbookView/, `<workbookView activeTab="${sheetIds.length}"`)
+  }))
+  archive[relationsPath] = strToU8(strFromU8(archive[relationsPath]).replace('</Relationships>',
+    `<Relationship Id="${relationId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/character-export-notes.xml"/></Relationships>`))
+  archive[contentTypesPath] = strToU8(strFromU8(archive[contentTypesPath]).replace('</Types>',
+    `<Override PartName="/${sheetPath}" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`))
+  for (const path of workbookSheets(archive).values()) {
+    if (path !== sheetPath) archive[path] = strToU8(strFromU8(archive[path]).replace(/\s+tabSelected="[^"]*"/g, ''))
+  }
+  const rows = [INCOMPLETE_CUSTOM_CONTENT, '以下数值按本机现有内容计算。请导入原扩展后重新导出。', ...messages]
+    .map((value, index) => `<row r="${index + 1}">${cellXmlForValue(`A${index + 1}`, '', value)}</row>`).join('')
+  archive[sheetPath] = strToU8(`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView tabSelected="1" workbookViewId="0"/></sheetViews><cols><col min="1" max="1" width="110" customWidth="1"/></cols><sheetData>${rows}</sheetData></worksheet>`)
+}
+
 export function fillCharacterSheetTemplate(templateBytes: Uint8Array, model: CharacterExportModel, templateId: CharacterSheetXlsxTemplateId): XlsxFillResult {
   const archive = unzipSync(templateBytes)
   const sheets = workbookSheets(archive)
@@ -482,6 +508,8 @@ export function fillCharacterSheetTemplate(templateBytes: Uint8Array, model: Cha
   if (diagnostics.some((item) => item.severity === 'error')) return { bytes: templateBytes, diagnostics }
 
   for (const [path, xml] of sheetXml) archive[path] = strToU8(xml)
+  const missing = diagnostics.filter((item) => item.code === 'missing-custom-content')
+  if (missing.length) appendExportNotes(archive, missing.map((item) => item.message))
   archive['xl/workbook.xml'] = strToU8(setFullCalcOnLoad(strFromU8(archive['xl/workbook.xml'])))
   return { bytes: zipSync(archive, { level: 6 }), diagnostics }
 }

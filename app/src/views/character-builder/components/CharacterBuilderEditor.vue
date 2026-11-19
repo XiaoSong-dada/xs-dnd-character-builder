@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 
 import BaseButton from '@/components/ui/BaseButton.vue'
 import UiModal from '@/components/ui/UiModal.vue'
+import CharacterPackageImportDialog from '@/features/custom-content/components/CharacterPackageImportDialog.vue'
 import UiNotice from '@/components/ui/UiNotice.vue'
 import CharacterDrawer from '@/features/quick-build/components/CharacterDrawer.vue'
 import QuickBuildShell from '@/features/quick-build/components/QuickBuildShell.vue'
@@ -45,6 +46,10 @@ const {
   completion,
   importError,
   importNotice,
+  missingExportContent,
+  packageContent,
+  packageImport,
+  openWorkshopFromExport,
   exportingFormat,
   exportNotice,
   pendingChange,
@@ -343,12 +348,15 @@ function updateMethod(value: AbilityMethod): void {
       :prepared-file-name="preparedFile?.name"
       :exporting-format="exportingFormat"
       :export-notice="exportNotice"
+      :missing-export-content="missingExportContent"
+      :package-content="packageContent"
       @enter-session="enterSession"
       @download-in-new-tab="downloadInNewTab"
       @export="exportDraft"
       @export-package="exportPackage"
       @export-pdf="exportPdf"
       @export-xlsx="exportXlsx"
+      @open-workshop-from-export="openWorkshopFromExport"
       @adjust-level="openLevelModal"
       @transform-lineage="lineageTransformation.start"
       @reedit="startReedit"
@@ -486,6 +494,12 @@ function updateMethod(value: AbilityMethod): void {
     @total-level="(next) => applyTotalLevelAction(next)"
   />
   <LineageTransformationModal :open="lineageTransformation.open.value" :target="lineageTransformation.target.value" :targets="lineageTransformation.targets.value" :retained="lineageTransformation.retained.value" :candidates="lineageTransformation.candidates.value" :preview="lineageTransformation.result.value.preview" :error="lineageTransformation.result.value.error" @close="lineageTransformation.close" @confirm="lineageTransformation.confirm" @target="lineageTransformation.target.value = $event" @toggle="lineageTransformation.toggle" />
+  <CharacterPackageImportDialog
+    v-bind="packageImport.dialog.value"
+    @close="packageImport.close"
+    @confirm="packageImport.confirm"
+    @choose="packageImport.choose"
+  />
 </template>
 
 <style scoped lang="scss">
