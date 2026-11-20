@@ -41,6 +41,19 @@ describe('离线资源清单', () => {
     expect(statuses.every((item) => item.cached === false)).toBe(true)
   })
 
+  it('只缓存旧版 2024 模板时下载新版路径，随后新版离线资源可用', async () => {
+    const revised = offlineAssets.find((asset) => asset.url.endsWith('character-sheet-2024-r2.xlsx'))!
+    const storage = createCacheStorage([revised.url.replace('-r2.xlsx', '.xlsx')])
+    expect((await readOfflineAssetStatus(storage)).find(({ asset }) => asset.id === revised.id)?.cached).toBe(false)
+    stubFetch(async (url) => {
+      storage.stored.add(url)
+      return { ok: true, arrayBuffer: async () => new ArrayBuffer(0) }
+    })
+    await downloadOfflineAssets(undefined, storage)
+    expect(fetch).toHaveBeenCalledWith(revised.url, { cache: 'reload' })
+    expect((await readOfflineAssetStatus(storage)).find(({ asset }) => asset.id === revised.id)?.cached).toBe(true)
+  })
+
   it('按 URL 命中情况分别报告已下载状态', async () => {
     const storage = createCacheStorage([offlineAssets[0]!.url])
 

@@ -68,7 +68,8 @@ describe('缺失自定义内容时导出角色卡', () => {
     expect(model.diagnostics).toContainEqual(expect.objectContaining({ code: 'missing-custom-content', severity: 'warning', message: expect.stringContaining('速度') }))
 
     const xlsxId = ruleset === '5e-2024' ? '2024' : '2014'
-    const xlsx = fillCharacterSheetTemplate(template(`character-sheet-${xlsxId}.xlsx`), model, xlsxId)
+    const xlsxTemplate = template(xlsxId === '2024' ? 'character-sheet-2024-r2.xlsx' : 'character-sheet-2014.xlsx')
+    const xlsx = fillCharacterSheetTemplate(xlsxTemplate, model, xlsxId)
     expect(xlsx.diagnostics.filter(({ severity }) => severity === 'error')).toEqual([])
     verifyXlsxOutput(xlsx.bytes)
     const archive = unzipSync(xlsx.bytes)
@@ -100,7 +101,7 @@ describe('缺失自定义内容时导出角色卡', () => {
     expect(restored.identity.raceName).toBe('工坊旅者')
     expect(restored.combat.speed).toBe(40)
     expect(restored.diagnostics.some(({ code }) => code === 'missing-custom-content')).toBe(false)
-    const restoredXlsx = fillCharacterSheetTemplate(template(`character-sheet-${xlsxId}.xlsx`), restored, xlsxId)
+    const restoredXlsx = fillCharacterSheetTemplate(xlsxTemplate, restored, xlsxId)
     expect(unzipSync(restoredXlsx.bytes)['xl/worksheets/character-export-notes.xml']).toBeUndefined()
   }, 30_000)
 

@@ -14,7 +14,7 @@ export type CharacterSheetXlsxTemplateId = '2014' | '2024'
 export const CHARACTER_SHEET_PDF_TEMPLATE_URL = `${baseUrl}templates/character-sheet-zh-plus.pdf`
 export const CHARACTER_SHEET_XLSX_TEMPLATE_URLS: Readonly<Record<CharacterSheetXlsxTemplateId, string>> = {
   '2014': `${baseUrl}templates/character-sheet-2014.xlsx`,
-  '2024': `${baseUrl}templates/character-sheet-2024.xlsx`,
+  '2024': `${baseUrl}templates/character-sheet-2024-r2.xlsx`,
 }
 export const CHARACTER_SHEET_FONT_URL = `${baseUrl}templates/fonts/noto-sans-sc-subset.ttf`
 

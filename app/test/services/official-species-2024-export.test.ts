@@ -27,7 +27,7 @@ describe('N01 全部19项实际导出与保存', () => {
     expect(saved?.raceToolChoices).toEqual(draft.raceToolChoices)
     if (!saved) throw new Error('Missing saved draft')
     expect(buildCharacterExportModel(saved, deriveCharacter(saved)).features).toEqual(model.features)
-    expect(fillCharacterSheetTemplate(new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-2024.xlsx'))), model, '2024').diagnostics.filter((item) => item.severity === 'error')).toEqual([])
+    expect(fillCharacterSheetTemplate(new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-2024-r2.xlsx'))), model, '2024').diagnostics.filter((item) => item.severity === 'error')).toEqual([])
     const template = new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/character-sheet-zh-plus.pdf')))
     const font = new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates/fonts/noto-sans-sc-subset.ttf')))
     const pdf = await fillPdfTemplate(template, font, model)

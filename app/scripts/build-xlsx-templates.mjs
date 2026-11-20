@@ -102,6 +102,21 @@ function stripMacrosAndActiveX(archive) {
   rels = rels.replace(/<Relationship\b[^>]*vbaProject[^>]*\/>/g, '')
   archive[relsPath] = strToU8(rels)
 
+  const workbookPath = 'xl/workbook.xml'
+  const workbook = strFromU8(archive[workbookPath])
+  archive[workbookPath] = strToU8(workbook.replace(
+    /<definedName\b(?=[^>]*\sxlm=["'](?:1|true)["'])[^>]*(?:\/>|>[\s\S]*?<\/definedName>)/g,
+    '',
+  ))
+  const chartSheetPath = 'xl/worksheets/sheet4.xml'
+  const chartSheet = strFromU8(archive[chartSheetPath])
+  const updatedChartSheet = chartSheet.replace(
+    /(<c\b[^>]*\br="BQ58"[^>]*>\s*<f\b[^>]*>[^<]*)_xleta\.na(?=[^<]*<\/f>)/i,
+    '$1NA()',
+  )
+  if (updatedChartSheet === chartSheet) throw new Error('2024 模板的图表 BQ58 公式已变更，请复核无亚种回退逻辑。')
+  archive[chartSheetPath] = strToU8(updatedChartSheet)
+
   for (const [name, bytes] of Object.entries(archive)) {
     if (!/^xl\/worksheets\/_rels\/sheet\d+\.xml\.rels$/.test(name)) continue
     let sheetRels = strFromU8(bytes)
@@ -124,10 +139,10 @@ function build(templateId, sourceFile, mappingFile) {
   if (templateId === '2024') stripMacrosAndActiveX(archive)
   addMappingSheet(archive, mapping)
   const bytes = zipSync(archive, { level: 6 })
-  const output = resolve(outDir, `character-sheet-${templateId}.xlsx`)
+  const output = resolve(outDir, templateId === '2024' ? 'character-sheet-2024-r2.xlsx' : 'character-sheet-2014.xlsx')
   writeFileSync(output, bytes)
   console.log(`${templateId}: ${(sourceFile)} -> ${output} (${(bytes.byteLength / 1024).toFixed(0)} KiB, ${mapping.entries.length} mappings)`)
 }
 
-build('2014', 'DND.5E.v4.4.5.xlsx', '2014.json')
+if (!process.argv.includes('--2024-only')) build('2014', 'DND.5E.v4.4.5.xlsx', '2014.json')
 build('2024', 'dnd5e2024.v1.3.xlsm', '2024.json')

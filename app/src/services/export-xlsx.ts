@@ -464,8 +464,19 @@ function appendExportNotes(archive: Record<string, Uint8Array>, messages: readon
   archive[sheetPath] = strToU8(`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView tabSelected="1" workbookViewId="0"/></sheetViews><cols><col min="1" max="1" width="110" customWidth="1"/></cols><sheetData>${rows}</sheetData></worksheet>`)
 }
 
+function verifyMacroFreeWorkbook(archive: Record<string, Uint8Array>): void {
+  const workbook = archive['xl/workbook.xml']
+  const contentTypes = archive['[Content_Types].xml']
+  if (Object.keys(archive).some((path) => /(?:^|\/)vbaProject\.bin$/i.test(path))
+    || (workbook && /<definedName\b[^>]*\sxlm=["'](?:1|true)["']/i.test(strFromU8(workbook)))
+    || (contentTypes && /spreadsheetml\.[^"']*macroEnabled|ms-excel\.[^"']*macroEnabled/i.test(strFromU8(contentTypes)))) {
+    throw new Error('自动卡模板包含宏内容。请联网更新模板后重新导出。')
+  }
+}
+
 export function fillCharacterSheetTemplate(templateBytes: Uint8Array, model: CharacterExportModel, templateId: CharacterSheetXlsxTemplateId): XlsxFillResult {
   const archive = unzipSync(templateBytes)
+  verifyMacroFreeWorkbook(archive)
   const sheets = workbookSheets(archive)
   const mapping = readMappingFromArchive(archive)
   const values = buildAutoCardValues(model, templateId)
@@ -526,7 +537,7 @@ export function verifyXlsxOutput(bytes: Uint8Array): void {
   if (!/<calcPr\b[^>]*\bfullCalcOnLoad="1"/.test(workbookXml)) throw new Error('导出后的角色卡未启用打开时完整重算。')
   const sheets = workbookSheets(archive)
   if (!sheets.has('字段映射')) throw new Error('导出后的角色卡缺少字段映射表。')
-  if (archive['xl/vbaProject.bin']) throw new Error('2024 自动卡仍包含宏，无法作为 xlsx 导出。')
+  verifyMacroFreeWorkbook(archive)
 }
 
 export function downloadXlsx(bytes: Uint8Array, filename: string): void {

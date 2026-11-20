@@ -1,16 +1,17 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { strFromU8, unzipSync } from 'fflate'
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 
 import { buildCharacterExportModel } from '@/features/character-export/build-export-data'
 import { deriveCharacter } from '@/rules/derive'
-import { buildAutoCardValues, CHARACTER_SHEET_TEMPLATE_VERSION, fillCharacterSheetTemplate, readXlsxTemplateMapping } from '@/services/export-xlsx'
+import { buildAutoCardValues, CHARACTER_SHEET_TEMPLATE_VERSION, fillCharacterSheetTemplate, readXlsxTemplateMapping, verifyXlsxOutput } from '@/services/export-xlsx'
 import { draft2024, selection } from '../fixtures/draft-2024'
 import { fighterExportModel, wizardExportModel } from '../fixtures/export-character'
 
 function template(id: '2014' | '2024'): Uint8Array {
-  return new Uint8Array(readFileSync(resolve(__dirname, `../../public/templates/character-sheet-${id}.xlsx`)))
+  const filename = id === '2024' ? 'character-sheet-2024-r2.xlsx' : 'character-sheet-2014.xlsx'
+  return new Uint8Array(readFileSync(resolve(__dirname, '../../public/templates', filename)))
 }
 
 function decode(value: string): string {
@@ -59,6 +60,20 @@ function model2024() {
 }
 
 describe('export-xlsx 自动卡模板契约 v4', () => {
+  it('2024 模板清除 XLM 名称并保留亚种公式回退，拒绝带原标记的产物', () => {
+    const clean = template('2024')
+    expect(cellValue(clean, 'xl/worksheets/sheet4.xml', 'BQ58')).toContain('NA()')
+    const output = fillCharacterSheetTemplate(clean, model2024(), '2024').bytes
+    const archive = unzipSync(output)
+    const workbook = strFromU8(archive['xl/workbook.xml'])
+    expect(workbook).not.toMatch(/\bxlm=["'](?:1|true)["']/)
+    expect(() => verifyXlsxOutput(output)).not.toThrow()
+    archive['xl/workbook.xml'] = strToU8(workbook.replace('</definedNames>',
+      '<definedName name="_xleta.IF" hidden="1" xlm="1">#NAME?</definedName></definedNames>'))
+    const stale = zipSync(archive)
+    expect(() => fillCharacterSheetTemplate(stale, model2024(), '2024')).toThrow('包含宏内容')
+    expect(() => verifyXlsxOutput(stale)).toThrow('包含宏内容')
+  })
   it('2014 自动卡使用 v4 字段映射并指向主要输入格', () => {
     const mapping = readXlsxTemplateMapping(template('2014'))
     expect(mapping.version).toBe(CHARACTER_SHEET_TEMPLATE_VERSION)

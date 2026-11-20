@@ -1,6 +1,6 @@
 # 自动计算卡模板契约（2014 / 2024）
 
-> 运行时文件：`app/public/templates/character-sheet-2014.xlsx`、`character-sheet-2024.xlsx`
+> 运行时文件：`app/public/templates/character-sheet-2014.xlsx`、`character-sheet-2024-r2.xlsx`
 > 源文件：`docs/export-templates/DND.5E.v4.4.5.xlsx`、`dnd5e2024.v1.3.xlsm`
 > 生成脚本：`app/scripts/build-xlsx-templates.mjs`
 > 映射数据：`app/scripts/xlsx-mappings/2014.json`、`2024.json`
@@ -38,10 +38,10 @@
 
 ## 4. 2024 xlsm → xlsx
 
-脚本会移除 `xl/vbaProject.bin`、`xl/activeX/*`、对应关系与 `[Content_Types].xml` 覆盖项，并把 workbook 内容类型改为普通 xlsx。这样既保留公式与版式，又避免宏安全提示和 ExcelJS 读取 `.xlsm` 时的长时间卡顿。
+脚本会移除 `xl/vbaProject.bin`、`xl/activeX/*`、对应关系、内容类型覆盖项及标记为 XLM 的定义名称，并将工作簿内容类型改为普通 XLSX。「图表」页 `BQ58` 使用 `NA()` 触发原有的「无亚种」回退。可用 `node scripts/build-xlsx-templates.mjs --2024-only` 单独重建 2024 模板。运行时通过独立文件名切换旧缓存，并在填充模板时校验宏内容。
 
 ## 5. 已知限制
 
 - 2024 自动卡暂不写入法术列表与法术位总数：该卡的「施法」页依赖 `法术大全` 行号与 VBA 辅助，直接改写名称会带入错误的法术元数据；导出时返回 warning，法术在卡内选择。
 - 2014 自动卡的法术列表按名称写入，最多 30 条；模板自身的 `列表` 查询表负责显示环级与效果。
-- 未做 Excel/WPS 人工打开验收；自动化只校验 OOXML 结构与写入值。
+- 2024 模板修订版已在桌面 Excel 中验证打开与重算，覆盖有亚种、无亚种和力量调整值。自动化测试覆盖两版模板的 OOXML 结构与写入值。
